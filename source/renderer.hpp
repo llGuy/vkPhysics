@@ -46,13 +46,13 @@ VkCommandBuffer begin_simgle_time_command_buffer();
 void end_single_time_command_buffer(
     VkCommandBuffer command_buffer);
 
-typedef struct {
+struct attachment_t {
     VkImage image;
     VkImageView image_view;
     VkDeviceMemory image_memory;
     VkFormat format;
     VkSampler sampler;
-} attachment_t;
+};
     
 VkDeviceMemory allocate_image_memory(
     VkImage image,

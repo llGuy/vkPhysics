@@ -5,7 +5,7 @@
 #include <vulkan/vulkan.h>
 
 /* Rendering pipeline stage (post processing etc..) */
-typedef struct {
+struct rpipeline_stage_t {
     VkRenderPass render_pass;
     VkFramebuffer framebuffer;
 
@@ -13,7 +13,7 @@ typedef struct {
     attachment_t *color_attachments;
     
     attachment_t *depth_attachment;
-} rpipeline_stage_t;
+};
 
 static rpipeline_stage_t deferred;
 
@@ -269,10 +269,10 @@ static void s_deferred_init() {
         swapchain_extent);
 }
 
-typedef struct {
+struct rpipeline_shader_t {
     VkPipeline pipeline;
     VkPipelineLayout layout;
-} rpipeline_shader_t;
+};
 
 static char *s_read_shader(
     const char *path,

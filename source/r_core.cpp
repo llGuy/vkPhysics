@@ -131,10 +131,10 @@ static void s_debug_messenger_init() {
 
 static VkSurfaceKHR surface;
 
-typedef struct {
+struct queue_families_t {
     int32_t graphics_family;
     int32_t present_family;
-} queue_families_t;
+};
 
 static queue_families_t queue_families;
 
@@ -142,13 +142,13 @@ static int32_t s_queue_families_complete(queue_families_t *families) {
     return families->graphics_family >= 0 && families->present_family >= 0;
 }
 
-typedef struct {
+struct swapchain_details_t {
     VkSurfaceCapabilitiesKHR capabilities;
     uint32_t available_formats_count;
     VkSurfaceFormatKHR *available_formats;
     uint32_t available_present_modes_count;
     VkPresentModeKHR *available_present_modes;
-} swapchain_details_t;
+};
 
 static swapchain_details_t swapchain_support;
 
@@ -390,7 +390,7 @@ static VkPresentModeKHR s_choose_surface_present_mode(const VkPresentModeKHR *av
     return(best_mode);
 }
 
-typedef struct {
+struct swapchain_t {
     VkSwapchainKHR swapchain;
     uint32_t image_count;
     VkImage *images;
@@ -398,7 +398,7 @@ typedef struct {
     VkFormat format;
     VkExtent2D extent;
     VkPresentModeKHR present_mode;
-} swapchain_t;
+};
 
 static swapchain_t swapchain;
 
@@ -692,11 +692,11 @@ static void s_imgui_init(void *vwindow, imgui_proc_t proc) {
     end_single_time_command_buffer(command_buffer);
 }
 
-typedef struct {
+struct descriptor_layouts_t {
     VkDescriptorSetLayout sampler;
     VkDescriptorSetLayout input_attachment;
     VkDescriptorSetLayout uniform_buffer;
-} descriptor_layouts_t;
+};
 
 static descriptor_layouts_t descriptor_layouts;
 
