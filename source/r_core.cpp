@@ -751,8 +751,7 @@ void renderer_init(
     s_final_render_pass_init();
     s_global_descriptor_layouts_init();
     r_pipeline_init();
-    //s_imgui_init(window, debug_proc);
-    
+    s_imgui_init(window, debug_proc);
 }
 
 static uint32_t current_frame = 0;
@@ -810,7 +809,7 @@ void end_frame() {
 
     r_execute_final_pass(primary_command_buffers[current_frame]);
 
-/*    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
@@ -818,7 +817,7 @@ void end_frame() {
 
     ImGui::Render();
 
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[current_frame]);   */
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[current_frame]);
 
     vkCmdEndRenderPass(primary_command_buffers[current_frame]);
 
