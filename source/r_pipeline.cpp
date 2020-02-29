@@ -2,7 +2,12 @@
 #include "r_internal.hpp"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <vulkan/vulkan.h>
+
+#include <iostream>
+#include <vector>
 
 /* Rendering pipeline stage (post processing etc..) */
 struct rpipeline_stage_t {
@@ -571,6 +576,7 @@ void r_pipeline_init() {
 void begin_scene_rendering(
     VkCommandBuffer command_buffer) {
     VkClearValue clear_values[4] = {};
+    
     memset(clear_values, 0, sizeof(VkClearValue) * 4);
 
     clear_values[0].color.float32[1] = 1;

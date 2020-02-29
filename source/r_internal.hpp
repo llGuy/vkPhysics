@@ -4,11 +4,11 @@
 
 #include "renderer.hpp"
 
-#include <malloc.h>
-#include <intrin.h>
-
 #define FL_MALLOC(type, n) (type *)malloc(sizeof(type) * (n))
-#define ALLOCA(type, n) (type *)_malloca(sizeof(type) * (n))
+#define ALLOCA(type, n) (type *)alloca(sizeof(type) * (n))
+
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 uint32_t r_image_index();
 VkFormat r_depth_format();

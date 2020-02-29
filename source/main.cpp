@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <vulkan/vulkan.h>
 
-#include <windows.h>
-
 #include "renderer.hpp"
 
 #include <imgui.h>

@@ -6,10 +6,11 @@
 #include <string.h>
 #include <assert.h>
 
-#include "imgui.h"
+#include <imgui.h>
 #include <vulkan/vulkan.h>
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_vulkan.h"
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+#include <GLFW/glfw3.h>
 
 static VkInstance instance;
 static int32_t enable_validation_layers;
@@ -67,7 +68,11 @@ static void s_instance_init(const char *application_name) {
 
     uint32_t extension_count = 4;
     const char *extensions[] = {
+#ifdef _WIN32
         "VK_KHR_win32_surface",
+#else
+        "VK_KHR_xcb_surface",
+#endif
         "VK_KHR_surface",
         "VK_EXT_debug_utils",
         "VK_EXT_debug_report"
@@ -102,10 +107,10 @@ static void s_instance_init(const char *application_name) {
 static VkDebugUtilsMessengerEXT debug_messenger;
 
 static VKAPI_ATTR VkBool32 VKAPI_PTR s_debug_messenger_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    VkDebugUtilsMessageTypeFlagsEXT message_types,
+    VkDebugUtilsMessageSeverityFlagBitsEXT,
+    VkDebugUtilsMessageTypeFlagsEXT,
     const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
-    void *user_data) {
+    void *) {
     printf("Validation layer: %s\n", callback_data->pMessage);
     return 0;
 }
@@ -273,11 +278,17 @@ static void s_device_init() {
 
     VkPhysicalDevice *devices = ALLOCA(VkPhysicalDevice, device_count);
     vkEnumeratePhysicalDevices(instance, &device_count, devices);
+
+    printf("Found %d devices\n", device_count);
+    
     for (uint32_t i = 0; i < device_count; ++i) {
         hardware = devices[i];
 
+        vkGetPhysicalDeviceProperties(hardware, &hardware_properties);
+        
+        printf("Device name: %s\n", hardware_properties.deviceName);
+        
         if (s_verify_hardware_meets_requirements(extensions, extension_count)) {
-            vkGetPhysicalDeviceProperties(hardware, &hardware_properties);
             break;
         }
     }
@@ -370,8 +381,8 @@ static VkExtent2D s_choose_swapchain_extent(uint32_t width, uint32_t height, con
     }
     else {
         VkExtent2D actual_extent = { (uint32_t)width, (uint32_t)height };
-        actual_extent.width = max(capabilities->minImageExtent.width, min(capabilities->maxImageExtent.width, actual_extent.width));
-        actual_extent.height = max(capabilities->minImageExtent.height, min(capabilities->maxImageExtent.height, actual_extent.height));
+        actual_extent.width = MAX(capabilities->minImageExtent.width, MIN(capabilities->maxImageExtent.width, actual_extent.width));
+        actual_extent.height = MAX(capabilities->minImageExtent.height, MIN(capabilities->maxImageExtent.height, actual_extent.height));
 
         return(actual_extent);
     }
@@ -766,8 +777,6 @@ void resize_swapchain() {
 }
 
 VkCommandBuffer begin_frame() {
-    current_frame = 0;
-
     VkFence null_fence = VK_NULL_HANDLE;
 
     VkResult result = vkAcquireNextImageKHR(
@@ -781,9 +790,9 @@ VkCommandBuffer begin_frame() {
     vkWaitForFences(device, 1, &fences[current_frame], VK_TRUE, UINT64_MAX);
     vkResetFences(device, 1, &fences[current_frame]);
 
-    begin_command_buffer(primary_command_buffers[current_frame], 0, NULL);
+    begin_command_buffer(primary_command_buffers[image_index], 0, NULL);
 
-    return primary_command_buffers[current_frame];
+    return primary_command_buffers[image_index];
 }
 
 void end_frame() {
@@ -805,9 +814,9 @@ void end_frame() {
     render_pass_begin_info.clearValueCount = 1;
     render_pass_begin_info.pClearValues = &clear_value;
 
-    vkCmdBeginRenderPass(primary_command_buffers[current_frame], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(primary_command_buffers[image_index], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    r_execute_final_pass(primary_command_buffers[current_frame]);
+    r_execute_final_pass(primary_command_buffers[image_index]);
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -817,20 +826,20 @@ void end_frame() {
 
     ImGui::Render();
 
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[current_frame]);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
 
-    vkCmdEndRenderPass(primary_command_buffers[current_frame]);
+    vkCmdEndRenderPass(primary_command_buffers[image_index]);
 
 
 
-    end_command_buffer(primary_command_buffers[current_frame]);
+    end_command_buffer(primary_command_buffers[image_index]);
 
     VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;;
 
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &primary_command_buffers[current_frame];
+    submit_info.pCommandBuffers = &primary_command_buffers[image_index];
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = &image_ready_semaphores[current_frame];
     submit_info.pWaitDstStageMask = &wait_stages;
