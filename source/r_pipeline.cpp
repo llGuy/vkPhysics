@@ -457,49 +457,6 @@ static rpipeline_stage_t final_stage;
 static rpipeline_shader_t final_shader;
 static VkDescriptorSet final_input;
 
-static void s_create_descriptor_sets(
-    attachment_t *attachments,
-    VkDescriptorSet *sets,
-    VkDescriptorType *types,
-    uint32_t count) {
-    VkDescriptorSetLayout *layouts = ALLOCA(VkDescriptorSetLayout, count);
-    for (uint32_t i = 0; i < count; ++i) {
-        layouts[i] = r_descriptor_layout(types[i]);
-    }
-    
-    VkDescriptorSetAllocateInfo allocate_info = {};
-    allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocate_info.descriptorPool = r_descriptor_pool();
-    allocate_info.descriptorSetCount = count;
-    allocate_info.pSetLayouts = layouts;
-    
-    vkAllocateDescriptorSets(r_device(), &allocate_info, sets);
-
-    VkWriteDescriptorSet *writes = ALLOCA(VkWriteDescriptorSet, count);
-    memset(writes, 0, sizeof(VkWriteDescriptorSet) * count);
-
-    VkDescriptorImageInfo *image_infos = ALLOCA(VkDescriptorImageInfo, count);
-    memset(image_infos, 0, sizeof(VkDescriptorImageInfo) * count);
-
-    for (uint32_t i = 0; i < count; ++i) {
-        image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_infos[i].imageView = attachments[i].image_view;
-        image_infos[i].sampler = attachments[i].sampler;
-    }
-    
-    for (uint32_t i = 0; i < count; ++i) {
-        writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[i].dstSet = sets[i];
-        writes[i].dstBinding = 0;
-        writes[i].dstArrayElement = 0;
-        writes[i].descriptorCount = 1;
-        writes[i].descriptorType = types[i];
-        writes[i].pImageInfo = &image_infos[i];
-    }
-
-    vkUpdateDescriptorSets(r_device(), count, writes, 0, NULL);
-}
-
 static void s_final_init() {
     final_stage.color_attachment_count = 1;
     final_stage.color_attachments = FL_MALLOC(attachment_t, 1);
@@ -521,13 +478,10 @@ static void s_final_init() {
         &final_stage,
         pipeline_layout);
 
-    VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    
-    s_create_descriptor_sets(
-        &deferred.color_attachments[0],
-        &final_input,
-        &type,
-        1);
+    create_image_descriptor_set(
+        deferred.color_attachments[0].image_view,
+        deferred.color_attachments[0].sampler,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 }
 
 void r_execute_final_pass(

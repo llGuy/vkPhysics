@@ -5,7 +5,6 @@ project(vkPhysics)
 file(GLOB_RECURSE SOURCES "source/*.cpp" "source/*.hpp" "dependencies/imgui/lib/*.cpp")
 
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/stb")
-include_directories("${CMAKE_SOURCE_DIR}/dependencies/lua")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/imgui/include")
 
 
@@ -16,17 +15,17 @@ find_package(Vulkan)
 
 if(NOT Vulkan_FOUND)
 
-       link_directories("${CMAKE_SOURCE_DIR}/dependencies/vulkan/lib")
-       include_directories("${CMAKE_SOURCE_DIR}/dependencies/vulkan/include")
+  link_directories("${CMAKE_SOURCE_DIR}/dependencies/vulkan/lib")
+  include_directories("${CMAKE_SOURCE_DIR}/dependencies/vulkan/include")
 
-       message("Using bundled Vulkan version")
+  message("Using bundled Vulkan version")
 
 else(NOT Vulkan_FOUND)
 
-         include_directories("${Vulkan_INCLUDE_DIRS}")
-         link_libraries("${Vulkan_LIBRARY}")
+  include_directories("${Vulkan_INCLUDE_DIRS}")
+  link_libraries("${Vulkan_LIBRARY}")
 
-         message("Using preinstalled Vulkan")
+  message("Using preinstalled Vulkan")
 
 endif()
 
@@ -34,12 +33,12 @@ link_libraries("glfw")
 
 if(WIN32)
 
-        link_libraries("user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib")
+  link_libraries("user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib")
 
 else(WIN32)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
-        
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+  
 endif(WIN32)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTB_IMAGE_IMPLEMENTATION -D_MBCS -DCIMGUI_DEFINE_ENUMS_AND_STRUCTS")

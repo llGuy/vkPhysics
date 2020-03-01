@@ -118,7 +118,7 @@ struct mesh_t {
     buffer_type_t buffer_type_stack[BT_INVALID_BUFFER_TYPE];
 
     // This is what will get passed to the vkCmdBindVertexBuffers
-    VkBuffer buffers_final;
+    VkBuffer vertex_buffers_final[BT_INVALID_BUFFER_TYPE];
     VkBuffer index_buffer;
 
     // Data needed to render
@@ -150,3 +150,24 @@ void load_mesh_internal(
     mesh_t *mesh);
 
 void load_mesh_external();
+
+struct mesh_binding_info_t {
+    uint32_t binding_count;
+    VkVertexInputBindingDescription *binding_descriptions;
+
+    uint32_t attribute_count;
+    VkVertexInputAttributeDescription *attribute_descriptions;
+};
+
+mesh_binding_info_t create_mesh_binding_info(
+    mesh_t *mesh);
+
+VkDescriptorSet create_image_descriptor_set(
+    VkImageView image,
+    VkSampler sampler,
+    VkDescriptorType type);
+
+VkDescriptorSet create_buffer_descriptor_set(
+    VkBuffer buffer,
+    VkDeviceSize buffer_size,
+    VkDescriptorType type);

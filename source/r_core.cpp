@@ -1,3 +1,5 @@
+// Renderer core
+
 #include "renderer.hpp"
 #include "r_internal.hpp"
 
@@ -963,7 +965,7 @@ gpu_buffer_t create_gpu_buffer(
     VkBufferCreateInfo buffer_info = {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = size;
-    buffer_info.usage = usage;
+    buffer_info.usage = data ? usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT : usage;
     buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VkBuffer buffer;
@@ -1026,7 +1028,7 @@ static VkAccessFlags s_find_access_flags_for_stage(VkPipelineStageFlags stage) {
     switch (stage) {
     case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT: return VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
     case VK_PIPELINE_STAGE_VERTEX_INPUT_BIT: return VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-    case VK_PIPELINE_STAGE_VERTEX_SHADER_BIT: case VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT: return VK_ACCESS_UNIFORM_READ_BIT;
+    case VK_PIPELINE_STAGE_VERTEX_SHADER_BIT: case VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT: case VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT: return VK_ACCESS_UNIFORM_READ_BIT;
     case VK_PIPELINE_STAGE_TRANSFER_BIT: return VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
     default: exit(1); return 0;
     }
@@ -1088,7 +1090,7 @@ VkBufferMemoryBarrier create_gpu_buffer_barrier(
     buffer_barrier.buffer = buffer->buffer;
     buffer_barrier.size = buffer->size;
     buffer_barrier.offset = offset;
-    buffer_barrier.size = (max == UINT32_MAX) ? buffer->size : max;
+    buffer_barrier.size = max;
     buffer_barrier.srcAccessMask = s_find_access_flags_for_stage(src);
     buffer_barrier.dstAccessMask = s_find_access_flags_for_stage(dst);
 
@@ -1118,6 +1120,76 @@ VkDescriptorSetLayout r_descriptor_layout(VkDescriptorType type) {
         printf("Specified invalid descriptor type\n");
         return (VkDescriptorSetLayout)0;
     }
+}
+
+VkDescriptorSet create_image_descriptor_set(
+    VkImageView image,
+    VkSampler sampler,
+    VkDescriptorType type) {
+    VkDescriptorSetLayout descriptor_layout = r_descriptor_layout(type);
+    
+    VkDescriptorSetAllocateInfo allocate_info = {};
+    allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocate_info.descriptorPool = r_descriptor_pool();
+    allocate_info.descriptorSetCount = 1;
+    allocate_info.pSetLayouts = &descriptor_layout;
+
+    VkDescriptorSet set;
+    
+    vkAllocateDescriptorSets(r_device(), &allocate_info, &set);
+
+    VkDescriptorImageInfo image_info = {};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = image;
+    image_info.sampler = sampler;
+    
+    VkWriteDescriptorSet write = {};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = set;
+    write.dstBinding = 0;
+    write.dstArrayElement = 0;
+    write.descriptorCount = 1;
+    write.descriptorType = type;
+    write.pImageInfo = &image_info;
+
+    vkUpdateDescriptorSets(r_device(), 1, &write, 0, NULL);
+
+    return set;
+}
+
+VkDescriptorSet create_buffer_descriptor_set(
+    VkBuffer buffer,
+    VkDeviceSize buffer_size,
+    VkDescriptorType type) {
+    VkDescriptorSetLayout descriptor_layout = r_descriptor_layout(type);
+    
+    VkDescriptorSetAllocateInfo allocate_info = {};
+    allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocate_info.descriptorPool = r_descriptor_pool();
+    allocate_info.descriptorSetCount = 1;
+    allocate_info.pSetLayouts = &descriptor_layout;
+
+    VkDescriptorSet set;
+    
+    vkAllocateDescriptorSets(r_device(), &allocate_info, &set);
+
+    VkDescriptorBufferInfo buffer_info = {};
+    buffer_info.buffer = buffer;
+    buffer_info.offset = 0;
+    buffer_info.range = buffer_size;
+    
+    VkWriteDescriptorSet write = {};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = set;
+    write.dstBinding = 0;
+    write.dstArrayElement = 0;
+    write.descriptorCount = 1;
+    write.descriptorType = type;
+    write.pBufferInfo = &buffer_info;
+
+    vkUpdateDescriptorSets(r_device(), 1, &write, 0, NULL);
+
+    return set;
 }
 
 VkDescriptorPool r_descriptor_pool() {
