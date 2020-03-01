@@ -55,10 +55,7 @@ static attachment_t s_create_color_attachment(
     image_view_info.subresourceRange.layerCount = 1;
 
     VkImageView image_view;
-    if (vkCreateImageView(r_device(), &image_view_info, NULL, &image_view) != VK_SUCCESS) {
-        printf("Failed to create image view\n");
-        exit(1);
-    }
+    VK_CHECK(vkCreateImageView(r_device(), &image_view_info, NULL, &image_view));
 
     VkSampler sampler;
     VkSamplerCreateInfo sampler_info = {};
@@ -74,10 +71,7 @@ static attachment_t s_create_color_attachment(
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
     sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     
-    if (vkCreateSampler(r_device(), &sampler_info, NULL, &sampler) != VK_SUCCESS) {
-        printf("Failed to create sampler\n");
-        exit(1);
-    }
+    VK_CHECK(vkCreateSampler(r_device(), &sampler_info, NULL, &sampler));
 
     attachment_t attachment;
     attachment.image = image;
@@ -121,10 +115,7 @@ static attachment_t s_create_depth_attachment(
     image_view_info.subresourceRange.layerCount = 1;
 
     VkImageView image_view;
-    if (vkCreateImageView(r_device(), &image_view_info, NULL, &image_view) != VK_SUCCESS) {
-        printf("Failed to create swapchain image view\n");
-        exit(1);
-    }
+    VK_CHECK(vkCreateImageView(r_device(), &image_view_info, NULL, &image_view));
 
     attachment_t attachment;
     attachment.image = image;
@@ -258,10 +249,7 @@ static void s_deferred_init() {
     render_pass_info.subpassCount = 1;
     render_pass_info.pSubpasses = &subpass_description;
 
-    if (vkCreateRenderPass(r_device(), &render_pass_info, NULL, &deferred.render_pass) != VK_SUCCESS) {
-        printf("Failed to create render pass\n");
-        exit(1);
-    }
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &deferred.render_pass));
 
     free(attachment_descriptions);
     free(attachment_references);
@@ -453,10 +441,7 @@ static rpipeline_shader_t s_create_rendering_pipeline_shader(
     pipeline_info.basePipelineIndex = -1;
 
     VkPipeline pipeline;
-    if (vkCreateGraphicsPipelines(r_device(), VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline) != VK_SUCCESS) {
-        printf("Failed to create graphics pipeline");
-        exit(1);
-    }
+    VK_CHECK(vkCreateGraphicsPipelines(r_device(), VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline));
 
     //s_free_shader_stage_create_info(shader_infos);
     //s_free_blend_state_info(&blend_info);
@@ -579,7 +564,7 @@ void begin_scene_rendering(
     
     memset(clear_values, 0, sizeof(VkClearValue) * 4);
 
-    clear_values[0].color.float32[1] = 1;
+    clear_values[0].color.float32[2] = 1;
 
     VkRect2D render_area = {};
     render_area.extent = r_swapchain_extent();

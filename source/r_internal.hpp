@@ -6,6 +6,7 @@
 
 #define FL_MALLOC(type, n) (type *)malloc(sizeof(type) * (n))
 #define ALLOCA(type, n) (type *)alloca(sizeof(type) * (n))
+#define VK_CHECK(call) if (call != VK_SUCCESS) { printf("%s failed\n", #call); }
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
