@@ -22,3 +22,6 @@ void r_execute_final_pass(VkCommandBuffer command_buffer);
 VkDescriptorSetLayout r_descriptor_layout(VkDescriptorType type);
 VkDescriptorPool r_descriptor_pool();
 VkRenderPass r_final_render_pass();
+void r_camera_handle_input(float dt, void *window);
+void r_camera_init(void *window);
+void r_camera_gpu_sync(VkCommandBuffer command_buffer);

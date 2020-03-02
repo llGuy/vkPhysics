@@ -478,7 +478,7 @@ static void s_final_init() {
         &final_stage,
         pipeline_layout);
 
-    create_image_descriptor_set(
+    final_input = create_image_descriptor_set(
         deferred.color_attachments[0].image_view,
         deferred.color_attachments[0].sampler,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);

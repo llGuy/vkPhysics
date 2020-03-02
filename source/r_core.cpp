@@ -727,6 +727,7 @@ void renderer_init(
     s_descriptor_pool_init();
     s_final_render_pass_init();
     s_global_descriptor_layouts_init();
+    r_camera_init(window);
     r_pipeline_init();
     s_imgui_init(window, debug_proc);
 }
@@ -989,7 +990,7 @@ gpu_buffer_t create_gpu_buffer(
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             &gpu_buffer,
             0,
-            UINT32_MAX);
+            size);
 
         vkCmdPipelineBarrier(
             command_buffer,
@@ -1007,7 +1008,7 @@ gpu_buffer_t create_gpu_buffer(
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             &gpu_buffer,
             0,
-            UINT32_MAX);
+            size);
 
         vkCmdPipelineBarrier(
             command_buffer,
