@@ -14,6 +14,10 @@ static gpu_buffer_t transforms_uniform_buffer;
 static VkDescriptorSet descriptor_set;
 static gpu_camera_transforms_t transforms;
 
+VkDescriptorSet r_camera_transforms_uniform() {
+    return descriptor_set;
+}
+
 struct cpu_camera_data_t {
     vector3_t position;
     vector3_t direction;

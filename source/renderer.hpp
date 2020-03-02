@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-
+#include "tools.hpp"
 #include <vulkan/vulkan.h>
 
 typedef int32_t result_t;
@@ -17,8 +17,10 @@ void renderer_init(
     uint32_t window_width,
     uint32_t window_height);
 
+/* Swapchain */
 void resize_swapchain();
 
+/* Rendering begin / end */
 VkCommandBuffer begin_frame();
 
 void end_frame();
@@ -29,6 +31,7 @@ void begin_scene_rendering(
 void end_scene_rendering(
     VkCommandBuffer command_buffer);
 
+/* Command buffer utility */
 void create_command_buffers(
     VkCommandBufferLevel level, 
     VkCommandBuffer *command_buffers, uint32_t count);
@@ -46,6 +49,7 @@ VkCommandBuffer begin_single_time_command_buffer();
 void end_single_time_command_buffer(
     VkCommandBuffer command_buffer);
 
+/* Images */
 struct attachment_t {
     VkImage image;
     VkImageView image_view;
@@ -58,6 +62,7 @@ VkDeviceMemory allocate_image_memory(
     VkImage image,
     VkMemoryPropertyFlags properties);
 
+/* Buffers */
 VkDeviceMemory allocate_gpu_buffer_memory(
     VkBuffer buffer,
     VkMemoryPropertyFlags properties);
@@ -74,6 +79,7 @@ gpu_buffer_t create_gpu_buffer(
     void *data,
     VkBufferUsageFlags usage);
 
+/* Pipeline barriers */
 VkImageMemoryBarrier create_image_barrier(
     VkImageLayout old_image_layout,
     VkImageLayout new_image_layout,
@@ -91,6 +97,7 @@ VkBufferMemoryBarrier create_gpu_buffer_barrier(
     uint32_t offset,
     uint32_t max);
 
+/* Mesh */
 enum buffer_type_t : char {
     BT_INDICES,
     BT_VERTEX,
@@ -112,17 +119,21 @@ struct mesh_buffer_t {
 
 #define MAX_MESH_BUFFERS 6
 
+// For the data needed to render (vertex offset, first index, index_count, index_offset, index_type) - will be set to default values by load_mesh_* functions
 struct mesh_t {
     mesh_buffer_t buffers[MAX_MESH_BUFFERS];
     uint32_t buffer_count;
     buffer_type_t buffer_type_stack[BT_INVALID_BUFFER_TYPE];
 
     // This is what will get passed to the vkCmdBindVertexBuffers
+    uint32_t vertex_buffer_count;
     VkBuffer vertex_buffers_final[BT_INVALID_BUFFER_TYPE];
+    VkDeviceSize vertex_buffers_offsets[BT_INVALID_BUFFER_TYPE];
     VkBuffer index_buffer;
 
     // Data needed to render
     uint32_t vertex_offset;
+    uint32_t vertex_count;
     uint32_t first_index;
     uint32_t index_count;
     uint32_t index_offset;
@@ -134,7 +145,8 @@ void push_buffer_to_mesh(
     mesh_t *mesh);
 
 bool mesh_has_buffer(
-    buffer_type_t buffer_type);
+    buffer_type_t buffer_type,
+    mesh_t *mesh);
 
 mesh_buffer_t *get_mesh_buffer(
     buffer_type_t buffer_type,
@@ -145,12 +157,6 @@ enum internal_mesh_type_t {
     IM_CUBE
 };
 
-void load_mesh_internal(
-    internal_mesh_type_t mesh_type,
-    mesh_t *mesh);
-
-void load_mesh_external();
-
 struct mesh_binding_info_t {
     uint32_t binding_count;
     VkVertexInputBindingDescription *binding_descriptions;
@@ -159,9 +165,45 @@ struct mesh_binding_info_t {
     VkVertexInputAttributeDescription *attribute_descriptions;
 };
 
+void load_mesh_internal(
+    internal_mesh_type_t mesh_type,
+    mesh_t *mesh,
+    mesh_binding_info_t *info);
+
+void load_mesh_external();
+
+struct mesh_shader_t {
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
+    VkShaderStageFlags flags;
+};
+
+struct mesh_render_data_t {
+    matrix4_t model;
+    vector4_t color;
+    // To add later with texture stuff
+    int32_t texture_index;
+};
+
+mesh_shader_t create_mesh_shader(
+    mesh_binding_info_t *binding_info,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags,
+    VkPipelineLayout layout);
+
+VkPipelineLayout create_mesh_shader_layout();
+
 mesh_binding_info_t create_mesh_binding_info(
     mesh_t *mesh);
 
+// Submits only one mesh
+void submit_mesh(
+    VkCommandBuffer command_buffer,
+    mesh_t *mesh,
+    mesh_shader_t *shader,
+    mesh_render_data_t *render_data);
+
+/* Descriptor set */
 VkDescriptorSet create_image_descriptor_set(
     VkImageView image,
     VkSampler sampler,

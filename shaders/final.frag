@@ -2,12 +2,13 @@
 
 layout(location = 0) in VS_DATA {
     vec2 uvs;
-} fs_in;
+} in_fs;
 
-layout(location = 0) out vec4 final_color;
+layout(location = 0) out vec4 out_final_color;
 
-layout(binding = 0, set = 0) uniform sampler2D input_tx;
+layout(binding = 0, set = 0) uniform sampler2D u_input_texture;
 
 void main() {
-    final_color = texture(input_tx, fs_in.uvs);
+    out_final_color = texture(u_input_texture, in_fs.uvs);
 }
+

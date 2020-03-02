@@ -9,18 +9,11 @@
 #include <iostream>
 #include <vector>
 
-/* Rendering pipeline stage (post processing etc..) */
-struct rpipeline_stage_t {
-    VkRenderPass render_pass;
-    VkFramebuffer framebuffer;
-
-    uint32_t color_attachment_count;
-    attachment_t *color_attachments;
-    
-    attachment_t *depth_attachment;
-};
-
 static rpipeline_stage_t deferred;
+
+rpipeline_stage_t *r_deferred_stage() {
+    return &deferred;
+}
 
 static attachment_t s_create_color_attachment(
     VkExtent3D extent, 
@@ -262,73 +255,7 @@ static void s_deferred_init() {
         swapchain_extent);
 }
 
-struct rpipeline_shader_t {
-    VkPipeline pipeline;
-    VkPipelineLayout layout;
-};
-
-static char *s_read_shader(
-    const char *path,
-    uint32_t *file_size) {
-    FILE *shader = fopen(path, "rb");
-    fseek(shader, 0L, SEEK_END);
-    *file_size = ftell(shader);
-    char *code = (char *)malloc(sizeof(char) * (*file_size));
-    rewind(shader);
-    fread(code, sizeof(char), *file_size, shader);
-    return code;
-}
-
-static uint32_t s_pop_count(uint32_t bits) {
-#ifndef __GNUC__
-    return __popcnt(bits);
-#else
-    return __builtin_popcount(bits);
-#endif
-}
-
-static VkPipelineShaderStageCreateInfo *s_fill_shader_stage_create_infos(
-    const char **paths,
-    VkShaderStageFlags flags) {
-    uint32_t count = s_pop_count(flags);
-
-    VkShaderStageFlagBits bits_order[] = { VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_GEOMETRY_BIT, VK_SHADER_STAGE_FRAGMENT_BIT };
-
-    VkPipelineShaderStageCreateInfo *infos = FL_MALLOC(VkPipelineShaderStageCreateInfo, count);
-    memset(infos, 0, sizeof(VkPipelineShaderStageCreateInfo) * count);
-    VkShaderModule *modules = FL_MALLOC(VkShaderModule, count);
-    
-    for (uint32_t bit = 0, current = 0; bit < sizeof(bits_order) / sizeof(VkShaderStageFlagBits); ++bit) {
-        if (flags & bits_order[bit]) {
-            uint32_t code_length;
-            char *code = s_read_shader(paths[current], &code_length);
-
-            VkShaderModuleCreateInfo shader_info = {};
-            shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            shader_info.codeSize = code_length;
-            shader_info.pCode = (uint32_t *)code;
-            vkCreateShaderModule(r_device(), &shader_info, NULL, &modules[current]);
-
-            infos[current].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            infos[current].pName = "main";
-            infos[current].stage = bits_order[bit];
-            infos[current].module = modules[current];
-
-            ++current;
-        }
-    }
-
-    free(modules);
-
-    return infos;
-}
-
-static void s_free_shader_stage_create_info(
-    VkPipelineShaderStageCreateInfo *info) {
-    free(info);
-}
-
-static VkPipelineColorBlendStateCreateInfo s_fill_blend_state_info(rpipeline_stage_t *stage) {
+VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(rpipeline_stage_t *stage) {
     VkPipelineColorBlendAttachmentState *attachment_states = FL_MALLOC(VkPipelineColorBlendAttachmentState, stage->color_attachment_count);
     memset(attachment_states, 0, sizeof(VkPipelineColorBlendAttachmentState) * stage->color_attachment_count);
     for (uint32_t attachment = 0; attachment < stage->color_attachment_count; ++attachment) {
@@ -363,9 +290,14 @@ static VkPipelineColorBlendStateCreateInfo s_fill_blend_state_info(rpipeline_sta
     return blend_info;
 }
 
-static void s_free_blend_state_info(VkPipelineColorBlendStateCreateInfo *info) {
+void r_free_blend_state_info(VkPipelineColorBlendStateCreateInfo *info) {
     free((void *)info->pAttachments);
 }
+
+struct rpipeline_shader_t {
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
+};
 
 static rpipeline_shader_t s_create_rendering_pipeline_shader(
     const char *vertex_shader_path,
@@ -373,7 +305,7 @@ static rpipeline_shader_t s_create_rendering_pipeline_shader(
     rpipeline_stage_t *stage,
     VkPipelineLayout layout) {
     const char *shaders[] = {vertex_shader_path, fragment_shader_path};
-    VkPipelineShaderStageCreateInfo *shader_infos = s_fill_shader_stage_create_infos(shaders, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    VkPipelineShaderStageCreateInfo *shader_infos = r_fill_shader_stage_create_infos(shaders, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
     /* Is all zero for rendering pipeline shaders */
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
@@ -410,7 +342,7 @@ static rpipeline_shader_t s_create_rendering_pipeline_shader(
     multisample_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisample_info.minSampleShading = 1.0f;
 
-    VkPipelineColorBlendStateCreateInfo blend_info = s_fill_blend_state_info(stage);
+    VkPipelineColorBlendStateCreateInfo blend_info = r_fill_blend_state_info(stage);
 
     VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT };
     
@@ -443,8 +375,8 @@ static rpipeline_shader_t s_create_rendering_pipeline_shader(
     VkPipeline pipeline;
     VK_CHECK(vkCreateGraphicsPipelines(r_device(), VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline));
 
-    //s_free_shader_stage_create_info(shader_infos);
-    //s_free_blend_state_info(&blend_info);
+    r_free_shader_stage_create_info(shader_infos);
+    r_free_blend_state_info(&blend_info);
 
     rpipeline_shader_t rendering_pipeline_shader = {};
     rendering_pipeline_shader.pipeline = pipeline;

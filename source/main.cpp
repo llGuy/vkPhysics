@@ -55,9 +55,28 @@ int main(int argc, char *argv[]) {
 
     renderer_init("vkPhysics", &s_create_vulkan_surface_proc, &s_imgui_test, window, (uint32_t)width, (uint32_t)height);
 
+    // Temporary stuff, just to test lighing
+    mesh_t sphere = {};
+    mesh_binding_info_t sphere_info = {};
+    
+    load_mesh_internal(
+        IM_SPHERE,
+        &sphere,
+        &sphere_info);
+
+    const char *paths[] = { "../shaders/SPV/mesh.vert.spv", "../shaders/SPV/mesh.frag.spv" };
+    mesh_shader_t sphere_shader = create_mesh_shader(
+        &sphere_info,
+        paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        create_mesh_shader_layout());
+
+    mesh_render_data_t render_data = {};
+    render_data.model = matrix4_t(1.0f);
+    
     double now = glfwGetTime();
     float dt = 0.0f;
-
+    
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -69,6 +88,8 @@ int main(int argc, char *argv[]) {
 
         begin_scene_rendering(command_buffer);
 
+        submit_mesh(command_buffer, &sphere, &sphere_shader, &render_data);
+        
         end_scene_rendering(command_buffer);
 
         end_frame();

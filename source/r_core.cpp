@@ -691,7 +691,7 @@ static void s_global_descriptor_layouts_init() {
     binding.binding = 0;
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     binding.descriptorCount = 1;
-    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    binding.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkDescriptorSetLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -1199,4 +1199,57 @@ VkDescriptorPool r_descriptor_pool() {
 
 VkRenderPass r_final_render_pass() {
     return final_render_pass;
+}
+
+static char *s_read_shader(
+    const char *path,
+    uint32_t *file_size) {
+    FILE *shader = fopen(path, "rb");
+    fseek(shader, 0L, SEEK_END);
+    *file_size = ftell(shader);
+    char *code = (char *)malloc(sizeof(char) * (*file_size));
+    rewind(shader);
+    fread(code, sizeof(char), *file_size, shader);
+    return code;
+}
+
+VkPipelineShaderStageCreateInfo *r_fill_shader_stage_create_infos(
+    const char **paths,
+    VkShaderStageFlags flags) {
+    uint32_t count = s_pop_count(flags);
+
+    VkShaderStageFlagBits bits_order[] = { VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_GEOMETRY_BIT, VK_SHADER_STAGE_FRAGMENT_BIT };
+
+    VkPipelineShaderStageCreateInfo *infos = FL_MALLOC(VkPipelineShaderStageCreateInfo, count);
+    memset(infos, 0, sizeof(VkPipelineShaderStageCreateInfo) * count);
+    VkShaderModule *modules = FL_MALLOC(VkShaderModule, count);
+    
+    for (uint32_t bit = 0, current = 0; bit < sizeof(bits_order) / sizeof(VkShaderStageFlagBits); ++bit) {
+        if (flags & bits_order[bit]) {
+            uint32_t code_length;
+            char *code = s_read_shader(paths[current], &code_length);
+
+            VkShaderModuleCreateInfo shader_info = {};
+            shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            shader_info.codeSize = code_length;
+            shader_info.pCode = (uint32_t *)code;
+            vkCreateShaderModule(r_device(), &shader_info, NULL, &modules[current]);
+
+            infos[current].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            infos[current].pName = "main";
+            infos[current].stage = bits_order[bit];
+            infos[current].module = modules[current];
+
+            ++current;
+        }
+    }
+
+    free(modules);
+
+    return infos;
+}
+
+void r_free_shader_stage_create_info(
+    VkPipelineShaderStageCreateInfo *info) {
+    free(info);
 }
