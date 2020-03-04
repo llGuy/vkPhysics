@@ -1001,7 +1001,7 @@ gpu_buffer_t create_gpu_buffer(
             1, &barrier,
             0, NULL);
 
-        vkCmdUpdateBuffer(command_buffer, gpu_buffer.buffer, 0, gpu_buffer.size, data);
+        vkCmdUpdateBuffer(command_buffer, buffer, 0, size, data);
 
         barrier = create_gpu_buffer_barrier(
             VK_PIPELINE_STAGE_TRANSFER_BIT,

@@ -220,6 +220,8 @@ static void s_create_mesh_vbo_final_list(mesh_t *mesh) {
     memset(mesh->vertex_buffers_offsets, 0, sizeof(VkDeviceSize) * vb_count);
 }
 
+#define MCHECK(index, max) if (index >= max) { printf("%d, %d", index, max); assert(0); }
+
 static void s_load_sphere(
     mesh_t *mesh,
     mesh_binding_info_t *binding_info) {
@@ -228,10 +230,10 @@ static void s_load_sphere(
     uint32_t segment_count_x = 64;
     uint32_t segment_count_y = 64;
 
-    vector3_t *positions = FL_MALLOC(vector3_t, segment_count_x * segment_count_y);
-    vector3_t *normals = FL_MALLOC(vector3_t, segment_count_x * segment_count_y);
-    vector2_t *uvs = FL_MALLOC(vector2_t, segment_count_x * segment_count_y);
-    uint32_t *indices = FL_MALLOC(uint32_t, segment_count_x * segment_count_y * 2);
+    vector3_t *positions = FL_MALLOC(vector3_t, segment_count_x * (segment_count_y + 1));
+    vector3_t *normals = FL_MALLOC(vector3_t, segment_count_x * (segment_count_y + 1));    
+    vector2_t *uvs = FL_MALLOC(vector2_t, segment_count_x * (segment_count_y + 1));
+    uint32_t *indices = FL_MALLOC(uint32_t, (segment_count_x + 1) * segment_count_y * 2);
 
     uint32_t counter = 0;
     for (uint32_t y = 0; y <= segment_count_y; ++y) {
@@ -280,21 +282,21 @@ static void s_load_sphere(
     push_buffer_to_mesh(BT_VERTEX, mesh);
     mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, mesh);
     vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(vector3_t) * segment_count_x * segment_count_y,
+        sizeof(vector3_t) * segment_count_x * (segment_count_y + 1),
         positions,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     push_buffer_to_mesh(BT_NORMAL, mesh);
     mesh_buffer_t *normal_gpu_buffer = get_mesh_buffer(BT_NORMAL, mesh);
     normal_gpu_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(vector3_t) * segment_count_x * segment_count_y,
+        sizeof(vector3_t) * segment_count_x * (segment_count_y + 1),
         normals,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     push_buffer_to_mesh(BT_UVS, mesh);
     mesh_buffer_t *uvs_gpu_buffer = get_mesh_buffer(BT_UVS, mesh);
     uvs_gpu_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(vector2_t) * segment_count_x * segment_count_y,
+        sizeof(vector2_t) * (segment_count_x + 1) * segment_count_y * 2,
         uvs,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
@@ -310,6 +312,11 @@ static void s_load_sphere(
     mesh->index_type = VK_INDEX_TYPE_UINT32;
 
     s_create_mesh_vbo_final_list(mesh);
+
+    free(positions);
+    free(normals);
+    free(uvs);
+    free(indices);
 }
 
 // TODO:
