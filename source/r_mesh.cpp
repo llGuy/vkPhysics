@@ -228,43 +228,6 @@ static void s_create_mesh_vbo_final_list(mesh_t *mesh) {
 
 #define MCHECK(index, max) if (index >= max) { printf("%d, %d", index, max); assert(0); }
 
-    /*    uint32_t counter = 0;
-              for (uint32_t y = 0; y <= segment_count_y; ++y) {
-              for (uint32_t x = 0; x <= segment_count_x; ++x) {
-              float segment_x = (float)x / (float)segment_count_x;
-          float segment_y = (float)y / (float)segment_count_y;
-          float x_position = cos(segment_x * 2.0f * PI) * sin(segment_y * PI);
-          float y_position = cos(segment_y * PI);
-          float z_position = sin(segment_x * 2.0f * PI) * sin(segment_y * PI);
-
-          positions[counter] = vector3_t(x_position, y_position, z_position);
-          normals[counter] = vector3_t(x_position, y_position, z_position);
-          uvs[counter] = vector2_t(segment_x, segment_y);
-
-          ++counter;
-          }
-          }
-
-          bool odd = 0;
-          counter = 0;
-
-          for (uint32_t y = 0; y < segment_count_y; ++y) {
-          if (!odd) {
-          for (int32_t x = 0; x <= (int32_t)segment_count_x; ++x) {
-          indices[counter++] = y * (segment_count_x + 1) + x;
-          indices[counter++] = (y + 1) * (segment_count_x + 1) + x;
-          }
-          }
-          else {
-          for (int32_t x = segment_count_x; x >= 0; --x) {
-          indices[counter++] = (y + 1) * (segment_count_x + 1) + x;
-          indices[counter++] = y * (segment_count_x + 1) + x;
-          }
-          }
-
-          odd = !odd;
-          }*/
-
 static void s_load_sphere(
     mesh_t *mesh,
     mesh_binding_info_t *binding_info) {
