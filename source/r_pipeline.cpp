@@ -450,7 +450,8 @@ void begin_scene_rendering(
     
     memset(clear_values, 0, sizeof(VkClearValue) * 4);
 
-    clear_values[0].color.float32[2] = 1;
+    clear_values[0].color.float32[1] = 1;
+    clear_values[3].depthStencil.depth = 1.0f;
 
     VkRect2D render_area = {};
     render_area.extent = r_swapchain_extent();

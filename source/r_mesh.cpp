@@ -85,9 +85,9 @@ mesh_binding_info_t create_mesh_binding_info(
 }
 
 // For the moment, just puts the camera info uniform buffer
-VkPipelineLayout create_mesh_shader_layout() {
+static VkPipelineLayout s_create_mesh_shader_layout(VkShaderStageFlags shader_flags) {
     VkPushConstantRange push_constant_range = {};
-    push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant_range.stageFlags = shader_flags;
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(mesh_render_data_t);
     VkDescriptorSetLayout uniform_buffer_layout = r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -107,21 +107,25 @@ VkPipelineLayout create_mesh_shader_layout() {
 mesh_shader_t create_mesh_shader(
     mesh_binding_info_t *binding_info,
     const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkPipelineLayout layout) {
+    VkShaderStageFlags shader_flags) {
+    VkPipelineLayout layout = s_create_mesh_shader_layout(shader_flags);
+    
     VkPipelineShaderStageCreateInfo *shader_infos = r_fill_shader_stage_create_infos(shader_paths, shader_flags);
 
     /* Is all zero for rendering pipeline shaders */
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_info.vertexBindingDescriptionCount = binding_info->binding_count;
-    vertex_input_info.pVertexBindingDescriptions = binding_info->binding_descriptions;
-    vertex_input_info.vertexAttributeDescriptionCount = binding_info->attribute_count;
-    vertex_input_info.pVertexAttributeDescriptions = binding_info->attribute_descriptions;
+    
+    if (binding_info) {
+        vertex_input_info.vertexBindingDescriptionCount = binding_info->binding_count;
+        vertex_input_info.pVertexBindingDescriptions = binding_info->binding_descriptions;
+        vertex_input_info.vertexAttributeDescriptionCount = binding_info->attribute_count;
+        vertex_input_info.pVertexAttributeDescriptions = binding_info->attribute_descriptions;
+    }
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
     input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
 
     VkViewport viewport = {};
     viewport.width = r_swapchain_extent().width;
@@ -166,7 +170,7 @@ mesh_shader_t create_mesh_shader(
     depth_stencil_info.depthWriteEnable = VK_TRUE;
     depth_stencil_info.depthCompareOp = VK_COMPARE_OP_LESS;
     depth_stencil_info.minDepthBounds = 0.0f;
-    depth_stencil_info.maxDepthBounds = 1.0f;    
+    depth_stencil_info.maxDepthBounds = 1.0f;
 
     VkGraphicsPipelineCreateInfo pipeline_info = {};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -209,11 +213,13 @@ static void s_create_mesh_vbo_final_list(mesh_t *mesh) {
 
     uint32_t counter = 0;
     for (uint32_t i = 0; i < mesh->buffer_count; ++i) {
-        if (mesh->buffers[i].type == BT_INDICES) {
-            mesh->index_buffer = mesh->buffers[i].gpu_buffer.buffer;
+        mesh_buffer_t *current_mesh_buffer = get_mesh_buffer(mesh->buffer_type_stack[i], mesh);
+        
+        if (current_mesh_buffer->type == BT_INDICES) {
+            mesh->index_buffer = current_mesh_buffer->gpu_buffer.buffer;
         }
         else {
-            mesh->vertex_buffers_final[counter++] = mesh->buffers[i].gpu_buffer.buffer;
+            mesh->vertex_buffers_final[counter++] = current_mesh_buffer->gpu_buffer.buffer;
         }
     }
 
@@ -222,81 +228,130 @@ static void s_create_mesh_vbo_final_list(mesh_t *mesh) {
 
 #define MCHECK(index, max) if (index >= max) { printf("%d, %d", index, max); assert(0); }
 
+    /*    uint32_t counter = 0;
+              for (uint32_t y = 0; y <= segment_count_y; ++y) {
+              for (uint32_t x = 0; x <= segment_count_x; ++x) {
+              float segment_x = (float)x / (float)segment_count_x;
+          float segment_y = (float)y / (float)segment_count_y;
+          float x_position = cos(segment_x * 2.0f * PI) * sin(segment_y * PI);
+          float y_position = cos(segment_y * PI);
+          float z_position = sin(segment_x * 2.0f * PI) * sin(segment_y * PI);
+
+          positions[counter] = vector3_t(x_position, y_position, z_position);
+          normals[counter] = vector3_t(x_position, y_position, z_position);
+          uvs[counter] = vector2_t(segment_x, segment_y);
+
+          ++counter;
+          }
+          }
+
+          bool odd = 0;
+          counter = 0;
+
+          for (uint32_t y = 0; y < segment_count_y; ++y) {
+          if (!odd) {
+          for (int32_t x = 0; x <= (int32_t)segment_count_x; ++x) {
+          indices[counter++] = y * (segment_count_x + 1) + x;
+          indices[counter++] = (y + 1) * (segment_count_x + 1) + x;
+          }
+          }
+          else {
+          for (int32_t x = segment_count_x; x >= 0; --x) {
+          indices[counter++] = (y + 1) * (segment_count_x + 1) + x;
+          indices[counter++] = y * (segment_count_x + 1) + x;
+          }
+          }
+
+          odd = !odd;
+          }*/
+
 static void s_load_sphere(
     mesh_t *mesh,
     mesh_binding_info_t *binding_info) {
     const float PI = 3.14159265359f;
-    
-    uint32_t segment_count_x = 64;
-    uint32_t segment_count_y = 64;
 
-    vector3_t *positions = FL_MALLOC(vector3_t, segment_count_x * (segment_count_y + 1));
-    vector3_t *normals = FL_MALLOC(vector3_t, segment_count_x * (segment_count_y + 1));    
-    vector2_t *uvs = FL_MALLOC(vector2_t, segment_count_x * (segment_count_y + 1));
-    uint32_t *indices = FL_MALLOC(uint32_t, (segment_count_x + 1) * segment_count_y * 2);
+    int32_t sector_count = 36;
+    int32_t stack_count = 36;
+    
+    uint32_t vertex_count = (sector_count + 1) * (stack_count + 1);
+    uint32_t index_count = sector_count * stack_count * 6;
+    
+    vector3_t *positions = FL_MALLOC(vector3_t, vertex_count);
+    vector3_t *normals = FL_MALLOC(vector3_t, vertex_count);
+    vector2_t *uvs = FL_MALLOC(vector2_t, vertex_count);
+    uint32_t *indices = FL_MALLOC(uint32_t, index_count);
+    
+    float sector_step = 2.0f * PI / sector_count;
+    float stack_step = PI / stack_count;
+    float sector_angle = 0;
+    float stack_angle = 0;
 
     uint32_t counter = 0;
-    for (uint32_t y = 0; y <= segment_count_y; ++y) {
-        for (uint32_t x = 0; x < segment_count_x; ++x) {
-            float segment_x = (float)x / (float)segment_count_x;
-            float segment_y = (float)y / (float)segment_count_y;
-            float x_position = cos(segment_x * 2.0f * PI) * sin(segment_y * PI);
-            float y_position = cos(segment_y);
-            float z_position = sin(segment_x * 2.0f * PI) * cos(segment_y * PI);
+    
+    for (int32_t i = 0; i <= stack_count; ++i) {
+        stack_angle = PI / 2.0f - i * stack_step;
+        float xy = cos(stack_angle);
+        float z = sin(stack_angle);
 
-            positions[counter] = vector3_t(x_position, y_position, z_position);
-            normals[counter] = vector3_t(x_position, y_position, z_position);
-            uvs[counter] = vector2_t(segment_x, segment_y);
+        for (int32_t j = 0; j <= sector_count; ++j) {
+            sector_angle = j * sector_step;
 
-            ++counter;
+            float x = xy * cos(sector_angle);
+            float y = xy * sin(sector_angle);
+
+            positions[counter] = vector3_t(x, y, z);
+            uvs[counter++] = vector2_t((float)j / (float)sector_count, (float)i / (float)stack_count);
         }
     }
 
-    bool odd = 0;
     counter = 0;
+    
+    for (int32_t i = 0; i < stack_count; ++i) {
+        int k1 = i * (sector_count + 1);
+        int k2 = k1 + sector_count + 1;
 
-    for (uint32_t y = 0; y < segment_count_y; ++y) {
-        if (!odd) {
-            for (int32_t x = 0; x <= (int32_t)segment_count_x; ++x) {
-                indices[counter++] = y * (segment_count_x + 1) + x;
-                indices[counter++] = (y + 1) * (segment_count_x + 1) + x;
+        for (int32_t j = 0; j < sector_count; ++j, ++k1, ++k2) {
+            if (i != 0) {
+                indices[counter++] = k1;
+                indices[counter++] = k2;
+                indices[counter++] = k1 + 1;
+            }
+
+            if (i != (stack_count - 1)) {
+                indices[counter++] = k1 + 1;
+                indices[counter++] = k2;
+                indices[counter++] = k2 + 1;
             }
         }
-        else {
-            for (int32_t x = segment_count_x; x >= 0; --x) {
-                indices[counter++] = (y + 1) * (segment_count_x + 1) + x;
-                indices[counter++] = y * (segment_count_x + 1) + x;
-            }
-        }
-
-        odd ^= 1;
     }
+
+    index_count = counter;
 
     push_buffer_to_mesh(BT_INDICES, mesh);
     mesh_buffer_t *indices_gpu_buffer = get_mesh_buffer(BT_INDICES, mesh);
     indices_gpu_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(uint32_t) * segment_count_x * segment_count_y,
+        sizeof(uint32_t) * index_count,
         indices,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
     push_buffer_to_mesh(BT_VERTEX, mesh);
     mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, mesh);
     vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(vector3_t) * segment_count_x * (segment_count_y + 1),
+        sizeof(vector3_t) * vertex_count,
         positions,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
-    push_buffer_to_mesh(BT_NORMAL, mesh);
-    mesh_buffer_t *normal_gpu_buffer = get_mesh_buffer(BT_NORMAL, mesh);
-    normal_gpu_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(vector3_t) * segment_count_x * (segment_count_y + 1),
-        normals,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    /*push_buffer_to_mesh(BT_NORMAL, mesh);
+      mesh_buffer_t *normal_gpu_buffer = get_mesh_buffer(BT_NORMAL, mesh);
+      normal_gpu_buffer->gpu_buffer = create_gpu_buffer(
+      sizeof(vector3_t) * vertex_count,
+      normals,
+      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);*/
 
     push_buffer_to_mesh(BT_UVS, mesh);
     mesh_buffer_t *uvs_gpu_buffer = get_mesh_buffer(BT_UVS, mesh);
     uvs_gpu_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(vector2_t) * (segment_count_x + 1) * segment_count_y * 2,
+        sizeof(vector2_t) * vertex_count,
         uvs,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
@@ -305,10 +360,10 @@ static void s_load_sphere(
     }
 
     mesh->vertex_offset = 0;
-    mesh->vertex_count = segment_count_x *segment_count_y;
+    mesh->vertex_count = vertex_count;
     mesh->first_index = 0;
     mesh->index_offset = 0;
-    mesh->index_count = segment_count_x * segment_count_y * 2;
+    mesh->index_count = index_count;
     mesh->index_type = VK_INDEX_TYPE_UINT32;
 
     s_create_mesh_vbo_final_list(mesh);

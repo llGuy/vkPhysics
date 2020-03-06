@@ -188,10 +188,7 @@ struct mesh_render_data_t {
 mesh_shader_t create_mesh_shader(
     mesh_binding_info_t *binding_info,
     const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkPipelineLayout layout);
-
-VkPipelineLayout create_mesh_shader_layout();
+    VkShaderStageFlags shader_flags);
 
 mesh_binding_info_t create_mesh_binding_info(
     mesh_t *mesh);

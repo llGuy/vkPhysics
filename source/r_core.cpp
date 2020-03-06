@@ -691,7 +691,7 @@ static void s_global_descriptor_layouts_init() {
     binding.binding = 0;
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     binding.descriptorCount = 1;
-    binding.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkDescriptorSetLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -785,15 +785,15 @@ void end_frame() {
 
     r_execute_final_pass(primary_command_buffers[image_index]);
 
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
+    /*ImGui_ImplVulkan_NewFrame();
+      ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
     imgui_proc();
 
     ImGui::Render();
 
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);*/
 
     vkCmdEndRenderPass(primary_command_buffers[image_index]);
 
@@ -983,6 +983,34 @@ gpu_buffer_t create_gpu_buffer(
     gpu_buffer.size = (VkDeviceSize)size;
 
     if (data) {
+        // Create staging buffer
+        VkBufferCreateInfo staging_buffer_info = {};
+        staging_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        staging_buffer_info.size = size;
+        staging_buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        staging_buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        VkBuffer staging_buffer;
+        vkCreateBuffer(r_device(), &staging_buffer_info, NULL, &staging_buffer);
+
+        VkDeviceMemory staging_memory = allocate_gpu_buffer_memory(
+            staging_buffer,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        void *staging_map;
+        vkMapMemory(r_device(), staging_memory, 0, size, 0, &staging_map);
+
+        memcpy(staging_map, data, size);
+
+        VkMappedMemoryRange range = {};
+        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        range.memory = staging_memory;
+        range.offset = 0;
+        range.size = size;
+        vkFlushMappedMemoryRanges(r_device(), 1, &range);
+
+        vkUnmapMemory(r_device(), staging_memory);
+        
         VkCommandBuffer command_buffer = begin_single_time_command_buffer();
         
         VkBufferMemoryBarrier barrier = create_gpu_buffer_barrier(
@@ -1001,7 +1029,9 @@ gpu_buffer_t create_gpu_buffer(
             1, &barrier,
             0, NULL);
 
-        vkCmdUpdateBuffer(command_buffer, buffer, 0, size, data);
+        VkBufferCopy copy_region = {};
+        copy_region.size = size;
+        vkCmdCopyBuffer(command_buffer, staging_buffer, gpu_buffer.buffer, 1, &copy_region);
 
         barrier = create_gpu_buffer_barrier(
             VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -1020,6 +1050,9 @@ gpu_buffer_t create_gpu_buffer(
             0, NULL);
 
         end_single_time_command_buffer(command_buffer);
+
+        vkFreeMemory(r_device(), staging_memory, NULL);
+        vkDestroyBuffer(r_device(), staging_buffer, NULL);
     }
 
     return gpu_buffer;

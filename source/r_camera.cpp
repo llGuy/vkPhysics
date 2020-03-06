@@ -40,6 +40,7 @@ void r_camera_init(void *window) {
 
     VkExtent2D extent = r_swapchain_extent();
     transforms.projection = glm::perspective(camera_data.fov, (float)extent.width / (float)extent.height, 0.1f, 100.0f);
+    transforms.projection[1][1] *= -1.0f;
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
     transforms.view_projection = transforms.projection * transforms.view;
     
@@ -134,7 +135,7 @@ void r_camera_handle_input(float dt, void *window) {
     vector2_t new_mouse_position = vector2_t((float)x, (float)y);
     vector2_t delta = new_mouse_position - camera_data.mouse_position;
     
-    static constexpr float SENSITIVITY = 15.0f;
+    static constexpr float SENSITIVITY = 40.0f;
     
     vector3_t res = camera_data.direction;
 	    

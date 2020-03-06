@@ -9,6 +9,7 @@
 .debug
 TAGS
 build
+imgui.ini
 
 Makefile
 

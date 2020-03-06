@@ -50,6 +50,8 @@ int main(int argc, char *argv[]) {
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     GLFWwindow *window = glfwCreateWindow(vidmode->width / 2, vidmode->height / 2, "vkPhysics", NULL, NULL);
 
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
     int32_t width, height;
     glfwGetFramebufferSize(window, &width, &height);
 
@@ -68,8 +70,7 @@ int main(int argc, char *argv[]) {
     mesh_shader_t sphere_shader = create_mesh_shader(
         &sphere_info,
         paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        create_mesh_shader_layout());
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
     mesh_render_data_t render_data = {};
     render_data.model = matrix4_t(1.0f);
