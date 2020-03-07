@@ -233,8 +233,8 @@ static void s_load_sphere(
     mesh_binding_info_t *binding_info) {
     const float PI = 3.14159265359f;
 
-    int32_t sector_count = 36;
-    int32_t stack_count = 36;
+    int32_t sector_count = 64;
+    int32_t stack_count = 64;
     
     uint32_t vertex_count = (sector_count + 1) * (stack_count + 1);
     uint32_t index_count = sector_count * stack_count * 6;

@@ -39,3 +39,53 @@ void r_lighting_init() {
         sizeof(lighting_data_t),
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 }
+
+void r_update_lighting() {
+    gpu_camera_transforms_t *transforms = r_gpu_camera_data();
+    
+    lighting_data.light_positions[0] = transforms->view * vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
+    lighting_data.light_positions[1] = transforms->view * vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
+    lighting_data.light_positions[2] = transforms->view * vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
+    lighting_data.light_positions[3] = transforms->view * vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
+}
+
+void r_lighting_gpu_sync(VkCommandBuffer command_buffer) {
+    VkBufferMemoryBarrier barrier = create_gpu_buffer_barrier(
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        &light_uniform_buffer,
+        0,
+        sizeof(lighting_data_t));
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        0, NULL,
+        1, &barrier,
+        0, NULL);
+
+    vkCmdUpdateBuffer(
+        command_buffer,
+        light_uniform_buffer.buffer,
+        0,
+        sizeof(lighting_data_t),
+        &lighting_data);
+
+    barrier = create_gpu_buffer_barrier(
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+        &light_uniform_buffer,
+        0,
+        sizeof(lighting_data_t));
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+        0,
+        0, NULL,
+        1, &barrier,
+        0, NULL);
+}

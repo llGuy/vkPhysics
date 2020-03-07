@@ -17,10 +17,17 @@ static void s_create_vulkan_surface_proc(struct VkInstance_T *instance, struct V
     }
 }
 
+// TODO: Temporary - until engine is implemented
+#include "r_internal.hpp"
+
 static void s_imgui_test() {
     ImGui::Begin("General");
 
     ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+
+    cpu_camera_data_t *camera_data = r_cpu_camera_data();
+
+    ImGui::Text("Position: %.1f %.1f %.1f", camera_data->position.x, camera_data->position.y, camera_data->position.z);
 
     /*static float rotation = 0.0;
     ImGui::SliderFloat("rotation", &rotation, 0.0f, 2.0f * 3.1415f);
@@ -37,9 +44,6 @@ static void s_imgui_test() {
 
     ImGui::End();
 }
-
-// TODO: Temporary - until engine is implemented
-#include "r_internal.hpp"
 
 int main(int argc, char *argv[]) {
     if (!glfwInit()) {
@@ -85,10 +89,13 @@ int main(int argc, char *argv[]) {
         glfwPollEvents();
 
         r_camera_handle_input(dt, window);
+ 
+        r_update_lighting();
         
         VkCommandBuffer command_buffer = begin_frame();
 
         r_camera_gpu_sync(command_buffer);
+        r_lighting_gpu_sync(command_buffer);
 
         begin_scene_rendering(command_buffer);
 
@@ -102,7 +109,7 @@ int main(int argc, char *argv[]) {
                 vector3_t ws_position = vector3_t(xy, 0.0f);
 
                 render_data.model = glm::translate(ws_position);
-                render_data.pbr_info.x = (float)x / 7.0f;
+                render_data.pbr_info.x = glm::clamp((float)x / 7.0f, 0.05f, 1.0f);
                 render_data.pbr_info.y = (float)y / 7.0f;
                 
                 submit_mesh(command_buffer, &sphere, &sphere_shader, &render_data);

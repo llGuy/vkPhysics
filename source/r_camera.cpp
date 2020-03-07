@@ -12,19 +12,14 @@ VkDescriptorSet r_camera_transforms_uniform() {
     return descriptor_set;
 }
 
-struct cpu_camera_data_t {
-    vector3_t position;
-    vector3_t direction;
-    vector3_t up;
-    vector2_t mouse_position;
-    float fov;
-    float near, far;
-};
-
 static cpu_camera_data_t camera_data;
 
 gpu_camera_transforms_t *r_gpu_camera_data() {
     return &transforms;
+}
+
+cpu_camera_data_t *r_cpu_camera_data() {
+    return &camera_data;
 }
 
 void r_camera_init(void *window) {
@@ -46,6 +41,7 @@ void r_camera_init(void *window) {
     transforms.view_projection = transforms.projection * transforms.view;
     transforms.frustum.x = camera_data.near;
     transforms.frustum.y = camera_data.far;
+    transforms.view_direction = vector4_t(camera_data.direction, 1.0f);
     
     transforms_uniform_buffer = create_gpu_buffer(
         sizeof(gpu_camera_transforms_t),
@@ -155,6 +151,8 @@ void r_camera_handle_input(float dt, void *window) {
         res = glm::normalize(res);
                 
         camera_data.direction = res;
+
+        transforms.view_direction = vector4_t(camera_data.direction, 1.0f);
 
         camera_data.mouse_position = new_mouse_position;
     }

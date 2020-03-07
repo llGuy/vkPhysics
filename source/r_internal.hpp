@@ -79,14 +79,29 @@ rpipeline_stage_t *r_deferred_stage();
 
 void r_lighting_init();
 
+void r_update_lighting();
+
+void r_lighting_gpu_sync(VkCommandBuffer command_buffer);
+
 struct gpu_camera_transforms_t {
     matrix4_t projection;
     matrix4_t view;
     matrix4_t view_projection;
     vector4_t frustum;
+    vector4_t view_direction;
+};
+
+struct cpu_camera_data_t {
+    vector3_t position;
+    vector3_t direction;
+    vector3_t up;
+    vector2_t mouse_position;
+    float fov;
+    float near, far;
 };
 
 gpu_camera_transforms_t *r_gpu_camera_data();
+cpu_camera_data_t *r_cpu_camera_data();
 
 /* Uniform access */
 VkDescriptorSet r_camera_transforms_uniform();
