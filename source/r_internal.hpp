@@ -31,7 +31,8 @@ void r_execute_final_pass(
     VkCommandBuffer command_buffer);
 
 VkDescriptorSetLayout r_descriptor_layout(
-    VkDescriptorType type);
+    VkDescriptorType type,
+    uint32_t count);
 
 VkDescriptorPool r_descriptor_pool();
 
@@ -66,6 +67,9 @@ struct rpipeline_stage_t {
     attachment_t *color_attachments;
     
     attachment_t *depth_attachment;
+
+    uint32_t binding_count;
+    VkDescriptorSet descriptor_set;
 };
 
 VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(
@@ -73,4 +77,17 @@ VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(
 
 rpipeline_stage_t *r_deferred_stage();
 
+void r_lighting_init();
+
+struct gpu_camera_transforms_t {
+    matrix4_t projection;
+    matrix4_t view;
+    matrix4_t view_projection;
+    vector4_t frustum;
+};
+
+gpu_camera_transforms_t *r_gpu_camera_data();
+
+/* Uniform access */
 VkDescriptorSet r_camera_transforms_uniform();
+VkDescriptorSet r_lighting_uniform();

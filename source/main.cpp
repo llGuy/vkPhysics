@@ -20,7 +20,9 @@ static void s_create_vulkan_surface_proc(struct VkInstance_T *instance, struct V
 static void s_imgui_test() {
     ImGui::Begin("General");
 
-    static float rotation = 0.0;
+    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+
+    /*static float rotation = 0.0;
     ImGui::SliderFloat("rotation", &rotation, 0.0f, 2.0f * 3.1415f);
     static float translation[] = { 0.0f, 0.0f };
     ImGui::SliderFloat2("position", translation, -1.0f, 1.0f);
@@ -31,7 +33,7 @@ static void s_imgui_test() {
         printf("Pressed save\n");
     }
     char buffer[100] = {};
-    ImGui::InputText("string", buffer, IM_ARRAYSIZE(buffer));
+    ImGui::InputText("string", buffer, IM_ARRAYSIZE(buffer));*/
 
     ImGui::End();
 }
@@ -49,8 +51,6 @@ int main(int argc, char *argv[]) {
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     GLFWwindow *window = glfwCreateWindow(vidmode->width / 2, vidmode->height / 2, "vkPhysics", NULL, NULL);
-
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     int32_t width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -74,6 +74,9 @@ int main(int argc, char *argv[]) {
 
     mesh_render_data_t render_data = {};
     render_data.model = matrix4_t(1.0f);
+    render_data.color = vector4_t(0.5f, 0.0f ,0.0f, 1.0f);
+    render_data.pbr_info.x = 0.2f;
+    render_data.pbr_info.y = 0.8;
     
     double now = glfwGetTime();
     float dt = 0.0f;
@@ -89,7 +92,23 @@ int main(int argc, char *argv[]) {
 
         begin_scene_rendering(command_buffer);
 
-        submit_mesh(command_buffer, &sphere, &sphere_shader, &render_data);
+        for (uint32_t x = 0; x < 7; ++x) {
+            for (uint32_t y = 0; y < 7; ++y) {
+                vector2_t xy = vector2_t((float)x, (float)y);
+
+                xy -= vector2_t(3.5f);
+                xy *= 3.0f;
+
+                vector3_t ws_position = vector3_t(xy, 0.0f);
+
+                render_data.model = glm::translate(ws_position);
+                render_data.pbr_info.x = (float)x / 7.0f;
+                render_data.pbr_info.y = (float)y / 7.0f;
+                
+                submit_mesh(command_buffer, &sphere, &sphere_shader, &render_data);
+            }
+        }
+
         
         end_scene_rendering(command_buffer);
 

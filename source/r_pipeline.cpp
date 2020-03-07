@@ -87,7 +87,7 @@ static attachment_t s_create_depth_attachment(
     image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_info.mipLevels = 1;
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -110,10 +110,27 @@ static attachment_t s_create_depth_attachment(
     VkImageView image_view;
     VK_CHECK(vkCreateImageView(r_device(), &image_view_info, NULL, &image_view));
 
+    VkSampler sampler;
+    VkSamplerCreateInfo sampler_info = {};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = 16;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    
+    VK_CHECK(vkCreateSampler(r_device(), &sampler_info, NULL, &sampler));
+
     attachment_t attachment;
     attachment.image = image;
     attachment.image_view = image_view;
     attachment.image_memory = memory;
+    attachment.sampler = sampler;
     attachment.format = r_depth_format();
 
     return attachment;
@@ -179,6 +196,34 @@ static VkFramebuffer s_2d_framebuffer_init(
     return framebuffer;
 }
 
+static void s_rpipeline_descriptor_set_output_init(
+    rpipeline_stage_t *stage) {
+    VkImageView *views = ALLOCA(VkImageView, stage->color_attachment_count + 1);
+    VkSampler *samplers = ALLOCA(VkSampler, stage->color_attachment_count + 1);
+    
+    uint32_t binding_count = 0;
+
+    for (; binding_count < stage->color_attachment_count; ++binding_count) {
+        views[binding_count] = stage->color_attachments[binding_count].image_view;
+        samplers[binding_count] = stage->color_attachments[binding_count].sampler;
+    }
+
+    if (stage->depth_attachment) {
+        views[binding_count] = stage->color_attachments[binding_count].image_view;
+        samplers[binding_count] = stage->color_attachments[binding_count].sampler;
+        
+        ++binding_count;
+    }
+
+    stage->binding_count = binding_count;
+
+    stage->descriptor_set = create_image_descriptor_set(
+        views,
+        samplers,
+        binding_count,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+}
+
 static void s_deferred_init() {
     deferred.color_attachment_count = 3;
     deferred.color_attachments = FL_MALLOC(attachment_t, deferred.color_attachment_count + 1);
@@ -202,7 +247,7 @@ static void s_deferred_init() {
         attachment_descriptions[i] = s_fill_color_attachment_description(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_FORMAT_R16G16B16A16_SFLOAT);
     }
 
-    attachment_descriptions[deferred.color_attachment_count] = s_fill_depth_attachment_description(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    attachment_descriptions[deferred.color_attachment_count] = s_fill_depth_attachment_description(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     VkAttachmentReference *attachment_references = FL_MALLOC(VkAttachmentReference, deferred.color_attachment_count + 1);
     for (uint32_t i = 0; i < deferred.color_attachment_count; ++i) {
@@ -253,6 +298,8 @@ static void s_deferred_init() {
         deferred.depth_attachment,
         deferred.render_pass,
         swapchain_extent);
+
+    s_rpipeline_descriptor_set_output_init(&deferred);
 }
 
 VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(rpipeline_stage_t *stage) {
@@ -387,7 +434,6 @@ static rpipeline_shader_t s_create_rendering_pipeline_shader(
 
 static rpipeline_stage_t final_stage;
 static rpipeline_shader_t final_shader;
-static VkDescriptorSet final_input;
 
 static void s_final_init() {
     final_stage.color_attachment_count = 1;
@@ -396,11 +442,16 @@ static void s_final_init() {
     final_stage.depth_attachment = NULL;
     final_stage.render_pass = r_final_render_pass();
     
-    VkDescriptorSetLayout sampler_layout = r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    VkDescriptorSetLayout input_layouts[] = {
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, deferred.binding_count),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
+    };
+    
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &sampler_layout;
+    pipeline_layout_info.setLayoutCount = sizeof(input_layouts) / sizeof(VkDescriptorSetLayout);
+    pipeline_layout_info.pSetLayouts = input_layouts;
     VkPipelineLayout pipeline_layout;
     vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
     
@@ -409,11 +460,6 @@ static void s_final_init() {
         "../shaders/SPV/final.frag.spv",
         &final_stage,
         pipeline_layout);
-
-    final_input = create_image_descriptor_set(
-        deferred.color_attachments[0].image_view,
-        deferred.color_attachments[0].sampler,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 }
 
 void r_execute_final_pass(
@@ -426,13 +472,21 @@ void r_execute_final_pass(
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, final_shader.pipeline);
 
+    VkDescriptorSet inputs[] = {
+        deferred.descriptor_set,
+        /* Contains lighting information */
+        r_lighting_uniform(),
+        /* Contains camera information */
+        r_camera_transforms_uniform()
+    };
+    
     vkCmdBindDescriptorSets(
         command_buffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         final_shader.layout,
         0,
-        1,
-        &final_input,
+        sizeof(inputs) / sizeof(VkDescriptorSet),
+        inputs,
         0,
         NULL);
 
@@ -450,7 +504,6 @@ void begin_scene_rendering(
     
     memset(clear_values, 0, sizeof(VkClearValue) * 4);
 
-    clear_values[0].color.float32[1] = 1;
     clear_values[3].depthStencil.depth = 1.0f;
 
     VkRect2D render_area = {};

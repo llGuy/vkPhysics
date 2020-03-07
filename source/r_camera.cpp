@@ -4,12 +4,6 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 
-struct gpu_camera_transforms_t {
-    matrix4_t projection;
-    matrix4_t view;
-    matrix4_t view_projection;
-};
-
 static gpu_buffer_t transforms_uniform_buffer;
 static VkDescriptorSet descriptor_set;
 static gpu_camera_transforms_t transforms;
@@ -24,25 +18,34 @@ struct cpu_camera_data_t {
     vector3_t up;
     vector2_t mouse_position;
     float fov;
+    float near, far;
 };
 
 static cpu_camera_data_t camera_data;
+
+gpu_camera_transforms_t *r_gpu_camera_data() {
+    return &transforms;
+}
 
 void r_camera_init(void *window) {
     camera_data.position = vector3_t(0.0f);
     camera_data.direction = vector3_t(1.0f, 0.0, 0.0f);
     camera_data.up = vector3_t(0.0f, 1.0f, 0.0f);
     camera_data.fov = glm::radians(60.0f);
+    camera_data.near = 0.1f;
+    camera_data.far = 100.0f;
     
     double x, y;
     glfwGetCursorPos((GLFWwindow *)window, &x, &y);
     camera_data.mouse_position = vector2_t((float)x, (float)y);
 
     VkExtent2D extent = r_swapchain_extent();
-    transforms.projection = glm::perspective(camera_data.fov, (float)extent.width / (float)extent.height, 0.1f, 100.0f);
+    transforms.projection = glm::perspective(camera_data.fov, (float)extent.width / (float)extent.height, camera_data.near, camera_data.far);
     transforms.projection[1][1] *= -1.0f;
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
     transforms.view_projection = transforms.projection * transforms.view;
+    transforms.frustum.x = camera_data.near;
+    transforms.frustum.y = camera_data.far;
     
     transforms_uniform_buffer = create_gpu_buffer(
         sizeof(gpu_camera_transforms_t),
@@ -104,51 +107,63 @@ void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
 void r_camera_handle_input(float dt, void *window) {
     GLFWwindow *glfw_window = (GLFWwindow *)window;
 
-    vector3_t right = glm::normalize(glm::cross(camera_data.direction, camera_data.up));
-    
-    if (glfwGetKey(glfw_window, GLFW_KEY_W)) {
-        camera_data.position += camera_data.direction * dt * 10.0f;
-    }
-    
-    if (glfwGetKey(glfw_window, GLFW_KEY_A)) {
-        camera_data.position -= right * dt * 10.0f;
-    }
-    
-    if (glfwGetKey(glfw_window, GLFW_KEY_S)) {
-        camera_data.position -= camera_data.direction * dt * 10.0f;
-    }
-    
-    if (glfwGetKey(glfw_window, GLFW_KEY_D)) {
-        camera_data.position += right * dt * 10.0f;
-    }
+    if (glfwGetMouseButton(glfw_window, GLFW_MOUSE_BUTTON_MIDDLE)) {
+        glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    if (glfwGetKey(glfw_window, GLFW_KEY_SPACE)) {
-        camera_data.position += camera_data.up * dt * 10.0f;
-    }
-
-    if (glfwGetKey(glfw_window, GLFW_KEY_LEFT_SHIFT)) {
-        camera_data.position -= camera_data.up * dt * 10.0f;
-    }
-
-    double x, y;
-    glfwGetCursorPos((GLFWwindow *)window, &x, &y);
-    vector2_t new_mouse_position = vector2_t((float)x, (float)y);
-    vector2_t delta = new_mouse_position - camera_data.mouse_position;
+        vector3_t right = glm::normalize(glm::cross(camera_data.direction, camera_data.up));
     
-    static constexpr float SENSITIVITY = 40.0f;
+        if (glfwGetKey(glfw_window, GLFW_KEY_W)) {
+            camera_data.position += camera_data.direction * dt * 10.0f;
+        }
     
-    vector3_t res = camera_data.direction;
+        if (glfwGetKey(glfw_window, GLFW_KEY_A)) {
+            camera_data.position -= right * dt * 10.0f;
+        }
+    
+        if (glfwGetKey(glfw_window, GLFW_KEY_S)) {
+            camera_data.position -= camera_data.direction * dt * 10.0f;
+        }
+    
+        if (glfwGetKey(glfw_window, GLFW_KEY_D)) {
+            camera_data.position += right * dt * 10.0f;
+        }
+
+        if (glfwGetKey(glfw_window, GLFW_KEY_SPACE)) {
+            camera_data.position += camera_data.up * dt * 10.0f;
+        }
+
+        if (glfwGetKey(glfw_window, GLFW_KEY_LEFT_SHIFT)) {
+            camera_data.position -= camera_data.up * dt * 10.0f;
+        }
+
+        double x, y;
+        glfwGetCursorPos((GLFWwindow *)window, &x, &y);
+        vector2_t new_mouse_position = vector2_t((float)x, (float)y);
+        vector2_t delta = new_mouse_position - camera_data.mouse_position;
+    
+        static constexpr float SENSITIVITY = 40.0f;
+    
+        vector3_t res = camera_data.direction;
 	    
-    float x_angle = glm::radians(-delta.x) * SENSITIVITY * dt;// *elapsed;
-    float y_angle = glm::radians(-delta.y) * SENSITIVITY * dt;// *elapsed;
+        float x_angle = glm::radians(-delta.x) * SENSITIVITY * dt;// *elapsed;
+        float y_angle = glm::radians(-delta.y) * SENSITIVITY * dt;// *elapsed;
                 
-    res = matrix3_t(glm::rotate(x_angle, camera_data.up)) * res;
-    vector3_t rotate_y = glm::cross(res, camera_data.up);
-    res = matrix3_t(glm::rotate(y_angle, rotate_y)) * res;
+        res = matrix3_t(glm::rotate(x_angle, camera_data.up)) * res;
+        vector3_t rotate_y = glm::cross(res, camera_data.up);
+        res = matrix3_t(glm::rotate(y_angle, rotate_y)) * res;
 
-    res = glm::normalize(res);
+        res = glm::normalize(res);
                 
-    camera_data.direction = res;
+        camera_data.direction = res;
 
-    camera_data.mouse_position = new_mouse_position;
+        camera_data.mouse_position = new_mouse_position;
+    }
+    else {
+        glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+        double x, y;
+        glfwGetCursorPos((GLFWwindow *)window, &x, &y);
+        vector2_t new_mouse_position = vector2_t((float)x, (float)y);
+        camera_data.mouse_position = new_mouse_position;
+    }
 }

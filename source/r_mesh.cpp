@@ -90,7 +90,7 @@ static VkPipelineLayout s_create_mesh_shader_layout(VkShaderStageFlags shader_fl
     push_constant_range.stageFlags = shader_flags;
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(mesh_render_data_t);
-    VkDescriptorSetLayout uniform_buffer_layout = r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    VkDescriptorSetLayout uniform_buffer_layout = r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = 1;
@@ -125,7 +125,7 @@ mesh_shader_t create_mesh_shader(
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
     input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+    input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkViewport viewport = {};
     viewport.width = r_swapchain_extent().width;
@@ -262,7 +262,7 @@ static void s_load_sphere(
             float x = xy * cos(sector_angle);
             float y = xy * sin(sector_angle);
 
-            positions[counter] = vector3_t(x, y, z);
+            positions[counter] = vector3_t(x, z, y);
             uvs[counter++] = vector2_t((float)j / (float)sector_count, (float)i / (float)stack_count);
         }
     }
@@ -303,13 +303,6 @@ static void s_load_sphere(
         sizeof(vector3_t) * vertex_count,
         positions,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-
-    /*push_buffer_to_mesh(BT_NORMAL, mesh);
-      mesh_buffer_t *normal_gpu_buffer = get_mesh_buffer(BT_NORMAL, mesh);
-      normal_gpu_buffer->gpu_buffer = create_gpu_buffer(
-      sizeof(vector3_t) * vertex_count,
-      normals,
-      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);*/
 
     push_buffer_to_mesh(BT_UVS, mesh);
     mesh_buffer_t *uvs_gpu_buffer = get_mesh_buffer(BT_UVS, mesh);

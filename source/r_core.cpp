@@ -678,15 +678,19 @@ static void s_imgui_init(void *vwindow, imgui_proc_t proc) {
     end_single_time_command_buffer(command_buffer);
 }
 
+#define MAX_DESCRIPTOR_SET_LAYOUTS_PER_TYPE 5
+
 struct descriptor_layouts_t {
-    VkDescriptorSetLayout sampler;
-    VkDescriptorSetLayout input_attachment;
-    VkDescriptorSetLayout uniform_buffer;
+    VkDescriptorSetLayout sampler[MAX_DESCRIPTOR_SET_LAYOUTS_PER_TYPE];
+    VkDescriptorSetLayout input_attachment[MAX_DESCRIPTOR_SET_LAYOUTS_PER_TYPE];
+    VkDescriptorSetLayout uniform_buffer[MAX_DESCRIPTOR_SET_LAYOUTS_PER_TYPE];
 };
 
 static descriptor_layouts_t descriptor_layouts;
 
 static void s_global_descriptor_layouts_init() {
+    memset(&descriptor_layouts, 0, sizeof(descriptor_layouts));
+    
     VkDescriptorSetLayoutBinding binding = {};
     binding.binding = 0;
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -698,15 +702,15 @@ static void s_global_descriptor_layouts_init() {
     layout_info.bindingCount = 1;
     layout_info.pBindings = &binding;
 
-    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.sampler));
+    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.sampler[0]));
 
     binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
     
-    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.input_attachment));
+    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.input_attachment[0]));
 
     binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     
-    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.uniform_buffer));
+    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.uniform_buffer[0]));
 }
 
 void renderer_init(
@@ -727,8 +731,11 @@ void renderer_init(
     s_descriptor_pool_init();
     s_final_render_pass_init();
     s_global_descriptor_layouts_init();
+    
     r_camera_init(window);
+    r_lighting_init();
     r_pipeline_init();
+    
     s_imgui_init(window, debug_proc);
 }
 
@@ -780,24 +787,22 @@ void end_frame() {
     render_pass_begin_info.renderArea = render_area;
     render_pass_begin_info.clearValueCount = 1;
     render_pass_begin_info.pClearValues = &clear_value;
-
+    
     vkCmdBeginRenderPass(primary_command_buffers[image_index], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
     r_execute_final_pass(primary_command_buffers[image_index]);
 
-    /*ImGui_ImplVulkan_NewFrame();
-      ImGui_ImplGlfw_NewFrame();
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
     imgui_proc();
 
     ImGui::Render();
 
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);*/
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
 
     vkCmdEndRenderPass(primary_command_buffers[image_index]);
-
-
 
     end_command_buffer(primary_command_buffers[image_index]);
 
@@ -1139,16 +1144,79 @@ VkFormat r_depth_format() {
     return suitable_hardware_depth_format;
 }
 
-VkDescriptorSetLayout r_descriptor_layout(VkDescriptorType type) {
+VkDescriptorSetLayout r_descriptor_layout(
+    VkDescriptorType type,
+    uint32_t count) {
+    if (count > MAX_DESCRIPTOR_SET_LAYOUTS_PER_TYPE) {
+        printf("Descriptor count for layout is too high\n");
+        exit(1);
+        return VK_NULL_HANDLE;
+    }
+    
     switch (type) {
     case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
-        return descriptor_layouts.sampler;
+        if (descriptor_layouts.sampler[count - 1] == VK_NULL_HANDLE) {
+            VkDescriptorSetLayoutBinding *bindings = ALLOCA(VkDescriptorSetLayoutBinding, count);
+            memset(bindings, 0, sizeof(VkDescriptorSetLayoutBinding) * count);
+
+            for (uint32_t i = 0; i < count; ++i) {
+                bindings[i].binding = i;
+                bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                bindings[i].descriptorCount = 1;
+                bindings[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            }
+
+            VkDescriptorSetLayoutCreateInfo layout_info = {};
+            layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layout_info.bindingCount = count;
+            layout_info.pBindings = bindings;
+
+            VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.sampler[count - 1]));
+        }
+
+        return descriptor_layouts.sampler[count - 1];
     }
     case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
-        return descriptor_layouts.input_attachment;
+        if (descriptor_layouts.sampler[count - 1] == VK_NULL_HANDLE) {
+            VkDescriptorSetLayoutBinding *bindings = ALLOCA(VkDescriptorSetLayoutBinding, count);
+
+            for (uint32_t i = 0; i < count; ++i) {
+                bindings[i].binding = i;
+                bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+                bindings[i].descriptorCount = 1;
+                bindings[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            }
+
+            VkDescriptorSetLayoutCreateInfo layout_info = {};
+            layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layout_info.bindingCount = count;
+            layout_info.pBindings = bindings;
+
+            VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.sampler[count - 1]));
+        }
+        
+        return descriptor_layouts.input_attachment[count - 1];
     }
     case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER: {
-        return descriptor_layouts.uniform_buffer;
+        if (descriptor_layouts.sampler[count - 1] == VK_NULL_HANDLE) {
+            VkDescriptorSetLayoutBinding *bindings = ALLOCA(VkDescriptorSetLayoutBinding, count);
+
+            for (uint32_t i = 0; i < count; ++i) {
+                bindings[i].binding = i;
+                bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+                bindings[i].descriptorCount = 1;
+                bindings[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            }
+
+            VkDescriptorSetLayoutCreateInfo layout_info = {};
+            layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layout_info.bindingCount = count;
+            layout_info.pBindings = bindings;
+
+            VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.sampler[count - 1]));
+        }
+        
+        return descriptor_layouts.uniform_buffer[count - 1];
     }
     default:
         printf("Specified invalid descriptor type\n");
@@ -1160,7 +1228,7 @@ VkDescriptorSet create_image_descriptor_set(
     VkImageView image,
     VkSampler sampler,
     VkDescriptorType type) {
-    VkDescriptorSetLayout descriptor_layout = r_descriptor_layout(type);
+    VkDescriptorSetLayout descriptor_layout = r_descriptor_layout(type, 1);
     
     VkDescriptorSetAllocateInfo allocate_info = {};
     allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1191,11 +1259,52 @@ VkDescriptorSet create_image_descriptor_set(
     return set;
 }
 
+VkDescriptorSet create_image_descriptor_set(
+    VkImageView *images,
+    VkSampler *samplers,
+    uint32_t count,
+    VkDescriptorType type) {
+    VkDescriptorSetLayout descriptor_layout = r_descriptor_layout(type, count);
+    
+    VkDescriptorSetAllocateInfo allocate_info = {};
+    allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocate_info.descriptorPool = r_descriptor_pool();
+    allocate_info.descriptorSetCount = 1;
+    allocate_info.pSetLayouts = &descriptor_layout;
+
+    VkDescriptorSet set;
+    
+    vkAllocateDescriptorSets(r_device(), &allocate_info, &set);
+
+    VkDescriptorImageInfo *image_info = ALLOCA(VkDescriptorImageInfo, count);
+    VkWriteDescriptorSet *write = ALLOCA(VkWriteDescriptorSet, count);
+    memset(image_info, 0, sizeof(VkDescriptorImageInfo) * count);
+    memset(write, 0, sizeof(VkWriteDescriptorSet) * count);
+    
+    for (uint32_t i = 0; i < count; ++i) {
+        image_info[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_info[i].imageView = images[i];
+        image_info[i].sampler = samplers[i];
+
+        write[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write[i].dstSet = set;
+        write[i].dstBinding = i;
+        write[i].dstArrayElement = 0;
+        write[i].descriptorCount = 1;
+        write[i].descriptorType = type;
+        write[i].pImageInfo = &image_info[i];
+    }
+
+    vkUpdateDescriptorSets(r_device(), count, write, 0, NULL);
+
+    return set;
+}
+
 VkDescriptorSet create_buffer_descriptor_set(
     VkBuffer buffer,
     VkDeviceSize buffer_size,
     VkDescriptorType type) {
-    VkDescriptorSetLayout descriptor_layout = r_descriptor_layout(type);
+    VkDescriptorSetLayout descriptor_layout = r_descriptor_layout(type, 1);
     
     VkDescriptorSetAllocateInfo allocate_info = {};
     allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

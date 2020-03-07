@@ -181,6 +181,11 @@ struct mesh_shader_t {
 struct mesh_render_data_t {
     matrix4_t model;
     vector4_t color;
+
+    // .x = roughness
+    // .y = metallic
+    vector4_t pbr_info;
+    
     // To add later with texture stuff
     int32_t texture_index;
 };
@@ -206,7 +211,19 @@ VkDescriptorSet create_image_descriptor_set(
     VkSampler sampler,
     VkDescriptorType type);
 
+VkDescriptorSet create_image_descriptor_set(
+    VkImageView *images,
+    VkSampler *samplers,
+    uint32_t count,
+    VkDescriptorType type);
+
 VkDescriptorSet create_buffer_descriptor_set(
     VkBuffer buffer,
+    VkDeviceSize buffer_size,
+    VkDescriptorType type);
+
+VkDescriptorSet create_buffer_descriptor_set(
+    VkBuffer *buffers,
+    uint32_t count,
     VkDeviceSize buffer_size,
     VkDescriptorType type);
