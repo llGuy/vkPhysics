@@ -19,6 +19,14 @@ VkFormat r_swapchain_format();
 
 VkExtent2D r_swapchain_extent();
 
+struct attachment_t {
+    VkImage image;
+    VkImageView image_view;
+    VkDeviceMemory image_memory;
+    VkFormat format;
+    VkSampler sampler;
+};
+
 void r_swapchain_images(
     uint32_t *image_count,
     attachment_t *attachments);
@@ -72,8 +80,33 @@ struct rpipeline_stage_t {
     VkDescriptorSet descriptor_set;
 };
 
+attachment_t r_create_color_attachment(
+    VkExtent3D extent, 
+    VkFormat format);
+
+attachment_t r_create_depth_attachment(
+    VkExtent3D extent);
+
+VkFramebuffer r_create_framebuffer(
+    uint32_t color_attachment_count,
+    attachment_t *color_attachments, 
+    attachment_t *depth_attachment,
+    VkRenderPass render_pass,
+    VkExtent2D extent,
+    uint32_t output_layer_count);
+
+void r_rpipeline_descriptor_set_output_init(
+    rpipeline_stage_t *stage);
+
 VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(
     rpipeline_stage_t *stage);
+
+VkAttachmentDescription r_fill_color_attachment_description(
+    VkImageLayout layout,
+    VkFormat format);
+
+VkAttachmentDescription r_fill_depth_attachment_description(
+    VkImageLayout layout);
 
 rpipeline_stage_t *r_deferred_stage();
 
@@ -82,6 +115,8 @@ void r_lighting_init();
 void r_update_lighting();
 
 void r_lighting_gpu_sync(VkCommandBuffer command_buffer);
+
+void r_environment_init();
 
 struct gpu_camera_transforms_t {
     matrix4_t projection;

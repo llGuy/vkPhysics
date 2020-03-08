@@ -29,14 +29,13 @@ else(NOT Vulkan_FOUND)
 
 endif()
 
-link_libraries("glfw")
-
 if(WIN32)
 
   link_libraries("user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib")
 
 else(WIN32)
 
+  link_libraries("glfw")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
   
 endif(WIN32)

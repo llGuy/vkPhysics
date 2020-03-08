@@ -9,10 +9,11 @@
 #include <assert.h>
 
 #include <imgui.h>
+#include <stb_image.h>
+#include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
-#include <GLFW/glfw3.h>
 
 static VkInstance instance;
 static int32_t enable_validation_layers;
@@ -735,6 +736,7 @@ void renderer_init(
     r_camera_init(window);
     r_lighting_init();
     r_pipeline_init();
+    r_environment_init();
     
     s_imgui_init(window, debug_proc);
 }
@@ -1394,4 +1396,354 @@ VkPipelineShaderStageCreateInfo *r_fill_shader_stage_create_infos(
 void r_free_shader_stage_create_info(
     VkPipelineShaderStageCreateInfo *info) {
     free(info);
+}
+
+attachment_t r_create_color_attachment(
+    VkExtent3D extent, 
+    VkFormat format) {
+    VkImageCreateInfo image_info = {};
+    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_info.arrayLayers = 1;
+    image_info.extent = extent;
+    image_info.format = format;
+    image_info.imageType = VK_IMAGE_TYPE_2D;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_info.mipLevels = 1;
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkImage image;
+    vkCreateImage(r_device(), &image_info, NULL, &image);
+
+    VkDeviceMemory memory = allocate_image_memory(image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VkImageViewCreateInfo image_view_info = {};
+    image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_info.image = image;
+    image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_info.format = format;
+    image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_info.subresourceRange.baseMipLevel = 0;
+    image_view_info.subresourceRange.levelCount = 1;
+    image_view_info.subresourceRange.baseArrayLayer = 0;
+    image_view_info.subresourceRange.layerCount = 1;
+
+    VkImageView image_view;
+    VK_CHECK(vkCreateImageView(r_device(), &image_view_info, NULL, &image_view));
+
+    VkSampler sampler;
+    VkSamplerCreateInfo sampler_info = {};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = 16;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    
+    VK_CHECK(vkCreateSampler(r_device(), &sampler_info, NULL, &sampler));
+
+    attachment_t attachment;
+    attachment.image = image;
+    attachment.image_view = image_view;
+    attachment.image_memory = memory;
+    attachment.format = format;
+    attachment.sampler = sampler;
+
+    return attachment;
+}
+
+attachment_t r_create_depth_attachment(
+    VkExtent3D extent) {
+    VkImageCreateInfo image_info = {};
+    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_info.arrayLayers = 1;
+    image_info.extent = extent;
+    image_info.format = r_depth_format();
+    image_info.imageType = VK_IMAGE_TYPE_2D;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_info.mipLevels = 1;
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkImage image;
+    vkCreateImage(r_device(), &image_info, NULL, &image);
+
+    VkDeviceMemory memory = allocate_image_memory(image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VkImageViewCreateInfo image_view_info = {};
+    image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_info.image = image;
+    image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_info.format = r_depth_format();
+    image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    image_view_info.subresourceRange.baseMipLevel = 0;
+    image_view_info.subresourceRange.levelCount = 1;
+    image_view_info.subresourceRange.baseArrayLayer = 0;
+    image_view_info.subresourceRange.layerCount = 1;
+
+    VkImageView image_view;
+    VK_CHECK(vkCreateImageView(r_device(), &image_view_info, NULL, &image_view));
+
+    VkSampler sampler;
+    VkSamplerCreateInfo sampler_info = {};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = 16;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    
+    VK_CHECK(vkCreateSampler(r_device(), &sampler_info, NULL, &sampler));
+
+    attachment_t attachment;
+    attachment.image = image;
+    attachment.image_view = image_view;
+    attachment.image_memory = memory;
+    attachment.sampler = sampler;
+    attachment.format = r_depth_format();
+
+    return attachment;
+}
+
+VkFramebuffer r_create_framebuffer(
+    uint32_t color_attachment_count,
+    attachment_t *color_attachments, 
+    attachment_t *depth_attachment,
+    VkRenderPass render_pass,
+    VkExtent2D extent,
+    uint32_t output_layer_count) {
+    uint32_t attachment_count = color_attachment_count + (depth_attachment ? 1 : 0);
+    VkImageView *attachments = FL_MALLOC(VkImageView, attachment_count);
+    for (uint32_t i = 0; i < color_attachment_count; ++i) {
+        attachments[i] = color_attachments[i].image_view;
+    }
+    if (depth_attachment) {
+        attachments[color_attachment_count] = depth_attachment->image_view;
+    }
+
+    VkFramebufferCreateInfo framebuffer_info = {};
+    framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebuffer_info.attachmentCount = attachment_count;
+    framebuffer_info.pAttachments = attachments;
+    framebuffer_info.width = extent.width;
+    framebuffer_info.height = extent.height;
+    framebuffer_info.layers = output_layer_count;
+    framebuffer_info.renderPass = render_pass;
+
+    VkFramebuffer framebuffer;
+    vkCreateFramebuffer(r_device(), &framebuffer_info, NULL, &framebuffer);
+
+    free(attachments);
+
+    return framebuffer;
+}
+
+void r_rpipeline_descriptor_set_output_init(
+    rpipeline_stage_t *stage) {
+    VkImageView *views = ALLOCA(VkImageView, stage->color_attachment_count + 1);
+    VkSampler *samplers = ALLOCA(VkSampler, stage->color_attachment_count + 1);
+    
+    uint32_t binding_count = 0;
+
+    for (; binding_count < stage->color_attachment_count; ++binding_count) {
+        views[binding_count] = stage->color_attachments[binding_count].image_view;
+        samplers[binding_count] = stage->color_attachments[binding_count].sampler;
+    }
+
+    if (stage->depth_attachment) {
+        views[binding_count] = stage->color_attachments[binding_count].image_view;
+        samplers[binding_count] = stage->color_attachments[binding_count].sampler;
+        
+        ++binding_count;
+    }
+
+    stage->binding_count = binding_count;
+
+    stage->descriptor_set = create_image_descriptor_set(
+        views,
+        samplers,
+        binding_count,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+}
+
+VkAttachmentDescription r_fill_color_attachment_description(VkImageLayout layout, VkFormat format) {
+    VkAttachmentDescription description = {};
+    description.finalLayout = layout;
+    description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    description.format = format;
+    description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    description.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    return description;
+}
+
+VkAttachmentDescription r_fill_depth_attachment_description(VkImageLayout layout) {
+    VkAttachmentDescription description = {};
+    description.finalLayout = layout;
+    description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    description.format = r_depth_format();
+    description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    description.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    return description;
+}
+
+texture_t create_texture(
+    const char *path,
+    VkFormat format) {
+    int32_t x, y, channels;
+    void *pixels = stbi_load(path, &x, &y, &channels, STBI_rgb_alpha);
+
+    VkExtent3D extent = {};
+    extent.width = x;
+    extent.height = y;
+    extent.depth = 1;
+    
+    VkImageCreateInfo image_info = {};
+    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_info.arrayLayers = 1;
+    image_info.extent = extent;
+    image_info.format = format;
+    image_info.imageType = VK_IMAGE_TYPE_2D;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_info.mipLevels = 1;
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkImage image;
+    vkCreateImage(r_device(), &image_info, NULL, &image);
+
+    VkDeviceMemory memory = allocate_image_memory(image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VkImageViewCreateInfo image_view_info = {};
+    image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_info.image = image;
+    image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_info.format = format;
+    image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_info.subresourceRange.baseMipLevel = 0;
+    image_view_info.subresourceRange.levelCount = 1;
+    image_view_info.subresourceRange.baseArrayLayer = 0;
+    image_view_info.subresourceRange.layerCount = 1;
+
+    VkImageView image_view;
+    VK_CHECK(vkCreateImageView(r_device(), &image_view_info, NULL, &image_view));
+
+    VkSampler sampler;
+    VkSamplerCreateInfo sampler_info = {};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = 16;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    
+    VK_CHECK(vkCreateSampler(r_device(), &sampler_info, NULL, &sampler));
+
+    create_image_descriptor_set(image_view, sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    
+    texture_t texture;
+    texture.image = image;
+    texture.image_view = image_view;
+    texture.image_memory = memory;
+    texture.sampler = sampler;
+    texture.format = format;
+
+    gpu_buffer_t staging = create_gpu_buffer(
+        sizeof(uint8_t) * 2 * x * y * channels,
+        pixels,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+
+    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
+
+    VkImageMemoryBarrier barrier = create_image_barrier(
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        image,
+        0,
+        1,
+        0,
+        1,
+        VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        1, NULL,
+        0, NULL,
+        1, &barrier);
+
+    VkBufferImageCopy region = {};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageExtent.width = x;
+    region.imageExtent.height = y;
+    region.imageExtent.depth = 1;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    
+    vkCmdCopyBufferToImage(
+        command_buffer,
+        staging.buffer,
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1, &region);
+
+    barrier = create_image_barrier(
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        image,
+        0,
+        1,
+        0,
+        1,
+        VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        0,
+        1, NULL,
+        0, NULL,
+        1, &barrier);
+
+    end_single_time_command_buffer(command_buffer);
+
+    vkFreeMemory(r_device(), staging.memory, NULL);
+    vkDestroyBuffer(r_device(), staging.buffer, NULL);
+
+    return texture;
 }

@@ -50,14 +50,6 @@ void end_single_time_command_buffer(
     VkCommandBuffer command_buffer);
 
 /* Images */
-struct attachment_t {
-    VkImage image;
-    VkImageView image_view;
-    VkDeviceMemory image_memory;
-    VkFormat format;
-    VkSampler sampler;
-};
-    
 VkDeviceMemory allocate_image_memory(
     VkImage image,
     VkMemoryPropertyFlags properties);
@@ -227,3 +219,17 @@ VkDescriptorSet create_buffer_descriptor_set(
     uint32_t count,
     VkDeviceSize buffer_size,
     VkDescriptorType type);
+
+struct texture_t {
+    VkImage image;
+    VkImageView image_view;
+    VkDeviceMemory image_memory;
+    VkSampler sampler;
+    VkFormat format;
+
+    VkDescriptorSet descriptor;
+};
+
+texture_t create_texture(
+    const char *path,
+    VkFormat format);
