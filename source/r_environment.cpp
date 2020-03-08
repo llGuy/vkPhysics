@@ -2,6 +2,8 @@
 #include "renderer.hpp"
 #include "r_internal.hpp"
 
+#include <ktxvulkan.h>
+
 static attachment_t s_create_cubemap(
     VkExtent3D extent,
     VkFormat format,
@@ -66,7 +68,6 @@ static attachment_t s_create_cubemap(
     return attachment;
 }
 
-// This is for creating the HDR cubemap from a .hdr image
 static rpipeline_stage_t hdr_environment_init;
 
 static void s_hdr_environment_pass_init() {
@@ -136,7 +137,12 @@ static void s_hdr_environment_pass_init() {
 }
 
 void r_environment_init() {
-    /*s_hdr_environment_pass_init();
+    s_hdr_environment_pass_init();
 
-      texture_t hdr_texture = create_texture("../assets/textures/test.hdr", VK_FORMAT_R16G16B16A16_SFLOAT);*/
+    ktxTexture *texture;
+    
+    if (ktxTexture_CreateFromNamedFile("../assets/textures/hdr_environment.ktx", KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &texture) != KTX_SUCCESS) {
+        printf("Failed to load cubemap\n");
+        exit(1);
+    }
 }

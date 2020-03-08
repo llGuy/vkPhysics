@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include "tools.hpp"
 #include "renderer.hpp"
 #include "r_internal.hpp"

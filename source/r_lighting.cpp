@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include "r_internal.hpp"
 
 struct lighting_data_t {
