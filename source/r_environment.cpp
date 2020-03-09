@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "renderer.hpp"
 #include "r_internal.hpp"
 
@@ -18,7 +19,7 @@ static attachment_t s_create_cubemap(
     image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_info.mipLevels = mip_levels;
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -136,13 +137,160 @@ static void s_hdr_environment_pass_init() {
     r_rpipeline_descriptor_set_output_init(&hdr_environment_init);
 }
 
-void r_environment_init() {
-    s_hdr_environment_pass_init();
+static attachment_t base_cubemap;
+static VkDescriptorSet base_cubemap_descriptor_set;
+static mesh_shader_t cubemap_shader;
 
+static void s_load_cubemap_texture() {
+    // Load with KTX
     ktxTexture *texture;
     
     if (ktxTexture_CreateFromNamedFile("../assets/textures/hdr_environment.ktx", KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &texture) != KTX_SUCCESS) {
         printf("Failed to load cubemap\n");
         exit(1);
     }
+
+    uint32_t width = texture->baseWidth;
+    uint32_t height = texture->baseHeight;
+    uint32_t layer_count = texture->numLayers;
+    uint32_t mip_levels = texture->numLevels;
+
+    ktx_uint8_t *data = ktxTexture_GetData(texture);
+    ktx_size_t size = ktxTexture_GetSize(texture);
+
+    gpu_buffer_t staging = create_gpu_buffer(size, data, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+
+    VkBufferImageCopy *buffer_copies = FL_MALLOC(VkBufferImageCopy, 6);
+    memset(buffer_copies, 0, sizeof(VkBufferImageCopy) * 6);
+    
+    for (uint32_t face = 0; face < 6; ++face) {
+        ktx_size_t offset;
+        KTX_error_code result = ktxTexture_GetImageOffset(texture, 0, 0, face, &offset);
+        assert(result == KTX_SUCCESS);
+
+        VkBufferImageCopy *buffer_copy_region = &buffer_copies[face];
+        buffer_copy_region->imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        buffer_copy_region->imageSubresource.mipLevel = 0;
+        buffer_copy_region->imageSubresource.baseArrayLayer = face;
+        buffer_copy_region->imageSubresource.layerCount = 1;
+        buffer_copy_region->imageExtent.width = width;
+        buffer_copy_region->imageExtent.height = height;
+        buffer_copy_region->imageExtent.depth = 1;
+        buffer_copy_region->bufferOffset = offset;
+    }
+
+    VkExtent3D extent = {};
+    extent.width = width;
+    extent.height = height;
+    extent.depth = 1;
+    base_cubemap = s_create_cubemap(extent, VK_FORMAT_R16G16B16A16_SFLOAT, 1);
+
+    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
+    
+    VkImageMemoryBarrier barrier = create_image_barrier(
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        base_cubemap.image,
+        0, 6,
+        0, 1,
+        VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        0, NULL,
+        0, NULL,
+        1, &barrier);
+
+    vkCmdCopyBufferToImage(
+        command_buffer,
+        staging.buffer,
+        base_cubemap.image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        6, buffer_copies);
+
+    barrier = create_image_barrier(
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        base_cubemap.image,
+        0, 6,
+        0, 1,
+        VK_IMAGE_ASPECT_COLOR_BIT);
+    
+    vkCmdPipelineBarrier(
+        command_buffer,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0,
+        0, NULL,
+        0, NULL,
+        1, &barrier);
+
+    end_single_time_command_buffer(command_buffer);
+
+    base_cubemap_descriptor_set = create_image_descriptor_set(
+        base_cubemap.image_view,
+        base_cubemap.sampler,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+}
+
+struct cubemap_render_data_t {
+    matrix4_t model;
+    float invert_y;
+};
+
+static void s_cubemap_shader_init() {
+    mesh_binding_info_t binding_info = {};
+    VkDescriptorType descriptor_types[] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
+    const char *shader_paths[] = { "../shaders/SPV/cubemap.vert.spv", "../shaders/SPV/cubemap.frag.spv" };
+    
+    cubemap_shader = create_mesh_shader(
+        &binding_info,
+        sizeof(cubemap_render_data_t),
+        descriptor_types,
+        sizeof(descriptor_types) / sizeof(descriptor_types[0]),
+        shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+}
+
+void r_environment_init() {
+    s_hdr_environment_pass_init();
+
+    s_load_cubemap_texture();
+
+    s_cubemap_shader_init();
+}
+
+void r_render_environment(VkCommandBuffer command_buffer) {
+    VkViewport viewport = {};
+    viewport.width = r_swapchain_extent().width;
+    viewport.height = r_swapchain_extent().height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cubemap_shader.pipeline);
+
+    VkDescriptorSet descriptor_sets[] = {
+        r_camera_transforms_uniform(),
+        base_cubemap_descriptor_set };
+
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        cubemap_shader.layout,
+        0,
+        2, descriptor_sets,
+        0, NULL);
+
+    cpu_camera_data_t *camera = r_cpu_camera_data();
+    
+    cubemap_render_data_t render_data = {};
+    render_data.model = glm::translate(camera->position);
+    render_data.invert_y = -1.0f;
+    
+    vkCmdPushConstants(command_buffer, cubemap_shader.layout, cubemap_shader.flags, 0, sizeof(cubemap_render_data_t), &render_data);
+
+    vkCmdDraw(command_buffer, 36, 1, 0, 0);
 }

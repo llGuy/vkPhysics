@@ -184,6 +184,14 @@ struct mesh_render_data_t {
 
 mesh_shader_t create_mesh_shader(
     mesh_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags);
+
+mesh_shader_t create_mesh_shader(
+    mesh_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 

@@ -116,6 +116,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        r_render_environment(command_buffer);
         
         end_scene_rendering(command_buffer);
 

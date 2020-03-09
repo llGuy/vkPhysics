@@ -68,50 +68,54 @@ void main() {
     vec3 vs_position = texture(u_gbuffer_position, in_fs.uvs).xyz;
     vec3 vs_view = normalize(-vs_position);
 
-    float roughness = raw_albedo.a;
-    float metalness = raw_vs_normal.a;
+    vec3 color = raw_albedo.rgb;
 
-    vec3 albedo = raw_albedo.rgb;
-    vec3 vs_normal = normalize(raw_vs_normal.xyz);
+    if (raw_vs_normal.x > -10.0f) {
+        float roughness = raw_albedo.a;
+        float metalness = raw_vs_normal.a;
+
+        vec3 albedo = raw_albedo.rgb;
+        vec3 vs_normal = normalize(raw_vs_normal.xyz);
     
-    vec3 base_reflectivity = mix(vec3(0.04), albedo, metalness);
-    vec3 l = vec3(0.0f);
+        vec3 base_reflectivity = mix(vec3(0.04), albedo, metalness);
+        vec3 l = vec3(0.0f);
 
-    for (int i = 0; i < 4; ++i) {
-        //vec3 light_position = vec3(u_camera_transforms.view * u_lighting.vs_light_positions[i]);
-        vec3 light_position = vec3(u_lighting.vs_light_positions[i]);
+        for (int i = 0; i < 4; ++i) {
+            //vec3 light_position = vec3(u_camera_transforms.view * u_lighting.vs_light_positions[i]);
+            vec3 light_position = vec3(u_lighting.vs_light_positions[i]);
         
-        vec3 vs_light = normalize(light_position - vs_position);
-        vec3 vs_halfway = normalize(vs_light + vs_view);
+            vec3 vs_light = normalize(light_position - vs_position);
+            vec3 vs_halfway = normalize(vs_light + vs_view);
 
-        float d = length(light_position - vs_position);
-        float attenuation = 1.0 / (d * d);
-        vec3 radiance = u_lighting.light_colors[i].rgb * attenuation;
+            float d = length(light_position - vs_position);
+            float attenuation = 1.0 / (d * d);
+            vec3 radiance = u_lighting.light_colors[i].rgb * attenuation;
 
-        float ndotv = max(dot(vs_normal, vs_view), 0.0000001f);
-        float ndotl = max(dot(vs_normal, vs_light), 0.0000001f);
-        float hdotv = max(dot(vs_halfway, vs_view), 0.0f);
-        float ndoth = max(dot(vs_normal, vs_halfway), 0.0f);
+            float ndotv = max(dot(vs_normal, vs_view), 0.0000001f);
+            float ndotl = max(dot(vs_normal, vs_light), 0.0000001f);
+            float hdotv = max(dot(vs_halfway, vs_view), 0.0f);
+            float ndoth = max(dot(vs_normal, vs_halfway), 0.0f);
 
-        float distribution_term = distribution_ggx(ndoth, roughness);
-        float smith_term = smith_ggx(ndotv, ndotl, roughness);
-        vec3 fresnel_term = fresnel(hdotv, base_reflectivity);
+            float distribution_term = distribution_ggx(ndoth, roughness);
+            float smith_term = smith_ggx(ndotv, ndotl, roughness);
+            vec3 fresnel_term = fresnel(hdotv, base_reflectivity);
 
-        vec3 specular = smith_term * distribution_term * fresnel_term;
-        specular /= 4.0 * ndotv * ndotl;
+            vec3 specular = smith_term * distribution_term * fresnel_term;
+            specular /= 4.0 * ndotv * ndotl;
 
-        vec3 kd = vec3(1.0) - fresnel_term;
+            vec3 kd = vec3(1.0) - fresnel_term;
 
-        kd *= 1.0f - metalness;
+            kd *= 1.0f - metalness;
 
-        l += (kd * albedo / PI + specular) * radiance * ndotl;
+            l += (kd * albedo / PI + specular) * radiance * ndotl;
+        }
+
+        vec3 ambient = vec3(0.03) * albedo;
+        color = ambient + l;
+
+        color = color / (color + vec3(1.0f));
+        color = pow(color, vec3(1.0f / 2.2f));
     }
-
-    vec3 ambient = vec3(0.03) * albedo;
-    vec3 color = ambient + l;
-
-    color = color / (color + vec3(1.0f));
-    color = pow(color, vec3(1.0f / 2.2f));
 
     out_final_color = vec4(color, 1.0f);
 }

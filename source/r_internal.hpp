@@ -118,6 +118,8 @@ void r_lighting_gpu_sync(VkCommandBuffer command_buffer);
 
 void r_environment_init();
 
+void r_render_environment(VkCommandBuffer command_buffer);
+
 struct gpu_camera_transforms_t {
     matrix4_t projection;
     matrix4_t view;

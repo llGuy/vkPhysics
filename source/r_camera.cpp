@@ -28,7 +28,7 @@ void r_camera_init(void *window) {
     camera_data.up = vector3_t(0.0f, 1.0f, 0.0f);
     camera_data.fov = glm::radians(60.0f);
     camera_data.near = 0.1f;
-    camera_data.far = 100.0f;
+    camera_data.far = 10000.0f;
     
     double x, y;
     glfwGetCursorPos((GLFWwindow *)window, &x, &y);

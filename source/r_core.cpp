@@ -1108,7 +1108,7 @@ VkImageMemoryBarrier create_image_barrier(
     VkImageMemoryBarrier image_barrier = {};
     image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     image_barrier.srcAccessMask = s_find_access_flags_for_image_layout(old_image_layout);
-    image_barrier.dstAccessMask = s_find_access_flags_for_image_layout(old_image_layout);
+    image_barrier.dstAccessMask = s_find_access_flags_for_image_layout(new_image_layout);
     image_barrier.oldLayout = old_image_layout;
     image_barrier.newLayout = new_image_layout;
     image_barrier.image = image;

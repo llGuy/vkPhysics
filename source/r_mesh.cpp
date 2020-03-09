@@ -86,16 +86,25 @@ mesh_binding_info_t create_mesh_binding_info(
 }
 
 // For the moment, just puts the camera info uniform buffer
-static VkPipelineLayout s_create_mesh_shader_layout(VkShaderStageFlags shader_flags) {
+static VkPipelineLayout s_create_mesh_shader_layout(
+    VkShaderStageFlags shader_flags,
+    VkDescriptorType *descriptor_types,
+    uint32_t descriptor_layout_count,
+    uint32_t push_constant_size) {
     VkPushConstantRange push_constant_range = {};
     push_constant_range.stageFlags = shader_flags;
     push_constant_range.offset = 0;
-    push_constant_range.size = sizeof(mesh_render_data_t);
-    VkDescriptorSetLayout uniform_buffer_layout = r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
+    push_constant_range.size = push_constant_size;
+
+    VkDescriptorSetLayout *layouts = ALLOCA(VkDescriptorSetLayout, descriptor_layout_count);
+    for (uint32_t i = 0; i < descriptor_layout_count; ++i) {
+        layouts[i] = r_descriptor_layout(descriptor_types[i], 1);
+    }
+    
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &uniform_buffer_layout;
+    pipeline_layout_info.setLayoutCount = descriptor_layout_count;
+    pipeline_layout_info.pSetLayouts = layouts;
     pipeline_layout_info.pushConstantRangeCount = 1;
     pipeline_layout_info.pPushConstantRanges = &push_constant_range;
     VkPipelineLayout pipeline_layout;
@@ -104,12 +113,18 @@ static VkPipelineLayout s_create_mesh_shader_layout(VkShaderStageFlags shader_fl
     return pipeline_layout;
 }
 
-// May need geometry shader for normal calculations
 mesh_shader_t create_mesh_shader(
     mesh_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
     const char **shader_paths,
     VkShaderStageFlags shader_flags) {
-    VkPipelineLayout layout = s_create_mesh_shader_layout(shader_flags);
+    VkPipelineLayout layout = s_create_mesh_shader_layout(
+        shader_flags,
+        descriptor_layout_types,
+        descriptor_layout_count,
+        push_constant_size);
     
     VkPipelineShaderStageCreateInfo *shader_infos = r_fill_shader_stage_create_infos(shader_paths, shader_flags);
 
@@ -206,6 +221,21 @@ mesh_shader_t create_mesh_shader(
     mesh_shader.flags = shader_flags;
 
     return mesh_shader;
+}
+
+// May need geometry shader for normal calculations
+mesh_shader_t create_mesh_shader(
+    mesh_binding_info_t *binding_info,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags) {
+    VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    
+    return create_mesh_shader(
+        binding_info,
+        sizeof(mesh_render_data_t),
+        &ubo_type, 1,
+        shader_paths,
+        shader_flags);
 }
 
 static void s_create_mesh_vbo_final_list(mesh_t *mesh) {
