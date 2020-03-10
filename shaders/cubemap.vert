@@ -42,6 +42,7 @@ layout(push_constant) uniform push_constant_t {
 layout(set = 0, binding = 0) uniform camera_transforms_t {
     mat4 projection;
     mat4 view;
+    mat4 inverse_view;
     mat4 view_projection;
     vec4 frustum;
     vec4 view_direction;

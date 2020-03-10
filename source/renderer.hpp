@@ -149,7 +149,7 @@ enum internal_mesh_type_t {
     IM_CUBE
 };
 
-struct mesh_binding_info_t {
+struct shader_binding_info_t {
     uint32_t binding_count;
     VkVertexInputBindingDescription *binding_descriptions;
 
@@ -160,11 +160,11 @@ struct mesh_binding_info_t {
 void load_mesh_internal(
     internal_mesh_type_t mesh_type,
     mesh_t *mesh,
-    mesh_binding_info_t *info);
+    shader_binding_info_t *info);
 
 void load_mesh_external();
 
-struct mesh_shader_t {
+struct shader_t {
     VkPipeline pipeline;
     VkPipelineLayout layout;
     VkShaderStageFlags flags;
@@ -182,27 +182,39 @@ struct mesh_render_data_t {
     int32_t texture_index;
 };
 
-mesh_shader_t create_mesh_shader(
-    mesh_binding_info_t *binding_info,
+// Disabled depth
+shader_t create_2d_shader(
+    shader_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags,
+    struct rpipeline_stage_t *stage,
+    VkPrimitiveTopology topology);
+
+// Enables depth and will always happen in deferred stage
+shader_t create_3d_shader(
+    shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
     VkDescriptorType *descriptor_layout_types,
     uint32_t descriptor_layout_count,
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 
-mesh_shader_t create_mesh_shader(
-    mesh_binding_info_t *binding_info,
+shader_t create_mesh_shader(
+    shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 
-mesh_binding_info_t create_mesh_binding_info(
+shader_binding_info_t create_mesh_binding_info(
     mesh_t *mesh);
 
 // Submits only one mesh
 void submit_mesh(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
-    mesh_shader_t *shader,
+    shader_t *shader,
     mesh_render_data_t *render_data);
 
 /* Descriptor set */

@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 
     // Temporary stuff, just to test lighing
     mesh_t sphere = {};
-    mesh_binding_info_t sphere_info = {};
+    shader_binding_info_t sphere_info = {};
     
     load_mesh_internal(
         IM_SPHERE,
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
         &sphere_info);
 
     const char *paths[] = { "../shaders/SPV/mesh.vert.spv", "../shaders/SPV/mesh.frag.spv" };
-    mesh_shader_t sphere_shader = create_mesh_shader(
+    shader_t sphere_shader = create_mesh_shader(
         &sphere_info,
         paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);

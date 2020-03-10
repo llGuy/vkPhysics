@@ -69,15 +69,25 @@ static attachment_t s_create_cubemap(
     return attachment;
 }
 
+static VkExtent2D hdr_environment_extent;
+
 static rpipeline_stage_t hdr_environment_init;
+static shader_t hdr_environment_init_shader;
+
+VkDescriptorSet r_diffuse_ibl_irradiance() {
+    return hdr_environment_init.descriptor_set;
+}
 
 static void s_hdr_environment_pass_init() {
+    hdr_environment_extent.width = 512;
+    hdr_environment_extent.height = 512;
+    
     hdr_environment_init.color_attachment_count = 1;
     hdr_environment_init.color_attachments = FL_MALLOC(attachment_t, hdr_environment_init.color_attachment_count);
 
     VkExtent3D extent3d = {};
-    extent3d.width = 512;
-    extent3d.height = 512;
+    extent3d.width = hdr_environment_extent.width;
+    extent3d.height = hdr_environment_extent.height;
     extent3d.depth = 1;
 
     VkExtent2D extent2d = {};
@@ -135,11 +145,70 @@ static void s_hdr_environment_pass_init() {
         6);
 
     r_rpipeline_descriptor_set_output_init(&hdr_environment_init);
+
+    VkDescriptorType types[] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
+    const char *paths[] = {
+        "../shaders/SPV/diffuse_ibl.vert.spv",
+        "../shaders/SPV/diffuse_ibl.geom.spv",
+        "../shaders/SPV/diffuse_ibl.frag.spv"  };
+    hdr_environment_init_shader = create_2d_shader(
+        NULL,
+        0,
+        types, 1,
+        paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        &hdr_environment_init,
+        VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
 }
 
 static attachment_t base_cubemap;
 static VkDescriptorSet base_cubemap_descriptor_set;
-static mesh_shader_t cubemap_shader;
+
+static void s_render_to_diffuse_ibl_cubemap() {
+    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
+
+    VkClearValue clear_value = {};
+    
+    VkRect2D render_area = {};
+    render_area.extent = hdr_environment_extent;
+    
+    VkRenderPassBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    begin_info.renderPass = hdr_environment_init.render_pass;
+    begin_info.framebuffer = hdr_environment_init.framebuffer;
+    begin_info.renderArea = render_area;
+    begin_info.clearValueCount = 1;
+    begin_info.pClearValues = &clear_value;
+    
+    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkViewport viewport = {};
+    viewport.width = hdr_environment_extent.width;
+    viewport.height = hdr_environment_extent.height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_environment_init_shader.pipeline);
+
+    VkDescriptorSet inputs[] = { base_cubemap_descriptor_set };
+
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        hdr_environment_init_shader.layout,
+        0,
+        sizeof(inputs) / sizeof(VkDescriptorSet),
+        inputs,
+        0, NULL);
+
+    vkCmdDraw(command_buffer, 1, 1, 0, 0);
+
+    vkCmdEndRenderPass(command_buffer);
+    
+    end_single_time_command_buffer(command_buffer);
+}
+
+static shader_t cubemap_shader;
 
 static void s_load_cubemap_texture() {
     // Load with KTX
@@ -242,11 +311,11 @@ struct cubemap_render_data_t {
 };
 
 static void s_cubemap_shader_init() {
-    mesh_binding_info_t binding_info = {};
+    shader_binding_info_t binding_info = {};
     VkDescriptorType descriptor_types[] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
     const char *shader_paths[] = { "../shaders/SPV/cubemap.vert.spv", "../shaders/SPV/cubemap.frag.spv" };
     
-    cubemap_shader = create_mesh_shader(
+    cubemap_shader = create_3d_shader(
         &binding_info,
         sizeof(cubemap_render_data_t),
         descriptor_types,
@@ -261,6 +330,8 @@ void r_environment_init() {
     s_load_cubemap_texture();
 
     s_cubemap_shader_init();
+
+    s_render_to_diffuse_ibl_cubemap();
 }
 
 void r_render_environment(VkCommandBuffer command_buffer) {

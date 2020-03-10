@@ -38,6 +38,7 @@ void r_camera_init(void *window) {
     transforms.projection = glm::perspective(camera_data.fov, (float)extent.width / (float)extent.height, camera_data.near, camera_data.far);
     transforms.projection[1][1] *= -1.0f;
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
+    transforms.inverse_view = glm::inverse(transforms.view);
     transforms.view_projection = transforms.projection * transforms.view;
     transforms.frustum.x = camera_data.near;
     transforms.frustum.y = camera_data.far;
@@ -57,6 +58,7 @@ void r_camera_init(void *window) {
 // Should not worry about case where not running in window mode (server mode) because anyway, r_ prefixed files won't be running
 void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
+    transforms.inverse_view = glm::inverse(transforms.view);
     transforms.view_projection = transforms.projection * transforms.view;
     
     VkBufferMemoryBarrier buffer_barrier = create_gpu_buffer_barrier(

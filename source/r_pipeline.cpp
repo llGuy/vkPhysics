@@ -237,7 +237,8 @@ static void s_final_init() {
     VkDescriptorSetLayout input_layouts[] = {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, deferred.binding_count),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -269,7 +270,8 @@ void r_execute_final_pass(
         /* Contains lighting information */
         r_lighting_uniform(),
         /* Contains camera information */
-        r_camera_transforms_uniform()
+        r_camera_transforms_uniform(),
+        r_diffuse_ibl_irradiance()
     };
     
     vkCmdBindDescriptorSets(

@@ -63,6 +63,12 @@ VkPipelineShaderStageCreateInfo *r_fill_shader_stage_create_infos(
 void r_free_shader_stage_create_info(
     VkPipelineShaderStageCreateInfo *info);
 
+VkPipelineLayout r_create_pipeline_layout(
+    VkShaderStageFlags shader_flags,
+    VkDescriptorType *descriptor_types,
+    uint32_t descriptor_layout_count,
+    uint32_t push_constant_size);
+
 void r_free_blend_state_info(
     VkPipelineColorBlendStateCreateInfo *info);
 
@@ -120,9 +126,12 @@ void r_environment_init();
 
 void r_render_environment(VkCommandBuffer command_buffer);
 
+VkDescriptorSet r_diffuse_ibl_irradiance();
+
 struct gpu_camera_transforms_t {
     matrix4_t projection;
     matrix4_t view;
+    matrix4_t inverse_view;
     matrix4_t view_projection;
     vector4_t frustum;
     vector4_t view_direction;

@@ -12,6 +12,8 @@ layout(binding = 2, set = 0) uniform sampler2D u_gbuffer_position;
 // TODO: Get position from depth buffer - for now, use gbuffer position as testcase
 layout(binding = 3, set = 0) uniform sampler2D u_gbuffer_depth;
 
+layout(binding = 0, set = 3) uniform samplerCube u_irradiance_map;
+
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[4];
     vec4 light_colors[4];
@@ -20,6 +22,7 @@ layout(set = 1, binding = 0) uniform lighting_t {
 layout(set = 2, binding = 0) uniform camera_transforms_t {
     mat4 projection;
     mat4 view;
+    mat4 inverse_view;
     mat4 view_projection;
     vec4 frustum;
     vec4 view_direction;
@@ -68,16 +71,18 @@ void main() {
     vec3 vs_position = texture(u_gbuffer_position, in_fs.uvs).xyz;
     vec3 vs_view = normalize(-vs_position);
 
+    vec3 vs_normal = normalize(raw_vs_normal.xyz);
+    
     vec3 color = raw_albedo.rgb;
 
+    
     if (raw_vs_normal.x > -10.0f) {
         float roughness = raw_albedo.a;
         float metalness = raw_vs_normal.a;
 
         vec3 albedo = raw_albedo.rgb;
-        vec3 vs_normal = normalize(raw_vs_normal.xyz);
-    
         vec3 base_reflectivity = mix(vec3(0.04), albedo, metalness);
+    
         vec3 l = vec3(0.0f);
 
         for (int i = 0; i < 4; ++i) {
@@ -110,7 +115,18 @@ void main() {
             l += (kd * albedo / PI + specular) * radiance * ndotl;
         }
 
-        vec3 ambient = vec3(0.03) * albedo;
+        vec3 fresnel = fresnel(dot(vs_view, vs_normal), base_reflectivity);
+        vec3 kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
+
+        vec3 ws_normal = vec3(u_camera_transforms.inverse_view * vec4(vs_normal, 0.0f));
+        
+        vec3 diffuse = texture(u_irradiance_map, vec3(ws_normal.x, -ws_normal.y, ws_normal.z)).xyz * albedo * kd;
+        //vec3 diffuse = texture(u_irradiance_map, ws_normal).xyz * albedo * kd;
+
+        vec3 ambient = diffuse;
+        
+        //vec3 ambient = vec3(0.03) * albedo;
+        
         color = ambient + l;
 
         color = color / (color + vec3(1.0f));
