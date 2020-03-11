@@ -208,6 +208,125 @@ static void s_render_to_diffuse_ibl_cubemap() {
     end_single_time_command_buffer(command_buffer);
 }
 
+static shader_t integral_lookup_init_shader;
+static rpipeline_stage_t integral_lookup_init;
+
+VkDescriptorSet r_integral_lookup() {
+    return integral_lookup_init.descriptor_set;
+}
+
+static void s_integral_look_pass_init() {
+    integral_lookup_init.color_attachment_count = 1;
+    integral_lookup_init.color_attachments = FL_MALLOC(attachment_t, integral_lookup_init.color_attachment_count);
+
+    VkExtent3D extent3d = {};
+    extent3d.width = 512;
+    extent3d.height = 512;
+    extent3d.depth = 1;
+
+    VkExtent2D extent2d = {};
+    extent2d.width = 512;
+    extent2d.height = 512;
+
+    integral_lookup_init.color_attachments[0] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16_SFLOAT);
+
+    VkAttachmentDescription cubemap_description = r_fill_color_attachment_description(
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_FORMAT_R16G16_SFLOAT);
+    
+    VkAttachmentReference cubemap_reference = {};
+    cubemap_reference.attachment = 0;
+    cubemap_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = integral_lookup_init.color_attachment_count;
+    subpass_description.pColorAttachments = &cubemap_reference;
+    subpass_description.pDepthStencilAttachment = NULL;
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = integral_lookup_init.color_attachment_count;
+    render_pass_info.pAttachments = &cubemap_description;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &integral_lookup_init.render_pass));
+
+    integral_lookup_init.framebuffer = r_create_framebuffer(
+        integral_lookup_init.color_attachment_count,
+        integral_lookup_init.color_attachments,
+        NULL,
+        integral_lookup_init.render_pass,
+        extent2d,
+        1);
+
+    r_rpipeline_descriptor_set_output_init(&integral_lookup_init);
+
+    const char *paths[] = {
+        "../shaders/SPV/integral_lookup.vert.spv",
+        "../shaders/SPV/integral_lookup.frag.spv"  };
+    integral_lookup_init_shader = create_2d_shader(
+        NULL,
+        0,
+        NULL, 0,
+        paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        &integral_lookup_init,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+}
+
+static void s_render_to_integral_lookup() {
+    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
+
+    VkClearValue clear_value = {};
+
+    VkRect2D render_area = {};
+    render_area.extent.width = 512;
+    render_area.extent.height = 512;
+
+    VkRenderPassBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    begin_info.renderPass = integral_lookup_init.render_pass;
+    begin_info.framebuffer = integral_lookup_init.framebuffer;
+    begin_info.renderArea = render_area;
+    begin_info.clearValueCount = 1;
+    begin_info.pClearValues = &clear_value;
+
+    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkViewport viewport = {};
+    viewport.width = 512;
+    viewport.height = 512;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, integral_lookup_init_shader.pipeline);
+
+    vkCmdDraw(command_buffer, 4, 1, 0, 0);
+
+    vkCmdEndRenderPass(command_buffer);
+
+    end_single_time_command_buffer(command_buffer);
+}
+
 static shader_t cubemap_shader;
 
 static void s_load_cubemap_texture() {
@@ -332,6 +451,10 @@ void r_environment_init() {
     s_cubemap_shader_init();
 
     s_render_to_diffuse_ibl_cubemap();
+
+    s_integral_look_pass_init();
+
+    s_render_to_integral_lookup();
 }
 
 void r_render_environment(VkCommandBuffer command_buffer) {

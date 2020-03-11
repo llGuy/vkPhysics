@@ -106,6 +106,10 @@ VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(rpipeline_stage_t *s
                 VK_COLOR_COMPONENT_A_BIT;
             break;
         }
+        case VK_FORMAT_R16G16_SFLOAT: {
+            attachment_states[attachment].colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                VK_COLOR_COMPONENT_G_BIT;
+        }
         default:
             break;
         }
@@ -238,7 +242,9 @@ static void s_final_init() {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, deferred.binding_count),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+        //r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -271,7 +277,8 @@ void r_execute_final_pass(
         r_lighting_uniform(),
         /* Contains camera information */
         r_camera_transforms_uniform(),
-        r_diffuse_ibl_irradiance()
+        r_diffuse_ibl_irradiance(),
+        r_integral_lookup()
     };
     
     vkCmdBindDescriptorSets(

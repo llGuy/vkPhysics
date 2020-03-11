@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
                 vector2_t xy = vector2_t((float)x, (float)y);
 
                 xy -= vector2_t(3.5f);
-                xy *= 3.0f;
+                xy *= 2.5f;
 
                 vector3_t ws_position = vector3_t(xy, 0.0f);
 

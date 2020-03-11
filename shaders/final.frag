@@ -14,6 +14,9 @@ layout(binding = 3, set = 0) uniform sampler2D u_gbuffer_depth;
 
 layout(binding = 0, set = 3) uniform samplerCube u_irradiance_map;
 
+layout(binding = 0, set = 4) uniform sampler2D u_integral_lookup;
+layout(binding = 0, set = 4) uniform samplerCube u_prefilter_map;
+
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[4];
     vec4 light_colors[4];
@@ -62,7 +65,14 @@ float smith_ggx(
 vec3 fresnel(
     float hdotv,
     vec3 base) {
-    return base + (1.0f - base) * pow(1.0f - clamp(hdotv, 0.0, 1.0), 5.0);
+    return base + (1.0f - base) * pow(1.0f - clamp(hdotv, 0.0f, 1.0f), 5.0f);
+}
+
+vec3 fresnel_roughness(
+    float ndotv,
+    vec3 base,
+    float roughness) {
+    return base + (max(vec3(1.0f - roughness), base) - base) * pow(1.0f - ndotv, 5.0f);
 }
 
 void main() {
@@ -115,15 +125,20 @@ void main() {
             l += (kd * albedo / PI + specular) * radiance * ndotl;
         }
 
-        vec3 fresnel = fresnel(dot(vs_view, vs_normal), base_reflectivity);
+        vec3 fresnel = fresnel_roughness(dot(vs_view, vs_normal), base_reflectivity, roughness);
         vec3 kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
 
         vec3 ws_normal = vec3(u_camera_transforms.inverse_view * vec4(vs_normal, 0.0f));
+        vec3 ws_view = vec3(u_camera_transforms.inverse_view * vec4(vs_view, 0.0f));
         
         vec3 diffuse = texture(u_irradiance_map, vec3(ws_normal.x, -ws_normal.y, ws_normal.z)).xyz * albedo * kd;
-        //vec3 diffuse = texture(u_irradiance_map, ws_normal).xyz * albedo * kd;
 
-        vec3 ambient = diffuse;
+        const float MAX_REFLECTION_LOD = 4.0f;
+        vec3 prefiltered_color = textureLod(u_prefilter_map, reflect(-ws_view, ws_normal), roughness * MAX_REFLECTION_LOD).rgb;
+        vec2 brdf = texture(u_integral_lookup, vec2(dot(ws_normal, ws_view), roughness)).rg;
+        vec3 specular = prefiltered_color * (fresnel * brdf.r + brdf.g);
+
+        vec3 ambient = (diffuse + specular);
         
         //vec3 ambient = vec3(0.03) * albedo;
         

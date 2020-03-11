@@ -127,6 +127,8 @@ void r_environment_init();
 void r_render_environment(VkCommandBuffer command_buffer);
 
 VkDescriptorSet r_diffuse_ibl_irradiance();
+VkDescriptorSet r_specular_ibl();
+VkDescriptorSet r_integral_lookup();
 
 struct gpu_camera_transforms_t {
     matrix4_t projection;
