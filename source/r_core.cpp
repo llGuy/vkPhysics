@@ -1079,7 +1079,8 @@ static VkAccessFlags s_find_access_flags_for_stage(VkPipelineStageFlags stage) {
 static VkAccessFlags s_find_access_flags_for_image_layout(VkImageLayout layout) {
     switch (layout) {
     case VK_IMAGE_LAYOUT_UNDEFINED: return 0;
-    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: return VK_ACCESS_TRANSFER_WRITE_BIT;
+    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: return VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: return VK_ACCESS_TRANSFER_WRITE_BIT;
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return VK_ACCESS_SHADER_READ_BIT;
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -1413,7 +1414,7 @@ attachment_t r_create_color_attachment(
     image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_info.mipLevels = 1;
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -1997,4 +1998,9 @@ shader_t create_3d_shader(
     shader.flags = shader_flags;
 
     return shader;
+}
+
+void foo() {
+    VkImageCopy region;
+    vkCmdCopyImage((VkCommandBuffer)0, (VkImage)0, (VkImageLayout)0, (VkImage)0, (VkImageLayout)0, 0, &region);
 }

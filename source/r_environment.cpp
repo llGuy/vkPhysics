@@ -8,7 +8,8 @@
 static attachment_t s_create_cubemap(
     VkExtent3D extent,
     VkFormat format,
-    uint32_t mip_levels) {
+    uint32_t mip_levels,
+    VkSamplerAddressMode address_mode) {
     VkImageCreateInfo image_info = {};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -47,9 +48,9 @@ static attachment_t s_create_cubemap(
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     sampler_info.magFilter = VK_FILTER_LINEAR;
     sampler_info.minFilter = VK_FILTER_LINEAR;
-    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeU = address_mode;
+    sampler_info.addressModeV = address_mode;
+    sampler_info.addressModeW = address_mode;
     sampler_info.anisotropyEnable = VK_TRUE;
     sampler_info.maxAnisotropy = 16;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -94,7 +95,7 @@ static void s_hdr_environment_pass_init() {
     extent2d.width = 512;
     extent2d.height = 512;
 
-    hdr_environment_init.color_attachments[0] = s_create_cubemap(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT, 1);
+    hdr_environment_init.color_attachments[0] = s_create_cubemap(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT, 1, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
     VkAttachmentDescription cubemap_description = r_fill_color_attachment_description(
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -327,6 +328,282 @@ static void s_render_to_integral_lookup() {
     end_single_time_command_buffer(command_buffer);
 }
 
+static attachment_t specular_ibl_cubemap;
+static VkDescriptorSet specular_ibl_cubemap_descriptor;
+
+VkDescriptorSet r_specular_ibl() {
+    return specular_ibl_cubemap_descriptor;
+}
+
+static rpipeline_stage_t specular_ibl_init;
+static shader_t specular_ibl_init_shader;
+
+
+
+struct specular_ibl_init_render_data_t {
+    matrix4_t face_rotation;
+    float roughness;
+    float layer;
+};
+
+static void s_specular_ibl_init() {
+    VkExtent3D extent3d = {};
+    extent3d.width = 512;
+    extent3d.height = 512;
+    extent3d.depth = 1;
+    
+    specular_ibl_cubemap = s_create_cubemap(
+        extent3d,
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        5,
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+
+    specular_ibl_cubemap_descriptor = create_image_descriptor_set(
+        specular_ibl_cubemap.image_view,
+        specular_ibl_cubemap.sampler,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    
+    specular_ibl_init.color_attachment_count = 1;
+    specular_ibl_init.color_attachments = FL_MALLOC(attachment_t, specular_ibl_init.color_attachment_count);
+
+    VkExtent2D extent2d = {};
+    extent2d.width = 512;
+    extent2d.height = 512;
+
+    specular_ibl_init.color_attachments[0] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
+
+    VkAttachmentDescription attachment_description = r_fill_color_attachment_description(
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_FORMAT_R16G16B16A16_SFLOAT);
+
+    VkAttachmentReference attachment_reference = {};
+    attachment_reference.attachment = 0;
+    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = specular_ibl_init.color_attachment_count;
+    subpass_description.pColorAttachments = &attachment_reference;
+    subpass_description.pDepthStencilAttachment = NULL;
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = specular_ibl_init.color_attachment_count;
+    render_pass_info.pAttachments = &attachment_description;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &specular_ibl_init.render_pass));
+
+    specular_ibl_init.framebuffer = r_create_framebuffer(
+        specular_ibl_init.color_attachment_count,
+        specular_ibl_init.color_attachments,
+        NULL,
+        specular_ibl_init.render_pass,
+        extent2d,
+        1);
+
+    const char *paths[] = {
+        "../shaders/SPV/specular_ibl.vert.spv",
+        "../shaders/SPV/specular_ibl.frag.spv" };
+
+    VkDescriptorType input_types[] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
+    
+    specular_ibl_init_shader = create_2d_shader(
+        NULL,
+        sizeof(specular_ibl_init_render_data_t),
+        input_types,
+        sizeof(input_types) / sizeof(input_types[0]),
+        paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        &specular_ibl_init,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+}
+
+static void s_render_to_specular_ibl() {
+    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
+
+    VkImageMemoryBarrier barrier = create_image_barrier(
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        specular_ibl_cubemap.image,
+        0, 6,
+        0, 5,
+        VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        0, NULL,
+        0, NULL,
+        1, &barrier);
+    
+    matrix4_t projection_matrix = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f);
+
+    matrix4_t view_matrices[6] = {
+        glm::rotate(glm::rotate(matrix4_t(1.0f), glm::radians(90.0f), vector3_t(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), vector3_t(1.0f, 0.0f, 0.0f)),
+        glm::rotate(glm::rotate(matrix4_t(1.0f), glm::radians(-90.0f), vector3_t(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), vector3_t(1.0f, 0.0f, 0.0f)),
+        glm::rotate(matrix4_t(1.0f), glm::radians(-90.0f), vector3_t(1.0f, 0.0f, 0.0f)),
+        glm::rotate(matrix4_t(1.0f), glm::radians(90.0f), vector3_t(1.0f, 0.0f, 0.0f)),
+        glm::rotate(matrix4_t(1.0f), glm::radians(180.0f), vector3_t(1.0f, 0.0f, 0.0f)),
+        glm::rotate(matrix4_t(1.0f), glm::radians(180.0f), vector3_t(0.0f, 0.0f, 1.0f)),
+    };
+
+    specular_ibl_init_render_data_t render_data = {};
+
+    for (uint32_t mip = 0; mip < 5; ++mip) {
+        uint32_t width = (uint32_t)(512.0f * pow(0.5, mip));
+        uint32_t height = (uint32_t)(512.0f * pow(0.5, mip));
+
+        float roughness = (float)mip / (float)(5 - 1);
+        
+        for (uint32_t layer = 0; layer < 6; ++layer) {
+            VkClearValue clear_value = {};
+    
+            VkRect2D render_area = {};
+            render_area.extent.width = 512;
+            render_area.extent.height = 512;
+    
+            VkRenderPassBeginInfo begin_info = {};
+            begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            begin_info.renderPass = specular_ibl_init.render_pass;
+            begin_info.framebuffer = specular_ibl_init.framebuffer;
+            begin_info.renderArea = render_area;
+            begin_info.clearValueCount = 1;
+            begin_info.pClearValues = &clear_value;
+
+            vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+            VkViewport viewport = {};
+            viewport.width = width;
+            viewport.height = height;
+            viewport.maxDepth = 1;
+            vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, specular_ibl_init_shader.pipeline);
+
+            vkCmdBindDescriptorSets(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                specular_ibl_init_shader.layout,
+                0,
+                1, &base_cubemap_descriptor_set,
+                0, NULL);
+
+            render_data.face_rotation = projection_matrix * view_matrices[layer];
+            render_data.roughness = roughness;
+            render_data.layer = (float)layer;
+
+            vkCmdPushConstants(
+                command_buffer,
+                specular_ibl_init_shader.layout,
+                specular_ibl_init_shader.flags,
+                0,
+                sizeof(specular_ibl_init_render_data_t),
+                &render_data);
+
+            vkCmdDraw(command_buffer, 36, 1, 0, 0);
+
+            vkCmdEndRenderPass(command_buffer);
+
+            barrier = create_image_barrier(
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                specular_ibl_init.color_attachments[0].image,
+                0, 1,
+                0, 1,
+                VK_IMAGE_ASPECT_COLOR_BIT);
+
+            vkCmdPipelineBarrier(
+                command_buffer,
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                0,
+                0, NULL,
+                0, NULL,
+                1, &barrier);
+
+            VkImageCopy region = {};
+            region.extent.width = width;
+            region.extent.height = height;
+            region.extent.depth = 1;
+            region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.srcSubresource.mipLevel = 0;
+            region.srcSubresource.baseArrayLayer = 0;
+            region.srcSubresource.layerCount = 1;
+            region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.dstSubresource.mipLevel = mip;
+            region.dstSubresource.baseArrayLayer = layer;
+            region.dstSubresource.layerCount = 1;
+
+            vkCmdCopyImage(
+                command_buffer,
+                specular_ibl_init.color_attachments[0].image,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                specular_ibl_cubemap.image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                1, &region);
+
+            barrier = create_image_barrier(
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                specular_ibl_init.color_attachments[0].image,
+                0, 1,
+                0, 1,
+                VK_IMAGE_ASPECT_COLOR_BIT);
+
+            vkCmdPipelineBarrier(
+                command_buffer,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                0,
+                0, NULL,
+                0, NULL,
+                1, &barrier);
+
+            barrier = create_image_barrier(
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                specular_ibl_cubemap.image,
+                layer, 1,
+                mip, 1,
+                VK_IMAGE_ASPECT_COLOR_BIT);
+
+            vkCmdPipelineBarrier(
+                command_buffer,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0,
+                0, NULL,
+                0, NULL,
+                1, &barrier);
+        }
+    }
+    
+    end_single_time_command_buffer(command_buffer);
+}
+
 static shader_t cubemap_shader;
 
 static void s_load_cubemap_texture() {
@@ -371,7 +648,7 @@ static void s_load_cubemap_texture() {
     extent.width = width;
     extent.height = height;
     extent.depth = 1;
-    base_cubemap = s_create_cubemap(extent, VK_FORMAT_R16G16B16A16_SFLOAT, 1);
+    base_cubemap = s_create_cubemap(extent, VK_FORMAT_R16G16B16A16_SFLOAT, 1, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
     VkCommandBuffer command_buffer = begin_single_time_command_buffer();
     
@@ -455,6 +732,10 @@ void r_environment_init() {
     s_integral_look_pass_init();
 
     s_render_to_integral_lookup();
+
+    s_specular_ibl_init();
+
+    s_render_to_specular_ibl();
 }
 
 void r_render_environment(VkCommandBuffer command_buffer) {

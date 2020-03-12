@@ -244,7 +244,7 @@ static void s_final_init() {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
-        //r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -278,7 +278,8 @@ void r_execute_final_pass(
         /* Contains camera information */
         r_camera_transforms_uniform(),
         r_diffuse_ibl_irradiance(),
-        r_integral_lookup()
+        r_integral_lookup(),
+        r_specular_ibl()
     };
     
     vkCmdBindDescriptorSets(

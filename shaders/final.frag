@@ -15,7 +15,7 @@ layout(binding = 3, set = 0) uniform sampler2D u_gbuffer_depth;
 layout(binding = 0, set = 3) uniform samplerCube u_irradiance_map;
 
 layout(binding = 0, set = 4) uniform sampler2D u_integral_lookup;
-layout(binding = 0, set = 4) uniform samplerCube u_prefilter_map;
+layout(binding = 0, set = 5) uniform samplerCube u_prefilter_map;
 
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[4];
@@ -96,7 +96,6 @@ void main() {
         vec3 l = vec3(0.0f);
 
         for (int i = 0; i < 4; ++i) {
-            //vec3 light_position = vec3(u_camera_transforms.view * u_lighting.vs_light_positions[i]);
             vec3 light_position = vec3(u_lighting.vs_light_positions[i]);
         
             vec3 vs_light = normalize(light_position - vs_position);
@@ -125,7 +124,7 @@ void main() {
             l += (kd * albedo / PI + specular) * radiance * ndotl;
         }
 
-        vec3 fresnel = fresnel_roughness(dot(vs_view, vs_normal), base_reflectivity, roughness);
+        vec3 fresnel = fresnel_roughness(max(dot(vs_view, vs_normal), 0.0f), base_reflectivity, roughness);
         vec3 kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
 
         vec3 ws_normal = vec3(u_camera_transforms.inverse_view * vec4(vs_normal, 0.0f));
@@ -134,9 +133,12 @@ void main() {
         vec3 diffuse = texture(u_irradiance_map, vec3(ws_normal.x, -ws_normal.y, ws_normal.z)).xyz * albedo * kd;
 
         const float MAX_REFLECTION_LOD = 4.0f;
-        vec3 prefiltered_color = textureLod(u_prefilter_map, reflect(-ws_view, ws_normal), roughness * MAX_REFLECTION_LOD).rgb;
-        vec2 brdf = texture(u_integral_lookup, vec2(dot(ws_normal, ws_view), roughness)).rg;
-        vec3 specular = prefiltered_color * (fresnel * brdf.r + brdf.g);
+        vec3 reflected_vector = reflect(-ws_view, ws_normal);
+        reflected_vector.y *= -1.0f;
+        vec3 prefiltered_color = textureLod(u_prefilter_map, reflected_vector, roughness * MAX_REFLECTION_LOD).rgb;
+        vec2 brdf = texture(u_integral_lookup, vec2(max(dot(ws_normal, ws_view), 0.0f), roughness)).rg;
+        vec3 specular = prefiltered_color * (fresnel * brdf.r + clamp(brdf.g, 0, 1));
+        //vec3 specular = vec3(1.0f) * (fresnel * brdf.r);
 
         vec3 ambient = (diffuse + specular);
         
