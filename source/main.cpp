@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
                 xy -= vector2_t(3.5f);
                 xy *= 2.5f;
 
-                vector3_t ws_position = vector3_t(xy, 0.0f);
+                vector3_t ws_position = vector3_t(xy, xy.x);
 
                 render_data.model = glm::translate(ws_position);
                 render_data.pbr_info.x = glm::clamp((float)x / 7.0f, 0.05f, 1.0f);

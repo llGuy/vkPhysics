@@ -9,91 +9,6 @@
 #include <iostream>
 #include <vector>
 
-static rpipeline_stage_t deferred;
-
-rpipeline_stage_t *r_deferred_stage() {
-    return &deferred;
-}
-
-static void s_deferred_init() {
-    deferred.color_attachment_count = 3;
-    deferred.color_attachments = FL_MALLOC(attachment_t, deferred.color_attachment_count + 1);
-
-    VkExtent2D swapchain_extent = r_swapchain_extent();
-
-    VkExtent3D extent = {};
-    extent.width = swapchain_extent.width;
-    extent.height = swapchain_extent.height;
-    extent.depth = 1;
-
-    for (uint32_t i = 0; i < deferred.color_attachment_count; ++i) {
-        deferred.color_attachments[i] = r_create_color_attachment(extent, VK_FORMAT_R16G16B16A16_SFLOAT);
-    }
-
-    deferred.depth_attachment = &deferred.color_attachments[deferred.color_attachment_count];
-    *deferred.depth_attachment = r_create_depth_attachment(extent);
-    
-    VkAttachmentDescription *attachment_descriptions = FL_MALLOC(VkAttachmentDescription, deferred.color_attachment_count + 1);
-    for (uint32_t i = 0; i < deferred.color_attachment_count; ++i) {
-        attachment_descriptions[i] = r_fill_color_attachment_description(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_FORMAT_R16G16B16A16_SFLOAT);
-    }
-
-    attachment_descriptions[deferred.color_attachment_count] = r_fill_depth_attachment_description(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    VkAttachmentReference *attachment_references = FL_MALLOC(VkAttachmentReference, deferred.color_attachment_count + 1);
-    for (uint32_t i = 0; i < deferred.color_attachment_count; ++i) {
-        attachment_references[i].attachment = i;
-        attachment_references[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-    attachment_references[deferred.color_attachment_count].attachment = deferred.color_attachment_count;
-    attachment_references[deferred.color_attachment_count].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass_description = {};
-    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass_description.colorAttachmentCount = deferred.color_attachment_count;
-    subpass_description.pColorAttachments = attachment_references;
-    subpass_description.pDepthStencilAttachment = &attachment_references[deferred.color_attachment_count];
-
-    VkSubpassDependency dependencies[2] = {};
-    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[0].dstSubpass = 0;
-    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    dependencies[1].srcSubpass = 0;
-    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-
-    VkRenderPassCreateInfo render_pass_info = {};
-    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    render_pass_info.attachmentCount = deferred.color_attachment_count + 1;
-    render_pass_info.pAttachments = attachment_descriptions;
-    render_pass_info.dependencyCount = 2;
-    render_pass_info.pDependencies = dependencies;
-    render_pass_info.subpassCount = 1;
-    render_pass_info.pSubpasses = &subpass_description;
-
-    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &deferred.render_pass));
-
-    free(attachment_descriptions);
-    free(attachment_references);
-
-    deferred.framebuffer = r_create_framebuffer(
-        deferred.color_attachment_count,
-        deferred.color_attachments,
-        deferred.depth_attachment,
-        deferred.render_pass,
-        swapchain_extent,
-        1);
-
-    r_rpipeline_descriptor_set_output_init(&deferred);
-}
-
 VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(rpipeline_stage_t *stage) {
     VkPipelineColorBlendAttachmentState *attachment_states = FL_MALLOC(VkPipelineColorBlendAttachmentState, stage->color_attachment_count);
     memset(attachment_states, 0, sizeof(VkPipelineColorBlendAttachmentState) * stage->color_attachment_count);
@@ -228,6 +143,415 @@ static rpipeline_shader_t s_create_rendering_pipeline_shader(
     return rendering_pipeline_shader;
 }
 
+static rpipeline_stage_t deferred;
+
+rpipeline_stage_t *r_deferred_stage() {
+    return &deferred;
+}
+
+static void s_deferred_init() {
+    deferred.color_attachment_count = 3;
+    deferred.color_attachments = FL_MALLOC(attachment_t, deferred.color_attachment_count + 1);
+
+    VkExtent2D swapchain_extent = r_swapchain_extent();
+
+    VkExtent3D extent = {};
+    extent.width = swapchain_extent.width;
+    extent.height = swapchain_extent.height;
+    extent.depth = 1;
+
+    for (uint32_t i = 0; i < deferred.color_attachment_count; ++i) {
+        deferred.color_attachments[i] = r_create_color_attachment(extent, VK_FORMAT_R16G16B16A16_SFLOAT);
+    }
+
+    deferred.depth_attachment = &deferred.color_attachments[deferred.color_attachment_count];
+    *deferred.depth_attachment = r_create_depth_attachment(extent);
+    
+    VkAttachmentDescription *attachment_descriptions = FL_MALLOC(VkAttachmentDescription, deferred.color_attachment_count + 1);
+    for (uint32_t i = 0; i < deferred.color_attachment_count; ++i) {
+        attachment_descriptions[i] = r_fill_color_attachment_description(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_FORMAT_R16G16B16A16_SFLOAT);
+    }
+
+    attachment_descriptions[deferred.color_attachment_count] = r_fill_depth_attachment_description(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    VkAttachmentReference *attachment_references = FL_MALLOC(VkAttachmentReference, deferred.color_attachment_count + 1);
+    for (uint32_t i = 0; i < deferred.color_attachment_count; ++i) {
+        attachment_references[i].attachment = i;
+        attachment_references[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+    attachment_references[deferred.color_attachment_count].attachment = deferred.color_attachment_count;
+    attachment_references[deferred.color_attachment_count].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = deferred.color_attachment_count;
+    subpass_description.pColorAttachments = attachment_references;
+    subpass_description.pDepthStencilAttachment = &attachment_references[deferred.color_attachment_count];
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = deferred.color_attachment_count + 1;
+    render_pass_info.pAttachments = attachment_descriptions;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &deferred.render_pass));
+
+    free(attachment_descriptions);
+    free(attachment_references);
+
+    deferred.framebuffer = r_create_framebuffer(
+        deferred.color_attachment_count,
+        deferred.color_attachments,
+        deferred.depth_attachment,
+        deferred.render_pass,
+        swapchain_extent,
+        1);
+
+    r_rpipeline_descriptor_set_output_init(&deferred);
+}
+
+static rpipeline_stage_t lighting_stage;
+static VkDescriptorSet bright_colors_set;
+static rpipeline_shader_t lighting_shader;
+
+static void s_lighting_init() {
+    lighting_stage.color_attachment_count = 2;
+    lighting_stage.color_attachments = FL_MALLOC(attachment_t, lighting_stage.color_attachment_count);
+
+    VkExtent3D extent3d = {};
+    extent3d.width = r_swapchain_extent().width;
+    extent3d.height = r_swapchain_extent().height;
+    extent3d.depth = 1;
+    
+    lighting_stage.color_attachments[0] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
+    lighting_stage.color_attachments[1] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
+
+    VkAttachmentDescription attachment_descriptions[2] = {
+        r_fill_color_attachment_description(
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_FORMAT_R16G16B16A16_SFLOAT),
+        r_fill_color_attachment_description(
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_FORMAT_R16G16B16A16_SFLOAT) };
+    
+    VkAttachmentReference attachment_references[2] = {};
+    attachment_references[0].attachment = 0;
+    attachment_references[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment_references[1].attachment = 1;
+    attachment_references[1].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = lighting_stage.color_attachment_count;
+    subpass_description.pColorAttachments = attachment_references;
+    subpass_description.pDepthStencilAttachment = NULL;
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = lighting_stage.color_attachment_count;
+    render_pass_info.pAttachments = attachment_descriptions;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &lighting_stage.render_pass));
+
+    lighting_stage.framebuffer = r_create_framebuffer(
+        lighting_stage.color_attachment_count,
+        lighting_stage.color_attachments,
+        NULL,
+        lighting_stage.render_pass,
+        r_swapchain_extent(),
+        1);
+
+    r_rpipeline_descriptor_set_output_init(&lighting_stage);
+
+    bright_colors_set = create_image_descriptor_set(
+        lighting_stage.color_attachments[1].image_view,
+        lighting_stage.color_attachments[1].sampler,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+    VkDescriptorSetLayout input_layouts[] = {
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, deferred.binding_count),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+    };
+    
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = sizeof(input_layouts) / sizeof(VkDescriptorSetLayout);
+    pipeline_layout_info.pSetLayouts = input_layouts;
+    VkPipelineLayout pipeline_layout;
+    vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
+    
+    lighting_shader = s_create_rendering_pipeline_shader(
+        "../shaders/SPV/lighting.vert.spv",
+        "../shaders/SPV/lighting.frag.spv",
+        &lighting_stage,
+        pipeline_layout);
+}
+
+void r_execute_lighting_pass(
+    VkCommandBuffer command_buffer) {
+    VkClearValue clear_values = {};
+    
+    VkRect2D render_area = {};
+    render_area.extent = r_swapchain_extent();
+
+    VkRenderPassBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    begin_info.framebuffer = lighting_stage.framebuffer;
+    begin_info.renderPass = lighting_stage.render_pass;
+    begin_info.clearValueCount = lighting_stage.color_attachment_count;
+    begin_info.pClearValues = &clear_values;
+    begin_info.renderArea = render_area;
+
+    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    
+    VkViewport viewport = {};
+    viewport.width = r_swapchain_extent().width;
+    viewport.height = r_swapchain_extent().height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_shader.pipeline);
+
+    VkDescriptorSet inputs[] = {
+        deferred.descriptor_set,
+        /* Contains lighting information */
+        r_lighting_uniform(),
+        /* Contains camera information */
+        r_camera_transforms_uniform(),
+        r_diffuse_ibl_irradiance(),
+        r_integral_lookup(),
+        r_specular_ibl()
+    };
+    
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        lighting_shader.layout,
+        0,
+        sizeof(inputs) / sizeof(VkDescriptorSet),
+        inputs,
+        0,
+        NULL);
+
+    vkCmdDraw(command_buffer, 4, 1, 0, 0);
+
+    vkCmdEndRenderPass(command_buffer);
+}
+
+static rpipeline_shader_t blur_shader;
+static rpipeline_stage_t blur_stage;
+VkDescriptorSet blur_sets[2];
+VkDescriptorSet current_set;
+
+static void s_blur_init() {
+    blur_stage.color_attachment_count = 1;
+    // Need 2 attachments for ping-pong rendering, but render pass only takes one
+    blur_stage.color_attachments = FL_MALLOC(attachment_t, 2);
+
+    VkExtent3D extent3d = {};
+    extent3d.width = r_swapchain_extent().width;
+    extent3d.height = r_swapchain_extent().height;
+    extent3d.depth = 1;
+    
+    blur_stage.color_attachments[0] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
+    blur_stage.color_attachments[1] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
+
+    VkAttachmentDescription attachment_description = r_fill_color_attachment_description(
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_FORMAT_R16G16B16A16_SFLOAT);
+    
+    VkAttachmentReference attachment_reference = {};
+    attachment_reference.attachment = 0;
+    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = blur_stage.color_attachment_count;
+    subpass_description.pColorAttachments = &attachment_reference;
+    subpass_description.pDepthStencilAttachment = NULL;
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = blur_stage.color_attachment_count;
+    render_pass_info.pAttachments = &attachment_description;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &blur_stage.render_pass));
+
+    blur_stage.framebuffers[0] = r_create_framebuffer(
+        blur_stage.color_attachment_count,
+        blur_stage.color_attachments,
+        NULL,
+        blur_stage.render_pass,
+        r_swapchain_extent(),
+        1);
+
+    blur_stage.framebuffers[1] = r_create_framebuffer(
+        blur_stage.color_attachment_count,
+        blur_stage.color_attachments + 1,
+        NULL,
+        blur_stage.render_pass,
+        r_swapchain_extent(),
+        1);
+
+    //r_rpipeline_descriptor_set_output_init(&blur_stage);
+    blur_sets[0] = create_image_descriptor_set(
+        blur_stage.color_attachments[0].image_view,
+        blur_stage.color_attachments[0].sampler,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+    blur_sets[1] = create_image_descriptor_set(
+        blur_stage.color_attachments[1].image_view,
+        blur_stage.color_attachments[1].sampler,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+    VkDescriptorSetLayout input_layouts[] = {
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+    };
+
+    VkPushConstantRange range = {};
+    range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    range.offset = 0;
+    range.size = 4;
+    
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = sizeof(input_layouts) / sizeof(VkDescriptorSetLayout);
+    pipeline_layout_info.pSetLayouts = input_layouts;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pPushConstantRanges = &range;
+    VkPipelineLayout pipeline_layout;
+    vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
+    
+    blur_shader = s_create_rendering_pipeline_shader(
+        "../shaders/SPV/gauss_blur.vert.spv",
+        "../shaders/SPV/gauss_blur.frag.spv",
+        &blur_stage,
+        pipeline_layout);
+}
+
+// Blur bright colors
+void r_execute_bloom_pass(
+    VkCommandBuffer command_buffer) {
+    VkDescriptorSet inputs[] = {
+        bright_colors_set
+    };
+
+    uint32_t horizontal = true;
+    
+    for (uint32_t i = 0; i < 10; ++i) {
+        if (i > 0) {
+            inputs[0] = blur_sets[!horizontal];
+            current_set = blur_sets[horizontal];
+        }
+        
+        VkClearValue clear_values = {};
+    
+        VkRect2D render_area = {};
+        render_area.extent = r_swapchain_extent();
+
+        VkRenderPassBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        begin_info.framebuffer = blur_stage.framebuffers[horizontal];
+        begin_info.renderPass = blur_stage.render_pass;
+        begin_info.clearValueCount = blur_stage.color_attachment_count;
+        begin_info.pClearValues = &clear_values;
+        begin_info.renderArea = render_area;
+
+        vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    
+        VkViewport viewport = {};
+        viewport.width = r_swapchain_extent().width;
+        viewport.height = r_swapchain_extent().height;
+        viewport.maxDepth = 1;
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, blur_shader.pipeline);
+
+        vkCmdBindDescriptorSets(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            blur_shader.layout,
+            0,
+            sizeof(inputs) / sizeof(VkDescriptorSet),
+            inputs,
+            0,
+            NULL);
+
+        vkCmdPushConstants(
+            command_buffer,
+            blur_shader.layout,
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            0, sizeof(uint32_t),
+            &horizontal);
+
+        vkCmdDraw(command_buffer, 4, 1, 0, 0);
+
+        vkCmdEndRenderPass(command_buffer);
+        
+        horizontal = !horizontal;
+    }
+}
+
 static rpipeline_stage_t final_stage;
 static rpipeline_shader_t final_shader;
 
@@ -239,11 +563,7 @@ static void s_final_init() {
     final_stage.render_pass = r_final_render_pass();
     
     VkDescriptorSetLayout input_layouts[] = {
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, deferred.binding_count),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, lighting_stage.binding_count),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
@@ -272,14 +592,8 @@ void r_execute_final_pass(
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, final_shader.pipeline);
 
     VkDescriptorSet inputs[] = {
-        deferred.descriptor_set,
-        /* Contains lighting information */
-        r_lighting_uniform(),
-        /* Contains camera information */
-        r_camera_transforms_uniform(),
-        r_diffuse_ibl_irradiance(),
-        r_integral_lookup(),
-        r_specular_ibl()
+        lighting_stage.descriptor_set,
+        current_set
     };
     
     vkCmdBindDescriptorSets(
@@ -297,6 +611,8 @@ void r_execute_final_pass(
 
 void r_pipeline_init() {
     s_deferred_init();
+    s_lighting_init();
+    s_blur_init();
     s_final_init();
 }
 

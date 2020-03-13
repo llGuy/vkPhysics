@@ -791,6 +791,9 @@ void end_frame() {
     render_pass_begin_info.clearValueCount = 1;
     render_pass_begin_info.pClearValues = &clear_value;
     
+    r_execute_lighting_pass(primary_command_buffers[image_index]);
+    r_execute_bloom_pass(primary_command_buffers[image_index]);
+    
     vkCmdBeginRenderPass(primary_command_buffers[image_index], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
     r_execute_final_pass(primary_command_buffers[image_index]);
@@ -1442,9 +1445,9 @@ attachment_t r_create_color_attachment(
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     sampler_info.magFilter = VK_FILTER_LINEAR;
     sampler_info.minFilter = VK_FILTER_LINEAR;
-    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sampler_info.anisotropyEnable = VK_TRUE;
     sampler_info.maxAnisotropy = 16;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;

@@ -35,6 +35,12 @@ VkDevice r_device();
 
 void r_pipeline_init();
 
+void r_execute_lighting_pass(
+    VkCommandBuffer command_buffer);
+
+void r_execute_bloom_pass(
+    VkCommandBuffer command_buffer);
+
 void r_execute_final_pass(
     VkCommandBuffer command_buffer);
 
@@ -75,7 +81,14 @@ void r_free_blend_state_info(
 /* Rendering pipeline stage (post processing etc..) */
 struct rpipeline_stage_t {
     VkRenderPass render_pass;
-    VkFramebuffer framebuffer;
+    
+    union {
+        VkFramebuffer framebuffer;
+        struct {
+            // Maximum 3 framebuffers now
+            VkFramebuffer framebuffers[3];
+        };
+    };
 
     uint32_t color_attachment_count;
     attachment_t *color_attachments;
