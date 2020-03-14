@@ -70,6 +70,149 @@ static attachment_t s_create_cubemap(
     return attachment;
 }
 
+static VkExtent2D base_cubemap_extent;
+static rpipeline_stage_t base_cubemap_init;
+static shader_t base_cubemap_init_shader;
+
+struct base_cubemap_render_data_t {
+    matrix4_t inverse_projection;
+    float width;
+    float height;
+};
+
+static void s_base_cubemap_init() {
+    base_cubemap_extent.width = 512;
+    base_cubemap_extent.height = 512;
+
+    VkExtent3D extent3d = {};
+    extent3d.width = base_cubemap_extent.width;
+    extent3d.height = base_cubemap_extent.height;
+    extent3d.depth = 1;
+
+    base_cubemap_init.color_attachment_count = 1;
+    base_cubemap_init.color_attachments = FL_MALLOC(attachment_t, base_cubemap_init.color_attachment_count);
+
+    base_cubemap_init.color_attachments[0] = s_create_cubemap(
+        extent3d,
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        1,
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+
+    VkAttachmentDescription cubemap_description = r_fill_color_attachment_description(
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_FORMAT_R16G16B16A16_SFLOAT);
+    
+    VkAttachmentReference cubemap_reference = {};
+    cubemap_reference.attachment = 0;
+    cubemap_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = base_cubemap_init.color_attachment_count;
+    subpass_description.pColorAttachments = &cubemap_reference;
+    subpass_description.pDepthStencilAttachment = NULL;
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = base_cubemap_init.color_attachment_count;
+    render_pass_info.pAttachments = &cubemap_description;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &base_cubemap_init.render_pass));
+
+    base_cubemap_init.framebuffer = r_create_framebuffer(
+        base_cubemap_init.color_attachment_count,
+        base_cubemap_init.color_attachments,
+        NULL,
+        base_cubemap_init.render_pass,
+        base_cubemap_extent,
+        6);
+
+    r_rpipeline_descriptor_set_output_init(&base_cubemap_init);
+
+    const char *paths[] = {
+        "../shaders/SPV/atmosphere_scatter_cubemap_init.vert.spv",
+        "../shaders/SPV/atmosphere_scatter_cubemap_init.geom.spv",
+        "../shaders/SPV/atmosphere_scatter_cubemap_init.frag.spv"  };
+    base_cubemap_init_shader = create_2d_shader(
+        NULL,
+        sizeof(base_cubemap_render_data_t),
+        NULL, 0,
+        paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        &base_cubemap_init,
+        VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+}
+
+static void s_render_to_base_cubemap() {
+    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
+
+    VkClearValue clear_value = {};
+    
+    VkRect2D render_area = {};
+    render_area.extent = base_cubemap_extent;
+    
+    VkRenderPassBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    begin_info.renderPass = base_cubemap_init.render_pass;
+    begin_info.framebuffer = base_cubemap_init.framebuffer;
+    begin_info.renderArea = render_area;
+    begin_info.clearValueCount = 1;
+    begin_info.pClearValues = &clear_value;
+    
+    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkViewport viewport = {};
+    viewport.width = base_cubemap_extent.width;
+    viewport.height = base_cubemap_extent.height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, base_cubemap_init_shader.pipeline);
+
+    matrix4_t projection = glm::perspective(
+        glm::radians(90.0f),
+        (float)base_cubemap_extent.width / (float)base_cubemap_extent.height,
+        0.1f, 5.0f);
+    
+    base_cubemap_render_data_t render_data = {};
+    render_data.width = (float)base_cubemap_extent.width;
+    render_data.height = (float)base_cubemap_extent.height;
+    render_data.inverse_projection = glm::inverse(projection);
+    
+    vkCmdPushConstants(
+        command_buffer,
+        base_cubemap_init_shader.layout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        0,
+        sizeof(base_cubemap_render_data_t),
+        &render_data);
+
+    vkCmdDraw(command_buffer, 1, 1, 0, 0);
+
+    vkCmdEndRenderPass(command_buffer);
+    
+    end_single_time_command_buffer(command_buffer);
+}
+
 static VkExtent2D hdr_environment_extent;
 
 static rpipeline_stage_t hdr_environment_init;
@@ -191,7 +334,8 @@ static void s_render_to_diffuse_ibl_cubemap() {
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_environment_init_shader.pipeline);
 
-    VkDescriptorSet inputs[] = { base_cubemap_descriptor_set };
+    //VkDescriptorSet inputs[] = { base_cubemap_descriptor_set };
+    VkDescriptorSet inputs[] = { base_cubemap_init.descriptor_set };
 
     vkCmdBindDescriptorSets(
         command_buffer,
@@ -508,7 +652,8 @@ static void s_render_to_specular_ibl() {
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 specular_ibl_init_shader.layout,
                 0,
-                1, &base_cubemap_descriptor_set,
+                //1, &base_cubemap_descriptor_set,
+                1, &base_cubemap_init.descriptor_set,
                 0, NULL);
 
             render_data.face_rotation = projection_matrix * view_matrices[layer];
@@ -721,20 +866,15 @@ static void s_cubemap_shader_init() {
 }
 
 void r_environment_init() {
+    s_base_cubemap_init();
+    s_render_to_base_cubemap();
     s_hdr_environment_pass_init();
-
-    s_load_cubemap_texture();
-
+    //s_load_cubemap_texture();
     s_cubemap_shader_init();
-
     s_render_to_diffuse_ibl_cubemap();
-
     s_integral_look_pass_init();
-
     s_render_to_integral_lookup();
-
     s_specular_ibl_init();
-
     s_render_to_specular_ibl();
 }
 
@@ -749,7 +889,8 @@ void r_render_environment(VkCommandBuffer command_buffer) {
 
     VkDescriptorSet descriptor_sets[] = {
         r_camera_transforms_uniform(),
-        base_cubemap_descriptor_set };
+        //base_cubemap_descriptor_set };
+        base_cubemap_init.descriptor_set };
 
     vkCmdBindDescriptorSets(
         command_buffer,

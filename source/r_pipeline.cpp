@@ -459,7 +459,7 @@ static void s_blur_init() {
         blur_stage.color_attachments[0].sampler,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-    blur_sets[1] = create_image_descriptor_set(
+    current_set = blur_sets[1] = create_image_descriptor_set(
         blur_stage.color_attachments[1].image_view,
         blur_stage.color_attachments[1].sampler,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -564,7 +564,7 @@ static void s_final_init() {
     
     VkDescriptorSetLayout input_layouts[] = {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, lighting_stage.binding_count),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+        //r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -593,7 +593,7 @@ void r_execute_final_pass(
 
     VkDescriptorSet inputs[] = {
         lighting_stage.descriptor_set,
-        current_set
+        //current_set
     };
     
     vkCmdBindDescriptorSets(

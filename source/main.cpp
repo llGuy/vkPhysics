@@ -10,6 +10,8 @@
 
 #include <imgui.h>
 
+#include <unistd.h>
+
 static void s_create_vulkan_surface_proc(struct VkInstance_T *instance, struct VkSurfaceKHR_T **surface, void *window) {
     if (glfwCreateWindowSurface(instance, (GLFWwindow *)window, NULL, surface) != VK_SUCCESS) {
         printf("Failed to create surface\n");
@@ -78,12 +80,14 @@ int main(int argc, char *argv[]) {
 
     mesh_render_data_t render_data = {};
     render_data.model = matrix4_t(1.0f);
-    render_data.color = vector4_t(0.5f, 0.0f ,0.0f, 1.0f);
+    render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.2f;
     render_data.pbr_info.y = 0.8;
     
     double now = glfwGetTime();
     float dt = 0.0f;
+
+    float frame_time_max = 1.0f / 60.0f;
     
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -124,6 +128,13 @@ int main(int argc, char *argv[]) {
 
         double new_now = glfwGetTime();
         dt = (float)(new_now - now);
+
+        /*if (dt < frame_time_max) {
+            usleep((frame_time_max - dt) * 1000000.0f);
+        }
+
+        dt = frame_time_max;*/
+        
         now = new_now;
     }
 
