@@ -225,8 +225,68 @@ static void s_load_sphere(
 
 // TODO:
 static void s_load_cube(
-    mesh_t *mesh) {
-    (void)mesh;
+    mesh_t *mesh,
+    shader_binding_info_t *binding_info) {
+    vector3_t vertices[8] = {
+        vector3_t(-1.0f, -1.0f, 1.0f),
+        vector3_t(1.0f, -1.0f, 1.0f),
+        vector3_t(1.0f, 1.0f, 1.0f),
+        vector3_t(-1.0f, 1.0f, 1.0f),
+        vector3_t(-1.0f, -1.0f, -1.0f),
+        vector3_t(1.0f, -1.0f, -1.0f),
+        vector3_t(1.0f, 1.0f, -1.0f),
+        vector3_t(-1.0f, 1.0f, -1.0f)
+    };
+
+    uint32_t indices[36] = {
+        0, 1, 2,
+        2, 3, 0,
+
+        1, 5, 6,
+        6, 2, 1,
+
+        7, 6, 5,
+        5, 4, 7,
+	    
+        3, 7, 4,
+        4, 0, 3,
+	    
+        4, 5, 1,
+        1, 0, 4,
+	    
+        3, 2, 6,
+        6, 7, 3
+    };
+
+    uint32_t index_count = sizeof(indices) / sizeof(indices[0]);
+    uint32_t vertex_count = sizeof(vertices) / sizeof(vertices[0]);
+
+    push_buffer_to_mesh(BT_INDICES, mesh);
+    mesh_buffer_t *indices_gpu_buffer = get_mesh_buffer(BT_INDICES, mesh);
+    indices_gpu_buffer->gpu_buffer = create_gpu_buffer(
+        sizeof(uint32_t) * index_count,
+        indices,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+
+    push_buffer_to_mesh(BT_VERTEX, mesh);
+    mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, mesh);
+    vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
+        sizeof(vector3_t) * vertex_count,
+        vertices,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+    if (binding_info) {
+        *binding_info = create_mesh_binding_info(mesh);
+    }
+
+    mesh->vertex_offset = 0;
+    mesh->vertex_count = vertex_count;
+    mesh->first_index = 0;
+    mesh->index_offset = 0;
+    mesh->index_count = index_count;
+    mesh->index_type = VK_INDEX_TYPE_UINT32;
+
+    s_create_mesh_vbo_final_list(mesh);
 }
 
 void load_mesh_internal(
@@ -241,7 +301,7 @@ void load_mesh_internal(
     } break;
        
     case IM_CUBE: {
-        s_load_cube(mesh);
+        s_load_cube(mesh, info);
     } break;
     }
 }
