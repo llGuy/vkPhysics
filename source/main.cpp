@@ -36,7 +36,7 @@ static void s_imgui_test() {
     static float eye_height = 0.0f;
     ImGui::SliderFloat("Eye height", &eye_height, 0.0f, 1.0f);
 
-    static float light_direction[3] = { 0.0f, 0.622f, 0.714f };
+    static float light_direction[3] = { 0.0f, 0.222f, 0.714f };
     ImGui::SliderFloat3("Light direction", light_direction, -1.0f, +1.0f);
 
     static float rayleigh = -0.082f;
@@ -48,10 +48,10 @@ static void s_imgui_test() {
     static float intensity = 0.650f;
     ImGui::SliderFloat("Intensity", &intensity, 0.1f, 30.0f);
 
-    static float scatter_strength = 1.177f;
+    static float scatter_strength = 1.975f;
     ImGui::SliderFloat("Scatter strength", &scatter_strength, 1.0f, 30.0f);
 
-    static float rayleigh_strength = 1.454f;
+    static float rayleigh_strength = 2.496f;
     ImGui::SliderFloat("Rayleigh strength", &rayleigh_strength, 0.0f, 3.0f);
 
     static float mie_strength = 0.184f;
@@ -63,7 +63,8 @@ static void s_imgui_test() {
     static float mie_collection = 2.981f;
     ImGui::SliderFloat("Mie collection", &mie_collection, 0.0f, 3.0f);
 
-    static float kr[3] = {0.18867780436772762, 0.4978442963618773, 0.6616065586417131};
+    //static float kr[3] = {0.18867780436772762, 0.4978442963618773, 0.6616065586417131};
+    static float kr[3] = {27.0f / 255.0f, 82.0f / 255.0f, 111.0f / 255.0f};
     ImGui::ColorEdit3("Air color", kr);
 
     changed = ImGui::Button("Update");
