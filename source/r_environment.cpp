@@ -74,11 +74,11 @@ static VkExtent2D base_cubemap_extent;
 static rpipeline_stage_t base_cubemap_init;
 static shader_t base_cubemap_init_shader;
 
-struct base_cubemap_render_data_t {
-    matrix4_t inverse_projection;
-    float width;
-    float height;
-};
+static base_cubemap_render_data_t render_data = {};
+
+base_cubemap_render_data_t *r_cubemap_render_data() {
+    return &render_data;
+}
 
 static void s_base_cubemap_init() {
     base_cubemap_extent.width = 512;
@@ -160,6 +160,20 @@ static void s_base_cubemap_init() {
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         &base_cubemap_init,
         VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+
+    /*    render_data.eye_height = 0.5f;
+    render_data.light_direction.x = 0.0f;
+    render_data.light_direction.y = 1.0f;
+    render_data.light_direction.z = 0.0f;
+    render_data.light_direction.w = 1.0f;
+    render_data.rayleigh = -0.01f;
+    render_data.mie = -0.75f;
+    render_data.intensity = 1.5f;
+    render_data.scatter_strength = 19.0f;
+    render_data.rayleigh_strength = 1.0f;
+    render_data.mie_strength = 1.0f;
+    render_data.rayleigh_collection = 1.0f;
+    render_data.mie_collection = 1.0f;*/
 }
 
 static void s_render_to_base_cubemap() {
@@ -193,7 +207,6 @@ static void s_render_to_base_cubemap() {
         (float)base_cubemap_extent.width / (float)base_cubemap_extent.height,
         0.1f, 5.0f);
     
-    base_cubemap_render_data_t render_data = {};
     render_data.width = (float)base_cubemap_extent.width;
     render_data.height = (float)base_cubemap_extent.height;
     render_data.inverse_projection = glm::inverse(projection);
@@ -909,4 +922,8 @@ void r_render_environment(VkCommandBuffer command_buffer) {
     vkCmdPushConstants(command_buffer, cubemap_shader.layout, cubemap_shader.flags, 0, sizeof(cubemap_render_data_t), &render_data);
 
     vkCmdDraw(command_buffer, 36, 1, 0, 0);
+}
+
+void r_render_environment_to_offscreen() {
+    s_render_to_base_cubemap();
 }

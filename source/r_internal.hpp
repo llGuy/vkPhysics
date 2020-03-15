@@ -138,6 +138,26 @@ void r_lighting_gpu_sync(VkCommandBuffer command_buffer);
 void r_environment_init();
 
 void r_render_environment(VkCommandBuffer command_buffer);
+void r_render_environment_to_offscreen();
+
+struct base_cubemap_render_data_t {
+    matrix4_t inverse_projection;
+    
+    float width;
+    float height;
+
+    /*float eye_height;
+    float rayleigh;
+    float mie;
+    float intensity;
+    float scatter_strength;
+    float rayleigh_strength;
+    float mie_strength;
+    float rayleigh_collection;
+    float mie_collection;*/
+};
+
+base_cubemap_render_data_t *r_cubemap_render_data();
 
 VkDescriptorSet r_diffuse_ibl_irradiance();
 VkDescriptorSet r_specular_ibl();

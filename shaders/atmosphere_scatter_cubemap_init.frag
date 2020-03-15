@@ -11,6 +11,17 @@ layout(push_constant) uniform push_constant_t {
     mat4 inverse_projection;
     float width;
     float height;
+
+    vec4 light_direction;
+    float eye_height;
+    float rayleigh;
+    float mie;
+    float intensity;
+    float scatter_strength;
+    float rayleigh_strength;
+    float mie_strength;
+    float rayleigh_collection;
+    float mie_collection;
 } u_push_constant;
 
 mat4 look_at(
@@ -49,7 +60,7 @@ float atmospheric_depth(vec3 position, vec3 dir){
     return t1;
 }
 
-const float EYE_HEIGHT = 0.8f;
+const float EYE_HEIGHT = 0.0f;
 const int NUM_SAMPLES_I = 20;
 const float NUM_SAMPLES = 20.0f;
 
@@ -71,7 +82,23 @@ vec3 compute_spherical_view_direction() {
     return normalize(mat3(inverse_view_rotate) * direction);
 }
 
-const vec3 LIGHT_DIR = normalize(vec3(0.0f, 1.0f, 0.0f));
+float horizon_extinction(vec3 position, vec3 dir, float radius) {
+    float u = dot(dir, -position);
+    if(u < 0.0){
+        return 1.0;
+    }
+    vec3 near = position + u*dir;
+    if(length(near) < radius){
+        return 0.0;
+    }
+    else{
+        vec3 v2 = normalize(near)*radius - position;
+        float diff = acos(dot(normalize(v2), dir));
+        return smoothstep(0.0, 1.0, pow(diff*2.0, 3.0));
+    }
+}
+
+const vec3 LIGHT_DIR = normalize(vec3(0.0f, 0.0f, 0.1f));
 
 float phase(float alpha, float g){
     float a = 3.0f * (1.0f - g* g);
@@ -96,7 +123,7 @@ void main() {
     float alpha = dot(eye_direction, LIGHT_DIR);
     
     float rayleigh = phase(alpha, -0.01f);
-    float mie = phase(alpha, -0.93f);
+    float mie = phase(alpha, -0.955f);
     
     float ray_length = atmospheric_depth(eye_position, eye_direction);
     float ray_step_length = ray_length / NUM_SAMPLES;
@@ -106,22 +133,28 @@ void main() {
     vec3 accumulated_rayleigh = vec3(0.0f);
     vec3 accumulated_mie = vec3(0.0f);
 
-    float intensity = 0.8f;
+    float eye_extinction = horizon_extinction(eye_position, eye_direction, EYE_HEIGHT - 0.25f);
+    
+    float intensity = 1.5f;
+
+    float spot = smoothstep(0.0, 15.0, phase(alpha, 0.9995)) * 5.0f;
     
     for (int i = 0; i < NUM_SAMPLES_I; ++i) {
         float sample_distance = ray_step_length * float(i);
         vec3 ray_sample_position = eye_position + sample_distance * eye_direction;
 
+        float extinction = horizon_extinction(ray_sample_position, LIGHT_DIR, EYE_HEIGHT - 0.35f);
+        
         float sample_depth = atmospheric_depth(eye_position, LIGHT_DIR);
 
-        vec3 influx = absorb(sample_depth, vec3(intensity), 3.0f);
+        vec3 influx = absorb(sample_depth, vec3(intensity), 19.0f) * extinction;
 
-        accumulated_rayleigh += absorb(sample_distance, kr * influx, 1.0f);
-        accumulated_mie += absorb(sample_distance, influx, 1.0f);
+        accumulated_rayleigh += absorb(sample_distance, kr * influx, 0.001f);
+        accumulated_mie += absorb(sample_distance, influx, 0.01f);
     }
 
-    accumulated_rayleigh = (accumulated_rayleigh * pow(ray_length, 3.0f)) / NUM_SAMPLES;
-    accumulated_mie = (accumulated_mie * pow(ray_length, 0.7f)) / NUM_SAMPLES;
+    accumulated_rayleigh = (accumulated_rayleigh * pow(ray_length, 8.0f)) / NUM_SAMPLES;
+    accumulated_mie = (accumulated_mie * pow(ray_length, 2.0f)) / NUM_SAMPLES;
 
     vec3 color = vec3(mie * accumulated_mie + rayleigh * accumulated_rayleigh);
     

@@ -31,6 +31,54 @@ static void s_imgui_test() {
 
     ImGui::Text("Position: %.1f %.1f %.1f", camera_data->position.x, camera_data->position.y, camera_data->position.z);
 
+    float eye_height = 0.5f;
+    ImGui::SliderFloat("Eye height", &eye_height, 0.0f, 1.0f);
+
+    float light_direction[3] = { 0.0f, 1.0f, 0.0f };
+    ImGui::SliderFloat3("Light direction", light_direction, -1.0f, +1.0f);
+
+    float rayleigh = -0.01f;
+    ImGui::SliderFloat("Rayleigh factor", &rayleigh, -0.1f, 0.0f);
+    
+    float mie = -0.75f;
+    ImGui::SliderFloat("Mie factor", &mie, -0.999f, -0.75f);
+
+    float intensity = 1.5f;
+    ImGui::SliderFloat("Intensity", &intensity, 0.1f, 30.0f);
+
+    float scatter_strength = 19.0f;
+    ImGui::SliderFloat("Scatter strength", &scatter_strength, 1.0f, 30.0f);
+
+    float rayleigh_strength = 1.0f;
+    ImGui::SliderFloat("Rayleigh strength", &rayleigh_strength, 0.0f, 3.0f);
+
+    float mie_strength = 1.0f;
+    ImGui::SliderFloat("Mie strength", &mie_strength, 0.0f, 3.0f);
+
+    float rayleigh_collection = 1.0f;
+    ImGui::SliderFloat("Rayleigh collection", &rayleigh_collection, 0.0f, 3.0f);
+
+    float mie_collection = 1.0f;
+    ImGui::SliderFloat("Mie collection", &mie_collection, 0.0f, 3.0f);
+
+    base_cubemap_render_data_t *ptr = r_cubemap_render_data();
+
+    /*ptr->eye_height = eye_height;
+    ptr->light_direction.x = light_direction[0];
+    ptr->light_direction.y = light_direction[1];
+    ptr->light_direction.z = light_direction[2];
+    ptr->light_direction.w = 1.0f;
+    ptr->rayleigh = rayleigh;
+    ptr->mie = mie;
+    ptr->intensity = intensity;
+    ptr->scatter_strength = scatter_strength;
+    ptr->rayleigh_strength = rayleigh_strength;
+    ptr->mie_strength = mie_strength;
+    ptr->rayleigh_collection = rayleigh_collection;
+    ptr->mie_collection = mie_collection;*/
+    
+    
+
     /*static float rotation = 0.0;
     ImGui::SliderFloat("rotation", &rotation, 0.0f, 2.0f * 3.1415f);
     static float translation[] = { 0.0f, 0.0f };
@@ -80,7 +128,7 @@ int main(int argc, char *argv[]) {
 
     mesh_render_data_t render_data = {};
     render_data.model = matrix4_t(1.0f);
-    render_data.color = vector4_t(1.0f);
+    render_data.color = vector4_t(0.0f);
     render_data.pbr_info.x = 0.2f;
     render_data.pbr_info.y = 0.8;
     
@@ -88,10 +136,14 @@ int main(int argc, char *argv[]) {
     float dt = 0.0f;
 
     float frame_time_max = 1.0f / 60.0f;
+
+    printf("%i\n", sizeof(base_cubemap_render_data_t));
     
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
+        //r_render_environment_to_offscreen();
+        
         r_camera_handle_input(dt, window);
  
         r_update_lighting();
