@@ -51,7 +51,7 @@ float distribution_ggx(
     float denom = ndoth * ndoth * (a2 - 1.0f) + 1.0f;
     denom = PI * denom * denom;
 
-    return a2 / max(denom, 0.0000001f);
+    return a2 / max(denom, 0.000001f);
 }
 
 float smith_ggx(
@@ -115,10 +115,10 @@ void main() {
             //vec3 radiance = u_lighting.light_colors[i].rgb * attenuation;
             vec3 radiance = directional_light_color * attenuation;
 
-            float ndotv = max(dot(vs_normal, vs_view), 0.0000001f);
-            float ndotl = max(dot(vs_normal, vs_light), 0.0000001f);
-            float hdotv = max(dot(vs_halfway, vs_view), 0.0f);
-            float ndoth = max(dot(vs_normal, vs_halfway), 0.0f);
+            float ndotv = max(dot(vs_normal, vs_view), 0.000001f);
+            float ndotl = max(dot(vs_normal, vs_light), 0.000001f);
+            float hdotv = max(dot(vs_halfway, vs_view), 0.000001f);
+            float ndoth = max(dot(vs_normal, vs_halfway), 0.000001f);
 
             float distribution_term = distribution_ggx(ndoth, roughness);
             float smith_term = smith_ggx(ndotv, ndotl, roughness);
@@ -134,7 +134,7 @@ void main() {
             l += (kd * albedo / PI + specular) * radiance * ndotl;
         //}
 
-        vec3 fresnel = fresnel_roughness(max(dot(vs_view, vs_normal), 0.0f), base_reflectivity, roughness);
+        vec3 fresnel = fresnel_roughness(max(dot(vs_view, vs_normal), 0.000001f), base_reflectivity, roughness);
         //vec3 kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
         kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
 

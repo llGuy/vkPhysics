@@ -252,4 +252,7 @@ struct texture_t {
 
 texture_t create_texture(
     const char *path,
-    VkFormat format);
+    VkFormat format,
+    void *data,
+    uint32_t width, uint32_t height,
+    VkFilter filter);

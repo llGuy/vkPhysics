@@ -1618,9 +1618,19 @@ VkAttachmentDescription r_fill_depth_attachment_description(VkImageLayout layout
 
 texture_t create_texture(
     const char *path,
-    VkFormat format) {
+    VkFormat format,
+    void *data,
+    uint32_t width, uint32_t height) {
     int32_t x, y, channels;
-    void *pixels = stbi_load(path, &x, &y, &channels, STBI_rgb_alpha);
+    void *pixels;
+    if (!data && path) {
+        pixels = stbi_load(path, &x, &y, &channels, STBI_rgb_alpha);
+    }
+    else {
+        pixels = data;
+        x = width;
+        y = height;
+    }
 
     VkExtent3D extent = {};
     extent.width = x;

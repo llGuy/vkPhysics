@@ -133,9 +133,9 @@ int main(int argc, char *argv[]) {
 
     mesh_render_data_t cube_data = {};
     cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
-    cube_data.color = vector4_t(0.9f);
-    cube_data.pbr_info.x = 0.05f;
-    cube_data.pbr_info.y = 0.5f;
+    cube_data.color = vector4_t(1.0f);
+    cube_data.pbr_info.x = 0.07f;
+    cube_data.pbr_info.y = 0.1f;
     
     // Temporary stuff, just to test lighing
     mesh_t sphere = {};
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
                 xz -= vector2_t(3.5f);
                 xz *= 3.5f;
 
-                vector3_t ws_position = vector3_t(xz.x, 3.0f, xz.y);
+                vector3_t ws_position = vector3_t(xz.x, 1.5f, xz.y);
 
                 render_data.model = glm::translate(ws_position);
                 render_data.pbr_info.x = glm::clamp((float)x / 7.0f, 0.05f, 1.0f);

@@ -228,6 +228,37 @@ static void s_deferred_init() {
     r_rpipeline_descriptor_set_output_init(&deferred);
 }
 
+#define KERNEL_COUNT 64
+static vector3_t kernels[KERNEL_COUNT];
+static vector4_t noise[16];
+static texture_t noise_texture;
+
+static float random_float() {
+    return (float)rand() / (float)(RAND_MAX);
+}
+
+static float lerp(float a, float b, float f) {
+    return a + f * (b - a);
+}  
+
+static void s_ssao_init() {
+    for (uint32_t i = 0; i < KERNEL_COUNT; ++i) {
+        kernels[i] = vector3_t( random_float() * 2.0f - 1.0f, random_float() * 2.0f - 1.0f, random_float() );
+
+        kernels[i] = glm::normalize(kernels[i]);
+        kernels[i] *= random_float();
+        float scale = (float)i / 64.0f;
+        scale = lerp(0.1f, 1.0f, scale * scale);
+        kernels[i] *= scale;
+    }
+
+    for (uint32_t i = 0; i < 16; ++i) {
+        noise[i] = vector4_t(random_float(), random_float(), random_float(), 1.0f);
+    }
+
+    //noise_texture = create_texture(NULL, VK_FORMAT_R16G16B16A16_SFLOAT, noise, 4, 4, VK_FILTER_NEAREST);
+}
+
 static rpipeline_stage_t lighting_stage;
 static VkDescriptorSet bright_colors_set;
 static rpipeline_shader_t lighting_shader;
