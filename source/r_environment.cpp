@@ -926,4 +926,6 @@ void r_render_environment(VkCommandBuffer command_buffer) {
 
 void r_render_environment_to_offscreen() {
     s_render_to_base_cubemap();
+    s_render_to_diffuse_ibl_cubemap();
+    s_render_to_specular_ibl();
 }

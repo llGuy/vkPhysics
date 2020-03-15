@@ -146,7 +146,10 @@ struct base_cubemap_render_data_t {
     float width;
     float height;
 
-    /*float eye_height;
+    float light_direction_x;
+    float light_direction_y;
+    float light_direction_z;
+    float eye_height;
     float rayleigh;
     float mie;
     float intensity;
@@ -154,7 +157,7 @@ struct base_cubemap_render_data_t {
     float rayleigh_strength;
     float mie_strength;
     float rayleigh_collection;
-    float mie_collection;*/
+    float mie_collection;
 };
 
 base_cubemap_render_data_t *r_cubemap_render_data();

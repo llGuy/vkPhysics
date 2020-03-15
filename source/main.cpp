@@ -22,6 +22,8 @@ static void s_create_vulkan_surface_proc(struct VkInstance_T *instance, struct V
 // TODO: Temporary - until engine is implemented
 #include "r_internal.hpp"
 
+bool changed = 0;
+
 static void s_imgui_test() {
     ImGui::Begin("General");
 
@@ -31,43 +33,44 @@ static void s_imgui_test() {
 
     ImGui::Text("Position: %.1f %.1f %.1f", camera_data->position.x, camera_data->position.y, camera_data->position.z);
 
-    float eye_height = 0.5f;
+    static float eye_height = 0.0f;
     ImGui::SliderFloat("Eye height", &eye_height, 0.0f, 1.0f);
 
-    float light_direction[3] = { 0.0f, 1.0f, 0.0f };
+    static float light_direction[3] = { 0.0f, 0.122f, 0.714f };
     ImGui::SliderFloat3("Light direction", light_direction, -1.0f, +1.0f);
 
-    float rayleigh = -0.01f;
+    static float rayleigh = -0.082f;
     ImGui::SliderFloat("Rayleigh factor", &rayleigh, -0.1f, 0.0f);
     
-    float mie = -0.75f;
+    static float mie = -0.843f;
     ImGui::SliderFloat("Mie factor", &mie, -0.999f, -0.75f);
 
-    float intensity = 1.5f;
+    static float intensity = 0.650f;
     ImGui::SliderFloat("Intensity", &intensity, 0.1f, 30.0f);
 
-    float scatter_strength = 19.0f;
+    static float scatter_strength = 1.177f;
     ImGui::SliderFloat("Scatter strength", &scatter_strength, 1.0f, 30.0f);
 
-    float rayleigh_strength = 1.0f;
+    static float rayleigh_strength = 1.454f;
     ImGui::SliderFloat("Rayleigh strength", &rayleigh_strength, 0.0f, 3.0f);
 
-    float mie_strength = 1.0f;
+    static float mie_strength = 0.184f;
     ImGui::SliderFloat("Mie strength", &mie_strength, 0.0f, 3.0f);
 
-    float rayleigh_collection = 1.0f;
+    static float rayleigh_collection = 8.0f;
     ImGui::SliderFloat("Rayleigh collection", &rayleigh_collection, 0.0f, 3.0f);
 
-    float mie_collection = 1.0f;
+    static float mie_collection = 2.981f;
     ImGui::SliderFloat("Mie collection", &mie_collection, 0.0f, 3.0f);
 
+    changed = ImGui::Button("Update");
+    
     base_cubemap_render_data_t *ptr = r_cubemap_render_data();
 
-    /*ptr->eye_height = eye_height;
-    ptr->light_direction.x = light_direction[0];
-    ptr->light_direction.y = light_direction[1];
-    ptr->light_direction.z = light_direction[2];
-    ptr->light_direction.w = 1.0f;
+    ptr->eye_height = eye_height;
+    ptr->light_direction_x = light_direction[0];
+    ptr->light_direction_y = light_direction[1];
+    ptr->light_direction_z = light_direction[2];
     ptr->rayleigh = rayleigh;
     ptr->mie = mie;
     ptr->intensity = intensity;
@@ -75,7 +78,7 @@ static void s_imgui_test() {
     ptr->rayleigh_strength = rayleigh_strength;
     ptr->mie_strength = mie_strength;
     ptr->rayleigh_collection = rayleigh_collection;
-    ptr->mie_collection = mie_collection;*/
+    ptr->mie_collection = mie_collection;
     
     
 
@@ -142,7 +145,10 @@ int main(int argc, char *argv[]) {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        //r_render_environment_to_offscreen();
+        if (changed) {
+            r_render_environment_to_offscreen();
+            changed = 0;
+        }
         
         r_camera_handle_input(dt, window);
  

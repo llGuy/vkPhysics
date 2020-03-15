@@ -12,7 +12,9 @@ layout(push_constant) uniform push_constant_t {
     float width;
     float height;
 
-    vec4 light_direction;
+    float light_direction_x;
+    float light_direction_y;
+    float light_direction_z;
     float eye_height;
     float rayleigh;
     float mie;
@@ -118,12 +120,14 @@ vec3 absorb(float d, vec3 color, float factor) {
 
 void main() {
     vec3 eye_direction = compute_spherical_view_direction();
-    vec3 eye_position = vec3(0.0f, EYE_HEIGHT, 0.0f);
+    vec3 eye_position = vec3(0.0f, u_push_constant.eye_height, 0.0f);
 
-    float alpha = dot(eye_direction, LIGHT_DIR);
+    vec3 light_dir = normalize(vec3(u_push_constant.light_direction_x, u_push_constant.light_direction_y, u_push_constant.light_direction_z));
     
-    float rayleigh = phase(alpha, -0.01f);
-    float mie = phase(alpha, -0.955f);
+    float alpha = dot(eye_direction, light_dir);
+    
+    float rayleigh = phase(alpha, u_push_constant.rayleigh);
+    float mie = phase(alpha, u_push_constant.mie);
     
     float ray_length = atmospheric_depth(eye_position, eye_direction);
     float ray_step_length = ray_length / NUM_SAMPLES;
@@ -133,9 +137,9 @@ void main() {
     vec3 accumulated_rayleigh = vec3(0.0f);
     vec3 accumulated_mie = vec3(0.0f);
 
-    float eye_extinction = horizon_extinction(eye_position, eye_direction, EYE_HEIGHT - 0.25f);
+    float eye_extinction = horizon_extinction(eye_position, eye_direction, u_push_constant.eye_height - 0.25f);
     
-    float intensity = 1.5f;
+    float intensity = u_push_constant.intensity;
 
     float spot = smoothstep(0.0, 15.0, phase(alpha, 0.9995)) * 5.0f;
     
@@ -143,18 +147,18 @@ void main() {
         float sample_distance = ray_step_length * float(i);
         vec3 ray_sample_position = eye_position + sample_distance * eye_direction;
 
-        float extinction = horizon_extinction(ray_sample_position, LIGHT_DIR, EYE_HEIGHT - 0.35f);
+        float extinction = horizon_extinction(ray_sample_position, light_dir, u_push_constant.eye_height - 0.35f);
         
-        float sample_depth = atmospheric_depth(eye_position, LIGHT_DIR);
+        float sample_depth = atmospheric_depth(eye_position, light_dir);
 
-        vec3 influx = absorb(sample_depth, vec3(intensity), 19.0f) * extinction;
+        vec3 influx = absorb(sample_depth, vec3(intensity), u_push_constant.scatter_strength) * extinction;
 
-        accumulated_rayleigh += absorb(sample_distance, kr * influx, 0.001f);
-        accumulated_mie += absorb(sample_distance, influx, 0.01f);
+        accumulated_rayleigh += absorb(sample_distance, kr * influx, u_push_constant.rayleigh_strength);
+        accumulated_mie += absorb(sample_distance, influx, u_push_constant.mie_strength);
     }
 
-    accumulated_rayleigh = (accumulated_rayleigh * pow(ray_length, 8.0f)) / NUM_SAMPLES;
-    accumulated_mie = (accumulated_mie * pow(ray_length, 2.0f)) / NUM_SAMPLES;
+    accumulated_rayleigh = (accumulated_rayleigh * pow(ray_length, u_push_constant.rayleigh_strength)) / NUM_SAMPLES;
+    accumulated_mie = (accumulated_mie * pow(ray_length, u_push_constant.mie_strength)) / NUM_SAMPLES;
 
     vec3 color = vec3(mie * accumulated_mie + rayleigh * accumulated_rayleigh);
     
