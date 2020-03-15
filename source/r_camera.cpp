@@ -22,11 +22,23 @@ cpu_camera_data_t *r_cpu_camera_data() {
     return &camera_data;
 }
 
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    if (camera_data.fov >= 1.0f && camera_data.fov <= 90.0f)
+        camera_data.fov -= yoffset;
+    if (camera_data.fov <= 1.0f)
+        camera_data.fov = 1.0f;
+    if (camera_data.fov >= 90.0f)
+        camera_data.fov = 45.0f;
+}
+
 void r_camera_init(void *window) {
+    glfwSetScrollCallback((GLFWwindow *)window, scroll_callback);
+    
     camera_data.position = vector3_t(0.0f);
     camera_data.direction = vector3_t(1.0f, 0.0, 0.0f);
     camera_data.up = vector3_t(0.0f, 1.0f, 0.0f);
-    camera_data.fov = glm::radians(60.0f);
+    camera_data.fov = 60.0f;
     camera_data.near = 0.1f;
     camera_data.far = 10000.0f;
     
@@ -35,7 +47,7 @@ void r_camera_init(void *window) {
     camera_data.mouse_position = vector2_t((float)x, (float)y);
 
     VkExtent2D extent = r_swapchain_extent();
-    transforms.projection = glm::perspective(camera_data.fov, (float)extent.width / (float)extent.height, camera_data.near, camera_data.far);
+    transforms.projection = glm::perspective(glm::radians(camera_data.fov), (float)extent.width / (float)extent.height, camera_data.near, camera_data.far);
     transforms.projection[1][1] *= -1.0f;
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
     transforms.inverse_view = glm::inverse(transforms.view);
@@ -57,6 +69,8 @@ void r_camera_init(void *window) {
 
 // Should not worry about case where not running in window mode (server mode) because anyway, r_ prefixed files won't be running
 void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
+    transforms.projection = glm::perspective(glm::radians(camera_data.fov), (float)r_swapchain_extent().width / (float)r_swapchain_extent().height, camera_data.near, camera_data.far);
+    transforms.projection[1][1] *= -1.0f;
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
     transforms.inverse_view = glm::inverse(transforms.view);
     transforms.view_projection = transforms.projection * transforms.view;

@@ -27,7 +27,7 @@ bool changed = 0;
 static void s_imgui_test() {
     ImGui::Begin("General");
 
-    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+    //    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
 
     cpu_camera_data_t *camera_data = r_cpu_camera_data();
 
@@ -36,13 +36,13 @@ static void s_imgui_test() {
     static float eye_height = 0.0f;
     ImGui::SliderFloat("Eye height", &eye_height, 0.0f, 1.0f);
 
-    static float light_direction[3] = { 0.0f, 0.122f, 0.714f };
+    static float light_direction[3] = { 0.0f, 0.622f, 0.714f };
     ImGui::SliderFloat3("Light direction", light_direction, -1.0f, +1.0f);
 
     static float rayleigh = -0.082f;
     ImGui::SliderFloat("Rayleigh factor", &rayleigh, -0.1f, 0.0f);
     
-    static float mie = -0.843f;
+    static float mie = -0.908f;
     ImGui::SliderFloat("Mie factor", &mie, -0.999f, -0.75f);
 
     static float intensity = 0.650f;
@@ -79,6 +79,8 @@ static void s_imgui_test() {
     ptr->mie_strength = mie_strength;
     ptr->rayleigh_collection = rayleigh_collection;
     ptr->mie_collection = mie_collection;
+
+    *r_light_direction() = vector3_t(light_direction[0], ptr->light_direction_y = light_direction[1], ptr->light_direction_z = light_direction[2]);
     
     
 

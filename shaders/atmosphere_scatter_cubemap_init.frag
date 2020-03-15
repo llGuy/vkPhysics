@@ -3,6 +3,7 @@
 layout(location = 0) in GS_DATA {
     vec3 normal;
     vec3 cube_face_direction;
+    mat4 rotation;
 } in_fs;
 
 layout(location = 0) out vec4 out_final_color;
@@ -67,21 +68,20 @@ const int NUM_SAMPLES_I = 20;
 const float NUM_SAMPLES = 20.0f;
 
 vec3 compute_spherical_view_direction() {
-    mat3 inverse_view_rotate = inverse(mat3(look_at(vec3(0.0f), in_fs.cube_face_direction, vec3(0.0f, 1.0f, 0.0f))));
-
+    //mat3 inverse_view_rotate = inverse(mat3(look_at(vec3(0.0f), in_fs.cube_face_direction, vec3(0.0f, 1.0f, 0.0f))));
     vec2 ds_direction = gl_FragCoord.xy / vec2(u_push_constant.width, u_push_constant.height);
 
-    if (gl_Layer == 2 || gl_Layer == 3) {
-        ds_direction.xy = 1.0f - ds_direction.xy;
-    }
+    /*if (gl_Layer == 2 || gl_Layer == 3) {
+        ds_direction.y = 1.0f - ds_direction.y;
+    }*/
 
-    ds_direction.y = 1.0f - ds_direction.y;
+    //ds_direction.y = 1.0f - ds_direction.y;
     ds_direction -= vec2(0.5f);
     ds_direction *= 2.0f;
 
     vec3 direction = normalize((u_push_constant.inverse_projection * vec4(ds_direction, 0.0f, 1.0f)).xyz);
 
-    return normalize(mat3(inverse_view_rotate) * direction);
+    return normalize(mat3(in_fs.rotation) * direction);
 }
 
 float horizon_extinction(vec3 position, vec3 dir, float radius) {
@@ -123,6 +123,7 @@ void main() {
     vec3 eye_position = vec3(0.0f, u_push_constant.eye_height, 0.0f);
 
     vec3 light_dir = normalize(vec3(u_push_constant.light_direction_x, u_push_constant.light_direction_y, u_push_constant.light_direction_z));
+    light_dir.xz *= -1.0f;
     
     float alpha = dot(eye_direction, light_dir);
     

@@ -3,12 +3,13 @@
 #include <stdio.h>
 #include "r_internal.hpp"
 
-struct lighting_data_t {
-    vector4_t light_positions[4];
-    vector4_t light_colors[4];
-};
-
 static lighting_data_t lighting_data;
+
+static vector3_t light_direction;
+
+vector3_t *r_light_direction() {
+    return &light_direction;
+}
 
 static gpu_buffer_t light_uniform_buffer;
 static VkDescriptorSet light_descriptor_set;
@@ -21,11 +22,14 @@ void r_lighting_init() {
     memset(&lighting_data, 0, sizeof(lighting_data));
 
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
+
+    light_direction = vector3_t(0.0f, 0.622f, 0.714f);
     
     lighting_data.light_positions[0] = transforms->view * vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[1] = transforms->view * vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[2] = transforms->view * vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[3] = transforms->view * vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
+    lighting_data.vs_directional_light = transforms->view * -vector4_t(light_direction, 0.0f);
 
     lighting_data.light_colors[0] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
     lighting_data.light_colors[1] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
@@ -50,6 +54,7 @@ void r_update_lighting() {
     lighting_data.light_positions[1] = transforms->view * vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[2] = transforms->view * vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[3] = transforms->view * vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
+    lighting_data.vs_directional_light = transforms->view * -vector4_t(light_direction, 0.0f);
 }
 
 void r_lighting_gpu_sync(VkCommandBuffer command_buffer) {

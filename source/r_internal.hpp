@@ -133,6 +133,14 @@ void r_lighting_init();
 
 void r_update_lighting();
 
+struct lighting_data_t {
+    vector4_t light_positions[4];
+    vector4_t light_colors[4];
+    vector4_t vs_directional_light;
+};
+
+vector3_t *r_light_direction();
+
 void r_lighting_gpu_sync(VkCommandBuffer command_buffer);
 
 void r_environment_init();
