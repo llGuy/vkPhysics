@@ -63,6 +63,9 @@ static void s_imgui_test() {
     static float mie_collection = 2.981f;
     ImGui::SliderFloat("Mie collection", &mie_collection, 0.0f, 3.0f);
 
+    static float kr[3] = {0.18867780436772762, 0.4978442963618773, 0.6616065586417131};
+    ImGui::ColorEdit3("Air color", kr);
+
     changed = ImGui::Button("Update");
     
     base_cubemap_render_data_t *ptr = r_cubemap_render_data();
@@ -79,6 +82,9 @@ static void s_imgui_test() {
     ptr->mie_strength = mie_strength;
     ptr->rayleigh_collection = rayleigh_collection;
     ptr->mie_collection = mie_collection;
+    ptr->air_color_r = kr[0];
+    ptr->air_color_g = kr[1];
+    ptr->air_color_b = kr[2];
 
     *r_light_direction() = vector3_t(light_direction[0], ptr->light_direction_y = light_direction[1], ptr->light_direction_z = light_direction[2]);
     

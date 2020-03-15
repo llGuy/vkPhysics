@@ -25,6 +25,9 @@ layout(push_constant) uniform push_constant_t {
     float mie_strength;
     float rayleigh_collection;
     float mie_collection;
+    float air_color_r;
+    float air_color_g;
+    float air_color_b;
 } u_push_constant;
 
 mat4 look_at(
@@ -110,15 +113,17 @@ float phase(float alpha, float g){
     return (a / b) * (c / d);
 }
 
-vec3 kr = vec3(
-    0.18867780436772762, 0.4978442963618773, 0.6616065586417131
-);
+//vec3 kr = vec3(
+//    0.18867780436772762, 0.4978442963618773, 0.6616065586417131
+//);
 
-vec3 absorb(float d, vec3 color, float factor) {
+vec3 absorb(float d, vec3 color, float factor, vec3 kr) {
     return color - color * pow(kr, vec3(factor/  d));
 }
 
 void main() {
+    vec3 kr = vec3(u_push_constant.air_color_r, u_push_constant.air_color_g, u_push_constant.air_color_b);
+    
     vec3 eye_direction = compute_spherical_view_direction();
     vec3 eye_position = vec3(0.0f, u_push_constant.eye_height, 0.0f);
 
@@ -152,10 +157,10 @@ void main() {
         
         float sample_depth = atmospheric_depth(eye_position, light_dir);
 
-        vec3 influx = absorb(sample_depth, vec3(intensity), u_push_constant.scatter_strength) * extinction;
+        vec3 influx = absorb(sample_depth, vec3(intensity), u_push_constant.scatter_strength, kr) * extinction;
 
-        accumulated_rayleigh += absorb(sample_distance, kr * influx, u_push_constant.rayleigh_strength);
-        accumulated_mie += absorb(sample_distance, influx, u_push_constant.mie_strength);
+        accumulated_rayleigh += absorb(sample_distance, kr * influx, u_push_constant.rayleigh_strength, kr);
+        accumulated_mie += absorb(sample_distance, influx, u_push_constant.mie_strength, kr);
     }
 
     accumulated_rayleigh = (accumulated_rayleigh * pow(ray_length, u_push_constant.rayleigh_strength)) / NUM_SAMPLES;

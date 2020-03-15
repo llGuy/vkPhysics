@@ -166,6 +166,9 @@ struct base_cubemap_render_data_t {
     float mie_strength;
     float rayleigh_collection;
     float mie_collection;
+    float air_color_r;
+    float air_color_g;
+    float air_color_b;
 };
 
 base_cubemap_render_data_t *r_cubemap_render_data();
