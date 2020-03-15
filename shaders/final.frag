@@ -6,8 +6,9 @@ layout(location = 0) in VS_DATA {
 
 layout(location = 0) out vec4 out_final_color;
 
+//layout(binding = 0, set = 0) uniform sampler2D u_diffuse;
+//layout(binding = 1, set = 0) uniform sampler2D u_bright;
 layout(binding = 0, set = 0) uniform sampler2D u_diffuse;
-layout(binding = 1, set = 0) uniform sampler2D u_bright;
 
 //layout(binding = 0, set = 1) uniform sampler2D u_bloom;
 

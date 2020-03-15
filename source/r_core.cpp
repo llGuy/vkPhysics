@@ -792,6 +792,7 @@ void end_frame() {
     render_pass_begin_info.pClearValues = &clear_value;
     
     r_execute_lighting_pass(primary_command_buffers[image_index]);
+    r_execute_motion_blur_pass(primary_command_buffers[image_index]);
     //r_execute_bloom_pass(primary_command_buffers[image_index]);
     
     vkCmdBeginRenderPass(primary_command_buffers[image_index], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);

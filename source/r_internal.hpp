@@ -41,6 +41,9 @@ void r_execute_lighting_pass(
 void r_execute_bloom_pass(
     VkCommandBuffer command_buffer);
 
+void r_execute_motion_blur_pass(
+    VkCommandBuffer command_buffer);
+
 void r_execute_final_pass(
     VkCommandBuffer command_buffer);
 
@@ -184,6 +187,8 @@ struct gpu_camera_transforms_t {
     matrix4_t view_projection;
     vector4_t frustum;
     vector4_t view_direction;
+    matrix4_t previous_view_projection;
+    float dt;
 };
 
 struct cpu_camera_data_t {
@@ -193,6 +198,7 @@ struct cpu_camera_data_t {
     vector2_t mouse_position;
     float fov;
     float near, far;
+    matrix4_t previous_view_projection;
 };
 
 gpu_camera_transforms_t *r_gpu_camera_data();

@@ -27,7 +27,7 @@ bool changed = 0;
 static void s_imgui_test() {
     ImGui::Begin("General");
 
-    //    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
 
     cpu_camera_data_t *camera_data = r_cpu_camera_data();
 
@@ -195,11 +195,11 @@ int main(int argc, char *argv[]) {
         double new_now = glfwGetTime();
         dt = (float)(new_now - now);
 
-        /*if (dt < frame_time_max) {
-            usleep((frame_time_max - dt) * 1000000.0f);
-        }
+        //if (dt < frame_time_max) {
+        //usleep((frame_time_max - dt) * 1000000.0f);
+            //}
 
-        dt = frame_time_max;*/
+        //dt = frame_time_max;
         
         now = new_now;
     }

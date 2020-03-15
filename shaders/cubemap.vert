@@ -2,6 +2,7 @@
 
 layout(location = 0) out VS_DATA {
     vec3 cubemap_direction;
+    vec3 vs_position;
 } out_vs;
 
 const vec3 VERTICES[] = vec3[] (
@@ -56,8 +57,11 @@ void main() {
     view_rotation[3][1] = 0.0f;
     view_rotation[3][1] = 0.0f;
 
-    gl_Position = u_camera_transforms.projection * view_rotation * u_push_constant.model * vec4(ms_vertex_position * 1000.0f, 1.0);
+    vec4 vs_position = view_rotation * u_push_constant.model * vec4(ms_vertex_position * 1000.0f, 1.0);
+    
+    gl_Position = u_camera_transforms.projection * vs_position;
 
     out_vs.cubemap_direction = normalize(ms_vertex_position);
     out_vs.cubemap_direction.y *= u_push_constant.invert_y;
+    out_vs.vs_position = vs_position.xyz;
 }

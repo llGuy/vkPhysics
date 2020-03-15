@@ -23,6 +23,7 @@ layout(set = 0, binding = 0) uniform camera_transforms_t {
     mat4 view_projection;
     vec4 frustum;
     vec4 view_direction;
+    mat4 previous_view_projection;
 } u_camera_transforms;
 
 void main() {

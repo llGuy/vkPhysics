@@ -2,6 +2,7 @@
 
 layout(location = 0) in VS_DATA {
     vec3 cubemap_direction;
+    vec3 vs_position;
 } in_fs;
 
 layout(location = 0) out vec4 out_albedo;
@@ -14,5 +15,5 @@ void main() {
     out_albedo = texture(cubemap, in_fs.cubemap_direction);
     // A normal vector value of -10.0f means that no lighting calculations should be made
     out_normal = vec4(-10.0f);
-    out_position = vec4(-10.0f);
+    out_position = vec4(in_fs.vs_position, 1.0f);
 }

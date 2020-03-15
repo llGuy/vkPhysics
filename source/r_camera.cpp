@@ -52,9 +52,11 @@ void r_camera_init(void *window) {
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
     transforms.inverse_view = glm::inverse(transforms.view);
     transforms.view_projection = transforms.projection * transforms.view;
+    camera_data.previous_view_projection = transforms.previous_view_projection = transforms.view_projection;
     transforms.frustum.x = camera_data.near;
     transforms.frustum.y = camera_data.far;
     transforms.view_direction = vector4_t(camera_data.direction, 1.0f);
+    transforms.dt = 1.0f / 60.0f;
     
     transforms_uniform_buffer = create_gpu_buffer(
         sizeof(gpu_camera_transforms_t),
@@ -74,6 +76,7 @@ void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
     transforms.inverse_view = glm::inverse(transforms.view);
     transforms.view_projection = transforms.projection * transforms.view;
+    //transforms.previous_view_projection = camera_data.previous_view_projection;
     
     VkBufferMemoryBarrier buffer_barrier = create_gpu_buffer_barrier(
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -117,6 +120,9 @@ void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
 
 // TODO: Add proper input handling (this is a placeholder until proper world / entity infrastructure is added)
 void r_camera_handle_input(float dt, void *window) {
+    transforms.previous_view_projection = transforms.view_projection;
+    transforms.dt = dt;
+    
     GLFWwindow *glfw_window = (GLFWwindow *)window;
 
     if (glfwGetMouseButton(glfw_window, GLFW_MOUSE_BUTTON_MIDDLE)) {
@@ -153,7 +159,7 @@ void r_camera_handle_input(float dt, void *window) {
         vector2_t new_mouse_position = vector2_t((float)x, (float)y);
         vector2_t delta = new_mouse_position - camera_data.mouse_position;
     
-        static constexpr float SENSITIVITY = 40.0f;
+        static constexpr float SENSITIVITY = 30.0f;
     
         vector3_t res = camera_data.direction;
 	    
