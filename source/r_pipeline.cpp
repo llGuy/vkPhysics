@@ -336,7 +336,11 @@ static void s_destroy_deferred() {
 }
 
 #define KERNEL_COUNT 64
-static vector4_t kernels[KERNEL_COUNT];
+static struct {
+    vector4_t k[KERNEL_COUNT];
+    float resolution_coefficient;
+} kernels;
+
 static vector4_t noise[16];
 static texture_t noise_texture;
 static rpipeline_stage_t ssao_stage;
@@ -357,13 +361,13 @@ static float lerp(float a, float b, float f) {
 
 static void s_ssao_kernels_init() {
     for (uint32_t i = 0; i < KERNEL_COUNT; ++i) {
-        kernels[i] = vector4_t( random_float() * 2.0f - 1.0f, random_float() * 2.0f - 1.0f, random_float(), 0.0f );
+        kernels.k[i] = vector4_t( random_float() * 2.0f - 1.0f, random_float() * 2.0f - 1.0f, random_float(), 0.0f );
 
-        kernels[i] = glm::normalize(kernels[i]);
-        kernels[i] *= random_float();
+        kernels.k[i] = glm::normalize(kernels.k[i]);
+        kernels.k[i] *= random_float();
         float scale = (float)i / 64.0f;
         scale = lerp(0.1f, 1.0f, scale * scale);
-        kernels[i] *= scale;
+        kernels.k[i] *= scale;
     }
 
     for (uint32_t i = 0; i < 16; ++i) {
@@ -374,6 +378,7 @@ static void s_ssao_kernels_init() {
 }
 
 static void s_ssao_render_pass_init() {
+    kernels.resolution_coefficient = 2.0f;
     ssao_stage.color_attachment_count = 1;
 
     VkAttachmentDescription attachment_description = r_fill_color_attachment_description(
@@ -437,13 +442,13 @@ static void s_ssao_init() {
     ssao_stage.color_attachments = FL_MALLOC(attachment_t, ssao_stage.color_attachment_count);
 
     VkExtent3D extent3d = {};
-    extent3d.width = r_swapchain_extent().width;
-    extent3d.height = r_swapchain_extent().height;
+    extent3d.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    extent3d.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
     extent3d.depth = 1;
 
     VkExtent2D extent2d = {};
-    extent2d.width = r_swapchain_extent().width ;
-    extent2d.height = r_swapchain_extent().height ;
+    extent2d.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    extent2d.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
 
     // Can optimise memory usage by using R8G8B8A8_UNORM
     ssao_stage.color_attachments[0] = r_create_color_attachment(extent3d, VK_FORMAT_R16_SFLOAT);
@@ -479,8 +484,8 @@ static void s_ssao_init() {
         pipeline_layout);
 
     kernel_uniform_buffer = create_gpu_buffer(
-        sizeof(kernels[0]) * KERNEL_COUNT,
-        kernels,
+        sizeof(kernels),
+        &kernels,
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     kernel_uniform_buffer_set = create_buffer_descriptor_set(
@@ -524,7 +529,8 @@ void r_execute_ssao_pass(
     VkClearValue clear_values = {};
     
     VkRect2D render_area = {};
-    render_area.extent = r_swapchain_extent();
+    render_area.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    render_area.extent.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
 
     VkRenderPassBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -537,13 +543,14 @@ void r_execute_ssao_pass(
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    viewport.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
     VkRect2D rect = {};
-    rect.extent = r_swapchain_extent();
+    rect.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    rect.extent.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
     vkCmdSetScissor(command_buffer, 0, 1, &rect);
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ssao_shader.pipeline);
@@ -575,7 +582,8 @@ void r_execute_ssao_blur_pass(
     VkClearValue clear_values = {};
     
     VkRect2D render_area = {};
-    render_area.extent = r_swapchain_extent();
+    render_area.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    render_area.extent.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
 
     VkRenderPassBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -588,13 +596,14 @@ void r_execute_ssao_blur_pass(
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    viewport.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
     VkRect2D rect = {};
-    rect.extent = r_swapchain_extent();
+    rect.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    rect.extent.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
     vkCmdSetScissor(command_buffer, 0, 1, &rect);
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ssao_blur_shader.pipeline);

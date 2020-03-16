@@ -29,10 +29,11 @@ layout(binding = 0, set = 2) uniform sampler2D u_noise;
 
 layout(binding = 0, set = 3) uniform kernel_t {
     vec4 kernels[64];
+    float resolution_coefficient;
 } u_kernels;
 
 void main() {
-    vec2 noise_scale = vec2(u_camera_transforms.width, u_camera_transforms.height) / 4.0f;
+    vec2 noise_scale = vec2(u_camera_transforms.width, u_camera_transforms.height) / (4.0f * u_kernels.resolution_coefficient);
 
     vec3 vs_position = texture(u_gbuffer_position, in_fs.uvs).xyz;
     vec3 vs_normal = texture(u_gbuffer_normal, in_fs.uvs).xyz;
@@ -45,7 +46,7 @@ void main() {
         mat3 tangent_space = mat3(tangent, bitangent, vs_normal);
 
         float occlusion = 0.0f;
-        for (int i = 0; i < 64; ++i) {
+        for (int i = 0; i < 54; ++i) {
             vec3 sample_kernel = tangent_space * vec3(u_kernels.kernels[i]);
             sample_kernel = vs_position + sample_kernel * 0.5f;
 
@@ -60,7 +61,7 @@ void main() {
             occlusion += (sample_depth >= sample_kernel.z + 0.025f ? 1.0f : 0.0f) * range;
         }
 
-        occlusion = 1.0f - (occlusion / 64.0f);
+        occlusion = 1.0f - (occlusion / 54.0f);
         out_final_ao = occlusion;
     }
     else {
