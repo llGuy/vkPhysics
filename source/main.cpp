@@ -52,7 +52,7 @@ static void s_imgui_test() {
     static float rayleigh_strength = 2.496f;
     ImGui::SliderFloat("Rayleigh strength", &rayleigh_strength, 0.0f, 3.0f);
 
-    static float mie_strength = 0.184f;
+    static float mie_strength = 0.034f;
     ImGui::SliderFloat("Mie strength", &mie_strength, 0.0f, 3.0f);
 
     static float rayleigh_collection = 8.0f;

@@ -9,7 +9,6 @@
 #include <assert.h>
 
 #include <imgui.h>
-#include <ktxvulkan.h>
 #include <stb_image.h>
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>

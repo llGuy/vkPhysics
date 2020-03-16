@@ -3,8 +3,6 @@
 #include "renderer.hpp"
 #include "r_internal.hpp"
 
-#include <ktxvulkan.h>
-
 static attachment_t s_create_cubemap(
     VkExtent3D extent,
     VkFormat format,
@@ -783,101 +781,6 @@ static void s_render_to_specular_ibl() {
 }
 
 static shader_t cubemap_shader;
-
-static void s_load_cubemap_texture() {
-    // Load with KTX
-    ktxTexture *texture;
-    
-    if (ktxTexture_CreateFromNamedFile("../assets/textures/hdr_environment.ktx", KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &texture) != KTX_SUCCESS) {
-        printf("Failed to load cubemap\n");
-        exit(1);
-    }
-
-    uint32_t width = texture->baseWidth;
-    uint32_t height = texture->baseHeight;
-    uint32_t layer_count = texture->numLayers;
-    uint32_t mip_levels = texture->numLevels;
-
-    ktx_uint8_t *data = ktxTexture_GetData(texture);
-    ktx_size_t size = ktxTexture_GetSize(texture);
-
-    gpu_buffer_t staging = create_gpu_buffer(size, data, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-
-    VkBufferImageCopy *buffer_copies = FL_MALLOC(VkBufferImageCopy, 6);
-    memset(buffer_copies, 0, sizeof(VkBufferImageCopy) * 6);
-    
-    for (uint32_t face = 0; face < 6; ++face) {
-        ktx_size_t offset;
-        KTX_error_code result = ktxTexture_GetImageOffset(texture, 0, 0, face, &offset);
-        assert(result == KTX_SUCCESS);
-
-        VkBufferImageCopy *buffer_copy_region = &buffer_copies[face];
-        buffer_copy_region->imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        buffer_copy_region->imageSubresource.mipLevel = 0;
-        buffer_copy_region->imageSubresource.baseArrayLayer = face;
-        buffer_copy_region->imageSubresource.layerCount = 1;
-        buffer_copy_region->imageExtent.width = width;
-        buffer_copy_region->imageExtent.height = height;
-        buffer_copy_region->imageExtent.depth = 1;
-        buffer_copy_region->bufferOffset = offset;
-    }
-
-    VkExtent3D extent = {};
-    extent.width = width;
-    extent.height = height;
-    extent.depth = 1;
-    base_cubemap = s_create_cubemap(extent, VK_FORMAT_R16G16B16A16_SFLOAT, 1, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-
-    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
-    
-    VkImageMemoryBarrier barrier = create_image_barrier(
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        base_cubemap.image,
-        0, 6,
-        0, 1,
-        VK_IMAGE_ASPECT_COLOR_BIT);
-
-    vkCmdPipelineBarrier(
-        command_buffer,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        0,
-        0, NULL,
-        0, NULL,
-        1, &barrier);
-
-    vkCmdCopyBufferToImage(
-        command_buffer,
-        staging.buffer,
-        base_cubemap.image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        6, buffer_copies);
-
-    barrier = create_image_barrier(
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        base_cubemap.image,
-        0, 6,
-        0, 1,
-        VK_IMAGE_ASPECT_COLOR_BIT);
-    
-    vkCmdPipelineBarrier(
-        command_buffer,
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        0,
-        0, NULL,
-        0, NULL,
-        1, &barrier);
-
-    end_single_time_command_buffer(command_buffer);
-
-    base_cubemap_descriptor_set = create_image_descriptor_set(
-        base_cubemap.image_view,
-        base_cubemap.sampler,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-}
 
 struct cubemap_render_data_t {
     matrix4_t model;
