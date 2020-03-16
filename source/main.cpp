@@ -109,6 +109,21 @@ static void s_window_resize_callback(GLFWwindow *window, int32_t width, int32_t 
     handle_resize(width, height);
 }
 
+bool is_fullscreen = 0;
+
+static void s_window_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
+        if (is_fullscreen) {
+
+        }
+        else {
+            const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+
+            glfwSetWindowMonitor(window, glfwGetWindowMonitor(window), 0, 0, vidmode->width, vidmode->height, 0);
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (!glfwInit()) {
         printf("Failed to initialize GLFW\n");
@@ -120,7 +135,10 @@ int main(int argc, char *argv[]) {
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     GLFWwindow *window = glfwCreateWindow(vidmode->width / 2, vidmode->height / 2, "vkPhysics", NULL, NULL);
 
+    //glfwSetWindowMonitor(window, glfwGetWindowMonitor(window), 0, 0, vidmode->width, vidmode->height, 0);
+
     glfwSetWindowSizeCallback(window, s_window_resize_callback);
+    glfwSetKeyCallback(window, s_window_key_callback);
     
     int32_t width, height;
     glfwGetFramebufferSize(window, &width, &height);
