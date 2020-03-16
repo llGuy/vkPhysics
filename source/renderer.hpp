@@ -18,7 +18,9 @@ void renderer_init(
     uint32_t window_height);
 
 /* Swapchain */
-void resize_swapchain();
+void handle_resize(
+    uint32_t width,
+    uint32_t height);
 
 /* Rendering begin / end */
 VkCommandBuffer begin_frame();

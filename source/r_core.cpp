@@ -595,6 +595,7 @@ static void s_descriptor_pool_init() {
 
     VkDescriptorPoolCreateInfo pool_info = {};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     pool_info.maxSets = 1000 * 11;
     pool_info.poolSizeCount = 11;
     pool_info.pPoolSizes = sizes;
@@ -745,12 +746,41 @@ void renderer_init(
 static uint32_t current_frame = 0;
 static uint32_t image_index = 0;
 
-void resize_swapchain() {
-    /* ImGui stuff */
+void resize_swapchain(
+    uint32_t width,
+    uint32_t height) {
+    vkDestroySwapchainKHR(r_device(), swapchain.swapchain, NULL);
+
+    for (uint32_t i = 0; i < swapchain.image_count; ++i) {
+        vkDestroyImageView(r_device(), swapchain.image_views[i], NULL);
+    }
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(hardware, surface, &swapchain_support.capabilities);
+
+    s_swapchain_init(width, height);
+
+    vkDestroyRenderPass(r_device(), final_render_pass, NULL);
+
+    for (uint32_t i = 0; i < final_framebuffer_count; ++i) {
+        vkDestroyFramebuffer(r_device(), final_framebuffers[i], NULL);
+    }
+
+    s_final_render_pass_init();
+    
+    /* 
     ImGui_ImplVulkan_SetMinImageCount(swapchain.image_count);
 
-    /*ImGui_ImplVulkanH_CreateWindow(instance, hardare, device, &g_MainWindowData,
+    ImGui_ImplVulkanH_CreateWindow(instance, hardare, device, &g_MainWindowData,
     g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);*/
+}
+
+void handle_resize(
+    uint32_t width,
+    uint32_t height) {
+    vkDeviceWaitIdle(r_device());
+
+    resize_swapchain(width, height);
+    r_handle_resize(width, height);
 }
 
 VkCommandBuffer begin_frame() {
@@ -1575,8 +1605,8 @@ void r_rpipeline_descriptor_set_output_init(
     }
 
     if (stage->depth_attachment) {
-        views[binding_count] = stage->color_attachments[binding_count].image_view;
-        samplers[binding_count] = stage->color_attachments[binding_count].sampler;
+        views[binding_count] = stage->depth_attachment->image_view;
+        samplers[binding_count] = stage->depth_attachment->sampler;
         
         ++binding_count;
     }
@@ -1875,11 +1905,11 @@ shader_t create_2d_shader(
 
     VkPipelineColorBlendStateCreateInfo blend_info = r_fill_blend_state_info(stage);
 
-    VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT };
+    VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     
     VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
     dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state_info.dynamicStateCount = 1;
+    dynamic_state_info.dynamicStateCount = sizeof(dynamic_states) / sizeof(dynamic_states[0]);
     dynamic_state_info.pDynamicStates = dynamic_states;
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil_info {};
@@ -1982,11 +2012,11 @@ shader_t create_3d_shader(
     rpipeline_stage_t *stage = r_deferred_stage();
     VkPipelineColorBlendStateCreateInfo blend_info = r_fill_blend_state_info(stage);
 
-    VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT };
+    VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     
     VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
     dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state_info.dynamicStateCount = 1;
+    dynamic_state_info.dynamicStateCount = sizeof(dynamic_states) / sizeof(dynamic_states[0]);
     dynamic_state_info.pDynamicStates = dynamic_states;
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil_info {};

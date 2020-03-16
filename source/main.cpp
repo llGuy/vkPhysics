@@ -105,6 +105,10 @@ static void s_imgui_test() {
     ImGui::End();
 }
 
+static void s_window_resize_callback(GLFWwindow *window, int32_t width, int32_t height) {
+    handle_resize(width, height);
+}
+
 int main(int argc, char *argv[]) {
     if (!glfwInit()) {
         printf("Failed to initialize GLFW\n");
@@ -116,6 +120,8 @@ int main(int argc, char *argv[]) {
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     GLFWwindow *window = glfwCreateWindow(vidmode->width / 2, vidmode->height / 2, "vkPhysics", NULL, NULL);
 
+    glfwSetWindowSizeCallback(window, s_window_resize_callback);
+    
     int32_t width, height;
     glfwGetFramebufferSize(window, &width, &height);
 

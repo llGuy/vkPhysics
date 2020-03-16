@@ -316,6 +316,10 @@ void submit_mesh(
     viewport.height = r_swapchain_extent().height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent = r_swapchain_extent();
+    vkCmdSetScissor(command_buffer, 0, 1, &rect);
     
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline);
 

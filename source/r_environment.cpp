@@ -200,6 +200,11 @@ static void s_render_to_base_cubemap() {
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
+    VkRect2D rect = {};
+    rect.extent.width = base_cubemap_extent.width;
+    rect.extent.height = base_cubemap_extent.height;
+    vkCmdSetScissor(command_buffer, 0, 1, &rect);
+
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, base_cubemap_init_shader.pipeline);
 
     matrix4_t projection = glm::perspective(
@@ -345,6 +350,11 @@ static void s_render_to_diffuse_ibl_cubemap() {
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
+    VkRect2D rect = {};
+    rect.extent.width = hdr_environment_extent.width;
+    rect.extent.height = hdr_environment_extent.height;
+    vkCmdSetScissor(command_buffer, 0, 1, &rect);
+
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_environment_init_shader.pipeline);
 
     //VkDescriptorSet inputs[] = { base_cubemap_descriptor_set };
@@ -475,6 +485,11 @@ static void s_render_to_integral_lookup() {
     viewport.height = 512;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent.width = 512;
+    rect.extent.height = 512;
+    vkCmdSetScissor(command_buffer, 0, 1, &rect);
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, integral_lookup_init_shader.pipeline);
 
@@ -657,6 +672,11 @@ static void s_render_to_specular_ibl() {
             viewport.height = height;
             viewport.maxDepth = 1;
             vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+            VkRect2D rect = {};
+            rect.extent.width = width;
+            rect.extent.height = height;
+            vkCmdSetScissor(command_buffer, 0, 1, &rect);
 
             vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, specular_ibl_init_shader.pipeline);
 
@@ -897,6 +917,10 @@ void r_render_environment(VkCommandBuffer command_buffer) {
     viewport.height = r_swapchain_extent().height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent = r_swapchain_extent();
+    vkCmdSetScissor(command_buffer, 0, 1, &rect);
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cubemap_shader.pipeline);
 
