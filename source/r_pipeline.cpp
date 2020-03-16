@@ -356,7 +356,7 @@ static void s_ssao_init() {
         pipeline_layout);
 
     kernel_uniform_buffer = create_gpu_buffer(
-        sizeof(kernels[0]) * 64,
+        sizeof(kernels[0]) * KERNEL_COUNT,
         kernels,
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 

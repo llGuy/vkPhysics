@@ -28,7 +28,7 @@ layout(binding = 1, set = 2) uniform sampler2D u_bright;
 
 void main() {
     vec4 color = texture(u_diffuse, in_fs.uvs);
-    vec4 raw_vs_normal = texture(u_gbuffer_normal, in_fs.uvs);
+    /*vec4 raw_vs_normal = texture(u_gbuffer_normal, in_fs.uvs);
     
     vec3 vs_current = texture(u_gbuffer_position, in_fs.uvs).xyz;
     vec3 ws_current = (u_camera_transforms.inverse_view * vec4(vs_current, 1.0f)).xyz;
@@ -50,7 +50,7 @@ void main() {
     }
 
     color /= float(num_samples);
-    color.a = 1.0f;
+    color.a = 1.0f;*/
 
     out_final_color = color;
 }

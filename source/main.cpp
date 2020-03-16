@@ -171,13 +171,12 @@ int main(int argc, char *argv[]) {
             changed = 0;
         }
         
-        r_camera_handle_input(dt, window);
- 
-        r_update_lighting();
-        
         VkCommandBuffer command_buffer = begin_frame();
-
+        
+        r_camera_handle_input(dt, window);
         r_camera_gpu_sync(command_buffer);
+
+        r_update_lighting();
         r_lighting_gpu_sync(command_buffer);
 
         begin_scene_rendering(command_buffer);
@@ -221,11 +220,12 @@ int main(int argc, char *argv[]) {
         dt = (float)(new_now - now);
 
         //if (dt < frame_time_max) {
-        //usleep((frame_time_max - dt) * 1000000.0f);
-            //}
+        //    usleep((frame_time_max - dt) * 1000000.0f);
+        //}
 
         //dt = frame_time_max;
         
+        //now = glfwGetTime();
         now = new_now;
     }
 

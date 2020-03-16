@@ -134,6 +134,7 @@ void main() {
             kd *= 1.0f - metalness;
 
             l += (kd * albedo / PI + specular) * radiance * ndotl;
+            //l += (kd * albedo / PI + specular) * ndotl;
         //}
 
         vec3 fresnel = fresnel_roughness(max(dot(vs_view, vs_normal), 0.000001f), base_reflectivity, roughness);
@@ -155,7 +156,6 @@ void main() {
         //vec3 specular = vec3(1.0f) * (fresnel * brdf.r);
 
         float ao = texture(u_ao, in_fs.uvs).r;
-        //float ao = 1.0f;
         
         vec3 ambient = (diffuse + specular);
         //vec3 ambient = vec3(ao);
@@ -163,6 +163,7 @@ void main() {
         //vec3 ambient = vec3(0.03) * albedo;
         
         color = (ambient + l) * pow(ao, 8.0f);
+        //color = vec3(ao);
 
         //color = color / (color + vec3(1.0f));
         //color = pow(color, vec3(1.0f / 2.2f));
