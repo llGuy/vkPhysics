@@ -34,6 +34,9 @@ layout(set = 2, binding = 0) uniform camera_transforms_t {
     vec4 frustum;
     vec4 view_direction;
     mat4 previous_view_projection;
+    float dt;
+    float width;
+    float height;
 } u_camera_transforms;
 
 float linear_depth(
@@ -85,12 +88,42 @@ void main() {
     vec4 raw_vs_normal = texture(u_gbuffer_normal, in_fs.uvs);
     vec3 vs_position = texture(u_gbuffer_position, in_fs.uvs).xyz;
     vec3 vs_view = normalize(-vs_position);
-
-    vec3 vs_normal = normalize(raw_vs_normal.xyz);
     
     vec3 color = raw_albedo.rgb;
+
+    vec2 diff = 1.0f / vec2(u_camera_transforms.width, u_camera_transforms.height);
     
     if (raw_vs_normal.x > -10.0f) {
+        // Detect edge
+        /*vec3 total = vec3(0.0f);
+        float count = 0.0f;
+        
+        if (raw_vs_normal.x > -10.0f) {
+
+            for (int y = -3; y < 3; ++y) {
+                for (int x = -3; x < 3; ++x) {
+                    vec2 coord = vec2( float(x), float(y) ) * diff * 1.01f + in_fs.uvs;
+                    float depth = texture(u_gbuffer_position, coord).z;
+                    if (abs(depth - vs_position.z) < 0.8f) {
+                        // Calculate normal
+                        float coeff = abs(float(x) * float(y));
+                        vec4 n = texture(u_gbuffer_normal, coord);
+                        if (n.x > -10.0f) {
+                            total += n.xyz * coeff;
+
+                            count += coeff;
+                        }
+                    }
+                }
+            }
+        }
+
+        total /= count;
+
+        raw_vs_normal.xyz = total;*/
+
+        vec3 vs_normal = normalize(raw_vs_normal.xyz);
+        
         float roughness = raw_albedo.a;
         float metalness = raw_vs_normal.a;
 

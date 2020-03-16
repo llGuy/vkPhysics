@@ -35,7 +35,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 void r_camera_init(void *window) {
     glfwSetScrollCallback((GLFWwindow *)window, scroll_callback);
     
-    camera_data.position = vector3_t(0.0f);
+    camera_data.position = vector3_t(0.0f, 5.0f, 0.0f);
     camera_data.direction = vector3_t(1.0f, 0.0, 0.0f);
     camera_data.up = vector3_t(0.0f, 1.0f, 0.0f);
     camera_data.fov = 60.0f;

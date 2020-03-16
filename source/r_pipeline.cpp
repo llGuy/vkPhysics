@@ -148,6 +148,73 @@ static rpipeline_shader_t s_create_rendering_pipeline_shader(
     return rendering_pipeline_shader;
 }
 
+static VkExtent2D shadow_map_extent;
+static rpipeline_stage_t shadow_stage;
+
+static void s_shadow_init() {
+    shadow_map_extent.width = 4000;
+    shadow_map_extent.height = 4000;
+
+    VkExtent3D extent3d = {};
+    extent3d.width = shadow_map_extent.width;
+    extent3d.height = shadow_map_extent.height;
+    extent3d.depth = 1;
+    
+    shadow_stage.color_attachment_count = 0;
+    shadow_stage.color_attachments = NULL;
+    shadow_stage.depth_attachment = FL_MALLOC(attachment_t, 1);
+    *shadow_stage.depth_attachment = r_create_depth_attachment(extent3d);
+
+    VkAttachmentDescription attachment_description = r_fill_depth_attachment_description(
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    
+    VkAttachmentReference attachment_reference = {};
+    attachment_reference.attachment = 0;
+    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = 0;
+    subpass_description.pColorAttachments = NULL;
+    subpass_description.pDepthStencilAttachment = &attachment_reference;
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = shadow_stage.color_attachment_count;
+    render_pass_info.pAttachments = &attachment_description;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &shadow_stage.render_pass));
+
+    shadow_stage.framebuffer = r_create_framebuffer(
+        shadow_stage.color_attachment_count,
+        shadow_stage.color_attachments,
+        NULL,
+        shadow_stage.render_pass,
+        shadow_map_extent,
+        1);
+
+    r_rpipeline_descriptor_set_output_init(&shadow_stage);
+}
+
 static rpipeline_stage_t deferred;
 
 rpipeline_stage_t *r_deferred_stage() {
@@ -1019,6 +1086,7 @@ void r_execute_final_pass(
 }
 
 void r_pipeline_init() {
+    //s_shadow_init();
     s_deferred_init();
     s_ssao_init();
     s_lighting_init();

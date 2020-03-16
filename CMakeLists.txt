@@ -31,7 +31,9 @@ endif()
 
 if(WIN32)
 
-  link_libraries("user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib")
+  include_directories("${CMAKE_SOURCE_DIR}/dependencies/glfw/include")
+  link_directories("${CMAKE_SOURCE_DIR}/dependencies/glfw/lib")
+  link_libraries("user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib" "glfw3.lib")
 
 else(WIN32)
 

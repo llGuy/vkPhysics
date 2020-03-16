@@ -10,8 +10,6 @@
 
 #include <imgui.h>
 
-#include <unistd.h>
-
 static void s_create_vulkan_surface_proc(struct VkInstance_T *instance, struct VkSurfaceKHR_T **surface, void *window) {
     if (glfwCreateWindowSurface(instance, (GLFWwindow *)window, NULL, surface) != VK_SUCCESS) {
         printf("Failed to create surface\n");
@@ -154,7 +152,7 @@ int main(int argc, char *argv[]) {
 
     mesh_render_data_t render_data = {};
     render_data.model = matrix4_t(1.0f);
-    render_data.color = vector4_t(0.0f);
+    render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.2f;
     render_data.pbr_info.y = 0.8;
     
@@ -182,7 +180,7 @@ int main(int argc, char *argv[]) {
         begin_scene_rendering(command_buffer);
 
         cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
-        cube_data.color = vector4_t(1.0f);
+        cube_data.color = vector4_t(0.0f);
         cube_data.pbr_info.x = 0.07f;
         cube_data.pbr_info.y = 0.1f;
         submit_mesh(command_buffer, &cube, &cube_shader, &cube_data);
@@ -219,13 +217,6 @@ int main(int argc, char *argv[]) {
         double new_now = glfwGetTime();
         dt = (float)(new_now - now);
 
-        //if (dt < frame_time_max) {
-        //    usleep((frame_time_max - dt) * 1000000.0f);
-        //}
-
-        //dt = frame_time_max;
-        
-        //now = glfwGetTime();
         now = new_now;
     }
 

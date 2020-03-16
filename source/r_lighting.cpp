@@ -18,6 +18,8 @@ VkDescriptorSet r_lighting_uniform() {
     return light_descriptor_set;
 }
 
+
+
 void r_lighting_init() {
     memset(&lighting_data, 0, sizeof(lighting_data));
 
