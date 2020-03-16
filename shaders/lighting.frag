@@ -18,6 +18,8 @@ layout(binding = 0, set = 3) uniform samplerCube u_irradiance_map;
 layout(binding = 0, set = 4) uniform sampler2D u_integral_lookup;
 layout(binding = 0, set = 5) uniform samplerCube u_prefilter_map;
 
+layout(binding = 0, set = 6) uniform sampler2D u_ao;
+
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[4];
     vec4 light_colors[4];
@@ -152,11 +154,15 @@ void main() {
         specular = prefiltered_color * (fresnel * brdf.r + clamp(brdf.g, 0, 1));
         //vec3 specular = vec3(1.0f) * (fresnel * brdf.r);
 
+        float ao = texture(u_ao, in_fs.uvs).r;
+        //float ao = 1.0f;
+        
         vec3 ambient = (diffuse + specular);
+        //vec3 ambient = vec3(ao);
         
         //vec3 ambient = vec3(0.03) * albedo;
         
-        color = ambient + l;
+        color = (ambient + l) * pow(ao, 8.0f);
 
         //color = color / (color + vec3(1.0f));
         //color = pow(color, vec3(1.0f / 2.2f));
@@ -171,4 +177,6 @@ void main() {
     }
 
     out_final_color = vec4(color, 1.0f);
+
+//    out_final_color = vec4(texture(u_ao, in_fs.uvs).r);
 }

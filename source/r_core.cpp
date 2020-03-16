@@ -776,6 +776,12 @@ void end_frame() {
     VkOffset2D offset;
     memset(&offset, 0, sizeof(offset));
 
+    r_execute_ssao_pass(primary_command_buffers[image_index]);
+    r_execute_ssao_blur_pass(primary_command_buffers[image_index]);
+    r_execute_lighting_pass(primary_command_buffers[image_index]);
+    r_execute_motion_blur_pass(primary_command_buffers[image_index]);
+    //r_execute_bloom_pass(primary_command_buffers[image_index]);
+
     VkRect2D render_area = {};
     render_area.offset = offset;
     render_area.extent = swapchain.extent;
@@ -790,10 +796,6 @@ void end_frame() {
     render_pass_begin_info.renderArea = render_area;
     render_pass_begin_info.clearValueCount = 1;
     render_pass_begin_info.pClearValues = &clear_value;
-    
-    r_execute_lighting_pass(primary_command_buffers[image_index]);
-    r_execute_motion_blur_pass(primary_command_buffers[image_index]);
-    //r_execute_bloom_pass(primary_command_buffers[image_index]);
     
     vkCmdBeginRenderPass(primary_command_buffers[image_index], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1620,13 +1622,28 @@ texture_t create_texture(
     const char *path,
     VkFormat format,
     void *data,
-    uint32_t width, uint32_t height) {
+    uint32_t width, uint32_t height,
+    VkFilter filter) {
+    uint32_t pixel_component_size = 1;
     int32_t x, y, channels;
     void *pixels;
     if (!data && path) {
         pixels = stbi_load(path, &x, &y, &channels, STBI_rgb_alpha);
     }
     else {
+        switch (format) {
+        case VK_FORMAT_R16G16B16A16_SFLOAT: {
+            channels = 4;
+            pixel_component_size = 2;
+            break;
+        }
+        default: {
+            printf("Need to handle format type for creating texture\n");
+            exit(1);
+            break;
+        }
+        }
+        
         pixels = data;
         x = width;
         y = height;
@@ -1672,8 +1689,8 @@ texture_t create_texture(
     VkSampler sampler;
     VkSamplerCreateInfo sampler_info = {};
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_info.magFilter = VK_FILTER_LINEAR;
-    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.magFilter = filter;
+    sampler_info.minFilter = filter;
     sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -1685,7 +1702,6 @@ texture_t create_texture(
     
     VK_CHECK(vkCreateSampler(r_device(), &sampler_info, NULL, &sampler));
 
-    create_image_descriptor_set(image_view, sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     
     texture_t texture;
     texture.image = image;
@@ -1693,9 +1709,11 @@ texture_t create_texture(
     texture.image_memory = memory;
     texture.sampler = sampler;
     texture.format = format;
+    
+    texture.descriptor = create_image_descriptor_set(image_view, sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
     gpu_buffer_t staging = create_gpu_buffer(
-        sizeof(uint8_t) * 2 * x * y * channels,
+        pixel_component_size * x * y * channels,
         pixels,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
@@ -1716,7 +1734,7 @@ texture_t create_texture(
         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         0,
-        1, NULL,
+        0, NULL,
         0, NULL,
         1, &barrier);
 
@@ -1754,7 +1772,7 @@ texture_t create_texture(
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         0,
-        1, NULL,
+        0, NULL,
         0, NULL,
         1, &barrier);
 

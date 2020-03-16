@@ -35,6 +35,12 @@ VkDevice r_device();
 
 void r_pipeline_init();
 
+void r_execute_ssao_pass(
+    VkCommandBuffer command_buffer);
+
+void r_execute_ssao_blur_pass(
+    VkCommandBuffer command_buffer);
+
 void r_execute_lighting_pass(
     VkCommandBuffer command_buffer);
 
@@ -189,6 +195,8 @@ struct gpu_camera_transforms_t {
     vector4_t view_direction;
     matrix4_t previous_view_projection;
     float dt;
+    float width;
+    float height;
 };
 
 struct cpu_camera_data_t {

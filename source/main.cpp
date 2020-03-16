@@ -182,6 +182,16 @@ int main(int argc, char *argv[]) {
 
         begin_scene_rendering(command_buffer);
 
+        cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
+        cube_data.color = vector4_t(1.0f);
+        cube_data.pbr_info.x = 0.07f;
+        cube_data.pbr_info.y = 0.1f;
+        submit_mesh(command_buffer, &cube, &cube_shader, &cube_data);
+
+        cube_data.model = glm::translate(vector3_t(15.0f, 0.0f, 0.0f)) * glm::rotate(glm::radians(60.0f), vector3_t(0.0f, 1.0f, 0.0f)) * glm::scale(vector3_t(2.0f, 10.0f, 1.0f));
+        cube_data.color = vector4_t(1.0f);
+        cube_data.pbr_info.x = 0.07f;
+        cube_data.pbr_info.y = 0.1f;
         submit_mesh(command_buffer, &cube, &cube_shader, &cube_data);
 
         for (uint32_t x = 0; x < 7; ++x) {
@@ -191,7 +201,7 @@ int main(int argc, char *argv[]) {
                 xz -= vector2_t(3.5f);
                 xz *= 3.5f;
 
-                vector3_t ws_position = vector3_t(xz.x, 1.5f, xz.y);
+                vector3_t ws_position = vector3_t(xz.x, 1.25f, xz.y);
 
                 render_data.model = glm::translate(ws_position);
                 render_data.pbr_info.x = glm::clamp((float)x / 7.0f, 0.05f, 1.0f);
