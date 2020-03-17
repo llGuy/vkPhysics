@@ -21,6 +21,8 @@ VkFormat r_depth_format();
 VkFormat r_swapchain_format();
 VkExtent2D r_swapchain_extent();
 
+VkExtent2D r_shadow_extent();
+
 struct attachment_t {
     VkImage image;
     VkImageView image_view;
@@ -139,6 +141,7 @@ VkAttachmentDescription r_fill_depth_attachment_description(
     VkImageLayout layout);
 
 rpipeline_stage_t *r_deferred_stage();
+rpipeline_stage_t *r_shadow_stage();
 
 void r_lighting_init();
 
@@ -210,6 +213,7 @@ struct cpu_camera_data_t {
     vector3_t direction;
     vector3_t up;
     vector2_t mouse_position;
+    // Degrees
     float fov;
     float near, far;
     matrix4_t previous_view_projection;

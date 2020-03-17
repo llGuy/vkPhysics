@@ -15,7 +15,7 @@ layout(binding = 0, set = 0) uniform sampler2D u_diffuse;
 
 void main() {
     out_final_color = texture(u_diffuse, in_fs.uvs);// + texture(u_bloom, in_fs.uvs);
-
+    
     vec3 color = out_final_color.rgb;
 
     color = color / (color + vec3(1.0f));

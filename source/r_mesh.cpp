@@ -85,14 +85,27 @@ shader_binding_info_t create_mesh_binding_info(
     return info;
 }
 
-// May need geometry shader for normal calculations
-shader_t create_mesh_shader(
+shader_t create_mesh_shader_color(
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags) {
     VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     
-    return create_3d_shader(
+    return create_3d_shader_color(
+        binding_info,
+        sizeof(mesh_render_data_t),
+        &ubo_type, 1,
+        shader_paths,
+        shader_flags);
+}
+
+shader_t create_mesh_shader_shadow(
+    shader_binding_info_t *binding_info,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags) {
+    VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    
+    return create_3d_shader_shadow(
         binding_info,
         sizeof(mesh_render_data_t),
         &ubo_type, 1,
@@ -338,6 +351,49 @@ void submit_mesh(
     vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
 
     
+    if (mesh_has_buffer(BT_INDICES, mesh)) {
+        vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
+        vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);
+
+        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, mesh->vertex_offset, 0);
+    }
+    else {
+        vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
+        vkCmdDraw(command_buffer, mesh->vertex_count, 1, mesh->vertex_offset, 0);
+    }
+}
+
+void submit_mesh_shadow(
+    VkCommandBuffer command_buffer,
+    mesh_t *mesh,
+    shader_t *shader,
+    mesh_render_data_t * render_data) {
+    VkViewport viewport = {};
+    viewport.width = r_shadow_extent().width;
+    viewport.height = r_shadow_extent().height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent = r_shadow_extent();
+    vkCmdSetScissor(command_buffer, 0, 1, &rect);
+    
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline);
+
+    VkDescriptorSet lighting_transforms = r_lighting_uniform();
+
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        shader->layout,
+        0,
+        1,
+        &lighting_transforms,
+        0,
+        NULL);
+
+    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
+
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
         vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);

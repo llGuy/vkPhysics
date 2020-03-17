@@ -33,6 +33,12 @@ void begin_scene_rendering(
 void end_scene_rendering(
     VkCommandBuffer command_buffer);
 
+void begin_shadow_rendering(
+    VkCommandBuffer command_buffer);
+
+void end_shadow_rendering(
+    VkCommandBuffer command_buffer);
+
 /* Command buffer utility */
 void create_command_buffers(
     VkCommandBufferLevel level, 
@@ -196,7 +202,7 @@ shader_t create_2d_shader(
     VkPrimitiveTopology topology);
 
 // Enables depth and will always happen in deferred stage
-shader_t create_3d_shader(
+shader_t create_3d_shader_shadow(
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
     VkDescriptorType *descriptor_layout_types,
@@ -204,7 +210,20 @@ shader_t create_3d_shader(
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 
-shader_t create_mesh_shader(
+shader_t create_3d_shader_color(
+    shader_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags);
+
+shader_t create_mesh_shader_color(
+    shader_binding_info_t *binding_info,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags);
+
+shader_t create_mesh_shader_shadow(
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
@@ -218,6 +237,12 @@ void submit_mesh(
     mesh_t *mesh,
     shader_t *shader,
     mesh_render_data_t *render_data);
+
+void submit_mesh_shadow(
+    VkCommandBuffer command_buffer,
+    mesh_t *mesh,
+    shader_t *shader,
+    mesh_render_data_t * render_data);
 
 /* Descriptor set */
 VkDescriptorSet create_image_descriptor_set(

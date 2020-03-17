@@ -792,7 +792,7 @@ static void s_cubemap_shader_init() {
     VkDescriptorType descriptor_types[] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
     const char *shader_paths[] = { "../shaders/SPV/cubemap.vert.spv", "../shaders/SPV/cubemap.frag.spv" };
     
-    cubemap_shader = create_3d_shader(
+    cubemap_shader = create_3d_shader_color(
         &binding_info,
         sizeof(cubemap_render_data_t),
         descriptor_types,

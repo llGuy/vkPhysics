@@ -150,8 +150,10 @@ int main(int argc, char *argv[]) {
     load_mesh_internal(IM_CUBE, &cube, &cube_info);
 
     const char *cube_paths[] = { "../shaders/SPV/untextured_mesh.vert.spv", "../shaders/SPV/untextured_mesh.geom.spv", "../shaders/SPV/untextured_mesh.frag.spv" };
+    const char *cube_shadow_paths[] = { "../shaders/SPV/untextured_mesh_shadow.vert.spv", "../shaders/SPV/shadow.frag.spv" };    
 
-    shader_t cube_shader = create_mesh_shader(&cube_info, cube_paths, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    shader_t cube_shader = create_mesh_shader_color(&cube_info, cube_paths, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    shader_t cube_shadow_shader = create_mesh_shader_shadow(&cube_info, cube_shadow_paths, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
     mesh_render_data_t cube_data = {};
     cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
@@ -169,9 +171,15 @@ int main(int argc, char *argv[]) {
         &sphere_info);
 
     const char *paths[] = { "../shaders/SPV/mesh.vert.spv", "../shaders/SPV/mesh.frag.spv" };
-    shader_t sphere_shader = create_mesh_shader(
+    const char *shadow_paths[] = { "../shaders/SPV/mesh_shadow.vert.spv", "../shaders/SPV/shadow.frag.spv" };
+    shader_t sphere_shader = create_mesh_shader_color(
         &sphere_info,
         paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    shader_t sphere_shadow_shader = create_mesh_shader_shadow(
+        &sphere_info,
+        shadow_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
     mesh_render_data_t render_data = {};
@@ -201,6 +209,39 @@ int main(int argc, char *argv[]) {
         r_update_lighting();
         r_lighting_gpu_sync(command_buffer);
 
+        begin_shadow_rendering(command_buffer);
+
+        cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
+        cube_data.color = vector4_t(0.0f);
+        cube_data.pbr_info.x = 0.07f;
+        cube_data.pbr_info.y = 0.1f;
+        submit_mesh_shadow(command_buffer, &cube, &cube_shadow_shader, &cube_data);
+
+        cube_data.model = glm::translate(vector3_t(15.0f, 0.0f, 0.0f)) * glm::rotate(glm::radians(60.0f), vector3_t(0.0f, 1.0f, 0.0f)) * glm::scale(vector3_t(2.0f, 10.0f, 1.0f));
+        cube_data.color = vector4_t(1.0f);
+        cube_data.pbr_info.x = 0.07f;
+        cube_data.pbr_info.y = 0.1f;
+        submit_mesh_shadow(command_buffer, &cube, &cube_shadow_shader, &cube_data);
+
+        for (uint32_t x = 0; x < 7; ++x) {
+            for (uint32_t y = 0; y < 7; ++y) {
+                vector2_t xz = vector2_t((float)x, (float)y);
+
+                xz -= vector2_t(3.5f);
+                xz *= 3.5f;
+
+                vector3_t ws_position = vector3_t(xz.x, 1.25f, xz.y);
+
+                render_data.model = glm::translate(ws_position);
+                render_data.pbr_info.x = glm::clamp((float)x / 7.0f, 0.05f, 1.0f);
+                render_data.pbr_info.y = (float)y / 7.0f;
+                
+                submit_mesh_shadow(command_buffer, &sphere, &sphere_shadow_shader, &render_data);
+            }
+        }
+
+        end_shadow_rendering(command_buffer);
+        
         begin_scene_rendering(command_buffer);
 
         cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));

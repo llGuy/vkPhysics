@@ -18,14 +18,118 @@ VkDescriptorSet r_lighting_uniform() {
     return light_descriptor_set;
 }
 
+struct shadow_box_t {
+    matrix4_t view;
+    matrix4_t projection;
+    matrix4_t inverse_view;
 
+    float near;
+    float far;
+
+    vector4_t ls_corners[8];
+    
+    union {
+        struct {float x_min, x_max, y_min, y_max, z_min, z_max;};
+        float corner_values[6];
+    };
+};
+
+static shadow_box_t scene_shadow_box;
+
+static void s_shadow_box_init() {
+    // Replace up vector with actual camera up vector
+    scene_shadow_box.view = glm::lookAt(vector3_t(0.0f), light_direction, vector3_t(0.0f, 1.0f, 0.0f));
+    scene_shadow_box.inverse_view = glm::inverse(scene_shadow_box.view);
+    scene_shadow_box.near = 1.0f;
+    scene_shadow_box.far = 30.0f;
+}
+
+static void s_update_shadow_box(
+    float fov,
+    float aspect,
+    const vector3_t &ws_position,
+    const vector3_t &ws_direction,
+    const vector3_t &ws_up,
+    shadow_box_t *shadow_box) {
+    float far = shadow_box->far;
+    float near = shadow_box->near;
+    float far_width, near_width, far_height, near_height;
+    
+    far_width = 2.0f * far * tan(fov);
+    near_width = 2.0f * near * tan(fov);
+    far_height = far_width / aspect;
+    near_height = near_width / aspect;
+
+    vector3_t center_near = ws_position + ws_direction * near;
+    vector3_t center_far = ws_position + ws_direction * far;
+    
+    vector3_t right_view_ax = glm::normalize(glm::cross(ws_direction, ws_up));
+    vector3_t up_view_ax = glm::normalize(glm::cross(ws_direction, right_view_ax));
+
+    float far_width_half = far_width / 2.0f;
+    float near_width_half = near_width / 2.0f;
+    float far_height_half = far_height / 2.0f;
+    float near_height_half = near_height / 2.0f;
+
+    // f = far, n = near, l = left, r = right, t = top, b = bottom
+    enum ortho_corner_t : int32_t {
+	flt, flb,
+	frt, frb,
+	nlt, nlb,
+	nrt, nrb
+    };    
+
+    // Light space
+    shadow_box->ls_corners[flt] = shadow_box->view * vector4_t(ws_position + ws_direction * far - right_view_ax * far_width_half + up_view_ax * far_height_half, 1.0f);
+    shadow_box->ls_corners[flb] = shadow_box->view * vector4_t(ws_position + ws_direction * far - right_view_ax * far_width_half - up_view_ax * far_height_half, 1.0f);
+    
+    shadow_box->ls_corners[frt] = shadow_box->view * vector4_t(ws_position + ws_direction * far + right_view_ax * far_width_half + up_view_ax * far_height_half, 1.0f);
+    shadow_box->ls_corners[frb] = shadow_box->view * vector4_t(ws_position + ws_direction * far + right_view_ax * far_width_half - up_view_ax * far_height_half, 1.0f);
+    
+    shadow_box->ls_corners[nlt] = shadow_box->view * vector4_t(ws_position + ws_direction * near - right_view_ax * near_width_half + up_view_ax * near_height_half, 1.0f);
+    shadow_box->ls_corners[nlb] = shadow_box->view * vector4_t(ws_position + ws_direction * near - right_view_ax * near_width_half - up_view_ax * near_height_half, 1.0f);
+    
+    shadow_box->ls_corners[nrt] = shadow_box->view * vector4_t(ws_position + ws_direction * near + right_view_ax * near_width_half + up_view_ax * near_height_half, 1.0f);
+    shadow_box->ls_corners[nrb] = shadow_box->view * vector4_t(ws_position + ws_direction * near + right_view_ax * near_width_half - up_view_ax * near_height_half, 1.0f);
+
+    float x_min, x_max, y_min, y_max, z_min, z_max;
+
+    x_min = x_max = shadow_box->ls_corners[0].x;
+    y_min = y_max = shadow_box->ls_corners[0].y;
+    z_min = z_max = shadow_box->ls_corners[0].z;
+
+    for (uint32_t i = 1; i < 8; ++i) {
+	if (x_min > shadow_box->ls_corners[i].x) x_min = shadow_box->ls_corners[i].x;
+	if (x_max < shadow_box->ls_corners[i].x) x_max = shadow_box->ls_corners[i].x;
+
+	if (y_min > shadow_box->ls_corners[i].y) y_min = shadow_box->ls_corners[i].y;
+	if (y_max < shadow_box->ls_corners[i].y) y_max = shadow_box->ls_corners[i].y;
+
+	if (z_min > shadow_box->ls_corners[i].z) z_min = shadow_box->ls_corners[i].z;
+	if (z_max < shadow_box->ls_corners[i].z) z_max = shadow_box->ls_corners[i].z;
+    }
+    
+    shadow_box->x_min = x_min = x_min;
+    shadow_box->x_max = x_max = x_max;
+    shadow_box->y_min = y_min = y_min;
+    shadow_box->y_max = y_max = y_max;
+    shadow_box->z_min = z_min = z_min;
+    shadow_box->z_max = z_max = z_max;
+
+    z_min = z_min - (z_max - z_min);
+
+    shadow_box->projection = glm::transpose(matrix4_t(2.0f / (x_max - x_min), 0.0f, 0.0f, -(x_max + x_min) / (x_max - x_min),
+                                                      0.0f, 2.0f / (y_max - y_min), 0.0f, -(y_max + y_min) / (y_max - y_min),
+                                                      0.0f, 0.0f, 2.0f / (z_max - z_min), -(z_max + z_min) / (z_max - z_min),
+                                                      0.0f, 0.0f, 0.0f, 1.0f));
+}
 
 void r_lighting_init() {
     memset(&lighting_data, 0, sizeof(lighting_data));
 
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
 
-    light_direction = vector3_t(0.0f, 0.622f, 0.714f);
+    light_direction = glm::normalize(vector3_t(0.0f, 0.622f, 0.714f));
     
     lighting_data.light_positions[0] = transforms->view * vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[1] = transforms->view * vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
@@ -38,6 +142,8 @@ void r_lighting_init() {
     lighting_data.light_colors[2] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
     lighting_data.light_colors[3] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
 
+    s_shadow_box_init();
+    
     light_uniform_buffer = create_gpu_buffer(
         sizeof(lighting_data_t),
         &lighting_data,
@@ -51,12 +157,25 @@ void r_lighting_init() {
 
 void r_update_lighting() {
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
+    cpu_camera_data_t *camera_data = r_cpu_camera_data();
     
     lighting_data.light_positions[0] = transforms->view * vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[1] = transforms->view * vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[2] = transforms->view * vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[3] = transforms->view * vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
     lighting_data.vs_directional_light = transforms->view * -vector4_t(light_direction, 0.0f);
+
+    s_update_shadow_box(
+        glm::radians(camera_data->fov),
+        transforms->width / transforms->height,
+        camera_data->position,
+        camera_data->direction,
+        camera_data->up,
+        &scene_shadow_box);
+
+    lighting_data.shadow_view = scene_shadow_box.view;
+    lighting_data.shadow_projection = scene_shadow_box.projection;
+    lighting_data.shadow_view_projection = scene_shadow_box.projection * scene_shadow_box.view;
 }
 
 void r_lighting_gpu_sync(VkCommandBuffer command_buffer) {

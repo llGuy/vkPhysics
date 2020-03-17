@@ -1951,13 +1951,14 @@ shader_t create_2d_shader(
     return shader;
 }
 
-shader_t create_3d_shader(
+static shader_t s_create_3d_shader(
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
     VkDescriptorType *descriptor_layout_types,
     uint32_t descriptor_layout_count,
     const char **shader_paths,
-    VkShaderStageFlags shader_flags) {
+    VkShaderStageFlags shader_flags,
+    rpipeline_stage_t *stage) {
     VkPipelineLayout layout = r_create_pipeline_layout(
         shader_flags,
         descriptor_layout_types,
@@ -2008,7 +2009,6 @@ shader_t create_3d_shader(
     multisample_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisample_info.minSampleShading = 1.0f;
 
-    rpipeline_stage_t *stage = r_deferred_stage();
     VkPipelineColorBlendStateCreateInfo blend_info = r_fill_blend_state_info(stage);
 
     VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -2060,6 +2060,42 @@ shader_t create_3d_shader(
 
     return shader;
 }
+
+
+shader_t create_3d_shader_color(
+    shader_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags) {
+    return s_create_3d_shader(
+        binding_info,
+        push_constant_size,
+        descriptor_layout_types,
+        descriptor_layout_count,
+        shader_paths,
+        shader_flags,
+        r_deferred_stage());
+}
+
+shader_t create_3d_shader_shadow(
+    shader_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags) {
+    return s_create_3d_shader(
+        binding_info,
+        push_constant_size,
+        descriptor_layout_types,
+        descriptor_layout_count,
+        shader_paths,
+        shader_flags,
+        r_shadow_stage());
+}
+
 
 void foo() {
     VkImageCopy region;

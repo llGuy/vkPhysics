@@ -58,7 +58,7 @@ void main() {
             float sample_depth = texture(u_gbuffer_position, offset.xy).z;
 
             float range = smoothstep(0.25f, 1.0f, 0.5f / abs(vs_position.z - sample_depth));
-            occlusion += (sample_depth >= sample_kernel.z + 0.025f ? 1.0f : 0.0f) * range;
+            occlusion += (sample_depth >= sample_kernel.z + 0.1f ? 1.0f : 0.0f) * range;
         }
 
         occlusion = 1.0f - (occlusion / 54.0f);
