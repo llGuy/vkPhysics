@@ -193,6 +193,8 @@ int main(int argc, char *argv[]) {
 
     float frame_time_max = 1.0f / 60.0f;
 
+    r_render_environment_to_offscreen();
+    
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 

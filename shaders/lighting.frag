@@ -109,7 +109,7 @@ bool get_shadow_factor(
         for (int y = int(-pcf_count); y <= int(pcf_count); ++y) {
             float depth = texture(u_shadow_map, ls_position.xy).r;
             
-            if (ls_position.z - 0.0007f > depth) {
+            if (ls_position.z - 0.0009f > depth) {
                 occlusion += 0.95f;
                 occluded = true;
             }

@@ -79,6 +79,34 @@ base_cubemap_render_data_t *r_cubemap_render_data() {
 }
 
 static void s_base_cubemap_init() {
+    float eye_height = 0.0f;
+    float light_direction[3] = { 0.1f, 0.222f, 0.714f };
+    float rayleigh = -0.082f;
+    float mie = -0.908f;
+    float intensity = 0.650f;
+    float scatter_strength = 1.975f;
+    float rayleigh_strength = 2.496f;
+    float mie_strength = 0.034f;
+    float rayleigh_collection = 8.0f;
+    float mie_collection = 2.981f;
+    float kr[3] = {27.0f / 255.0f, 82.0f / 255.0f, 111.0f / 255.0f};
+    
+    render_data.eye_height = eye_height;
+    render_data.light_direction_x = light_direction[0];
+    render_data.light_direction_y = light_direction[1];
+    render_data.light_direction_z = light_direction[2];
+    render_data.rayleigh = rayleigh;
+    render_data.mie = mie;
+    render_data.intensity = intensity;
+    render_data.scatter_strength = scatter_strength;
+    render_data.rayleigh_strength = rayleigh_strength;
+    render_data.mie_strength = mie_strength;
+    render_data.rayleigh_collection = rayleigh_collection;
+    render_data.mie_collection = mie_collection;
+    render_data.air_color_r = kr[0];
+    render_data.air_color_g = kr[1];
+    render_data.air_color_b = kr[2];
+
     base_cubemap_extent.width = 512;
     base_cubemap_extent.height = 512;
 
