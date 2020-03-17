@@ -69,7 +69,7 @@ void main() {
 
     const int SAMPLES = 30;
     const float DENSITY = 1.0;
-    const float DECAY = 0.82;
+    const float DECAY = 0.87;
     const float WEIGHT = 0.03;
 
     vec2 blur_vector = (u_lighting.light_screen_coord - in_fs.uvs) * (1.0 / float(SAMPLES));
