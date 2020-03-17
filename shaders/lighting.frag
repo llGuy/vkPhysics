@@ -10,8 +10,9 @@ layout(location = 1) out vec4 out_bright_color;
 layout(binding = 0, set = 0) uniform sampler2D u_gbuffer_albedo;
 layout(binding = 1, set = 0) uniform sampler2D u_gbuffer_normal;
 layout(binding = 2, set = 0) uniform sampler2D u_gbuffer_position;
+layout(binding = 3, set = 0) uniform sampler2D u_gbuffer_sun;
 // TODO: Get position from depth buffer - for now, use gbuffer position as testcase
-layout(binding = 3, set = 0) uniform sampler2D u_gbuffer_depth;
+layout(binding = 4, set = 0) uniform sampler2D u_gbuffer_depth;
 
 layout(binding = 0, set = 3) uniform samplerCube u_irradiance_map;
 
@@ -208,9 +209,9 @@ void main() {
         float intensity = abs(dot(opposite_light_color, opposite_light_color));
         float shadow_intensity = clamp(0.0f, 1.0f, 1.0f / intensity);
 
-        if (get_shadow_factor(ws_position, occluded)) {
+        /*if (get_shadow_factor(ws_position, occluded)) {
             occluded *= shadow_intensity;
-        }
+        }*/
         
         //vec3 radiance = u_lighting.light_colors[i].rgb * attenuation;
         vec3 radiance = directional_light_color * attenuation;
@@ -277,7 +278,7 @@ void main() {
     }
 
     out_final_color = vec4(color, 1.0f);
-    
+
 //    out_final_color = out_bright_color;
     
 //    out_final_color = vec4(texture(u_ao, in_fs.uvs).r);

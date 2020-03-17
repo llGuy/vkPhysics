@@ -80,7 +80,7 @@ base_cubemap_render_data_t *r_cubemap_render_data() {
 
 static void s_base_cubemap_init() {
     float eye_height = 0.0f;
-    float light_direction[3] = { 0.1f, 0.222f, 0.714f };
+    float light_direction[3] = { 0.1f, 0.422f, 0.714f };
     float rayleigh = -0.082f;
     float mie = -0.908f;
     float intensity = 0.650f;

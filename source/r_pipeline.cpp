@@ -282,7 +282,7 @@ rpipeline_stage_t *r_deferred_stage() {
 }
 
 static void s_deferred_render_pass_init() {
-    deferred.color_attachment_count = 3;
+    deferred.color_attachment_count = 4;
 
     VkAttachmentDescription *attachment_descriptions = FL_MALLOC(VkAttachmentDescription, deferred.color_attachment_count + 1);
     for (uint32_t i = 0; i < deferred.color_attachment_count; ++i) {
@@ -892,7 +892,8 @@ static void s_motion_blur_init() {
     VkDescriptorSetLayout input_layouts[] = {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, deferred.binding_count),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, lighting_stage.binding_count)
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, lighting_stage.binding_count),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -941,7 +942,8 @@ void r_execute_motion_blur_pass(
     VkDescriptorSet inputs[] = {
         deferred.descriptor_set,
         r_camera_transforms_uniform(),
-        lighting_stage.descriptor_set
+        lighting_stage.descriptor_set,
+        r_lighting_uniform()
     };
     
     vkCmdBindDescriptorSets(
@@ -1223,11 +1225,11 @@ void r_pipeline_init() {
 
 void begin_scene_rendering(
     VkCommandBuffer command_buffer) {
-    VkClearValue clear_values[4] = {};
+    VkClearValue clear_values[5] = {};
     
     memset(clear_values, 0, sizeof(VkClearValue) * 4);
 
-    clear_values[3].depthStencil.depth = 1.0f;
+    clear_values[4].depthStencil.depth = 1.0f;
 
     VkRect2D render_area = {};
     render_area.extent = r_swapchain_extent();

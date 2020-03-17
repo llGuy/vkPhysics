@@ -34,7 +34,7 @@ static void s_imgui_test() {
     static float eye_height = 0.0f;
     ImGui::SliderFloat("Eye height", &eye_height, 0.0f, 1.0f);
 
-    static float light_direction[3] = { 0.1f, 0.222f, 0.714f };
+    static float light_direction[3] = { 0.1f, 0.422f, 0.714f };
     ImGui::SliderFloat3("Light direction", light_direction, -1.0f, +1.0f);
 
     static float rayleigh = -0.082f;
@@ -87,8 +87,6 @@ static void s_imgui_test() {
 
     *r_light_direction() = vector3_t(light_direction[0], ptr->light_direction_y = light_direction[1], ptr->light_direction_z = light_direction[2]);
     
-    
-
     /*static float rotation = 0.0;
     ImGui::SliderFloat("rotation", &rotation, 0.0f, 2.0f * 3.1415f);
     static float translation[] = { 0.0f, 0.0f };
@@ -213,7 +211,7 @@ int main(int argc, char *argv[]) {
 
         begin_shadow_rendering(command_buffer);
 
-        cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
+        /*cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
         cube_data.color = vector4_t(0.0f);
         cube_data.pbr_info.x = 0.07f;
         cube_data.pbr_info.y = 0.1f;
@@ -240,7 +238,7 @@ int main(int argc, char *argv[]) {
                 
                 submit_mesh_shadow(command_buffer, &sphere, &sphere_shadow_shader, &render_data);
             }
-        }
+            }*/
 
         end_shadow_rendering(command_buffer);
         

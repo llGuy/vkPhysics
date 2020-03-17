@@ -9,8 +9,9 @@ layout(location = 0) out vec4 out_final_color;
 layout(binding = 0, set = 0) uniform sampler2D u_gbuffer_albedo;
 layout(binding = 1, set = 0) uniform sampler2D u_gbuffer_normal;
 layout(binding = 2, set = 0) uniform sampler2D u_gbuffer_position;
+layout(binding = 3, set = 0) uniform sampler2D u_gbuffer_sun;
 // TODO: Get position from depth buffer - for now, use gbuffer position as testcase
-layout(binding = 3, set = 0) uniform sampler2D u_gbuffer_depth;
+layout(binding = 4, set = 0) uniform sampler2D u_gbuffer_depth;
 
 layout(binding = 0, set = 1) uniform camera_transforms_t {
     mat4 projection;
@@ -25,6 +26,18 @@ layout(binding = 0, set = 1) uniform camera_transforms_t {
 
 layout(binding = 0, set = 2) uniform sampler2D u_diffuse;
 layout(binding = 1, set = 2) uniform sampler2D u_bright;
+
+layout(binding = 0, set = 3) uniform lighting_t {
+    vec4 vs_light_positions[4];
+    vec4 light_colors[4];
+    vec4 vs_directional_light;
+
+    mat4 shadow_view_projection;
+    mat4 shadow_view;
+    mat4 shadow_projection;
+
+    vec2 light_screen_coord;
+} u_lighting;
 
 void main() {
     vec4 color = texture(u_diffuse, in_fs.uvs);
@@ -53,6 +66,28 @@ void main() {
     color.a = 1.0f;
 
     out_final_color = color;
+
+    const int SAMPLES = 30;
+    const float DENSITY = 1.0;
+    const float DECAY = 0.82;
+    const float WEIGHT = 0.03;
+
+    vec2 blur_vector = (u_lighting.light_screen_coord - in_fs.uvs) * (1.0 / float(SAMPLES));
+    vec2 current_uvs = in_fs.uvs;
+
+    float illumination_decay = 1.0;
+    
+    for (int i = 0; i < SAMPLES; ++i) {
+        current_uvs += blur_vector;
+
+        vec4 current_color = texture(u_gbuffer_sun, current_uvs);
+
+        current_color *= illumination_decay * WEIGHT;
+
+        out_final_color += current_color;
+
+        illumination_decay *= DECAY;
+    }
 
     // Flip UV coord
     /*vec2 coord = -in_fs.uvs + vec2(1.0f);

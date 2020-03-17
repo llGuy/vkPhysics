@@ -155,6 +155,8 @@ struct lighting_data_t {
     matrix4_t shadow_view_projection;
     matrix4_t shadow_view;
     matrix4_t shadow_projection;
+
+    vector2_t light_screen_coord;
 };
 
 vector3_t *r_light_direction();

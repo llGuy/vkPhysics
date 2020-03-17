@@ -51,6 +51,8 @@ static void s_update_shadow_box(
     const vector3_t &ws_direction,
     const vector3_t &ws_up,
     shadow_box_t *shadow_box) {
+    scene_shadow_box.view = glm::lookAt(vector3_t(0.0f), light_direction, vector3_t(0.0f, 1.0f, 0.0f));
+    
     float far = shadow_box->far;
     float near = shadow_box->near;
     float far_width, near_width, far_height, near_height;
@@ -129,7 +131,7 @@ void r_lighting_init() {
 
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
 
-    light_direction = glm::normalize(vector3_t(0.0f, 0.622f, 0.714f));
+    light_direction = vector3_t(0.1f, 0.422f, 0.714f);
     
     lighting_data.light_positions[0] = transforms->view * vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[1] = transforms->view * vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
@@ -164,6 +166,15 @@ void r_update_lighting() {
     lighting_data.light_positions[2] = transforms->view * vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
     lighting_data.light_positions[3] = transforms->view * vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
     lighting_data.vs_directional_light = transforms->view * -vector4_t(light_direction, 0.0f);
+
+    vector4_t light_position = vector4_t(light_direction * 1000.0f, 1.0f);
+    light_position = transforms->view_projection * light_position;
+    light_position.x /= light_position.w;
+    light_position.y /= light_position.w;
+    light_position.z /= light_position.w;
+    light_position.x = light_position.x * 0.5f + 0.5f;
+    light_position.y = light_position.y * 0.5f + 0.5f;
+    lighting_data.light_screen_coord = vector2_t(light_position.x, light_position.y);
 
     s_update_shadow_box(
         glm::radians(camera_data->fov),

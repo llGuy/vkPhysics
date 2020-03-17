@@ -167,6 +167,11 @@ void main() {
     accumulated_mie = (accumulated_mie * pow(ray_length, u_push_constant.mie_strength)) / NUM_SAMPLES;
 
     vec3 color = vec3(mie * accumulated_mie + rayleigh * accumulated_rayleigh);
+
+    float a = 0.0f;
+    if (dot(-light_dir, eye_direction) > 0.99) {
+        a = 1.0f;
+    }
     
-    out_final_color = vec4(color, 1.0f);
+    out_final_color = vec4(color, a);
 }
