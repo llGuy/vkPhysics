@@ -1045,12 +1045,12 @@ gpu_buffer_t create_gpu_buffer(
 
         memcpy(staging_map, data, size);
 
-        VkMappedMemoryRange range = {};
+        /*VkMappedMemoryRange range = {};
         range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         range.memory = staging_memory;
         range.offset = 0;
         range.size = size;
-        vkFlushMappedMemoryRanges(r_device(), 1, &range);
+        vkFlushMappedMemoryRanges(r_device(), 1, &range);*/
 
         vkUnmapMemory(r_device(), staging_memory);
         
