@@ -5,6 +5,7 @@ project(vkPhysics)
 file(GLOB_RECURSE SOURCES "source/*.cpp" "source/*.hpp" "dependencies/imgui/lib/*.cpp")
 
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/stb")
+include_directories("${CMAKE_SOURCE_DIR}/dependencies/glm")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/imgui/include")
 
 
