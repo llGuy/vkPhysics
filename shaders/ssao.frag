@@ -48,7 +48,12 @@ void main() {
         float occlusion = 0.0f;
         for (int i = 0; i < 54; ++i) {
             vec3 sample_kernel = tangent_space * vec3(u_kernels.kernels[i]);
-            sample_kernel = vs_position + sample_kernel * 0.5f;
+
+            // Depends on pixel distance to camera
+            float pixel_distance = abs(vs_position.z);
+            float kernel_size = mix(0.6f, 3.0f, pixel_distance / 100.0f);
+            
+            sample_kernel = vs_position + sample_kernel * kernel_size;
 
             vec4 offset = vec4(sample_kernel, 1.0f);
             offset = u_camera_transforms.projection * offset;
@@ -57,8 +62,10 @@ void main() {
 
             float sample_depth = texture(u_gbuffer_position, offset.xy).z;
 
+            float bias = mix(0.02f, 0.2f, pixel_distance / 100.0f);
+            
             float range = smoothstep(0.25f, 1.0f, 0.5f / abs(vs_position.z - sample_depth));
-            occlusion += (sample_depth >= sample_kernel.z + 0.1f ? 1.0f : 0.0f) * range;
+            occlusion += (sample_depth >= sample_kernel.z + bias ? 1.0f : 0.0f) * range;
         }
 
         occlusion = 1.0f - (occlusion / 54.0f);

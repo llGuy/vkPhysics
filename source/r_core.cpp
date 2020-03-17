@@ -1958,7 +1958,8 @@ static shader_t s_create_3d_shader(
     uint32_t descriptor_layout_count,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
-    rpipeline_stage_t *stage) {
+    rpipeline_stage_t *stage,
+    VkCullModeFlags cull_mode) {
     VkPipelineLayout layout = r_create_pipeline_layout(
         shader_flags,
         descriptor_layout_types,
@@ -2000,7 +2001,7 @@ static shader_t s_create_3d_shader(
     VkPipelineRasterizationStateCreateInfo rasterization_info = {};
     rasterization_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterization_info.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterization_info.cullMode = VK_CULL_MODE_NONE;
+    rasterization_info.cullMode = cull_mode;
     rasterization_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rasterization_info.lineWidth = 1.0f;
 
@@ -2076,7 +2077,8 @@ shader_t create_3d_shader_color(
         descriptor_layout_count,
         shader_paths,
         shader_flags,
-        r_deferred_stage());
+        r_deferred_stage(),
+        VK_CULL_MODE_NONE);
 }
 
 shader_t create_3d_shader_shadow(
@@ -2093,7 +2095,8 @@ shader_t create_3d_shader_shadow(
         descriptor_layout_count,
         shader_paths,
         shader_flags,
-        r_shadow_stage());
+        r_shadow_stage(),
+        VK_CULL_MODE_FRONT_BIT);
 }
 
 

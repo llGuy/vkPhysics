@@ -88,24 +88,47 @@ vec3 fresnel_roughness(
     return base + (max(vec3(1.0f - roughness), base) - base) * pow(1.0f - ndotv, 5.0f);
 }
 
-float get_shadow_factor(
+bool get_shadow_factor(
     vec3 ws_position,
     out float occlusion) {
+    float pcf_count = 2.0f;
+    
     vec4 ls_position = u_lighting.shadow_view_projection * vec4(ws_position, 1.0f);
 
     ls_position.xyz /= ls_position.w;
     ls_position.xy = ls_position.xy * 0.5f + 0.5f;
 
-    float depth = texture(u_shadow_map, ls_position.xy).r;
+    vec2 texel_size = 1.0f / (textureSize(u_shadow_map, 0));
+    //float depth = texture(u_shadow_map, ls_position.xy).r;
 
-    if (ls_position.z - 0.005f > depth) {
+    occlusion = 0.0f;
+
+    bool occluded = false;
+    
+    for (int x = int(-pcf_count); x <= int(pcf_count); ++x) {
+        for (int y = int(-pcf_count); y <= int(pcf_count); ++y) {
+            float depth = texture(u_shadow_map, ls_position.xy).r;
+            
+            if (ls_position.z - 0.0007f > depth) {
+                occlusion += 0.95f;
+                occluded = true;
+            }
+        }
+    }
+
+    occlusion /= (pcf_count * 2.0f + 1.0f) * (pcf_count * 2.0f + 1.0f);
+    occlusion = 1.0f - occlusion;
+
+    return occluded;
+
+    /*if (ls_position.z - 0.005f > depth) {
         occlusion = 0.0f;
         return 0.2f;
     }
     else {
         occlusion = 1.0f;
         return 1.0f;
-    }
+    }*/
 }
 
 void main() {
@@ -166,12 +189,13 @@ void main() {
 
         vec3 ws_position = vec3(u_camera_transforms.inverse_view * vec4(vs_position, 1.0f));
 
-        float shadow = 1.0f;
         float occluded = 1.0f;
-        if (dot(vs_normal, vs_light) > 0.2f) {
-            shadow = get_shadow_factor(ws_position, occluded);
-            shadow = pow(shadow, 3);
-        }
+
+        //get_shadow_factor(ws_position, occluded);
+
+        /*if (occluded == 0.0f) {
+            vs_normal = -vs_light;
+        }*/
 
         //float d = length(light_position - vs_position);
         //float attenuation = 1.0 / (d * d);
@@ -180,7 +204,14 @@ void main() {
         vec3 ws_light = vec3(u_camera_transforms.inverse_view * vec4(vs_light, 0.0f));
         ws_light.y *= -1.0f;
         vec3 directional_light_color =  textureLod(u_prefilter_map, ws_light, 0.0f).rgb;
-            
+        vec3 opposite_light_color = textureLod(u_prefilter_map, -ws_light, 0.0f).rgb;
+        float intensity = abs(dot(opposite_light_color, opposite_light_color));
+        float shadow_intensity = clamp(0.0f, 1.0f, 1.0f / intensity);
+
+        if (get_shadow_factor(ws_position, occluded)) {
+            occluded *= shadow_intensity;
+        }
+        
         //vec3 radiance = u_lighting.light_colors[i].rgb * attenuation;
         vec3 radiance = directional_light_color * attenuation;
 
@@ -230,7 +261,7 @@ void main() {
         
         //vec3 ambient = vec3(0.03) * albedo;
         
-        color = (ambient + l * occluded) * pow(ao, 8.0f);
+        color = (ambient + l * occluded) * pow(ao, 10.0f);
         //color = vec3(ao);
 
         //color = color / (color + vec3(1.0f));
