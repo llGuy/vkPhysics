@@ -16,7 +16,11 @@ In the directory containing CMakeLists.txt:
 
 - Build in the IDE you are using and it should be up and running!
 
+- Repo comes with bundled vulkan lib / headers, BUT if the shaders have trouble being loaded, may need to install Vulkan SDK
+
 ## Linux
+
+- Install Vulkan SDK: `sudo apt update`, `sudo apt install vulkan-sdk`
 
 - In the directory containing CMakeLists.txt
 
