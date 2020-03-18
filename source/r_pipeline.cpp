@@ -893,7 +893,8 @@ static void s_motion_blur_init() {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, deferred.binding_count),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, lighting_stage.binding_count),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -943,7 +944,7 @@ void r_execute_motion_blur_pass(
         deferred.descriptor_set,
         r_camera_transforms_uniform(),
         lighting_stage.descriptor_set,
-        r_lighting_uniform()
+        r_lighting_uniform(),
     };
     
     vkCmdBindDescriptorSets(
