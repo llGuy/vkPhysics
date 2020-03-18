@@ -147,10 +147,14 @@ void r_lighting_init();
 
 void r_update_lighting();
 
+#define MAX_LIGHTS 10
+
 struct lighting_data_t {
-    vector4_t light_positions[4];
-    vector4_t ws_light_positions[4];
-    vector4_t light_colors[4];
+    vector4_t light_positions[MAX_LIGHTS];
+    vector4_t ws_light_positions[MAX_LIGHTS];
+    vector4_t light_directions[MAX_LIGHTS];
+    vector4_t ws_light_directions[MAX_LIGHTS];
+    vector4_t light_colors[MAX_LIGHTS];
     vector4_t vs_directional_light;
     vector4_t ws_directional_light;
 
@@ -159,6 +163,8 @@ struct lighting_data_t {
     matrix4_t shadow_projection;
 
     vector2_t light_screen_coord;
+
+    int point_light_count;
 };
 
 vector3_t *r_light_direction();

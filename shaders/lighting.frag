@@ -23,15 +23,21 @@ layout(binding = 0, set = 6) uniform sampler2D u_ao;
 layout(binding = 0, set = 7) uniform sampler2D u_shadow_map;
 
 layout(set = 1, binding = 0) uniform lighting_t {
-    vec4 vs_light_positions[4];
-    vec4 ws_light_positions[4];
-    vec4 light_colors[4];
+    vec4 vs_light_positions[10];
+    vec4 ws_light_positions[10];
+    vec4 vs_light_directions[10];
+    vec4 ws_light_directions[10];
+    vec4 light_colors[10];
     vec4 vs_directional_light;
     vec4 ws_directional_light;
 
     mat4 shadow_view_projection;
     mat4 shadow_view;
     mat4 shadow_projection;
+
+    vec2 light_screen_coord;
+    
+    int point_light_count;
 } u_lighting;
 
 layout(set = 2, binding = 0) uniform camera_transforms_t {
@@ -213,7 +219,16 @@ vec3 point_luminance(
     in float roughness,
     in float metalness) {
     vec3 light_position = vec3(u_lighting.vs_light_positions[light_index]);
+    vec3 vs_view_light_direction = vec3(u_lighting.vs_light_directions[light_index]).xyz;
     vec3 vs_light = normalize(light_position - vs_position);
+
+    float cutoff = 0.95f;
+    float outer_cutoff = 0.8f;
+    
+    float theta = dot(vs_light, -vs_view_light_direction);
+    float eps = cutoff - outer_cutoff;
+    float intensity = clamp((theta - outer_cutoff) / eps, 0.0f, 1.0f);
+
     vec3 vs_halfway = normalize(vs_light + vs_view);
 
     // TODO: Replace with dot product
@@ -237,7 +252,7 @@ vec3 point_luminance(
     vec3 kd = vec3(1.0) - fresnel_term;
     kd *= 1.0f - metalness;
 
-    return (kd * albedo / PI + specular) * radiance * ndotl;
+    return (kd * albedo / PI + specular) * radiance * ndotl * intensity;
 }
 
 vec4 bright_color(
@@ -283,6 +298,19 @@ void main() {
             base_reflectivity,
             roughness,
             metalness);
+
+        for (int i = 0; i < u_lighting.point_light_count; ++i) {
+            l += point_luminance(
+                i,
+                albedo,
+                vs_position,
+                vs_normal,
+                vs_view,
+                ws_position,
+                base_reflectivity,
+                roughness,
+                metalness);
+        }
 
         vec3 fresnel = fresnel_roughness(max(dot(vs_view, vs_normal), 0.000001f), base_reflectivity, roughness);
         vec3 kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);

@@ -28,9 +28,11 @@ layout(binding = 0, set = 2) uniform sampler2D u_diffuse;
 layout(binding = 1, set = 2) uniform sampler2D u_bright;
 
 layout(binding = 0, set = 3) uniform lighting_t {
-    vec4 vs_light_positions[4];
-    vec4 ws_light_positions[4];
-    vec4 light_colors[4];
+    vec4 vs_light_positions[10];
+    vec4 ws_light_positions[10];
+    vec4 vs_light_directions[10];
+    vec4 ws_light_directions[10];
+    vec4 light_colors[10];
     vec4 vs_directional_light;
     vec4 ws_directional_light;
 
@@ -39,6 +41,8 @@ layout(binding = 0, set = 3) uniform lighting_t {
     mat4 shadow_projection;
 
     vec2 light_screen_coord;
+    
+    int point_light_count;
 } u_lighting;
 
 void main() {
@@ -68,7 +72,7 @@ void main() {
 
     out_final_color = color;
 
-    const int SAMPLES = 38;
+    const int SAMPLES = 40;
     const float DENSITY = 1.0;
     const float DECAY = 0.9;
     const float WEIGHT = 0.03;

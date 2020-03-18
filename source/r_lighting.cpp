@@ -133,23 +133,18 @@ void r_lighting_init() {
 
     light_direction = vector3_t(0.1f, 0.422f, 0.714f);
 
-    lighting_data.ws_light_positions[0] = vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
-    lighting_data.ws_light_positions[1] = vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
-    lighting_data.ws_light_positions[2] = vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
-    lighting_data.ws_light_positions[3] = vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
-    
+    lighting_data.ws_light_positions[0] = vector4_t(0.0f, 4.0f, 0.0f, 1.0f);
     lighting_data.light_positions[0] = transforms->view * lighting_data.ws_light_positions[0];
-    lighting_data.light_positions[1] = transforms->view * lighting_data.ws_light_positions[1];
-    lighting_data.light_positions[2] = transforms->view * lighting_data.ws_light_positions[2];
-    lighting_data.light_positions[3] = transforms->view * lighting_data.ws_light_positions[3];
+
+    lighting_data.ws_light_directions[0] = glm::normalize(vector4_t(0.0f, -0.3f, 0.8f, 0.0f));
+    lighting_data.light_directions[0] = transforms->view * lighting_data.ws_light_directions[0];
+    
+    lighting_data.light_colors[0] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
     
     lighting_data.ws_directional_light = -vector4_t(light_direction, 0.0f);
     lighting_data.vs_directional_light = transforms->view * lighting_data.ws_directional_light;
 
-    lighting_data.light_colors[0] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
-    lighting_data.light_colors[1] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
-    lighting_data.light_colors[2] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
-    lighting_data.light_colors[3] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
+    lighting_data.point_light_count = 1;
 
     s_shadow_box_init();
     
@@ -168,15 +163,11 @@ void r_update_lighting() {
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
     cpu_camera_data_t *camera_data = r_cpu_camera_data();
     
-    lighting_data.ws_light_positions[0] = vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
-    lighting_data.ws_light_positions[1] = vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
-    lighting_data.ws_light_positions[2] = vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
-    lighting_data.ws_light_positions[3] = vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
-    
+    lighting_data.ws_light_positions[0] = vector4_t(camera_data->position, 1.0f);
     lighting_data.light_positions[0] = transforms->view * lighting_data.ws_light_positions[0];
-    lighting_data.light_positions[1] = transforms->view * lighting_data.ws_light_positions[1];
-    lighting_data.light_positions[2] = transforms->view * lighting_data.ws_light_positions[2];
-    lighting_data.light_positions[3] = transforms->view * lighting_data.ws_light_positions[3];
+
+    lighting_data.ws_light_directions[0] = glm::normalize(vector4_t(camera_data->direction, 0.0f));
+    lighting_data.light_directions[0] = transforms->view * lighting_data.ws_light_directions[0];
     
     lighting_data.ws_directional_light = -vector4_t(light_direction, 0.0f);
     lighting_data.vs_directional_light = transforms->view * lighting_data.ws_directional_light;

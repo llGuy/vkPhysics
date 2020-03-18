@@ -33,7 +33,7 @@ layout(binding = 0, set = 3) uniform kernel_t {
 } u_kernels;
 
 const float div_magic = 1.0f / (4.0f * 0.0000001f);
-const float div_total = 1.0f / 54.0f;
+const float div_total = 1.0f / 50.0f;
 const float div_fade_distance_cap = 1.0f / 100.0f;
 
 void main() {
@@ -56,7 +56,7 @@ void main() {
         float kernel_size = mix(0.6f, 3.0f, pixel_distance * div_fade_distance_cap);
         float bias = mix(0.02f, 0.2f, pixel_distance * div_fade_distance_cap);
         
-        for (int i = 0; i < 54; ++i) {
+        for (int i = 0; i < 50; ++i) {
             vec3 sample_kernel = tangent_space * vec3(u_kernels.kernels[i]);
 
             sample_kernel = vs_position + sample_kernel * kernel_size;
