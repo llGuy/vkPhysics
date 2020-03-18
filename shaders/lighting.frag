@@ -24,8 +24,10 @@ layout(binding = 0, set = 7) uniform sampler2D u_shadow_map;
 
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[4];
+    vec4 ws_light_positions[4];
     vec4 light_colors[4];
     vec4 vs_directional_light;
+    vec4 ws_directional_light;
 
     mat4 shadow_view_projection;
     mat4 shadow_view;
@@ -89,6 +91,7 @@ vec3 fresnel_roughness(
     return base + (max(vec3(1.0f - roughness), base) - base) * pow(1.0f - ndotv, 5.0f);
 }
 
+// Not being used for the moment
 bool get_shadow_factor(
     vec3 ws_position,
     out float occlusion) {
@@ -121,15 +124,131 @@ bool get_shadow_factor(
     occlusion = 1.0f - occlusion;
 
     return occluded;
+}
 
-    /*if (ls_position.z - 0.005f > depth) {
-        occlusion = 0.0f;
-        return 0.2f;
+vec3 round_edge(
+    in vec4 raw_vs_normal,
+    in vec4 vs_position) {
+    vec3 total = vec3(0.0f);
+    float count = 0.0f;
+    
+    if (raw_vs_normal.x > -10.0f) {
+        vec2 diff = 1.0f / vec2(u_camera_transforms.width, u_camera_transforms.height);
+
+        for (int y = -3; y < 3; ++y) {
+            for (int x = -3; x < 3; ++x) {
+                vec2 coord = vec2( float(x), float(y) ) * diff * 1.01f + in_fs.uvs;
+                float depth = texture(u_gbuffer_position, coord).z;
+                if (abs(depth - vs_position.z) < 0.8f) {
+                    // Calculate normal
+                    float coeff = abs(float(x) * float(y));
+                    vec4 n = texture(u_gbuffer_normal, coord);
+                    if (n.x > -10.0f) {
+                        total += n.xyz * coeff;
+
+                        count += coeff;
+                    }
+                }
+            }
+        }
+    }
+
+    total /= count;
+
+    return total;
+}
+
+bool should_compute_lighting(
+    in vec4 raw_vs_normal) {
+    return raw_vs_normal.x > -10.0f;
+}
+
+vec3 directional_luminance(
+    in vec3 albedo,
+    in vec3 vs_normal,
+    in vec3 vs_view,
+    in vec3 ws_position,
+    in vec3 base_reflectivity,
+    in float roughness,
+    in float metalness) {
+    vec3 vs_light = -normalize(u_lighting.vs_directional_light.xyz);
+    vec3 vs_halfway = normalize(vs_light + vs_view);
+
+    vec3 ws_light = -u_lighting.ws_directional_light.xyz;
+    ws_light.y *= -1.0f;
+
+    vec3 directional_light_color =  textureLod(u_prefilter_map, ws_light, 0.0f).rgb;
+    vec3 opposite_light_color = textureLod(u_prefilter_map, -ws_light, 0.0f).rgb;
+    float intensity = abs(dot(opposite_light_color, opposite_light_color));
+
+    vec3 radiance = directional_light_color;
+
+    float ndotv = max(dot(vs_normal, vs_view), 0.000001f);
+    float ndotl = max(dot(vs_normal, vs_light), 0.000001f);
+    float hdotv = max(dot(vs_halfway, vs_view), 0.000001f);
+    float ndoth = max(dot(vs_normal, vs_halfway), 0.000001f);
+
+    float distribution_term = distribution_ggx(ndoth, roughness);
+    float smith_term = smith_ggx(ndotv, ndotl, roughness);
+    vec3 fresnel_term = fresnel(hdotv, base_reflectivity);
+
+    vec3 specular = smith_term * distribution_term * fresnel_term;
+    specular /= 4.0 * ndotv * ndotl;
+
+    vec3 kd = vec3(1.0) - fresnel_term;
+
+    kd *= 1.0f - metalness;
+
+    return (kd * albedo / PI + specular) * radiance * ndotl;
+}
+
+vec3 point_luminance(
+    int light_index,
+    in vec3 albedo,
+    in vec3 vs_position,
+    in vec3 vs_normal,
+    in vec3 vs_view,
+    in vec3 ws_position,
+    in vec3 base_reflectivity,
+    in float roughness,
+    in float metalness) {
+    vec3 light_position = vec3(u_lighting.vs_light_positions[light_index]);
+    vec3 vs_light = normalize(light_position - vs_position);
+    vec3 vs_halfway = normalize(vs_light + vs_view);
+
+    // TODO: Replace with dot product
+    float d = length(light_position - vs_position);
+    float attenuation = 1.0 / (d * d);
+
+    vec3 radiance = u_lighting.light_colors[light_index].rgb * attenuation;
+    
+    float ndotv = max(dot(vs_normal, vs_view), 0.000001f);
+    float ndotl = max(dot(vs_normal, vs_light), 0.000001f);
+    float hdotv = max(dot(vs_halfway, vs_view), 0.000001f);
+    float ndoth = max(dot(vs_normal, vs_halfway), 0.000001f);
+
+    float distribution_term = distribution_ggx(ndoth, roughness);
+    float smith_term = smith_ggx(ndotv, ndotl, roughness);
+    vec3 fresnel_term = fresnel(hdotv, base_reflectivity);
+
+    vec3 specular = smith_term * distribution_term * fresnel_term;
+    specular /= 4.0 * ndotv * ndotl;
+
+    vec3 kd = vec3(1.0) - fresnel_term;
+    kd *= 1.0f - metalness;
+
+    return (kd * albedo / PI + specular) * radiance * ndotl;
+}
+
+vec4 bright_color(
+    vec3 color) {
+    float brightness = dot(color, vec3(0.2126f, 0.7152f, 0.0722f));
+    if (brightness > 10.0f) {
+        return vec4(color, 1.0f);
     }
     else {
-        occlusion = 1.0f;
-        return 1.0f;
-    }*/
+        return vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    }
 }
 
 void main() {
@@ -139,39 +258,14 @@ void main() {
     vec3 vs_view = normalize(-vs_position);
     
     vec3 color = raw_albedo.rgb;
-
-    vec2 diff = 1.0f / vec2(u_camera_transforms.width, u_camera_transforms.height);
     
-    if (raw_vs_normal.x > -10.0f) {
-        // Detect edge
-        /*vec3 total = vec3(0.0f);
-        float count = 0.0f;
+    if (should_compute_lighting(raw_vs_normal)) {
+        vec3 vs_normal = raw_vs_normal.xyz;
         
-        if (raw_vs_normal.x > -10.0f) {
-
-            for (int y = -3; y < 3; ++y) {
-                for (int x = -3; x < 3; ++x) {
-                    vec2 coord = vec2( float(x), float(y) ) * diff * 1.01f + in_fs.uvs;
-                    float depth = texture(u_gbuffer_position, coord).z;
-                    if (abs(depth - vs_position.z) < 0.8f) {
-                        // Calculate normal
-                        float coeff = abs(float(x) * float(y));
-                        vec4 n = texture(u_gbuffer_normal, coord);
-                        if (n.x > -10.0f) {
-                            total += n.xyz * coeff;
-
-                            count += coeff;
-                        }
-                    }
-                }
-            }
-        }
-
-        total /= count;
-
-        raw_vs_normal.xyz = total;*/
-
-        vec3 vs_normal = normalize(raw_vs_normal.xyz);
+        // World space calculations
+        vec3 ws_position = vec3(u_camera_transforms.inverse_view * vec4(vs_position, 1.0f));
+        vec3 ws_normal = vec3(u_camera_transforms.inverse_view * vec4(vs_normal, 0.0f));
+        vec3 ws_view = vec3(u_camera_transforms.inverse_view * vec4(vs_view, 0.0f));
         
         float roughness = raw_albedo.a;
         float metalness = raw_vs_normal.a;
@@ -181,68 +275,17 @@ void main() {
     
         vec3 l = vec3(0.0f);
 
-        //for (int i = 0; i < 4; ++i) {
-        //vec3 light_position = vec3(u_lighting.vs_light_positions[i]);
-        
-        //vec3 vs_light = normalize(light_position - vs_position);
-        vec3 vs_light = -normalize(u_lighting.vs_directional_light.xyz);
-        vec3 vs_halfway = normalize(vs_light + vs_view);
-
-        vec3 ws_position = vec3(u_camera_transforms.inverse_view * vec4(vs_position, 1.0f));
-
-        float occluded = 1.0f;
-
-        //get_shadow_factor(ws_position, occluded);
-
-        /*if (occluded == 0.0f) {
-            vs_normal = -vs_light;
-        }*/
-
-        //float d = length(light_position - vs_position);
-        //float attenuation = 1.0 / (d * d);
-        float attenuation = 1.0f;
-
-        vec3 ws_light = vec3(u_camera_transforms.inverse_view * vec4(vs_light, 0.0f));
-        ws_light.y *= -1.0f;
-        vec3 directional_light_color =  textureLod(u_prefilter_map, ws_light, 0.0f).rgb;
-        vec3 opposite_light_color = textureLod(u_prefilter_map, -ws_light, 0.0f).rgb;
-        float intensity = abs(dot(opposite_light_color, opposite_light_color));
-        float shadow_intensity = clamp(0.0f, 1.0f, 1.0f / intensity);
-
-        /*if (get_shadow_factor(ws_position, occluded)) {
-            occluded *= shadow_intensity;
-        }*/
-        
-        //vec3 radiance = u_lighting.light_colors[i].rgb * attenuation;
-        vec3 radiance = directional_light_color * attenuation;
-
-        float ndotv = max(dot(vs_normal, vs_view), 0.000001f);
-        float ndotl = max(dot(vs_normal, vs_light), 0.000001f);
-        float hdotv = max(dot(vs_halfway, vs_view), 0.000001f);
-        float ndoth = max(dot(vs_normal, vs_halfway), 0.000001f);
-
-        float distribution_term = distribution_ggx(ndoth, roughness);
-        float smith_term = smith_ggx(ndotv, ndotl, roughness);
-        vec3 fresnel_term = fresnel(hdotv, base_reflectivity);
-
-        vec3 specular = smith_term * distribution_term * fresnel_term;
-        specular /= 4.0 * ndotv * ndotl;
-
-        vec3 kd = vec3(1.0) - fresnel_term;
-
-        kd *= 1.0f - metalness;
-
-        l += (kd * albedo / PI + specular) * radiance * ndotl;
-        
-        //l += (kd * albedo / PI + specular) * ndotl;
-        //}
+        l += directional_luminance(
+            albedo,
+            vs_normal,
+            vs_view,
+            ws_position,
+            base_reflectivity,
+            roughness,
+            metalness);
 
         vec3 fresnel = fresnel_roughness(max(dot(vs_view, vs_normal), 0.000001f), base_reflectivity, roughness);
-        //vec3 kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
-        kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
-
-        vec3 ws_normal = vec3(u_camera_transforms.inverse_view * vec4(vs_normal, 0.0f));
-        vec3 ws_view = vec3(u_camera_transforms.inverse_view * vec4(vs_view, 0.0f));
+        vec3 kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
         
         vec3 diffuse = texture(u_irradiance_map, vec3(ws_normal.x, -ws_normal.y, ws_normal.z)).xyz * albedo * kd;
 
@@ -251,35 +294,16 @@ void main() {
         reflected_vector.y *= -1.0f;
         vec3 prefiltered_color = textureLod(u_prefilter_map, reflected_vector, roughness * MAX_REFLECTION_LOD).rgb;
         vec2 brdf = texture(u_integral_lookup, vec2(max(dot(ws_normal, ws_view), 0.0f), roughness)).rg;
-        //vec3 specular = prefiltered_color * (fresnel * brdf.r + clamp(brdf.g, 0, 1));
-        specular = prefiltered_color * (fresnel * brdf.r + clamp(brdf.g, 0, 1));
-        //vec3 specular = vec3(1.0f) * (fresnel * brdf.r);
+        vec3 specular = prefiltered_color * (fresnel * brdf.r + clamp(brdf.g, 0, 1));
 
         float ao = texture(u_ao, in_fs.uvs).r;
         
-        vec3 ambient = (diffuse + specular * occluded);
-        //vec3 ambient = vec3(ao);
+        vec3 ambient = (diffuse + specular);
         
-        //vec3 ambient = vec3(0.03) * albedo;
-        
-        color = (ambient + l * occluded) * pow(ao, 10.0f);
-        //color = vec3(ao);
-
-        //color = color / (color + vec3(1.0f));
-        //color = pow(color, vec3(1.0f / 2.2f));
-    }
-
-    float brightness = dot(color, vec3(0.2126f, 0.7152f, 0.0722f));
-    if (brightness > 10.0f) {
-        out_bright_color = vec4(color, 1.0f);
-    }
-    else {
-        out_bright_color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+        color = (ambient + l) * pow(ao, 10.0f);
     }
 
     out_final_color = vec4(color, 1.0f);
-
-//    out_final_color = out_bright_color;
-    
-//    out_final_color = vec4(texture(u_ao, in_fs.uvs).r);
+    // Not enabling bloom for the moment
+    out_bright_color = vec4(0.0f);
 }

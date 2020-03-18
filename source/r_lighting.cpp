@@ -132,12 +132,19 @@ void r_lighting_init() {
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
 
     light_direction = vector3_t(0.1f, 0.422f, 0.714f);
+
+    lighting_data.ws_light_positions[0] = vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
+    lighting_data.ws_light_positions[1] = vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
+    lighting_data.ws_light_positions[2] = vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
+    lighting_data.ws_light_positions[3] = vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
     
-    lighting_data.light_positions[0] = transforms->view * vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
-    lighting_data.light_positions[1] = transforms->view * vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
-    lighting_data.light_positions[2] = transforms->view * vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
-    lighting_data.light_positions[3] = transforms->view * vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
-    lighting_data.vs_directional_light = transforms->view * -vector4_t(light_direction, 0.0f);
+    lighting_data.light_positions[0] = transforms->view * lighting_data.ws_light_positions[0];
+    lighting_data.light_positions[1] = transforms->view * lighting_data.ws_light_positions[1];
+    lighting_data.light_positions[2] = transforms->view * lighting_data.ws_light_positions[2];
+    lighting_data.light_positions[3] = transforms->view * lighting_data.ws_light_positions[3];
+    
+    lighting_data.ws_directional_light = -vector4_t(light_direction, 0.0f);
+    lighting_data.vs_directional_light = transforms->view * lighting_data.ws_directional_light;
 
     lighting_data.light_colors[0] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
     lighting_data.light_colors[1] = vector4_t(300.0f, 300.0f, 300.0f, 0.0f);
@@ -161,11 +168,18 @@ void r_update_lighting() {
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
     cpu_camera_data_t *camera_data = r_cpu_camera_data();
     
-    lighting_data.light_positions[0] = transforms->view * vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
-    lighting_data.light_positions[1] = transforms->view * vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
-    lighting_data.light_positions[2] = transforms->view * vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
-    lighting_data.light_positions[3] = transforms->view * vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
-    lighting_data.vs_directional_light = transforms->view * -vector4_t(light_direction, 0.0f);
+    lighting_data.ws_light_positions[0] = vector4_t(-10.0f, 10.0f, 10.0f, 0.0f);
+    lighting_data.ws_light_positions[1] = vector4_t(10.0f, 10.0f, 10.0f, 0.0f);
+    lighting_data.ws_light_positions[2] = vector4_t(-10.0f, -10.0f, 10.0f, 0.0f);
+    lighting_data.ws_light_positions[3] = vector4_t(10.0f, -10.0f, 10.0f, 0.0f);
+    
+    lighting_data.light_positions[0] = transforms->view * lighting_data.ws_light_positions[0];
+    lighting_data.light_positions[1] = transforms->view * lighting_data.ws_light_positions[1];
+    lighting_data.light_positions[2] = transforms->view * lighting_data.ws_light_positions[2];
+    lighting_data.light_positions[3] = transforms->view * lighting_data.ws_light_positions[3];
+    
+    lighting_data.ws_directional_light = -vector4_t(light_direction, 0.0f);
+    lighting_data.vs_directional_light = transforms->view * lighting_data.ws_directional_light;
 
     vector4_t light_position = vector4_t(light_direction * 1000.0f, 1.0f);
     light_position = transforms->view_projection * light_position;
@@ -176,13 +190,13 @@ void r_update_lighting() {
     light_position.y = light_position.y * 0.5f + 0.5f;
     lighting_data.light_screen_coord = vector2_t(light_position.x, light_position.y);
 
-    s_update_shadow_box(
+    /*s_update_shadow_box(
         glm::radians(camera_data->fov),
         transforms->width / transforms->height,
         camera_data->position,
         camera_data->direction,
         camera_data->up,
-        &scene_shadow_box);
+        &scene_shadow_box);*/
 
     lighting_data.shadow_view = scene_shadow_box.view;
     lighting_data.shadow_projection = scene_shadow_box.projection;

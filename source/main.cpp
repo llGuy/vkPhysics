@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
         cube_data.pbr_info.y = 0.1f;
         submit_mesh(command_buffer, &cube, &cube_shader, &cube_data);
 
-        cube_data.model = glm::translate(vector3_t(15.0f, 0.0f, 0.0f)) * glm::rotate(glm::radians(60.0f), vector3_t(0.0f, 1.0f, 0.0f)) * glm::scale(vector3_t(2.0f, 10.0f, 1.0f));
+        cube_data.model = glm::translate(vector3_t(15.0f, 0.0f, 0.0f)) * glm::rotate(glm::radians(60.0f), vector3_t(1.0f, 1.0f, 0.0f)) * glm::scale(vector3_t(2.0f, 10.0f, 1.0f));
         cube_data.color = vector4_t(1.0f);
         cube_data.pbr_info.x = 0.07f;
         cube_data.pbr_info.y = 0.1f;

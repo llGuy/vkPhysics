@@ -29,8 +29,10 @@ layout(binding = 1, set = 2) uniform sampler2D u_bright;
 
 layout(binding = 0, set = 3) uniform lighting_t {
     vec4 vs_light_positions[4];
+    vec4 ws_light_positions[4];
     vec4 light_colors[4];
     vec4 vs_directional_light;
+    vec4 ws_directional_light;
 
     mat4 shadow_view_projection;
     mat4 shadow_view;
@@ -44,9 +46,8 @@ void main() {
     vec4 raw_vs_normal = texture(u_gbuffer_normal, in_fs.uvs);
     
     vec3 vs_current = texture(u_gbuffer_position, in_fs.uvs).xyz;
-    vec3 ws_current = (u_camera_transforms.inverse_view * vec4(vs_current, 1.0f)).xyz;
-
-    vec4 previous = u_camera_transforms.previous_view_projection * vec4(ws_current, 1.0f);
+    // Converts directly from current view space, to previous projection space
+    vec4 previous = u_camera_transforms.previous_view_projection * vec4(vs_current, 1.0f);
     previous.xyz /= previous.w;
     previous.xy = previous.xy * 0.5f + 0.5f;
 
@@ -67,7 +68,7 @@ void main() {
 
     out_final_color = color;
 
-    const int SAMPLES = 40;
+    const int SAMPLES = 38;
     const float DENSITY = 1.0;
     const float DECAY = 0.9;
     const float WEIGHT = 0.03;

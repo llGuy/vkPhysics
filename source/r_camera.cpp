@@ -52,7 +52,7 @@ void r_camera_init(void *window) {
     transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
     transforms.inverse_view = glm::inverse(transforms.view);
     transforms.view_projection = transforms.projection * transforms.view;
-    camera_data.previous_view_projection = transforms.previous_view_projection = transforms.view_projection;
+    camera_data.previous_view_projection = transforms.previous_view_projection = transforms.view_projection * transforms.inverse_view;
     transforms.frustum.x = camera_data.near;
     transforms.frustum.y = camera_data.far;
     transforms.view_direction = vector4_t(camera_data.direction, 1.0f);
@@ -81,7 +81,7 @@ void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
     VkExtent2D extent = r_swapchain_extent();
     transforms.width = (float)extent.width;
     transforms.height = (float)extent.height;
-    //transforms.previous_view_projection = camera_data.previous_view_projection;
+    transforms.previous_view_projection = transforms.previous_view_projection * transforms.inverse_view;
     
     VkBufferMemoryBarrier buffer_barrier = create_gpu_buffer_barrier(
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,

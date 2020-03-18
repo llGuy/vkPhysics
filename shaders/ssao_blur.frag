@@ -8,6 +8,8 @@ layout(location = 0) out float out_final_ao;
 
 layout(set = 0, binding = 0) uniform sampler2D u_ao;
 
+const float div_total = 1.0f / (4.0f * 4.0f);
+
 void main() {
     vec2 texel_size = 1.0f / vec2(textureSize(u_ao, 0));
     float result = 0.0f;
@@ -18,5 +20,5 @@ void main() {
         }
     }
 
-    out_final_ao = result / (4.0f * 4.0f);
+    out_final_ao = result * div_total;
 }

@@ -17,9 +17,11 @@ layout(push_constant) uniform push_constant_t {
 } u_push_constant;
 
 layout(set = 0, binding = 0) uniform lighting_t {
-    vec4 light_positions[4];
+    vec4 vs_light_positions[4];
+    vec4 ws_light_positions[4];
     vec4 light_colors[4];
     vec4 vs_directional_light;
+    vec4 ws_directional_light;
 
     mat4 shadow_view_projection;
     mat4 shadow_view;

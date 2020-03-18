@@ -149,8 +149,10 @@ void r_update_lighting();
 
 struct lighting_data_t {
     vector4_t light_positions[4];
+    vector4_t ws_light_positions[4];
     vector4_t light_colors[4];
     vector4_t vs_directional_light;
+    vector4_t ws_directional_light;
 
     matrix4_t shadow_view_projection;
     matrix4_t shadow_view;
