@@ -89,28 +89,4 @@ void main() {
 
         illumination_decay *= DECAY;
     }
-
-    // Flip UV coord
-    /*vec2 coord = -in_fs.uvs + vec2(1.0f);
-
-    int ghosts = 5;
-    float dispersal = 0.6f;
-
-    vec2 texel_size = 1.0f / vec2(textureSize(u_bright, 0));
-
-    vec2 ghost_vec = (vec2(0.5f) - coord) * dispersal;
-
-    vec4 result = vec4(0.0f);
-    for (int i = 0; i < ghosts; ++i) {
-        vec2 offset = fract(coord + ghost_vec * float(i));
-
-        float weight = length(vec2(0.5f) - offset) / length(vec2(0.5f));
-        
-        result += texture(u_bright, offset) * weight;
-    }
-
-    out_final_color = result;
-    out_final_color *= ;*/
-    
-    //out_final_color = texture(u_bright, in_fs.uvs);
 }
