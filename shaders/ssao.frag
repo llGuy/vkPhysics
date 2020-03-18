@@ -34,7 +34,7 @@ layout(binding = 0, set = 3) uniform kernel_t {
 } u_kernels;
 
 void main() {
-    vec2 noise_scale = vec2(u_camera_transforms.width, u_camera_transforms.height) / (4.0f * u_kernels.resolution_coefficient);
+    vec2 noise_scale = vec2(u_camera_transforms.width, u_camera_transforms.height) / (4.0f * 0.0000001f);
 
     vec3 vs_position = texture(u_gbuffer_position, in_fs.uvs).xyz;
     vec3 vs_normal = texture(u_gbuffer_normal, in_fs.uvs).xyz;
