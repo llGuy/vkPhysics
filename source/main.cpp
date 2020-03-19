@@ -191,17 +191,18 @@ int main(int argc, char *argv[]) {
 
     float frame_time_max = 1.0f / 60.0f;
 
-    r_render_environment_to_offscreen();
+    bool is_first = 1;
     
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-
-        if (changed) {
-            r_render_environment_to_offscreen();
-            changed = 0;
-        }
         
         VkCommandBuffer command_buffer = begin_frame();
+
+        if (changed || is_first) {
+            r_render_environment_to_offscreen(command_buffer);
+            changed = 0;
+            is_first = 0;
+        }
         
         r_camera_handle_input(dt, window);
         r_camera_gpu_sync(command_buffer);

@@ -219,7 +219,7 @@ vec3 point_luminance(
     in float roughness,
     in float metalness) {
     vec3 light_position = vec3(u_lighting.vs_light_positions[light_index]);
-    vec3 vs_view_light_direction = vec3(u_lighting.vs_light_directions[light_index]).xyz;
+    vec3 vs_view_light_direction = normalize(vec3(u_lighting.vs_light_directions[light_index]).xyz);
     vec3 vs_light = normalize(light_position - vs_position);
 
     float cutoff = 0.95f;

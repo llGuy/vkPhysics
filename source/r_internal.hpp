@@ -173,8 +173,11 @@ void r_lighting_gpu_sync(VkCommandBuffer command_buffer);
 
 void r_environment_init();
 
-void r_render_environment(VkCommandBuffer command_buffer);
-void r_render_environment_to_offscreen();
+void r_render_environment(
+    VkCommandBuffer command_buffer);
+
+void r_render_environment_to_offscreen(
+    VkCommandBuffer command_buffer);
 
 struct base_cubemap_render_data_t {
     matrix4_t inverse_projection;

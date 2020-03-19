@@ -202,9 +202,7 @@ static void s_base_cubemap_init() {
     render_data.mie_collection = 1.0f;*/
 }
 
-static void s_render_to_base_cubemap() {
-    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
-
+static void s_render_to_base_cubemap(VkCommandBuffer command_buffer) {
     VkClearValue clear_value = {};
     
     VkRect2D render_area = {};
@@ -253,8 +251,6 @@ static void s_render_to_base_cubemap() {
     vkCmdDraw(command_buffer, 1, 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
-    
-    end_single_time_command_buffer(command_buffer);
 }
 
 static VkExtent2D hdr_environment_extent;
@@ -352,9 +348,7 @@ static void s_hdr_environment_pass_init() {
 static attachment_t base_cubemap;
 static VkDescriptorSet base_cubemap_descriptor_set;
 
-static void s_render_to_diffuse_ibl_cubemap() {
-    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
-
+static void s_render_to_diffuse_ibl_cubemap(VkCommandBuffer command_buffer) {
     VkClearValue clear_value = {};
     
     VkRect2D render_area = {};
@@ -398,8 +392,6 @@ static void s_render_to_diffuse_ibl_cubemap() {
     vkCmdDraw(command_buffer, 1, 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
-    
-    end_single_time_command_buffer(command_buffer);
 }
 
 static shader_t integral_lookup_init_shader;
@@ -637,9 +629,7 @@ static void s_specular_ibl_init() {
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 }
 
-static void s_render_to_specular_ibl() {
-    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
-
+static void s_render_to_specular_ibl(VkCommandBuffer command_buffer) {
     VkImageMemoryBarrier barrier = create_image_barrier(
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -804,8 +794,6 @@ static void s_render_to_specular_ibl() {
                 1, &barrier);
         }
     }
-    
-    end_single_time_command_buffer(command_buffer);
 }
 
 static shader_t cubemap_shader;
@@ -831,15 +819,17 @@ static void s_cubemap_shader_init() {
 
 void r_environment_init() {
     s_base_cubemap_init();
-    s_render_to_base_cubemap();
     s_hdr_environment_pass_init();
-    //s_load_cubemap_texture();
     s_cubemap_shader_init();
-    s_render_to_diffuse_ibl_cubemap();
     s_integral_look_pass_init();
     s_render_to_integral_lookup();
     s_specular_ibl_init();
-    s_render_to_specular_ibl();
+    
+    VkCommandBuffer command_buffer = begin_single_time_command_buffer();
+    s_render_to_base_cubemap(command_buffer);
+    s_render_to_diffuse_ibl_cubemap(command_buffer);
+    s_render_to_specular_ibl(command_buffer);
+    end_single_time_command_buffer(command_buffer);
 }
 
 void r_render_environment(VkCommandBuffer command_buffer) {
@@ -879,8 +869,9 @@ void r_render_environment(VkCommandBuffer command_buffer) {
     vkCmdDraw(command_buffer, 36, 1, 0, 0);
 }
 
-void r_render_environment_to_offscreen() {
-    s_render_to_base_cubemap();
-    s_render_to_diffuse_ibl_cubemap();
-    s_render_to_specular_ibl();
+void r_render_environment_to_offscreen(
+    VkCommandBuffer command_buffer) {
+    s_render_to_base_cubemap(command_buffer);
+    s_render_to_diffuse_ibl_cubemap(command_buffer);
+    s_render_to_specular_ibl(command_buffer);
 }
