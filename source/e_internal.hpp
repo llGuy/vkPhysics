@@ -2,5 +2,4 @@
 
 #include "input.hpp"
 
-// e_ = engine related - basically global
-const raw_input_t *e_raw_input();
+void e_event_system_init();

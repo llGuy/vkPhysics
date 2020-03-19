@@ -32,18 +32,23 @@ float surface_delta_time();
 typedef uint32_t listener_t;
 
 enum event_type_t {
-    RESIZE_WINDOW,
-    REQUEST_TO_JOIN_SERVER,
-    ENTER_SERVER_WORLD,
-    LAUNCH_MAP_EDITOR,
-    OPEN_MENU,
-    EXIT_MENU,
-    OPEN_CONSOLE,
-    EXIT_CONSOLE,
-    REQUEST_USERNAME,
-    ENTERED_USERNAME,
-    CACHE_PLAYER_COMMAND,
-    INVALID_EVENT_TYPE
+    ET_RESIZE_SURFACE,
+    ET_REQUEST_TO_JOIN_SERVER,
+    ET_ENTER_SERVER_WORLD,
+    ET_LAUNCH_MAP_EDITOR,
+    ET_OPEN_MENU,
+    ET_EXIT_MENU,
+    ET_OPEN_CONSOLE,
+    ET_EXIT_CONSOLE,
+    ET_REQUEST_USERNAME,
+    ET_ENTERED_USERNAME,
+    ET_CACHE_PLAYER_COMMAND,
+    ET_INVALID_EVENT_TYPE
+};
+
+struct event_surface_resize_t {
+    uint32_t width;
+    uint32_t height;
 };
 
 struct event_data_request_to_join_server_t {
@@ -63,12 +68,16 @@ struct event_t {
 
 typedef void(*listener_callback_t)(void *object, event_t *);
 
-struct listener_subscriptions_t {
-    uint32_t count = 0;
-    uint32_t listeners[MAX_LISTENERS] = {};
-};
+listener_t set_listener_callback(
+    listener_callback_t callback,
+    void *object);
 
-listener_t set_listener_callback(listener_callback_t callback, void *object);
-void subscribe_to_event(event_type_t type, listener_t listener);
-void submit_event(event_type_t type, void *data);
+void subscribe_to_event(
+    event_type_t type,
+    listener_t listener);
+
+void submit_event(
+    event_type_t type,
+    void *data);
+
 void dispatch_events();

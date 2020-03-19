@@ -1,6 +1,7 @@
 // Input core
 
 #include "input.hpp"
+#include "tools.hpp"
 #include "engine.hpp"
 
 #include <stdio.h>
@@ -22,7 +23,9 @@ static void s_window_resize_callback(
     GLFWwindow *window,
     int32_t width,
     int32_t height) {
-    //handle_resize(width, height);
+    raw_input.resized = 1;
+    raw_input.window_width = width;
+    raw_input.window_height = height;
 }
 
 enum key_action_t { KA_DOWN, KA_RELEASE };
@@ -110,7 +113,7 @@ static void s_window_key_callback(
     case GLFW_KEY_ENTER: { s_set_button_state(BT_ENTER, state); } break;
     case GLFW_KEY_BACKSPACE: { s_set_button_state(BT_BACKSPACE, state); } break;
     case GLFW_KEY_ESCAPE: { s_set_button_state(BT_ESCAPE, state); } break;
-    case GLFW_KEY_F3: { s_set_button_state(BT_F3, state); } break;
+    case GLFW_KEY_F11: { s_set_button_state(BT_F11, state); } break;
     }
 
     /*if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
@@ -220,6 +223,20 @@ void poll_input_events() {
     raw_input.instant_count = 0;
 
     glfwPollEvents();
+
+    // Check if user resized to trigger event
+    if (raw_input.buttons[BT_F11].instant) {
+        // TODO: Toggle fullscreen
+    }
+
+    if (raw_input.resized) {
+        // TODO: Change this to linear allocator when allocators are added in the future
+        event_surface_resize_t *resize_data = FL_MALLOC(event_surface_resize_t, 1);
+        resize_data->width = raw_input.window_width;
+        resize_data->height = raw_input.window_height;
+        
+        submit_event(ET_RESIZE_SURFACE, resize_data);
+    }
 }
 
 void disable_cursor_display() {
