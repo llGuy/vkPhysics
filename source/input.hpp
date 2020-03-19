@@ -3,39 +3,41 @@
 #include <stdint.h>
 #include "tools.hpp"
 
-enum button_type_t { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
-                     ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, UP, LEFT, DOWN, RIGHT,
-                     SPACE, LEFT_SHIFT, LEFT_CONTROL, ENTER, BACKSPACE, ESCAPE, F1, F2, F3, F4, F5,
-                     MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE, MOUSE_MOVE_UP, MOUSE_MOVE_LEFT, MOUSE_MOVE_DOWN, MOUSE_MOVE_RIGHT, INVALID_KEY };
+#include "renderer.hpp"
 
-enum button_state_t : char { NOT_DOWN, INSTANT, REPEAT, RELEASE };
-
-struct button_input_t {
-    button_state_t state = button_state_t::NOT_DOWN;
-    float down_amount = 0.0f;
-    float value = 0.0f;
+struct input_interface_data_t {
+    surface_proc_t surface_creation_proc;
+    uint32_t surface_width;
+    uint32_t surface_height;
+    const char *application_name;
 };
 
-enum gamepad_button_type_t { DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT,
-                             START, BACK,
-                             LEFT_THUMB, LEFT_SHOULDER,
-                             RIGHT_THUMB, RIGHT_SHOULDER,
-                             CONTROLLER_A, CONTROLLER_B, CONTROLLER_X, CONTROLLER_Y,
-                             LTHUMB_MOVE_RIGHT, LTHUMB_MOVE_LEFT, LTHUMB_MOVE_UP, LTHUMB_MOVE_DOWN,
-                             RTHUMB_MOVE_RIGHT, RTHUMB_MOVE_LEFT, RTHUMB_MOVE_UP, RTHUMB_MOVE_DOWN,
-                             LEFT_TRIGGER, RIGHT_TRIGGER,
-                             INVALID_BUTTON };
+input_interface_data_t input_interface_init();
+void poll_input_events();
 
-struct gamepad_button_input_t {
-    button_state_t state = button_state_t::NOT_DOWN;
-    float down_amount;
-    float value = 0.0f;
+void disable_cursor_display();
+
+void enable_cursor_display();
+
+enum button_type_t { BT_A, BT_B, BT_C, BT_D, BT_E, BT_F, BT_G, BT_H, BT_I, BT_J, BT_K, BT_L, BT_M, BT_N, BT_O, BT_P, BT_Q, BT_R, BT_S, BT_T, BT_U, BT_V, BT_W, BT_X, BT_Y, BT_Z,
+                     BT_ZERO, BT_ONE, BT_TWO, BT_THREE, BT_FOUR, BT_FIVE, BT_SIX, BT_SEVEN, BT_EIGHT, BT_NINE, BT_UP, BT_LEFT, BT_DOWN, BT_RIGHT,
+                     BT_SPACE, BT_LEFT_SHIFT, BT_LEFT_CONTROL, BT_ENTER, BT_BACKSPACE, BT_ESCAPE, BT_F1, BT_F2, BT_F3, BT_F4, BT_F5,
+                     BT_MOUSE_LEFT, BT_MOUSE_RIGHT, BT_MOUSE_MIDDLE, BT_MOUSE_MOVE_UP, BT_MOUSE_MOVE_LEFT, BT_MOUSE_MOVE_DOWN, BT_MOUSE_MOVE_RIGHT, BT_INVALID_KEY };
+
+enum button_state_t : char { BS_NOT_DOWN, BS_DOWN };
+
+struct button_input_t {
+    button_state_t state = BS_NOT_DOWN;
+    float down_amount = 0.0f;
+    bool instant;
 };
 
 #define MAX_CHARS 10
 
 struct raw_input_t {
-    button_input_t buttons[button_type_t::INVALID_KEY];
+    button_input_t buttons[BT_INVALID_KEY] = {};
+    uint32_t instant_count = 0;
+    uint32_t instant_indices[BT_INVALID_KEY] = {};
 
     uint32_t char_count;
     char char_stack[10] = {};
@@ -56,8 +58,42 @@ struct raw_input_t {
     bool toggled_fullscreen = 0;
     bool in_fullscreen = 0;
     bool has_focus = 1;
-
-
-    uint32_t gamepad_packet_number;
-    gamepad_button_input_t gamepad_buttons[gamepad_button_type_t::INVALID_BUTTON];
 };
+
+enum game_input_action_type_t {
+    // Menu stuff
+    GIAT_OK,
+    GIAT_CANCEL,
+    GIAT_MENU,
+    // Player stuff
+    GIAT_MOVE_FORWARD,
+    GIAT_MOVE_LEFT,
+    GIAT_MOVE_BACK,
+    GIAT_MOVE_RIGHT,
+    // Mouse as well
+    GIAT_LOOK_UP,
+    GIAT_LOOK_LEFT,
+    GIAT_LOOK_DOWN,
+    GIAT_LOOK_RIGHT,
+    GIAT_TRIGGER1,
+    GIAT_TRIGGER2,
+    GIAT_TRIGGER3,
+    GIAT_TRIGGER4,
+    GIAT_TRIGGER5,
+    GIAT_TRIGGER6,
+    // Invalid
+    GIAT_INVALID_ACTION };
+
+struct game_input_action_t {
+    button_state_t state;
+    float down_amount = 0.0f;
+    bool instant = 0;
+};
+
+// To translate from raw_input_t to player_input_t
+struct game_input_t {
+    game_input_action_t actions[GIAT_INVALID_ACTION];
+};
+
+void translate_raw_to_game_input(
+    raw_input_t *raw_input);
