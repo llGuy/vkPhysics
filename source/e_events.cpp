@@ -33,7 +33,7 @@ listener_t set_listener_callback(
     return id;
 }
 
-void subscribe(
+void subscribe_to_event(
     event_type_t type,
     listener_t listener) {
     events.subscriptions[type].listeners[events.subscriptions[type].count++] = listener;

@@ -22,8 +22,21 @@ void handle_resize(
     uint32_t width,
     uint32_t height);
 
+struct swapchain_information_t {
+    uint32_t frames_in_flight;
+    uint32_t image_count;
+    uint32_t width;
+    uint32_t height;
+};
+
+void swapchain_information(
+    swapchain_information_t *dst);
+
 /* Rendering begin / end */
 VkCommandBuffer begin_frame();
+
+void gpu_data_sync(
+    VkCommandBuffer command_buffer);
 
 void end_frame();
 
@@ -44,6 +57,9 @@ void create_command_buffers(
     VkCommandBufferLevel level, 
     VkCommandBuffer *command_buffers, uint32_t count);
 
+void fill_main_inheritance_info(
+    VkCommandBufferInheritanceInfo *info);
+
 void begin_command_buffer(
     VkCommandBuffer command_buffer,
     VkCommandBufferUsageFlags usage,
@@ -51,6 +67,10 @@ void begin_command_buffer(
 
 void end_command_buffer(
     VkCommandBuffer command_buffer);
+
+void submit_secondary_command_buffer(
+    VkCommandBuffer pcommand_buffer,
+    VkCommandBuffer scommand_buffer);
 
 VkCommandBuffer begin_single_time_command_buffer();
 

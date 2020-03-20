@@ -765,12 +765,6 @@ void resize_swapchain(
     }
 
     s_final_render_pass_init();
-    
-    /* 
-    ImGui_ImplVulkan_SetMinImageCount(swapchain.image_count);
-
-    ImGui_ImplVulkanH_CreateWindow(instance, hardare, device, &g_MainWindowData,
-    g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);*/
 }
 
 void handle_resize(
@@ -780,6 +774,14 @@ void handle_resize(
 
     resize_swapchain(width, height);
     r_handle_resize(width, height);
+}
+
+void swapchain_information(
+    swapchain_information_t *dst) {
+    dst->frames_in_flight = FRAMES_IN_FLIGHT;
+    dst->image_count = swapchain.image_count;
+    dst->width = swapchain.extent.width;
+    dst->height = swapchain.extent.height;
 }
 
 VkCommandBuffer begin_frame() {
@@ -799,6 +801,13 @@ VkCommandBuffer begin_frame() {
     begin_command_buffer(primary_command_buffers[image_index], 0, NULL);
 
     return primary_command_buffers[image_index];
+}
+
+void gpu_data_sync(
+    VkCommandBuffer command_buffer) {
+    r_camera_gpu_sync(command_buffer);
+    r_lighting_gpu_sync(command_buffer);
+    r_render_environment_to_offscreen_if_updated(command_buffer);
 }
 
 void end_frame() {
@@ -834,7 +843,13 @@ void end_frame() {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    imgui_proc();
+    // General stuff
+    ImGui::Begin("General");
+    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+
+    r_environment_debug_menu();
+    
+    ImGui::End();
 
     ImGui::Render();
 
@@ -883,6 +898,16 @@ void create_command_buffers(
     VK_CHECK(vkAllocateCommandBuffers(device, &allocate_info, command_buffers));
 }
 
+void fill_main_inheritance_info(
+    VkCommandBufferInheritanceInfo *info) {
+    rpipeline_stage_t *stage = r_deferred_stage();
+
+    info->sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    info->renderPass = stage->render_pass;
+    info->subpass = 0;
+    info->framebuffer = stage->framebuffer;
+}
+
 void begin_command_buffer(
     VkCommandBuffer command_buffer,
     VkCommandBufferUsageFlags usage,
@@ -898,6 +923,14 @@ void begin_command_buffer(
 void end_command_buffer(
     VkCommandBuffer command_buffer) {
     vkEndCommandBuffer(command_buffer);
+}
+
+void submit_secondary_command_buffer(
+    VkCommandBuffer pcommand_buffer,
+    VkCommandBuffer scommand_buffer) {
+    vkCmdExecuteCommands(
+        pcommand_buffer,
+        1, &scommand_buffer);
 }
 
 VkCommandBuffer begin_single_time_command_buffer() {

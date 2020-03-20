@@ -72,17 +72,7 @@ void r_camera_init(void *window) {
 }
 
 // Should not worry about case where not running in window mode (server mode) because anyway, r_ prefixed files won't be running
-void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
-    transforms.projection = glm::perspective(glm::radians(camera_data.fov), (float)r_swapchain_extent().width / (float)r_swapchain_extent().height, camera_data.near, camera_data.far);
-    transforms.projection[1][1] *= -1.0f;
-    transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
-    transforms.inverse_view = glm::inverse(transforms.view);
-    transforms.view_projection = transforms.projection * transforms.view;
-    VkExtent2D extent = r_swapchain_extent();
-    transforms.width = (float)extent.width;
-    transforms.height = (float)extent.height;
-    transforms.previous_view_projection = transforms.previous_view_projection * transforms.inverse_view;
-    
+void r_camera_gpu_sync(VkCommandBuffer command_buffer) {    
     VkBufferMemoryBarrier buffer_barrier = create_gpu_buffer_barrier(
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -123,12 +113,17 @@ void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
         0, NULL);
 }
 
+#include "engine.hpp"
+#include "input.hpp"
+
 // TODO: Add proper input handling (this is a placeholder until proper world / entity infrastructure is added)
-void r_camera_handle_input(float dt, void *window) {
+void r_camera_handle_input() {
+    float dt = surface_delta_time();
+
     transforms.previous_view_projection = transforms.view_projection;
     transforms.dt = dt;
     
-    GLFWwindow *glfw_window = (GLFWwindow *)window;
+    GLFWwindow *glfw_window = (GLFWwindow *)surface_window();
 
     if (glfwGetMouseButton(glfw_window, GLFW_MOUSE_BUTTON_MIDDLE)) {
         glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -160,7 +155,7 @@ void r_camera_handle_input(float dt, void *window) {
         }
 
         double x, y;
-        glfwGetCursorPos((GLFWwindow *)window, &x, &y);
+        glfwGetCursorPos((GLFWwindow *)surface_window(), &x, &y);
         vector2_t new_mouse_position = vector2_t((float)x, (float)y);
         vector2_t delta = new_mouse_position - camera_data.mouse_position;
     
@@ -187,8 +182,18 @@ void r_camera_handle_input(float dt, void *window) {
         glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
         double x, y;
-        glfwGetCursorPos((GLFWwindow *)window, &x, &y);
+        glfwGetCursorPos((GLFWwindow *)surface_window(), &x, &y);
         vector2_t new_mouse_position = vector2_t((float)x, (float)y);
         camera_data.mouse_position = new_mouse_position;
     }
+
+    transforms.projection = glm::perspective(glm::radians(camera_data.fov), (float)r_swapchain_extent().width / (float)r_swapchain_extent().height, camera_data.near, camera_data.far);
+    transforms.projection[1][1] *= -1.0f;
+    transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
+    transforms.inverse_view = glm::inverse(transforms.view);
+    transforms.view_projection = transforms.projection * transforms.view;
+    VkExtent2D extent = r_swapchain_extent();
+    transforms.width = (float)extent.width;
+    transforms.height = (float)extent.height;
+    transforms.previous_view_projection = transforms.previous_view_projection * transforms.inverse_view;
 }

@@ -869,9 +869,75 @@ void r_render_environment(VkCommandBuffer command_buffer) {
     vkCmdDraw(command_buffer, 36, 1, 0, 0);
 }
 
-void r_render_environment_to_offscreen(
+static bool updated_environment = 0;
+
+void r_render_environment_to_offscreen_if_updated(
     VkCommandBuffer command_buffer) {
-    s_render_to_base_cubemap(command_buffer);
-    s_render_to_diffuse_ibl_cubemap(command_buffer);
-    s_render_to_specular_ibl(command_buffer);
+    if (updated_environment) {
+        s_render_to_base_cubemap(command_buffer);
+        s_render_to_diffuse_ibl_cubemap(command_buffer);
+        s_render_to_specular_ibl(command_buffer);
+
+        updated_environment = 0;
+    }
+}
+
+#include <imgui.h>
+
+void r_environment_debug_menu() {
+    static float eye_height = 0.0f;
+    ImGui::SliderFloat("Eye height", &eye_height, 0.0f, 1.0f);
+
+    static float light_direction[3] = { 0.1f, 0.422f, 0.714f };
+    ImGui::SliderFloat3("Light direction", light_direction, -1.0f, +1.0f);
+
+    static float rayleigh = -0.082f;
+    ImGui::SliderFloat("Rayleigh factor", &rayleigh, -0.1f, 0.0f);
+    
+    static float mie = -0.908f;
+    ImGui::SliderFloat("Mie factor", &mie, -0.999f, -0.75f);
+
+    static float intensity = 0.650f;
+    ImGui::SliderFloat("Intensity", &intensity, 0.1f, 30.0f);
+
+    static float scatter_strength = 1.975f;
+    ImGui::SliderFloat("Scatter strength", &scatter_strength, 1.0f, 30.0f);
+
+    static float rayleigh_strength = 2.496f;
+    ImGui::SliderFloat("Rayleigh strength", &rayleigh_strength, 0.0f, 3.0f);
+
+    static float mie_strength = 0.034f;
+    ImGui::SliderFloat("Mie strength", &mie_strength, 0.0f, 3.0f);
+
+    static float rayleigh_collection = 8.0f;
+    ImGui::SliderFloat("Rayleigh collection", &rayleigh_collection, 0.0f, 3.0f);
+
+    static float mie_collection = 2.981f;
+    ImGui::SliderFloat("Mie collection", &mie_collection, 0.0f, 3.0f);
+
+    //static float kr[3] = {0.18867780436772762, 0.4978442963618773, 0.6616065586417131};
+    static float kr[3] = {27.0f / 255.0f, 82.0f / 255.0f, 111.0f / 255.0f};
+    ImGui::ColorEdit3("Air color", kr);
+
+    updated_environment = ImGui::Button("Update");
+    
+    base_cubemap_render_data_t *ptr = r_cubemap_render_data();
+
+    ptr->eye_height = eye_height;
+    ptr->light_direction_x = light_direction[0];
+    ptr->light_direction_y = light_direction[1];
+    ptr->light_direction_z = light_direction[2];
+    ptr->rayleigh = rayleigh;
+    ptr->mie = mie;
+    ptr->intensity = intensity;
+    ptr->scatter_strength = scatter_strength;
+    ptr->rayleigh_strength = rayleigh_strength;
+    ptr->mie_strength = mie_strength;
+    ptr->rayleigh_collection = rayleigh_collection;
+    ptr->mie_collection = mie_collection;
+    ptr->air_color_r = kr[0];
+    ptr->air_color_g = kr[1];
+    ptr->air_color_b = kr[2];
+
+    *r_light_direction() = vector3_t(light_direction[0], ptr->light_direction_y = light_direction[1], ptr->light_direction_z = light_direction[2]);
 }

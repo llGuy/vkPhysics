@@ -59,9 +59,7 @@ VkDescriptorPool r_descriptor_pool();
 
 VkRenderPass r_final_render_pass();
 
-void r_camera_handle_input(
-    float dt,
-    void *window);
+void r_camera_handle_input();
 
 void r_camera_init(
     void *window);
@@ -170,7 +168,7 @@ void r_environment_init();
 void r_render_environment(
     VkCommandBuffer command_buffer);
 
-void r_render_environment_to_offscreen(
+void r_render_environment_to_offscreen_if_updated(
     VkCommandBuffer command_buffer);
 
 struct base_cubemap_render_data_t {
@@ -232,3 +230,5 @@ cpu_camera_data_t *r_cpu_camera_data();
 /* Uniform access */
 VkDescriptorSet r_camera_transforms_uniform();
 VkDescriptorSet r_lighting_uniform();
+
+void r_environment_debug_menu();

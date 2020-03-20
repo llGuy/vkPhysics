@@ -5,6 +5,8 @@
 #include "engine.hpp"
 
 #include <stdio.h>
+
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 static void s_create_vulkan_surface_proc(
@@ -23,6 +25,7 @@ static void s_window_resize_callback(
     GLFWwindow *window,
     int32_t width,
     int32_t height) {
+    (void)window;
     raw_input.resized = 1;
     raw_input.window_width = width;
     raw_input.window_height = height;
@@ -51,6 +54,10 @@ static void s_window_key_callback(
     int scancode,
     int action,
     int mods) {
+    (void)window;
+    (void)scancode;
+    (void)mods;
+
     button_state_t state = (button_state_t)0;
     switch(action) {
         
@@ -180,6 +187,10 @@ static void s_window_cursor_position_callback(
 
 static GLFWwindow *window;
 
+void *surface_window() {
+    return window;
+}
+
 input_interface_data_t input_interface_init() {
     if (!glfwInit()) {
         printf("Failed to initialize GLFW\n");
@@ -209,6 +220,7 @@ input_interface_data_t input_interface_init() {
     interface_data.surface_width = width;
     interface_data.surface_width = height;
     interface_data.application_name = application_name;
+    interface_data.window = (void *)window;
 
     return interface_data;
 }
@@ -224,9 +236,20 @@ void poll_input_events() {
 
     glfwPollEvents();
 
+    if (glfwWindowShouldClose(window)) {
+        submit_event(ET_CLOSED_WINDOW, NULL);
+    }
+
     // Check if user resized to trigger event
     if (raw_input.buttons[BT_F11].instant) {
         // TODO: Toggle fullscreen
+        const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+
+        glfwSetWindowMonitor(window, glfwGetWindowMonitor(window), 0, 0, vidmode->width, vidmode->height, 0);
+
+        raw_input.resized = 1;
+        raw_input.window_width = vidmode->width;
+        raw_input.window_height = vidmode->height;
     }
 
     if (raw_input.resized) {
@@ -236,6 +259,8 @@ void poll_input_events() {
         resize_data->height = raw_input.window_height;
         
         submit_event(ET_RESIZE_SURFACE, resize_data);
+
+        raw_input.resized = 0;
     }
 }
 
@@ -245,6 +270,10 @@ void disable_cursor_display() {
 
 void enable_cursor_display() {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
+float get_current_time() {
+    return (float)glfwGetTime();
 }
 
 // Settings

@@ -2,25 +2,21 @@
 
 #include "tools.hpp"
 
-enum game_init_flags_t {
-    GIF_WINDOWED,
-    GIF_NOT_WINDOWED,
-    GIF_CLIENT,
-    GIF_SERVER
+enum game_init_flags_t : int32_t {
+    GIF_WINDOWED = 1 << 0,
+    GIF_NOT_WINDOWED = 1 << 1,
+    GIF_CLIENT = 1 << 2,
+    GIF_SERVER = 1 << 3
 };
 
 struct game_init_data_t {
     uint32_t fl_pool_size;
     uint32_t ln_pool_size;
-    game_init_flags_t flags;
+    int32_t flags;
 };
 
 void game_main(
     game_init_data_t *game_init_data);
-
-void run_game();
-
-void finish_game();
 
 float logic_delta_time();
 float surface_delta_time();
@@ -33,6 +29,7 @@ typedef uint32_t listener_t;
 
 enum event_type_t {
     ET_RESIZE_SURFACE,
+    ET_CLOSED_WINDOW,
     ET_REQUEST_TO_JOIN_SERVER,
     ET_ENTER_SERVER_WORLD,
     ET_LAUNCH_MAP_EDITOR,
@@ -66,8 +63,11 @@ struct event_t {
     void *data;
 };
 
-typedef void(*listener_callback_t)(void *object, event_t *);
+typedef void(*listener_callback_t)(
+    void *object,
+    event_t *);
 
+// Setting object to NULL will just not bind callback to any data object (this would be used for structures with member functions)
 listener_t set_listener_callback(
     listener_callback_t callback,
     void *object);
@@ -81,3 +81,21 @@ void submit_event(
     void *data);
 
 void dispatch_events();
+
+#define INFO_LOG(str) \
+    printf("INFO: %s", str); \
+    putchar('\n')
+
+#define ERROR_LOG(str) \
+    printf("ERROR: %s", str); \
+    putchar('\n')
+
+#define FINFO_LOG(str, ...) \
+    printf("INFO: "); \
+    printf(str, __VA_ARGS__) \
+    putchar('\n')
+
+#define FERROR_LOG(str, ...) \
+    printf("ERROR: "); \
+    printf(str, __VA_ARGS__) \
+    putchar('\n')

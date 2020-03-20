@@ -1243,7 +1243,7 @@ void begin_scene_rendering(
     begin_info.pClearValues = clear_values;
     begin_info.renderArea = render_area;
 
-    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 
 void end_scene_rendering(

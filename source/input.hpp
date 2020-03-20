@@ -10,6 +10,7 @@ struct input_interface_data_t {
     uint32_t surface_width;
     uint32_t surface_height;
     const char *application_name;
+    void *window;
 };
 
 input_interface_data_t input_interface_init();
@@ -18,6 +19,11 @@ void poll_input_events();
 void disable_cursor_display();
 
 void enable_cursor_display();
+
+float get_current_time();
+
+// TODO: Will remove this in the future once proper engine input handling is implemented
+void *surface_window();
 
 enum button_type_t { BT_A, BT_B, BT_C, BT_D, BT_E, BT_F, BT_G, BT_H, BT_I, BT_J, BT_K, BT_L, BT_M, BT_N, BT_O, BT_P, BT_Q, BT_R, BT_S, BT_T, BT_U, BT_V, BT_W, BT_X, BT_Y, BT_Z,
                      BT_ZERO, BT_ONE, BT_TWO, BT_THREE, BT_FOUR, BT_FIVE, BT_SIX, BT_SEVEN, BT_EIGHT, BT_NINE, BT_UP, BT_LEFT, BT_DOWN, BT_RIGHT,
