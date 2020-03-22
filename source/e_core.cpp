@@ -39,6 +39,27 @@ static listener_t game_core_listener;
 static uint32_t rendered_scene_command_buffer_count;
 static VkCommandBuffer rendered_scene_command_buffers[MAX_RENDERED_SCENE_COMMAND_BUFFERS];
 
+static enum highlevel_focus_t {
+    HF_WORLD, HF_UI
+} focus;
+
+static void s_handle_input() {
+    handle_world_input();
+
+    /*switch(focus) {
+        
+    case HF_WORLD: {
+        handle_world_input();
+        break;
+    }
+        
+    case HF_UI: {
+        break;  
+    } 
+        
+    }*/
+}
+
 // Records a secondary 
 static void s_tick(
     VkCommandBuffer command_buffer) {
@@ -50,8 +71,11 @@ static void s_render(
     VkCommandBuffer secondary_command_buffer) {
     VkCommandBuffer final_command_buffer = begin_frame();
 
+    eye_3d_info_t eye_info = create_eye_info();
+    
     gpu_data_sync(
-      final_command_buffer);
+        final_command_buffer,
+        &eye_info);
 
     begin_scene_rendering(
         final_command_buffer);
@@ -71,7 +95,10 @@ static void s_run_windowed_game() {
         float now = get_current_time();
 
         poll_input_events();
+        translate_raw_to_game_input();
         dispatch_events();
+
+        s_handle_input();
 
         static uint32_t command_buffer_index = 0;
         VkCommandBuffer rendered_scene = rendered_scene_command_buffers[command_buffer_index];
@@ -82,7 +109,6 @@ static void s_run_windowed_game() {
             VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
             &inheritance_info);
 
-        // s_tick() will draw to secondary command buffer
         s_tick(rendered_scene);
 
         end_command_buffer(rendered_scene);
@@ -102,6 +128,8 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_RESIZE_SURFACE, game_core_listener);
 
     input_interface_data_t input_interface = input_interface_init();
+
+    game_input_settings_init();
 
     renderer_init(
         input_interface.application_name,

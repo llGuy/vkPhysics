@@ -804,8 +804,9 @@ VkCommandBuffer begin_frame() {
 }
 
 void gpu_data_sync(
-    VkCommandBuffer command_buffer) {
-    r_camera_gpu_sync(command_buffer);
+    VkCommandBuffer command_buffer,
+    eye_3d_info_t *eye_info) {
+    r_camera_gpu_sync(command_buffer, eye_info);
     r_lighting_gpu_sync(command_buffer);
     r_render_environment_to_offscreen_if_updated(command_buffer);
 }

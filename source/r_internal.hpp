@@ -65,7 +65,8 @@ void r_camera_init(
     void *window);
 
 void r_camera_gpu_sync(
-    VkCommandBuffer command_buffer);
+    VkCommandBuffer command_buffer,
+    eye_3d_info_t *info);
 
 VkPipelineShaderStageCreateInfo *r_fill_shader_stage_create_infos(
     const char **paths,

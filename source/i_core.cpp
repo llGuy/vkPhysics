@@ -21,6 +21,10 @@ static void s_create_vulkan_surface_proc(
 
 static raw_input_t raw_input = {};
 
+raw_input_t *get_raw_input() {
+    return &raw_input;
+}
+
 static void s_window_resize_callback(
     GLFWwindow *window,
     int32_t width,
@@ -61,7 +65,7 @@ static void s_window_key_callback(
     button_state_t state = (button_state_t)0;
     switch(action) {
         
-    case GLFW_PRESS: {
+    case GLFW_PRESS: case GLFW_REPEAT: {
         state = BS_DOWN;
         break;
     }
@@ -143,7 +147,7 @@ static void s_window_mouse_button_callback(
     button_state_t state = (button_state_t)0;
     switch(action) {
         
-    case GLFW_PRESS: {
+    case GLFW_PRESS: case GLFW_REPEAT: {
         state = BS_DOWN;
         break;
     }
@@ -178,9 +182,6 @@ static void s_window_cursor_position_callback(
     double ypos) {
     raw_input.cursor_moved = 1;
 
-    raw_input.previous_cursor_pos_x = raw_input.cursor_pos_x;
-    raw_input.previous_cursor_pos_y = raw_input.cursor_pos_y;
-    
     raw_input.cursor_pos_x = (float)xpos;
     raw_input.cursor_pos_y = (float)ypos;
 }
@@ -234,6 +235,10 @@ void poll_input_events() {
 
     raw_input.instant_count = 0;
 
+    raw_input.previous_cursor_pos_x = raw_input.cursor_pos_x;
+    raw_input.previous_cursor_pos_y = raw_input.cursor_pos_y;
+    raw_input.cursor_moved = 0;
+
     glfwPollEvents();
 
     if (glfwWindowShouldClose(window)) {
@@ -284,7 +289,7 @@ struct action_bound_mouse_keyboard_button_t {
 
 static action_bound_mouse_keyboard_button_t bound_key_mouse_buttons[GIAT_INVALID_ACTION];
 
-void initialize_game_input_settings(void) {
+void game_input_settings_init() {
     bound_key_mouse_buttons[GIAT_OK].bound_button = BT_ENTER;
     bound_key_mouse_buttons[GIAT_CANCEL].bound_button = BT_ESCAPE;
     bound_key_mouse_buttons[GIAT_MENU].bound_button = BT_ESCAPE;
@@ -304,6 +309,10 @@ void initialize_game_input_settings(void) {
 
 static game_input_t game_input;
 
+game_input_t *get_game_input() {
+    return &game_input;
+}
+
 static void s_set_button_action_state(
     uint32_t action) {
     button_input_t *raw_key_mouse_input = &raw_input.buttons[bound_key_mouse_buttons[action].bound_button];
@@ -318,4 +327,9 @@ void translate_raw_to_game_input() {
     for (uint32_t action = 0; action < GIAT_INVALID_ACTION; ++action) {
         s_set_button_action_state(action);
     }
+
+    game_input.previous_mouse_x = raw_input.previous_cursor_pos_x;
+    game_input.previous_mouse_y = raw_input.previous_cursor_pos_y;
+    game_input.mouse_x = raw_input.cursor_pos_x;
+    game_input.mouse_y = raw_input.cursor_pos_y;
 }

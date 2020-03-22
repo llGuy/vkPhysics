@@ -72,7 +72,28 @@ void r_camera_init(void *window) {
 }
 
 // Should not worry about case where not running in window mode (server mode) because anyway, r_ prefixed files won't be running
-void r_camera_gpu_sync(VkCommandBuffer command_buffer) {    
+void r_camera_gpu_sync(
+    VkCommandBuffer command_buffer,
+    eye_3d_info_t *eye_info) {
+    transforms.dt = eye_info->dt;
+
+    camera_data.position = eye_info->position;
+    camera_data.direction = eye_info->direction;
+    camera_data.up = eye_info->up;
+    camera_data.fov = eye_info->fov;
+    camera_data.near = eye_info->near;
+    camera_data.far = eye_info->far;
+    
+    transforms.projection = glm::perspective(glm::radians(camera_data.fov), (float)r_swapchain_extent().width / (float)r_swapchain_extent().height, camera_data.near, camera_data.far);
+    transforms.projection[1][1] *= -1.0f;
+    transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
+    transforms.inverse_view = glm::inverse(transforms.view);
+    transforms.view_projection = transforms.projection * transforms.view;
+    VkExtent2D extent = r_swapchain_extent();
+    transforms.width = (float)extent.width;
+    transforms.height = (float)extent.height;
+    transforms.previous_view_projection = transforms.previous_view_projection * transforms.inverse_view;
+
     VkBufferMemoryBarrier buffer_barrier = create_gpu_buffer_barrier(
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -111,89 +132,6 @@ void r_camera_gpu_sync(VkCommandBuffer command_buffer) {
         0, NULL,
         1, &buffer_barrier,
         0, NULL);
-}
-
-#include "engine.hpp"
-#include "input.hpp"
-
-// TODO: Add proper input handling (this is a placeholder until proper world / entity infrastructure is added)
-void r_camera_handle_input() {
-    float dt = surface_delta_time();
 
     transforms.previous_view_projection = transforms.view_projection;
-    transforms.dt = dt;
-    
-    GLFWwindow *glfw_window = (GLFWwindow *)surface_window();
-
-    if (glfwGetMouseButton(glfw_window, GLFW_MOUSE_BUTTON_MIDDLE)) {
-        glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-        vector3_t right = glm::normalize(glm::cross(camera_data.direction, camera_data.up));
-    
-        if (glfwGetKey(glfw_window, GLFW_KEY_W)) {
-            camera_data.position += camera_data.direction * dt * 10.0f;
-        }
-    
-        if (glfwGetKey(glfw_window, GLFW_KEY_A)) {
-            camera_data.position -= right * dt * 10.0f;
-        }
-    
-        if (glfwGetKey(glfw_window, GLFW_KEY_S)) {
-            camera_data.position -= camera_data.direction * dt * 10.0f;
-        }
-    
-        if (glfwGetKey(glfw_window, GLFW_KEY_D)) {
-            camera_data.position += right * dt * 10.0f;
-        }
-
-        if (glfwGetKey(glfw_window, GLFW_KEY_SPACE)) {
-            camera_data.position += camera_data.up * dt * 10.0f;
-        }
-
-        if (glfwGetKey(glfw_window, GLFW_KEY_LEFT_SHIFT)) {
-            camera_data.position -= camera_data.up * dt * 10.0f;
-        }
-
-        double x, y;
-        glfwGetCursorPos((GLFWwindow *)surface_window(), &x, &y);
-        vector2_t new_mouse_position = vector2_t((float)x, (float)y);
-        vector2_t delta = new_mouse_position - camera_data.mouse_position;
-    
-        static constexpr float SENSITIVITY = 30.0f;
-    
-        vector3_t res = camera_data.direction;
-	    
-        float x_angle = glm::radians(-delta.x) * SENSITIVITY * dt;// *elapsed;
-        float y_angle = glm::radians(-delta.y) * SENSITIVITY * dt;// *elapsed;
-                
-        res = matrix3_t(glm::rotate(x_angle, camera_data.up)) * res;
-        vector3_t rotate_y = glm::cross(res, camera_data.up);
-        res = matrix3_t(glm::rotate(y_angle, rotate_y)) * res;
-
-        res = glm::normalize(res);
-                
-        camera_data.direction = res;
-
-        transforms.view_direction = vector4_t(camera_data.direction, 1.0f);
-
-        camera_data.mouse_position = new_mouse_position;
-    }
-    else {
-        glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-        double x, y;
-        glfwGetCursorPos((GLFWwindow *)surface_window(), &x, &y);
-        vector2_t new_mouse_position = vector2_t((float)x, (float)y);
-        camera_data.mouse_position = new_mouse_position;
-    }
-
-    transforms.projection = glm::perspective(glm::radians(camera_data.fov), (float)r_swapchain_extent().width / (float)r_swapchain_extent().height, camera_data.near, camera_data.far);
-    transforms.projection[1][1] *= -1.0f;
-    transforms.view = glm::lookAt(camera_data.position, camera_data.position + camera_data.direction, camera_data.up);
-    transforms.inverse_view = glm::inverse(transforms.view);
-    transforms.view_projection = transforms.projection * transforms.view;
-    VkExtent2D extent = r_swapchain_extent();
-    transforms.width = (float)extent.width;
-    transforms.height = (float)extent.height;
-    transforms.previous_view_projection = transforms.previous_view_projection * transforms.inverse_view;
 }

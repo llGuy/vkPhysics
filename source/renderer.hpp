@@ -35,8 +35,19 @@ void swapchain_information(
 /* Rendering begin / end */
 VkCommandBuffer begin_frame();
 
+struct eye_3d_info_t {
+    vector3_t position;
+    vector3_t direction;
+    vector3_t up;
+    float fov;
+    float near;
+    float far;
+    float dt;
+};
+
 void gpu_data_sync(
-    VkCommandBuffer command_buffer);
+    VkCommandBuffer command_buffer,
+    eye_3d_info_t *eye);
 
 void end_frame();
 

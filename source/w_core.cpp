@@ -1,4 +1,5 @@
 #include "world.hpp"
+#include "engine.hpp"
 #include "renderer.hpp"
 
 static mesh_t cube = {};
@@ -8,6 +9,12 @@ static mesh_render_data_t cube_data = {};
 static mesh_t sphere = {};
 static shader_t sphere_shader;
 static mesh_render_data_t render_data = {};
+
+// Temporary
+static struct player_info_t {
+    vector3_t position;
+    vector3_t direction;
+} player;
 
 void world_init() {
     shader_binding_info_t cube_info = {};
@@ -42,13 +49,70 @@ void world_init() {
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.2f;
     render_data.pbr_info.y = 0.8;
+
+    player.position = vector3_t(0.0f);
+    player.direction = vector3_t(1.0f, 0.0f, 0.0f);
+}
+
+void handle_world_input() {
+    game_input_t *game_input = get_game_input();
+    raw_input_t *raw_input = get_raw_input();
+
+    if (raw_input->buttons[BT_MOUSE_MIDDLE].state == BS_DOWN) {
+        disable_cursor_display();
+        vector3_t right = glm::normalize(glm::cross(player.direction, vector3_t(0.0f, 1.0f, 0.0f)));
+    
+        if (game_input->actions[GIAT_MOVE_FORWARD].state == BS_DOWN) {
+            player.position += player.direction * surface_delta_time() * 10.0f;
+        }
+    
+        if (game_input->actions[GIAT_MOVE_LEFT].state == BS_DOWN) {
+            player.position -= right * surface_delta_time() * 10.0f;
+        }
+    
+        if (game_input->actions[GIAT_MOVE_BACK].state == BS_DOWN) {
+            player.position -= player.direction * surface_delta_time() * 10.0f;
+        }
+    
+        if (game_input->actions[GIAT_MOVE_RIGHT].state == BS_DOWN) {
+            player.position += right * surface_delta_time() * 10.0f;
+        }
+    
+        if (game_input->actions[GIAT_TRIGGER4].state == BS_DOWN) { // Space
+            player.position += vector3_t(0.0f, 1.0f, 0.0f) * surface_delta_time() * 10.0f;
+        }
+    
+        if (game_input->actions[GIAT_TRIGGER6].state == BS_DOWN) { // Left shift
+            player.position -= vector3_t(0.0f, 1.0f, 0.0f) * surface_delta_time() * 10.0f;
+        }
+
+        vector2_t new_mouse_position = vector2_t((float)game_input->mouse_x, (float)game_input->mouse_y);
+        vector2_t delta = new_mouse_position - vector2_t(game_input->previous_mouse_x, game_input->previous_mouse_y);
+    
+        static constexpr float SENSITIVITY = 30.0f;
+    
+        vector3_t res = player.direction;
+	    
+        float x_angle = glm::radians(-delta.x) * SENSITIVITY * surface_delta_time();// *elapsed;
+        float y_angle = glm::radians(-delta.y) * SENSITIVITY * surface_delta_time();// *elapsed;
+                
+        res = matrix3_t(glm::rotate(x_angle, vector3_t(0.0f, 1.0f, 0.0f))) * res;
+        vector3_t rotate_y = glm::cross(res, vector3_t(0.0f, 1.0f, 0.0f));
+        res = matrix3_t(glm::rotate(y_angle, rotate_y)) * res;
+
+        res = glm::normalize(res);
+                
+        player.direction = res;
+    }
+    else {
+        enable_cursor_display();
+    }
 }
 
 #include "r_internal.hpp"
 
 void tick_world(
     VkCommandBuffer command_buffer) {
-    r_camera_handle_input();
     r_update_lighting();
 
     cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
@@ -81,4 +145,18 @@ void tick_world(
     }
 
     r_render_environment(command_buffer);
+}
+
+eye_3d_info_t create_eye_info() {
+    eye_3d_info_t info = {};
+
+    info.position = player.position;
+    info.direction = player.direction;
+    info.up = vector3_t(0.0f, 1.0f, 0.0f);
+    info.fov = 60.0f;
+    info.near = 0.1f;
+    info.far = 10000.0f;
+    info.dt = surface_delta_time();
+
+    return info;
 }

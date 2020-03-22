@@ -14,6 +14,7 @@ struct input_interface_data_t {
 };
 
 input_interface_data_t input_interface_init();
+void game_input_settings_init();
 void poll_input_events();
 
 void disable_cursor_display();
@@ -76,11 +77,6 @@ enum game_input_action_type_t {
     GIAT_MOVE_LEFT,
     GIAT_MOVE_BACK,
     GIAT_MOVE_RIGHT,
-    // Mouse as well
-    GIAT_LOOK_UP,
-    GIAT_LOOK_LEFT,
-    GIAT_LOOK_DOWN,
-    GIAT_LOOK_RIGHT,
     GIAT_TRIGGER1,
     GIAT_TRIGGER2,
     GIAT_TRIGGER3,
@@ -99,7 +95,13 @@ struct game_input_action_t {
 // To translate from raw_input_t to player_input_t
 struct game_input_t {
     game_input_action_t actions[GIAT_INVALID_ACTION];
+    float previous_mouse_x;
+    float previous_mouse_y;
+    float mouse_x;
+    float mouse_y;
 };
 
-void translate_raw_to_game_input(
-    raw_input_t *raw_input);
+void translate_raw_to_game_input();
+
+raw_input_t *get_raw_input();
+game_input_t *get_game_input();
