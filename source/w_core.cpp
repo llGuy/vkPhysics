@@ -113,8 +113,6 @@ void handle_world_input() {
 
 void tick_world(
     VkCommandBuffer command_buffer) {
-    r_update_lighting();
-
     cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
     cube_data.color = vector4_t(0.0f);
     cube_data.pbr_info.x = 0.07f;
@@ -157,6 +155,15 @@ eye_3d_info_t create_eye_info() {
     info.near = 0.1f;
     info.far = 10000.0f;
     info.dt = surface_delta_time();
+
+    return info;
+}
+
+lighting_info_t create_lighting_info() {
+    lighting_info_t info = {};
+    
+    info.ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
+    info.lights_count = 0;
 
     return info;
 }

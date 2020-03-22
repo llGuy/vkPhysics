@@ -162,7 +162,9 @@ struct lighting_data_t {
 
 vector3_t *r_light_direction();
 
-void r_lighting_gpu_sync(VkCommandBuffer command_buffer);
+void r_lighting_gpu_sync(
+    VkCommandBuffer command_buffer,
+    lighting_info_t *lighting);
 
 void r_environment_init();
 

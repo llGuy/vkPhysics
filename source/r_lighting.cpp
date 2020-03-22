@@ -159,17 +159,20 @@ void r_lighting_init() {
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 }
 
-void r_update_lighting() {
+void r_update_lighting(
+    lighting_info_t *lighting) {
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
     cpu_camera_data_t *camera_data = r_cpu_camera_data();
-    
-    lighting_data.ws_light_positions[0] = vector4_t(camera_data->position, 1.0f);
-    lighting_data.light_positions[0] = transforms->view * lighting_data.ws_light_positions[0];
 
-    lighting_data.ws_light_directions[0] = vector4_t(camera_data->direction, 0.0f);
-    lighting_data.light_directions[0] = glm::normalize(transforms->view * lighting_data.ws_light_directions[0]);
-    
-    lighting_data.ws_directional_light = -vector4_t(light_direction, 0.0f);
+    for (uint32_t i = 0; i < lighting->lights_count; ++i) {
+        lighting_data.ws_light_positions[i] = lighting->ws_light_positions[i];
+        lighting_data.light_positions[i] = transforms->view * lighting->ws_light_positions[i];
+        lighting_data.ws_light_directions[i] = lighting->ws_light_directions[i];
+        lighting_data.light_directions[i] = transforms->view * lighting->ws_light_directions[i];
+        lighting_data.light_colors[i] = lighting->light_colors[i];
+    }
+
+    lighting_data.ws_directional_light = -lighting->ws_directional_light;
     lighting_data.vs_directional_light = transforms->view * lighting_data.ws_directional_light;
 
     vector4_t light_position = vector4_t(light_direction * 1000.0f, 1.0f);
@@ -181,20 +184,16 @@ void r_update_lighting() {
     light_position.y = light_position.y * 0.5f + 0.5f;
     lighting_data.light_screen_coord = vector2_t(light_position.x, light_position.y);
 
-    /*s_update_shadow_box(
-        glm::radians(camera_data->fov),
-        transforms->width / transforms->height,
-        camera_data->position,
-        camera_data->direction,
-        camera_data->up,
-        &scene_shadow_box);*/
-
     lighting_data.shadow_view = scene_shadow_box.view;
     lighting_data.shadow_projection = scene_shadow_box.projection;
     lighting_data.shadow_view_projection = scene_shadow_box.projection * scene_shadow_box.view;
 }
 
-void r_lighting_gpu_sync(VkCommandBuffer command_buffer) {
+void r_lighting_gpu_sync(
+    VkCommandBuffer command_buffer,
+    lighting_info_t *lighting) {
+    r_update_lighting(lighting);
+    
     VkBufferMemoryBarrier barrier = create_gpu_buffer_barrier(
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT,

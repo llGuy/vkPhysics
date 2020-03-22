@@ -45,9 +45,21 @@ struct eye_3d_info_t {
     float dt;
 };
 
+#define MAX_LIGHTS 10
+
+struct lighting_info_t {
+    vector4_t ws_light_positions[MAX_LIGHTS];
+    vector4_t ws_light_directions[MAX_LIGHTS];
+    vector4_t light_colors[MAX_LIGHTS];
+    uint32_t lights_count;
+
+    vector4_t ws_directional_light;
+};
+
 void gpu_data_sync(
     VkCommandBuffer command_buffer,
-    eye_3d_info_t *eye);
+    eye_3d_info_t *eye,
+    lighting_info_t *lighting);
 
 void end_frame();
 

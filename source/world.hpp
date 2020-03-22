@@ -11,3 +11,4 @@ void tick_world(
     VkCommandBuffer command_buffer);
 
 eye_3d_info_t create_eye_info();
+lighting_info_t create_lighting_info();
