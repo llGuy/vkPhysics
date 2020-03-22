@@ -1,18 +1,19 @@
 // Engine core
-
 #include <stdio.h>
 #include "world.hpp"
 #include "engine.hpp"
-#include "renderer.hpp"
 #include "e_internal.hpp"
+#include <common/event.hpp>
+#include <renderer/input.hpp>
+#include <renderer/renderer.hpp>
 
 // Gonna use these when multithreading gets added
 // Logic delta time
 static float ldelta_time = 0.0f;
-// Surface delta time
-static float sdelta_time = 0.0f;
 
 static bool running;
+
+static event_submissions_t events = {};
 
 static void s_game_event_listener(
     void *object,
@@ -94,11 +95,9 @@ static void s_render(
 
 static void s_run_windowed_game() {
     while (running) {
-        float now = get_current_time();
-
-        poll_input_events();
+        poll_input_events(&events);
         translate_raw_to_game_input();
-        dispatch_events();
+        dispatch_events(&events);
 
         s_handle_input();
 
@@ -117,8 +116,7 @@ static void s_run_windowed_game() {
 
         s_render(rendered_scene);
 
-        float new_now = get_current_time();
-        ldelta_time = sdelta_time = new_now - now;
+        ldelta_time = surface_delta_time();
 
         command_buffer_index = (command_buffer_index + 1) % rendered_scene_command_buffer_count;
     }
@@ -126,8 +124,8 @@ static void s_run_windowed_game() {
 
 static void s_windowed_game_main(
     game_init_data_t *game_init_data) {
-    subscribe_to_event(ET_CLOSED_WINDOW, game_core_listener);
-    subscribe_to_event(ET_RESIZE_SURFACE, game_core_listener);
+    subscribe_to_event(ET_CLOSED_WINDOW, game_core_listener, &events);
+    subscribe_to_event(ET_RESIZE_SURFACE, game_core_listener, &events);
 
     input_interface_data_t input_interface = input_interface_init();
 
@@ -169,8 +167,7 @@ static void s_not_windowed_game_main(
 
 void game_main(
     game_init_data_t *game_init_data) {
-    e_event_system_init();
-    game_core_listener = set_listener_callback(&s_game_event_listener, NULL);
+    game_core_listener = set_listener_callback(&s_game_event_listener, NULL, &events);
 
     running = 1;
 
@@ -190,10 +187,6 @@ void game_main(
 
 void finish_game() {
     // Deinitialise everything
-}
-
-float surface_delta_time() {
-    return sdelta_time;
 }
 
 float logic_delta_time() {

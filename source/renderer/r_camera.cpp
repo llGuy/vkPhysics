@@ -1,8 +1,8 @@
-#include "tools.hpp"
 #include "renderer.hpp"
+#include <GLFW/glfw3.h>
 #include "r_internal.hpp"
 #include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>
+#include <common/tools.hpp>
 
 static gpu_buffer_t transforms_uniform_buffer;
 static VkDescriptorSet descriptor_set;

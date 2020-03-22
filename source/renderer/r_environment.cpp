@@ -832,7 +832,7 @@ void r_environment_init() {
     end_single_time_command_buffer(command_buffer);
 }
 
-void r_render_environment(VkCommandBuffer command_buffer) {
+void render_environment(VkCommandBuffer command_buffer) {
     VkViewport viewport = {};
     viewport.width = r_swapchain_extent().width;
     viewport.height = r_swapchain_extent().height;

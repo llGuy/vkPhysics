@@ -2,25 +2,6 @@
 
 #include "tools.hpp"
 
-enum game_init_flags_t : int32_t {
-    GIF_WINDOWED = 1 << 0,
-    GIF_NOT_WINDOWED = 1 << 1,
-    GIF_CLIENT = 1 << 2,
-    GIF_SERVER = 1 << 3
-};
-
-struct game_init_data_t {
-    uint32_t fl_pool_size;
-    uint32_t ln_pool_size;
-    int32_t flags;
-};
-
-void game_main(
-    game_init_data_t *game_init_data);
-
-float logic_delta_time();
-float surface_delta_time();
-
 // Engine events
 #define MAX_EVENTS 20
 #define MAX_LISTENERS 20
@@ -67,35 +48,38 @@ typedef void(*listener_callback_t)(
     void *object,
     event_t *);
 
+struct listener_subscriptions_t {
+    uint32_t count = 0;
+    uint32_t listeners[MAX_LISTENERS] = {};
+};
+
+struct event_submissions_t {
+    listener_callback_t callbacks[MAX_LISTENERS] = {};
+    
+    uint32_t listener_count = 0;
+    void *listener_objects[MAX_LISTENERS] = {};
+
+    listener_subscriptions_t subscriptions[ET_INVALID_EVENT_TYPE] = {};
+
+    uint32_t pending_event_count = 0;
+    event_t pending_events[MAX_EVENTS] = {};
+};
+
 // Setting object to NULL will just not bind callback to any data object (this would be used for structures with member functions)
 listener_t set_listener_callback(
     listener_callback_t callback,
-    void *object);
+    void *object,
+    event_submissions_t *event_data);
 
 void subscribe_to_event(
     event_type_t type,
-    listener_t listener);
+    listener_t listener,
+    event_submissions_t *event_data);
 
 void submit_event(
     event_type_t type,
-    void *data);
+    void *data,
+    event_submissions_t *event_data);
 
-void dispatch_events();
-
-#define INFO_LOG(str) \
-    printf("INFO: %s", str); \
-    putchar('\n')
-
-#define ERROR_LOG(str) \
-    printf("ERROR: %s", str); \
-    putchar('\n')
-
-#define FINFO_LOG(str, ...) \
-    printf("INFO: "); \
-    printf(str, __VA_ARGS__) \
-    putchar('\n')
-
-#define FERROR_LOG(str, ...) \
-    printf("ERROR: "); \
-    printf(str, __VA_ARGS__) \
-    putchar('\n')
+void dispatch_events(
+    event_submissions_t *event_data);

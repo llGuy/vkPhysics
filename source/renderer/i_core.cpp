@@ -1,13 +1,17 @@
 // Input core
 
 #include "input.hpp"
-#include "tools.hpp"
-#include "engine.hpp"
-
+#include <common/tools.hpp>
 #include <stdio.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+static float sdelta_time = 0.0f;
+
+float surface_delta_time() {
+    return sdelta_time;
+}
 
 static void s_create_vulkan_surface_proc(
     struct VkInstance_T *instance,
@@ -226,7 +230,9 @@ input_interface_data_t input_interface_init() {
     return interface_data;
 }
 
-void poll_input_events() {
+void poll_input_events(event_submissions_t *submissions) {
+    static float current_time = 0.0f;
+    
     // Reset instant presses
     for (uint32_t i = 0; i < raw_input.instant_count; ++i) {
         uint32_t index = raw_input.instant_indices[i];
@@ -241,8 +247,12 @@ void poll_input_events() {
 
     glfwPollEvents();
 
+    sdelta_time = get_current_time() - current_time;
+    // Start timing
+    current_time = get_current_time();
+
     if (glfwWindowShouldClose(window)) {
-        submit_event(ET_CLOSED_WINDOW, NULL);
+        submit_event(ET_CLOSED_WINDOW, NULL, submissions);
     }
 
     // Check if user resized to trigger event
@@ -263,7 +273,7 @@ void poll_input_events() {
         resize_data->width = raw_input.window_width;
         resize_data->height = raw_input.window_height;
         
-        submit_event(ET_RESIZE_SURFACE, resize_data);
+        submit_event(ET_RESIZE_SURFACE, resize_data, submissions);
 
         raw_input.resized = 0;
     }

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "input.hpp"
-#include "renderer.hpp"
+#include <renderer/renderer.hpp>
 
 void world_init();
 

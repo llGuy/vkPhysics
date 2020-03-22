@@ -1,7 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-#include "tools.hpp"
+#include <common/tools.hpp>
+#include <common/event.hpp>
 
 #include "renderer.hpp"
 
@@ -13,23 +14,29 @@ struct input_interface_data_t {
     void *window;
 };
 
-input_interface_data_t input_interface_init();
-void game_input_settings_init();
-void poll_input_events();
+DECLARE_RENDERER_PROC(input_interface_data_t, input_interface_init, void);
 
-void disable_cursor_display();
+DECLARE_VOID_RENDERER_PROC(void, game_input_settings_init, void);
 
-void enable_cursor_display();
+DECLARE_VOID_RENDERER_PROC(void, poll_input_events,
+    event_submissions_t *events);
 
-float get_current_time();
+DECLARE_VOID_RENDERER_PROC(void, disable_cursor_display, void);
+
+DECLARE_VOID_RENDERER_PROC(void, enable_cursor_display, void);
+
+DECLARE_RENDERER_PROC(float, get_current_time, void);
+
+DECLARE_RENDERER_PROC(float, surface_delta_time, void);
 
 // TODO: Will remove this in the future once proper engine input handling is implemented
-void *surface_window();
+DECLARE_RENDERER_PROC(void *, surface_window, void);
 
-enum button_type_t { BT_A, BT_B, BT_C, BT_D, BT_E, BT_F, BT_G, BT_H, BT_I, BT_J, BT_K, BT_L, BT_M, BT_N, BT_O, BT_P, BT_Q, BT_R, BT_S, BT_T, BT_U, BT_V, BT_W, BT_X, BT_Y, BT_Z,
-                     BT_ZERO, BT_ONE, BT_TWO, BT_THREE, BT_FOUR, BT_FIVE, BT_SIX, BT_SEVEN, BT_EIGHT, BT_NINE, BT_UP, BT_LEFT, BT_DOWN, BT_RIGHT,
-                     BT_SPACE, BT_LEFT_SHIFT, BT_LEFT_CONTROL, BT_ENTER, BT_BACKSPACE, BT_ESCAPE, BT_F1, BT_F2, BT_F3, BT_F4, BT_F5, BT_F11,
-                     BT_MOUSE_LEFT, BT_MOUSE_RIGHT, BT_MOUSE_MIDDLE, BT_MOUSE_MOVE_UP, BT_MOUSE_MOVE_LEFT, BT_MOUSE_MOVE_DOWN, BT_MOUSE_MOVE_RIGHT, BT_INVALID_KEY };
+enum button_type_t {
+    BT_A, BT_B, BT_C, BT_D, BT_E, BT_F, BT_G, BT_H, BT_I, BT_J, BT_K, BT_L, BT_M, BT_N, BT_O, BT_P, BT_Q, BT_R, BT_S, BT_T, BT_U, BT_V, BT_W, BT_X, BT_Y, BT_Z,
+    BT_ZERO, BT_ONE, BT_TWO, BT_THREE, BT_FOUR, BT_FIVE, BT_SIX, BT_SEVEN, BT_EIGHT, BT_NINE, BT_UP, BT_LEFT, BT_DOWN, BT_RIGHT,
+    BT_SPACE, BT_LEFT_SHIFT, BT_LEFT_CONTROL, BT_ENTER, BT_BACKSPACE, BT_ESCAPE, BT_F1, BT_F2, BT_F3, BT_F4, BT_F5, BT_F11,
+    BT_MOUSE_LEFT, BT_MOUSE_RIGHT, BT_MOUSE_MIDDLE, BT_MOUSE_MOVE_UP, BT_MOUSE_MOVE_LEFT, BT_MOUSE_MOVE_DOWN, BT_MOUSE_MOVE_RIGHT, BT_INVALID_KEY };
 
 enum button_state_t : char { BS_NOT_DOWN, BS_DOWN };
 
@@ -101,7 +108,7 @@ struct game_input_t {
     float mouse_y;
 };
 
-void translate_raw_to_game_input();
+DECLARE_VOID_RENDERER_PROC(void, translate_raw_to_game_input, void);
 
-raw_input_t *get_raw_input();
-game_input_t *get_game_input();
+DECLARE_RENDERER_PROC(raw_input_t *, get_raw_input, void);
+DECLARE_RENDERER_PROC(game_input_t *, get_game_input, void);

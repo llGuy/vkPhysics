@@ -1,15 +1,27 @@
 #pragma once
 
 #include <stdint.h>
-#include "tools.hpp"
 #include <vulkan/vulkan.h>
+#include <common/tools.hpp>
 
 typedef int32_t result_t;
 typedef void(*surface_proc_t)(struct VkInstance_T *instance, struct VkSurfaceKHR_T **surface, void *window);
 typedef void(*imgui_proc_t)();
 
+#if LINK_AGAINST_RENDERER
+#define DECLARE_RENDERER_PROC(return_type, name, ...)   \
+    return_type name(__VA_ARGS__)
+#define DECLARE_VOID_RENDERER_PROC(return_type, name, ...)   \
+    return_type name(__VA_ARGS__)
+#else
+#define DECLARE_RENDERER_PROC(return_type, name, ...)   \
+    inline return_type name(__VA_ARGS__) { return (return_type){}; }
+#define DECLARE_VOID_RENDERER_PROC(return_type, name, ...)   \
+    inline return_type name(__VA_ARGS__) {}
+#endif
+
 /* Initialise the renderer (graphics API, rendering pipeline, mesh managers, ...) */
-void renderer_init(
+DECLARE_VOID_RENDERER_PROC(void, renderer_init,
     const char *application_name,
     surface_proc_t create_surface,
     imgui_proc_t imgui_proc,
@@ -18,7 +30,7 @@ void renderer_init(
     uint32_t window_height);
 
 /* Swapchain */
-void handle_resize(
+DECLARE_VOID_RENDERER_PROC(void, handle_resize,
     uint32_t width,
     uint32_t height);
 
@@ -29,11 +41,11 @@ struct swapchain_information_t {
     uint32_t height;
 };
 
-void swapchain_information(
+DECLARE_VOID_RENDERER_PROC(void, swapchain_information,
     swapchain_information_t *dst);
 
 /* Rendering begin / end */
-VkCommandBuffer begin_frame();
+DECLARE_RENDERER_PROC(VkCommandBuffer, begin_frame, void);
 
 struct eye_3d_info_t {
     vector3_t position;
@@ -56,57 +68,60 @@ struct lighting_info_t {
     vector4_t ws_directional_light;
 };
 
-void gpu_data_sync(
+DECLARE_VOID_RENDERER_PROC(void, render_environment,
+    VkCommandBuffer command_buffer);
+
+DECLARE_VOID_RENDERER_PROC(void, gpu_data_sync,
     VkCommandBuffer command_buffer,
     eye_3d_info_t *eye,
     lighting_info_t *lighting);
 
-void end_frame();
+DECLARE_VOID_RENDERER_PROC(void, end_frame, void);
 
-void begin_scene_rendering(
+DECLARE_VOID_RENDERER_PROC(void, begin_scene_rendering,
     VkCommandBuffer command_buffer);
 
-void end_scene_rendering(
+DECLARE_VOID_RENDERER_PROC(void, end_scene_rendering,
     VkCommandBuffer command_buffer);
 
-void begin_shadow_rendering(
+DECLARE_VOID_RENDERER_PROC(void, begin_shadow_rendering,
     VkCommandBuffer command_buffer);
 
-void end_shadow_rendering(
+DECLARE_VOID_RENDERER_PROC(void, end_shadow_rendering,
     VkCommandBuffer command_buffer);
 
 /* Command buffer utility */
-void create_command_buffers(
+DECLARE_VOID_RENDERER_PROC(void, create_command_buffers,
     VkCommandBufferLevel level, 
     VkCommandBuffer *command_buffers, uint32_t count);
 
-void fill_main_inheritance_info(
+DECLARE_VOID_RENDERER_PROC(void, fill_main_inheritance_info,
     VkCommandBufferInheritanceInfo *info);
 
-void begin_command_buffer(
+DECLARE_VOID_RENDERER_PROC(void, begin_command_buffer,
     VkCommandBuffer command_buffer,
     VkCommandBufferUsageFlags usage,
     VkCommandBufferInheritanceInfo *inheritance);
 
-void end_command_buffer(
+DECLARE_VOID_RENDERER_PROC(void, end_command_buffer,
     VkCommandBuffer command_buffer);
 
-void submit_secondary_command_buffer(
+DECLARE_VOID_RENDERER_PROC(void, submit_secondary_command_buffer,
     VkCommandBuffer pcommand_buffer,
     VkCommandBuffer scommand_buffer);
 
-VkCommandBuffer begin_single_time_command_buffer();
+DECLARE_RENDERER_PROC(VkCommandBuffer, begin_single_time_command_buffer, void);
 
-void end_single_time_command_buffer(
+DECLARE_VOID_RENDERER_PROC(void, end_single_time_command_buffer,
     VkCommandBuffer command_buffer);
 
 /* Images */
-VkDeviceMemory allocate_image_memory(
+DECLARE_RENDERER_PROC(VkDeviceMemory, allocate_image_memory,
     VkImage image,
     VkMemoryPropertyFlags properties);
 
 /* Buffers */
-VkDeviceMemory allocate_gpu_buffer_memory(
+DECLARE_RENDERER_PROC(VkDeviceMemory, allocate_gpu_buffer_memory,
     VkBuffer buffer,
     VkMemoryPropertyFlags properties);
 
@@ -117,13 +132,13 @@ struct gpu_buffer_t {
     VkDeviceSize size;
 };
 
-gpu_buffer_t create_gpu_buffer(
+DECLARE_RENDERER_PROC(gpu_buffer_t, create_gpu_buffer,
     uint32_t size,
     void *data,
     VkBufferUsageFlags usage);
 
 /* Pipeline barriers */
-VkImageMemoryBarrier create_image_barrier(
+DECLARE_RENDERER_PROC(VkImageMemoryBarrier, create_image_barrier,
     VkImageLayout old_image_layout,
     VkImageLayout new_image_layout,
     VkImage image,
@@ -133,7 +148,7 @@ VkImageMemoryBarrier create_image_barrier(
     uint32_t mip_levels,
     VkImageAspectFlags aspect);
 
-VkBufferMemoryBarrier create_gpu_buffer_barrier(
+DECLARE_RENDERER_PROC(VkBufferMemoryBarrier, create_gpu_buffer_barrier,
     VkPipelineStageFlags src,
     VkPipelineStageFlags dst,
     gpu_buffer_t *buffer,
@@ -183,15 +198,15 @@ struct mesh_t {
     VkIndexType index_type;
 };
 
-void push_buffer_to_mesh(
+DECLARE_VOID_RENDERER_PROC(void, push_buffer_to_mesh,
     buffer_type_t buffer_type,
     mesh_t *mesh);
 
-bool mesh_has_buffer(
+DECLARE_VOID_RENDERER_PROC(bool, mesh_has_buffer,
     buffer_type_t buffer_type,
     mesh_t *mesh);
 
-mesh_buffer_t *get_mesh_buffer(
+DECLARE_VOID_RENDERER_PROC(mesh_buffer_t, *get_mesh_buffer,
     buffer_type_t buffer_type,
     mesh_t *mesh);
 
@@ -208,12 +223,12 @@ struct shader_binding_info_t {
     VkVertexInputAttributeDescription *attribute_descriptions;
 };
 
-void load_mesh_internal(
+DECLARE_VOID_RENDERER_PROC(void, load_mesh_internal,
     internal_mesh_type_t mesh_type,
     mesh_t *mesh,
     shader_binding_info_t *info);
 
-void load_mesh_external();
+DECLARE_VOID_RENDERER_PROC(void, load_mesh_external, void);
 
 struct shader_t {
     VkPipeline pipeline;
@@ -234,7 +249,7 @@ struct mesh_render_data_t {
 };
 
 // Disabled depth
-shader_t create_2d_shader(
+DECLARE_RENDERER_PROC(shader_t, create_2d_shader,
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
     VkDescriptorType *descriptor_layout_types,
@@ -245,7 +260,7 @@ shader_t create_2d_shader(
     VkPrimitiveTopology topology);
 
 // Enables depth and will always happen in deferred stage
-shader_t create_3d_shader_shadow(
+DECLARE_RENDERER_PROC(shader_t, create_3d_shader_shadow,
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
     VkDescriptorType *descriptor_layout_types,
@@ -253,7 +268,7 @@ shader_t create_3d_shader_shadow(
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 
-shader_t create_3d_shader_color(
+DECLARE_RENDERER_PROC(shader_t, create_3d_shader_color,
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
     VkDescriptorType *descriptor_layout_types,
@@ -261,50 +276,50 @@ shader_t create_3d_shader_color(
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 
-shader_t create_mesh_shader_color(
+DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_color,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 
-shader_t create_mesh_shader_shadow(
+DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 
-shader_binding_info_t create_mesh_binding_info(
+DECLARE_RENDERER_PROC(shader_binding_info_t, create_mesh_binding_info,
     mesh_t *mesh);
 
 // Submits only one mesh
-void submit_mesh(
+DECLARE_VOID_RENDERER_PROC(void, submit_mesh,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
     mesh_render_data_t *render_data);
 
-void submit_mesh_shadow(
+DECLARE_VOID_RENDERER_PROC(void, submit_mesh_shadow,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
     mesh_render_data_t * render_data);
 
 /* Descriptor set */
-VkDescriptorSet create_image_descriptor_set(
+DECLARE_RENDERER_PROC(VkDescriptorSet, create_image_descriptor_set,
     VkImageView image,
     VkSampler sampler,
     VkDescriptorType type);
 
-VkDescriptorSet create_image_descriptor_set(
+DECLARE_RENDERER_PROC(VkDescriptorSet, create_image_descriptor_set,
     VkImageView *images,
     VkSampler *samplers,
     uint32_t count,
     VkDescriptorType type);
 
-VkDescriptorSet create_buffer_descriptor_set(
+DECLARE_RENDERER_PROC(VkDescriptorSet, create_buffer_descriptor_set,
     VkBuffer buffer,
     VkDeviceSize buffer_size,
     VkDescriptorType type);
 
-VkDescriptorSet create_buffer_descriptor_set(
+DECLARE_RENDERER_PROC(VkDescriptorSet, create_buffer_descriptor_set,
     VkBuffer *buffers,
     uint32_t count,
     VkDeviceSize buffer_size,
@@ -320,7 +335,7 @@ struct texture_t {
     VkDescriptorSet descriptor;
 };
 
-texture_t create_texture(
+DECLARE_RENDERER_PROC(texture_t, create_texture,
     const char *path,
     VkFormat format,
     void *data,

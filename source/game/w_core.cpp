@@ -1,6 +1,7 @@
 #include "world.hpp"
 #include "engine.hpp"
-#include "renderer.hpp"
+#include "renderer/input.hpp"
+#include "renderer/renderer.hpp"
 
 static mesh_t cube = {};
 static shader_t cube_shader;
@@ -109,8 +110,6 @@ void handle_world_input() {
     }
 }
 
-#include "r_internal.hpp"
-
 void tick_world(
     VkCommandBuffer command_buffer) {
     cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
@@ -142,7 +141,7 @@ void tick_world(
         }
     }
 
-    r_render_environment(command_buffer);
+    render_environment(command_buffer);
 }
 
 eye_3d_info_t create_eye_info() {
