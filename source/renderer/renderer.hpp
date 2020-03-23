@@ -137,6 +137,9 @@ DECLARE_RENDERER_PROC(gpu_buffer_t, create_gpu_buffer,
     void *data,
     VkBufferUsageFlags usage);
 
+DECLARE_VOID_RENDERER_PROC(void, destroy_gpu_buffer,
+    gpu_buffer_t gpu_buffer);
+
 /* Pipeline barriers */
 DECLARE_RENDERER_PROC(VkImageMemoryBarrier, create_image_barrier,
     VkImageLayout old_image_layout,

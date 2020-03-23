@@ -1136,6 +1136,12 @@ gpu_buffer_t create_gpu_buffer(
     return gpu_buffer;
 }
 
+void destroy_gpu_buffer(
+    gpu_buffer_t gpu_buffer) {
+    vkFreeMemory(r_device(), gpu_buffer.memory, NULL);
+    vkDestroyBuffer(r_device(), gpu_buffer.buffer, NULL);
+}
+
 static VkAccessFlags s_find_access_flags_for_stage(VkPipelineStageFlags stage) {
     switch (stage) {
     case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT: return VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;

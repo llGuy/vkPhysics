@@ -18,7 +18,7 @@ static struct player_info_t {
 } player;
 
 void world_init() {
-    shader_binding_info_t cube_info = {};
+    /*shader_binding_info_t cube_info = {};
     load_mesh_internal(IM_CUBE, &cube, &cube_info);
 
     const char *cube_paths[] = { "../shaders/SPV/untextured_mesh.vert.spv", "../shaders/SPV/untextured_mesh.geom.spv", "../shaders/SPV/untextured_mesh.frag.spv" };
@@ -49,7 +49,7 @@ void world_init() {
     render_data.model = matrix4_t(1.0f);
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.2f;
-    render_data.pbr_info.y = 0.8;
+    render_data.pbr_info.y = 0.8;*/
 
     player.position = vector3_t(0.0f);
     player.direction = vector3_t(1.0f, 0.0f, 0.0f);
@@ -112,7 +112,13 @@ void handle_world_input() {
 
 void tick_world(
     VkCommandBuffer command_buffer) {
-    cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
+    
+    
+    if (command_buffer != VK_NULL_HANDLE) {
+        render_environment(command_buffer);
+    }
+
+    /*cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
     cube_data.color = vector4_t(0.0f);
     cube_data.pbr_info.x = 0.07f;
     cube_data.pbr_info.y = 0.1f;
@@ -139,9 +145,7 @@ void tick_world(
                 
             submit_mesh(command_buffer, &sphere, &sphere_shader, &render_data);
         }
-    }
-
-    render_environment(command_buffer);
+    }*/
 }
 
 eye_3d_info_t create_eye_info() {
