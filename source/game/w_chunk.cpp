@@ -32,13 +32,19 @@ void w_chunk_render_init(
     chunk->render->render_data.model_matrix = glm::scale(ws_size) * glm::translate(ws_position);
 }
 
-chunk_t *w_destroy_chunk(
+void w_destroy_chunk_render(
     chunk_t *chunk) {
     if (chunk->render) {
         destroy_gpu_buffer(chunk->render->chunk_vertices_gpu_buffer);
         FL_FREE(chunk->render);
         chunk->render = NULL;
     }
+}
+
+chunk_t *w_destroy_chunk(
+    chunk_t *chunk) {
+    w_destroy_chunk_render(
+        chunk);
 
     FL_FREE(chunk);
 
@@ -49,8 +55,17 @@ void w_chunk_world_init(
     chunk_world_t *world,
     uint32_t loaded_radius) {
     world->loaded_radius = loaded_radius;
-    world->chunk_indices = FL_MALLOC(uint32_t, world->loaded_radius * world->loaded_radius * world->loaded_radius);
+    world->chunk_indices = FL_MALLOC(
+        uint32_t,
+        (world->loaded_radius * 2 - 1) * (world->loaded_radius * 2 - 1) * (world->loaded_radius * 2 - 1));
 
     world->stack_pointer = 0;
     world->loaded_chunk_stack = FL_MALLOC(chunk_t *, MAX_LOADED_CHUNKS);
+}
+
+void w_add_sphere_m(
+    const vector3_t &ws_center,
+    float ws_radius,
+    chunk_world_t *world) {
+    
 }

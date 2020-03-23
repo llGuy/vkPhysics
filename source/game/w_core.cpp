@@ -1,5 +1,6 @@
 #include "world.hpp"
 #include "engine.hpp"
+#include "w_internal.hpp"
 #include "renderer/input.hpp"
 #include "renderer/renderer.hpp"
 
@@ -16,6 +17,8 @@ static struct player_info_t {
     vector3_t position;
     vector3_t direction;
 } player;
+
+static chunk_world_t world;
 
 void world_init() {
     /*shader_binding_info_t cube_info = {};
@@ -50,6 +53,8 @@ void world_init() {
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.2f;
     render_data.pbr_info.y = 0.8;*/
+
+    w_chunk_world_init(&world, 4);
 
     player.position = vector3_t(0.0f);
     player.direction = vector3_t(1.0f, 0.0f, 0.0f);

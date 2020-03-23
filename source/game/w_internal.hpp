@@ -39,6 +39,10 @@ void w_chunk_render_init(
     const vector3_t &ws_position,
     const vector3_t &ws_size);
 
+// Would call this at end of game or when chunk is out of chunk load radius.
+void w_destroy_chunk_render(
+    chunk_t *chunk);
+
 // Returns NULL
 // Usage: chunk = w_destroy_chunk(chun);
 chunk_t *w_destroy_chunk(
@@ -55,7 +59,7 @@ struct chunk_pointer_t {
 struct chunk_world_t {
     // Number of chunks to be loaded in x, y and z directions from the player's current chunk position
     uint32_t loaded_radius;
-    // Array of size loaded_radius * loaded_radius * loaded_radius
+    // Basically a 3 dimensional array
     uint32_t *chunk_indices;
 
     // List of chunks
@@ -68,4 +72,10 @@ void w_chunk_world_init(
     chunk_world_t *world,
     uint32_t loaded_radius);
 
+// Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpusync
+void w_add_sphere_m(
+    const vector3_t &ws_center,
+    float ws_radius);
 
+ivector3_t convert_world_to_chunk(
+    const vector3_t &ws_position);
