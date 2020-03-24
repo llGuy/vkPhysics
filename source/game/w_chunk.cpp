@@ -40,6 +40,28 @@ void w_chunk_render_init(
     chunk->render->render_data.model_matrix = glm::scale(ws_size) * glm::translate(ws_position);
 }
 
+// Array will be used anytime we need to create mesh from voxels
+static vector3_t *temp_mesh_vertices;
+static shader_t chunk_shader;
+
+void w_chunk_gpu_sync(
+    VkCommandBuffer command_buffer,
+    chunk_world_t *world) {
+    for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
+        chunk_t *c = world->chunks[i];
+
+        // Create render struct if not created yet
+        if (!c->render) {
+            w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord), vector3_t(1.0f));
+        }
+
+        if (c->flags.made_modification) {
+            // Update chunk mesh and put on GPU + send to command buffer
+            // TODO:
+        }
+    }
+}
+
 void w_destroy_chunk_render(
     chunk_t *chunk) {
     if (chunk->render) {
@@ -66,6 +88,28 @@ uint32_t w_hash_chunk_coord(
     result_hash ^= coord[2] * 16777619u;
     
     return result_hash;
+}
+
+void w_chunk_data_init() {
+    temp_mesh_vertices = FL_MALLOC(vector3_t, MAX_VERTICES_PER_CHUNK);
+
+    mesh_t chunk_mesh_prototype = {};
+    push_buffer_to_mesh(
+        BT_VERTEX,
+        &chunk_mesh_prototype);
+
+    shader_binding_info_t binding_info = create_mesh_binding_info(
+        &chunk_mesh_prototype);
+    
+    const char *shader_paths[] = {
+        "../shaders/SPV/chunk_mesh.vert.spv",
+        "../shaders/SPV/chunk_mesh.geom.spv",
+        "../shaders/SPV/chunk_mesh.frag.spv" };
+    
+    chunk_shader = create_mesh_shader_color(
+        &binding_info,
+        shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 void w_chunk_world_init(
@@ -147,6 +191,12 @@ ivector3_t w_convert_voxel_to_chunk(
     vector3_t from_origin = (vector3_t)vs_position;
     vector3_t xs_sized = glm::floor(from_origin / (float)CHUNK_EDGE_LENGTH);
     return (ivector3_t)xs_sized;
+}
+
+vector3_t w_convert_chunk_to_world(
+    const ivector3_t &chunk_coord) {
+    vector3_t ws_coord = (vector3_t)(chunk_coord);
+    return ws_coord * (float)CHUNK_EDGE_LENGTH;
 }
 
 ivector3_t w_convert_voxel_to_local_chunk(

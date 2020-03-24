@@ -80,9 +80,14 @@ struct chunk_world_t {
 uint32_t w_hash_chunk_coord(
     const ivector3_t &coord);
 
+void w_chunk_data_init();
+
 void w_chunk_world_init(
     chunk_world_t *world,
     uint32_t loaded_radius);
+
+void w_chunk_gpu_sync(
+    chunk_world_t *world);
 
 // Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpusync
 void w_add_sphere_m(
@@ -94,6 +99,9 @@ ivector3_t w_convert_world_to_voxel(
 
 ivector3_t w_convert_voxel_to_chunk(
     const ivector3_t &vs_position);
+
+vector3_t w_convert_chunk_to_world(
+    const ivector3_t &chunk_coord);
 
 ivector3_t w_convert_voxel_to_local_chunk(
     const ivector3_t &vs_position);
