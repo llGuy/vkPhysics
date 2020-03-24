@@ -5,6 +5,8 @@
 #include <renderer/renderer.hpp>
 
 #define CHUNK_EDGE_LENGTH 16
+#define MAX_VOXEL_VALUE_F 254.0f
+#define MAX_VOXEL_VALUE_I 254
 #define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
 
 // Push constant
@@ -20,6 +22,10 @@ struct chunk_render_t {
 };
 
 struct chunk_t {
+    struct flags_t {
+        uint32_t made_modification: 1;
+    } flags;
+    
     uint32_t chunk_stack_index;
     ivector3_t xs_bottom_corner;
     ivector3_t chunk_coord;
@@ -28,6 +34,11 @@ struct chunk_t {
 
     chunk_render_t *render;
 };
+
+uint32_t get_voxel(
+    uint32_t x,
+    uint32_t y,
+    uint32_t z);
 
 void w_chunk_init(
     chunk_t *chunk,
@@ -61,8 +72,7 @@ struct chunk_world_t {
 
     // List of chunks
     // Works like a stack
-    uint32_t stack_pointer;
-    chunk_t **loaded_chunk_stack;
+    stack_container_t<chunk_t *> chunks;
 
     hash_table_t<uint32_t, 40, 5, 5> chunk_indices;
 };

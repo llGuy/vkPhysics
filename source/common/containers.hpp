@@ -2,6 +2,7 @@
 
 #include "tools.hpp"
 
+// Simple hash table implementation
 template <
     typename T,
     uint32_t Bucket_Count,
@@ -76,5 +77,51 @@ template <
 	}
 
 	return NULL;
+    }
+};
+
+template <
+    typename T> struct stack_container_t {
+    uint32_t max_size = 0;
+    uint32_t data_count = 0;
+    T *data;
+
+    uint32_t removed_count = 0;
+    uint32_t *removed;
+
+    void init(
+        uint32_t max) {
+        max_size = max;
+        data = FL_MALLOC(T, max_size);
+        removed = FL_MALLOC(uint32_t, max_size);
+    }
+
+    void destroy() {
+        FL_FREE(data);
+        FL_FREE(removed);
+    }
+    
+    uint32_t add() {
+        if (removed_count) {
+            return removed[removed_count-- - 1];
+        }
+        else {
+            return data_count++;
+        }
+    }
+
+    T *get(
+        uint32_t index) {
+        return &data[index];
+    }
+
+    T &operator[](
+        uint32_t i) {
+        return data[i];
+    }
+
+    void remove(
+        uint32_t index) {
+        removed[removed_count++] = index;
     }
 };
