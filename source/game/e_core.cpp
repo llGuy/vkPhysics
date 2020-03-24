@@ -18,6 +18,7 @@ static event_submissions_t events = {};
 static void s_game_event_listener(
     void *object,
     event_t *event) {
+
     switch(event->type) {
     case ET_CLOSED_WINDOW: {
         running = 0;

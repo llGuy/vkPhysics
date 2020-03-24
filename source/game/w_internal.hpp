@@ -57,16 +57,18 @@ struct chunk_pointer_t {
 #define MAX_LOADED_CHUNKS 1000
 
 struct chunk_world_t {
-    // Number of chunks to be loaded in x, y and z directions from the player's current chunk position
     uint32_t loaded_radius;
-    // Basically a 3 dimensional array
-    uint32_t *chunk_indices;
 
     // List of chunks
     // Works like a stack
     uint32_t stack_pointer;
     chunk_t **loaded_chunk_stack;
+
+    hash_table_t<uint32_t, 40, 5, 5> chunk_indices;
 };
+
+uint32_t w_hash_chunk_coord(
+    const ivector3_t &coord);
 
 void w_chunk_world_init(
     chunk_world_t *world,
@@ -77,5 +79,15 @@ void w_add_sphere_m(
     const vector3_t &ws_center,
     float ws_radius);
 
-ivector3_t convert_world_to_chunk(
+ivector3_t w_convert_world_to_voxel(
     const vector3_t &ws_position);
+
+ivector3_t w_convert_voxel_to_chunk(
+    const ivector3_t &vs_position);
+
+ivector3_t w_convert_voxel_to_local_chunk(
+    const ivector3_t &vs_position);
+
+chunk_t *w_get_chunk(
+    const ivector3_t &coord,
+    chunk_world_t *world);

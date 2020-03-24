@@ -1,4 +1,5 @@
-#include <stdio.h>
+#include <iostream>
+
 #include "engine.hpp"
 
 int32_t main(
@@ -8,6 +9,6 @@ int32_t main(
     game_init_data.flags = GIF_WINDOWED | GIF_CLIENT;
 
     game_main(&game_init_data);
-
+    
     return 0;
 }
