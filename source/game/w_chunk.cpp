@@ -29,13 +29,31 @@ void w_chunk_render_init(
     const vector3_t &ws_size) {
     chunk->render = FL_MALLOC(chunk_render_t, 1);
 
+    memset(chunk->render, 0, sizeof(chunk_render_t));
+
     uint32_t buffer_size = sizeof(vector3_t) * MAX_VERTICES_PER_CHUNK;
 
-    chunk->render->chunk_vertices_gpu_buffer = create_gpu_buffer(
+    /*chunk->render->chunk_vertices_gpu_buffer = create_gpu_buffer(
         buffer_size,
         NULL,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);*/
+
+    push_buffer_to_mesh(BT_VERTEX, &chunk->render->mesh);
+    mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, &chunk->render->mesh);
+    vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
+        buffer_size,
+        NULL,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+
+    chunk->render->mesh.vertex_offset = 0;
+    chunk->render->mesh.vertex_count = 0;
+    chunk->render->mesh.first_index = 0;
+    chunk->render->mesh.index_offset = 0;
+    chunk->render->mesh.index_count = 0;
+    chunk->render->mesh.index_type = VK_INDEX_TYPE_UINT32;
+
+    create_mesh_vbo_final_list(&chunk->render->mesh);
+
     chunk->render->render_data.model = glm::scale(ws_size) * glm::translate(ws_position);
     chunk->render->render_data.pbr_info.x = 0.2f;
     chunk->render->render_data.pbr_info.y = 0.8f;
@@ -126,7 +144,9 @@ static void s_push_vertex_to_triangle_array(
     
     vector3_t vertex = interpolate(vertices[v0], vertices[v1], interpolated_voxel_values);
     
-    mesh_vertices[*vertex_count++] = vertex;
+    mesh_vertices[*(vertex_count)] = vertex;
+
+    ++(*vertex_count);
 }
 
 #include "triangle_table.inc"
@@ -150,7 +170,7 @@ static void s_update_chunk_mesh_voxel_pair(
     uint32_t edge = 0;
 
     int8_t edge_pair[3] = {};
-                
+
     while(triangle_entry[edge] != -1) {
         int8_t edge_index = triangle_entry[edge];
         edge_pair[edge % 3] = edge_index;
@@ -318,12 +338,38 @@ static void s_update_chunk_mesh(
         }
     }
 
-    update_gpu_buffer(
-        command_buffer,
-        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        vertex_count * sizeof(vector3_t),
-        mesh_vertices,
-        &c->render->chunk_vertices_gpu_buffer);
+    static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
+    uint32_t update_size = vertex_count * sizeof(vector3_t);
+
+    uint32_t loop_count = update_size / MAX_UPDATE_BUFFER_SIZE;
+
+    typedef char copy_byte_t;
+    copy_byte_t *pointer = (copy_byte_t *)mesh_vertices;
+    uint32_t to_copy_left = update_size;
+    uint32_t copied = 0;
+    for (uint32_t i = 0; i < loop_count; ++i) {
+        update_gpu_buffer(
+            command_buffer,
+            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+            copied,
+            MAX_UPDATE_BUFFER_SIZE,
+            pointer,
+            &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
+
+        copied += MAX_UPDATE_BUFFER_SIZE;
+        pointer += MAX_UPDATE_BUFFER_SIZE;
+        to_copy_left -= MAX_UPDATE_BUFFER_SIZE;
+    }
+
+    if (to_copy_left) {
+        update_gpu_buffer(
+            command_buffer,
+            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+            copied,
+            to_copy_left,
+            pointer,
+            &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
+    }
 
     c->render->mesh.vertex_count = vertex_count;
 
@@ -345,7 +391,6 @@ void w_chunk_gpu_sync_and_render(
         if (!c->render) {
             w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord), vector3_t(1.0f));
         }
-
 
         if (c->flags.made_modification) {
             c->flags.made_modification = 0;
@@ -372,7 +417,7 @@ void w_chunk_gpu_sync_and_render(
 void w_destroy_chunk_render(
     chunk_t *chunk) {
     if (chunk->render) {
-        destroy_gpu_buffer(chunk->render->chunk_vertices_gpu_buffer);
+        destroy_gpu_buffer(get_mesh_buffer(BT_VERTEX, &chunk->render->mesh)->gpu_buffer);
         FL_FREE(chunk->render);
         chunk->render = NULL;
     }
@@ -425,6 +470,8 @@ void w_chunk_world_init(
     world->loaded_radius = loaded_radius;
 
     world->chunks.init(MAX_LOADED_CHUNKS);
+
+    w_add_sphere_m(vector3_t(0.0f), 20.0f, world);
 }
 
 void w_add_sphere_m(
@@ -468,11 +515,12 @@ void w_add_sphere_m(
 
                         ivector3_t voxel_coord = w_convert_voxel_to_local_chunk(vs_position);
 
-                        current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) / (float)MAX_VOXEL_VALUE_I);
+                        current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
                     }
                     else {
+                        ivector3_t c = w_convert_voxel_to_chunk(vs_position);
                         // In another chunk, need to switch current_chunk pointer
-                        current_chunk = w_get_chunk(vs_position, world);
+                        current_chunk = w_get_chunk(c, world);
 
                         current_chunk->flags.made_modification = 1;
 
@@ -480,7 +528,7 @@ void w_add_sphere_m(
 
                         ivector3_t voxel_coord = w_convert_voxel_to_local_chunk(vs_position);
 
-                        current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) / (float)MAX_VOXEL_VALUE_I);
+                        current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
                     }
                 }
             }

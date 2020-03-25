@@ -1139,6 +1139,7 @@ gpu_buffer_t create_gpu_buffer(
 void update_gpu_buffer(
     VkCommandBuffer command_buffer,
     VkPipelineStageFlags pipeline_stage,
+    uint32_t offset,
     uint32_t data_size,
     void *data,
     gpu_buffer_t *gpu_buffer) {
@@ -1146,7 +1147,7 @@ void update_gpu_buffer(
         pipeline_stage,
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         gpu_buffer,
-        0,
+        offset,
         data_size);
 
     vkCmdPipelineBarrier(
@@ -1161,7 +1162,7 @@ void update_gpu_buffer(
     vkCmdUpdateBuffer(
         command_buffer,
         gpu_buffer->buffer,
-        0,
+        offset,
         data_size,
         data);
 
@@ -1169,7 +1170,7 @@ void update_gpu_buffer(
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         pipeline_stage,
         gpu_buffer,
-        0,
+        offset,
         data_size);
 
     vkCmdPipelineBarrier(

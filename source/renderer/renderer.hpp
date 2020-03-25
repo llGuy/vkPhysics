@@ -140,6 +140,7 @@ DECLARE_RENDERER_PROC(gpu_buffer_t, create_gpu_buffer,
 DECLARE_VOID_RENDERER_PROC(void, update_gpu_buffer,
     VkCommandBuffer command_buffer,
     VkPipelineStageFlags pipeline_stage,
+    uint32_t offset,
     uint32_t data_size,
     void *data,
     gpu_buffer_t *gpu_buffer);
@@ -167,6 +168,7 @@ DECLARE_RENDERER_PROC(VkBufferMemoryBarrier, create_gpu_buffer_barrier,
 
 /* Mesh */
 enum buffer_type_t : char {
+    BT_INVALID_BUFFER_TYPE,
     BT_INDICES,
     BT_VERTEX,
     BT_NORMAL,
@@ -177,7 +179,7 @@ enum buffer_type_t : char {
     BT_EXTRA_V3,
     BT_EXTRA_V2,
     BT_EXTRA_V1,
-    BT_INVALID_BUFFER_TYPE
+    BT_MAX_VALUE
 };
 
 struct mesh_buffer_t {
@@ -191,12 +193,12 @@ struct mesh_buffer_t {
 struct mesh_t {
     mesh_buffer_t buffers[MAX_MESH_BUFFERS];
     uint32_t buffer_count;
-    buffer_type_t buffer_type_stack[BT_INVALID_BUFFER_TYPE];
+    buffer_type_t buffer_type_stack[BT_MAX_VALUE];
 
     // This is what will get passed to the vkCmdBindVertexBuffers
     uint32_t vertex_buffer_count;
-    VkBuffer vertex_buffers_final[BT_INVALID_BUFFER_TYPE];
-    VkDeviceSize vertex_buffers_offsets[BT_INVALID_BUFFER_TYPE];
+    VkBuffer vertex_buffers_final[BT_MAX_VALUE];
+    VkDeviceSize vertex_buffers_offsets[BT_MAX_VALUE];
     VkBuffer index_buffer;
 
     // Data needed to render
@@ -218,6 +220,9 @@ DECLARE_VOID_RENDERER_PROC(bool, mesh_has_buffer,
 
 DECLARE_VOID_RENDERER_PROC(mesh_buffer_t, *get_mesh_buffer,
     buffer_type_t buffer_type,
+    mesh_t *mesh);
+
+DECLARE_VOID_RENDERER_PROC(void, create_mesh_vbo_final_list,
     mesh_t *mesh);
 
 enum internal_mesh_type_t {

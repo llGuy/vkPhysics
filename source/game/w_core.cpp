@@ -21,7 +21,8 @@ static struct player_info_t {
 static chunk_world_t world;
 
 void world_init() {
-    /*shader_binding_info_t cube_info = {};
+#if 0
+    shader_binding_info_t cube_info = {};
     load_mesh_internal(IM_CUBE, &cube, &cube_info);
 
     const char *cube_paths[] = { "../shaders/SPV/untextured_mesh.vert.spv", "../shaders/SPV/untextured_mesh.geom.spv", "../shaders/SPV/untextured_mesh.frag.spv" };
@@ -52,9 +53,13 @@ void world_init() {
     render_data.model = matrix4_t(1.0f);
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.2f;
-    render_data.pbr_info.y = 0.8;*/
+    render_data.pbr_info.y = 0.8;
+#endif
+#if 1
+    w_chunk_data_init();
 
     w_chunk_world_init(&world, 4);
+#endif
 
     player.position = vector3_t(0.0f);
     player.direction = vector3_t(1.0f, 0.0f, 0.0f);
@@ -118,23 +123,29 @@ void handle_world_input() {
 void tick_world(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
-    
+#if 1
+    w_chunk_gpu_sync_and_render(
+        render_command_buffer,
+        transfer_command_buffer,
+        &world);
+#endif
     
     if (render_command_buffer != VK_NULL_HANDLE) {
         render_environment(render_command_buffer);
     }
 
-    /*cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
+#if 0
+    cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
     cube_data.color = vector4_t(0.0f);
     cube_data.pbr_info.x = 0.07f;
     cube_data.pbr_info.y = 0.1f;
-    submit_mesh(command_buffer, &cube, &cube_shader, &cube_data);
+    submit_mesh(render_command_buffer, &cube, &cube_shader, &cube_data);
 
     cube_data.model = glm::translate(vector3_t(15.0f, 0.0f, 0.0f)) * glm::rotate(glm::radians(60.0f), vector3_t(1.0f, 1.0f, 0.0f)) * glm::scale(vector3_t(2.0f, 10.0f, 1.0f));
     cube_data.color = vector4_t(1.0f);
     cube_data.pbr_info.x = 0.07f;
     cube_data.pbr_info.y = 0.1f;
-    submit_mesh(command_buffer, &cube, &cube_shader, &cube_data);
+    submit_mesh(render_command_buffer, &cube, &cube_shader, &cube_data);
 
     for (uint32_t x = 0; x < 7; ++x) {
         for (uint32_t y = 0; y < 7; ++y) {
@@ -149,9 +160,10 @@ void tick_world(
             render_data.pbr_info.x = glm::clamp((float)x / 7.0f, 0.05f, 1.0f);
             render_data.pbr_info.y = (float)y / 7.0f;
                 
-            submit_mesh(command_buffer, &sphere, &sphere_shader, &render_data);
+            submit_mesh(render_command_buffer, &sphere, &sphere_shader, &render_data);
         }
-    }*/
+    }
+#endif
 }
 
 eye_3d_info_t create_eye_info() {

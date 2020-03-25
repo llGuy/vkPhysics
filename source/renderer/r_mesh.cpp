@@ -113,7 +113,7 @@ shader_t create_mesh_shader_shadow(
         shader_flags);
 }
 
-static void s_create_mesh_vbo_final_list(mesh_t *mesh) {
+void create_mesh_vbo_final_list(mesh_t *mesh) {
     uint32_t vb_count = mesh_has_buffer(BT_INDICES, mesh) ? mesh->buffer_count - 1 : mesh->buffer_count;
     mesh->vertex_buffer_count = vb_count;
 
@@ -228,7 +228,7 @@ static void s_load_sphere(
     mesh->index_count = index_count;
     mesh->index_type = VK_INDEX_TYPE_UINT32;
 
-    s_create_mesh_vbo_final_list(mesh);
+    create_mesh_vbo_final_list(mesh);
 
     free(positions);
     free(normals);
@@ -299,7 +299,7 @@ static void s_load_cube(
     mesh->index_count = index_count;
     mesh->index_type = VK_INDEX_TYPE_UINT32;
 
-    s_create_mesh_vbo_final_list(mesh);
+    create_mesh_vbo_final_list(mesh);
 }
 
 void load_mesh_internal(

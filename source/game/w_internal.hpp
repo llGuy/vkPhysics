@@ -16,7 +16,6 @@ typedef mesh_render_data_t chunk_render_data_t;
 struct chunk_render_t {
     mesh_t mesh;
     chunk_render_data_t render_data;
-    gpu_buffer_t chunk_vertices_gpu_buffer;
 };
 
 struct chunk_t {
@@ -96,7 +95,8 @@ void w_chunk_gpu_sync_and_render(
 // Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpusync
 void w_add_sphere_m(
     const vector3_t &ws_center,
-    float ws_radius);
+    float ws_radius,
+    chunk_world_t *world);
 
 ivector3_t w_convert_world_to_voxel(
     const vector3_t &ws_position);
