@@ -116,11 +116,12 @@ void handle_world_input() {
 }
 
 void tick_world(
-    VkCommandBuffer command_buffer) {
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer) {
     
     
-    if (command_buffer != VK_NULL_HANDLE) {
-        render_environment(command_buffer);
+    if (render_command_buffer != VK_NULL_HANDLE) {
+        render_environment(render_command_buffer);
     }
 
     /*cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));

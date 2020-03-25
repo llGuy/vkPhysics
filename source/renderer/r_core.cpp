@@ -1136,6 +1136,52 @@ gpu_buffer_t create_gpu_buffer(
     return gpu_buffer;
 }
 
+void update_gpu_buffer(
+    VkCommandBuffer command_buffer,
+    VkPipelineStageFlags pipeline_stage,
+    uint32_t data_size,
+    void *data,
+    gpu_buffer_t *gpu_buffer) {
+    VkBufferMemoryBarrier barrier = create_gpu_buffer_barrier(
+        pipeline_stage,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        gpu_buffer,
+        0,
+        data_size);
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        pipeline_stage,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        0, NULL,
+        1, &barrier,
+        0, NULL);
+
+    vkCmdUpdateBuffer(
+        command_buffer,
+        gpu_buffer->buffer,
+        0,
+        data_size,
+        data);
+
+    barrier = create_gpu_buffer_barrier(
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        pipeline_stage,
+        gpu_buffer,
+        0,
+        data_size);
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        pipeline_stage,
+        0,
+        0, NULL,
+        1, &barrier,
+        0, NULL);
+}
+
 void destroy_gpu_buffer(
     gpu_buffer_t gpu_buffer) {
     vkFreeMemory(r_device(), gpu_buffer.memory, NULL);

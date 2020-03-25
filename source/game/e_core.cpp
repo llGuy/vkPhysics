@@ -36,10 +36,11 @@ static void s_game_event_listener(
 
 static listener_t game_core_listener;
 
-#define MAX_RENDERED_SCENE_COMMAND_BUFFERS 3
+#define MAX_SECONDARY_COMMAND_BUFFERS 3
 
-static uint32_t rendered_scene_command_buffer_count;
-static VkCommandBuffer rendered_scene_command_buffers[MAX_RENDERED_SCENE_COMMAND_BUFFERS];
+static uint32_t secondary_command_buffer_count;
+static VkCommandBuffer render_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
+static VkCommandBuffer transfer_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 
 static enum highlevel_focus_t {
     HF_WORLD, HF_UI
@@ -64,29 +65,38 @@ static void s_handle_input() {
 
 // Records a secondary 
 static void s_tick(
-    VkCommandBuffer command_buffer) {
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer) {
     tick_world(
-        command_buffer);
+        render_command_buffer,
+        transfer_command_buffer);
 }
 
 static void s_render(
-    VkCommandBuffer secondary_command_buffer) {
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer) {
     VkCommandBuffer final_command_buffer = begin_frame();
 
     eye_3d_info_t eye_info = create_eye_info();
     lighting_info_t lighting_info = create_lighting_info();
-    
+
     gpu_data_sync(
         final_command_buffer,
         &eye_info,
         &lighting_info);
 
+    // All data transfers
+    submit_secondary_command_buffer(
+        final_command_buffer,
+        transfer_command_buffer);
+    
     begin_scene_rendering(
         final_command_buffer);
 
+    // All rendering
     submit_secondary_command_buffer(
         final_command_buffer,
-        secondary_command_buffer);
+        render_command_buffer);
 
     end_scene_rendering(
         final_command_buffer);
@@ -103,23 +113,35 @@ static void s_run_windowed_game() {
         s_handle_input();
 
         static uint32_t command_buffer_index = 0;
-        VkCommandBuffer rendered_scene = rendered_scene_command_buffers[command_buffer_index];
+        VkCommandBuffer render_command_buffer = render_command_buffers[command_buffer_index];
         VkCommandBufferInheritanceInfo inheritance_info = {};
         fill_main_inheritance_info(&inheritance_info);
         begin_command_buffer(
-            rendered_scene,
+            render_command_buffer,
             VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
             &inheritance_info);
 
-        s_tick(rendered_scene);
+        VkCommandBuffer transfer_command_buffer = transfer_command_buffers[command_buffer_index];
+        fill_main_inheritance_info(&inheritance_info);
+        begin_command_buffer(
+            transfer_command_buffer,
+            0,
+            &inheritance_info);
 
-        end_command_buffer(rendered_scene);
+        s_tick(
+            render_command_buffer,
+            transfer_command_buffer);
 
-        s_render(rendered_scene);
+        end_command_buffer(render_command_buffer);
+        end_command_buffer(transfer_command_buffer);
+
+        s_render(
+            render_command_buffer,
+            transfer_command_buffer);
 
         ldelta_time = surface_delta_time();
 
-        command_buffer_index = (command_buffer_index + 1) % rendered_scene_command_buffer_count;
+        command_buffer_index = (command_buffer_index + 1) % secondary_command_buffer_count;
     }
 }
 
@@ -143,12 +165,17 @@ static void s_windowed_game_main(
     swapchain_information_t swapchain_info = {};
     swapchain_information(&swapchain_info);
 
-    rendered_scene_command_buffer_count = swapchain_info.image_count;
+    secondary_command_buffer_count = swapchain_info.image_count;
 
     create_command_buffers(
         VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-        rendered_scene_command_buffers,
-        rendered_scene_command_buffer_count);
+        render_command_buffers,
+        secondary_command_buffer_count);
+
+    create_command_buffers(
+        VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+        transfer_command_buffers,
+        secondary_command_buffer_count);
 
     world_init();
     
@@ -157,7 +184,9 @@ static void s_windowed_game_main(
 
 static void s_run_not_windowed_game() {
     while (running) {
-        s_tick(VK_NULL_HANDLE);
+        s_tick(
+            VK_NULL_HANDLE,
+            VK_NULL_HANDLE);
     }
 }
 

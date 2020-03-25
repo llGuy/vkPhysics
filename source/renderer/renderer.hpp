@@ -137,6 +137,13 @@ DECLARE_RENDERER_PROC(gpu_buffer_t, create_gpu_buffer,
     void *data,
     VkBufferUsageFlags usage);
 
+DECLARE_VOID_RENDERER_PROC(void, update_gpu_buffer,
+    VkCommandBuffer command_buffer,
+    VkPipelineStageFlags pipeline_stage,
+    uint32_t data_size,
+    void *data,
+    gpu_buffer_t *gpu_buffer);
+
 DECLARE_VOID_RENDERER_PROC(void, destroy_gpu_buffer,
     gpu_buffer_t gpu_buffer);
 

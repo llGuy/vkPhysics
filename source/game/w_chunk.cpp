@@ -1,8 +1,9 @@
 #include "w_internal.hpp"
+#include <common/math.hpp>
 #include <common/tools.hpp>
 #include <renderer/renderer.hpp>
 
-uint32_t get_voxel_index(
+uint32_t w_get_voxel_index(
     uint32_t x,
     uint32_t y,
     uint32_t z) {
@@ -35,18 +36,308 @@ void w_chunk_render_init(
         NULL,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     
-    chunk->render->should_do_gpu_sync = 1;
-
-    chunk->render->render_data.model_matrix = glm::scale(ws_size) * glm::translate(ws_position);
+    chunk->render->render_data.model = glm::scale(ws_size) * glm::translate(ws_position);
+    chunk->render->render_data.pbr_info.x = 0.2f;
+    chunk->render->render_data.pbr_info.y = 0.8f;
+    chunk->render->render_data.color = vector4_t(1.0f);
 }
 
 // Array will be used anytime we need to create mesh from voxels
 static vector3_t *temp_mesh_vertices;
 static shader_t chunk_shader;
 
-void w_chunk_gpu_sync(
-    VkCommandBuffer command_buffer,
+static uint8_t s_chunk_edge_voxel_value(
+    int32_t x,
+    int32_t y,
+    int32_t z,
+    bool *doesnt_exist,
+    ivector3_t chunk_coord,
     chunk_world_t *world) {
+    int32_t chunk_coord_offset_x = 0, chunk_coord_offset_y = 0, chunk_coord_offset_z = 0;
+    int32_t final_x = x, final_y = y, final_z = z;
+
+    if (x == CHUNK_EDGE_LENGTH) {
+        final_x = 0;
+        chunk_coord_offset_x = 1;
+    }
+    if (y == CHUNK_EDGE_LENGTH) {
+        final_y = 0;
+        chunk_coord_offset_y = 1;
+    }
+    if (z == CHUNK_EDGE_LENGTH) {
+        final_z = 0;
+        chunk_coord_offset_z = 1;
+    }
+
+    chunk_t *chunk_ptr = w_get_chunk(ivector3_t(chunk_coord.x + chunk_coord_offset_x,
+                                                 chunk_coord.y + chunk_coord_offset_y,
+                                                 chunk_coord.z + chunk_coord_offset_z), world);
+    *doesnt_exist = (bool)(chunk_ptr == nullptr);
+    if (*doesnt_exist) {
+        return 0;
+    }
+    
+    return chunk_ptr->voxels[w_get_voxel_index(final_x, final_y, final_z)];
+}
+
+static const vector3_t NORMALIZED_CUBE_VERTICES[8] = {
+    vector3_t(-0.5f, -0.5f, -0.5f),
+    vector3_t(+0.5f, -0.5f, -0.5f),
+    vector3_t(+0.5f, -0.5f, +0.5f),
+    vector3_t(-0.5f, -0.5f, +0.5f),
+    vector3_t(-0.5f, +0.5f, -0.5f),
+    vector3_t(+0.5f, +0.5f, -0.5f),
+    vector3_t(+0.5f, +0.5f, +0.5f),
+    vector3_t(-0.5f, +0.5f, +0.5f) };
+
+static const ivector3_t NORMALIZED_CUBE_VERTEX_INDICES[8] = {
+    ivector3_t(0, 0, 0),
+    ivector3_t(1, 0, 0),
+    ivector3_t(1, 0, 1),
+    ivector3_t(0, 0, 1),
+    ivector3_t(0, 1, 0),
+    ivector3_t(1, 1, 0),
+    ivector3_t(1, 1, 1),
+    ivector3_t(0, 1, 1) };
+
+static void s_push_vertex_to_triangle_array(
+    uint8_t v0,
+    uint8_t v1,
+    vector3_t *vertices,
+    uint8_t *voxel_values,
+    uint8_t surface_level,
+    vector3_t *mesh_vertices,
+    uint32_t *vertex_count) {
+    float surface_level_f = (float)surface_level;
+    float voxel_value0 = (float)voxel_values[v0];
+    float voxel_value1 = (float)voxel_values[v1];
+
+    if (voxel_value0 > voxel_value1) {
+        float tmp = voxel_value0;
+        voxel_value0 = voxel_value1;
+        voxel_value1 = tmp;
+
+        uint8_t tmp_v = v0;
+        v0 = v1;
+        v1 = tmp_v;
+    }
+
+    float interpolated_voxel_values = lerp(voxel_value0, voxel_value1, surface_level_f);
+    
+    vector3_t vertex = interpolate(vertices[v0], vertices[v1], interpolated_voxel_values);
+    
+    mesh_vertices[*vertex_count++] = vertex;
+}
+
+#include "triangle_table.inc"
+
+static void s_update_chunk_mesh_voxel_pair(
+    uint8_t *voxel_values,
+    uint32_t x,
+    uint32_t y,
+    uint32_t z,
+    uint8_t surface_level,
+    vector3_t *mesh_vertices,
+    uint32_t *vertex_count) {
+    uint8_t bit_combination = 0;
+    for (uint32_t i = 0; i < 8; ++i) {
+        bool is_over_surface = (voxel_values[i] > surface_level);
+        bit_combination |= is_over_surface << i;
+    }
+
+    const int8_t *triangle_entry = &TRIANGLE_TABLE[bit_combination][0];
+
+    uint32_t edge = 0;
+
+    int8_t edge_pair[3] = {};
+                
+    while(triangle_entry[edge] != -1) {
+        int8_t edge_index = triangle_entry[edge];
+        edge_pair[edge % 3] = edge_index;
+
+        if (edge % 3 == 2) {
+            vector3_t vertices[8] = {};
+            for (uint32_t i = 0; i < 8; ++i) {
+                vertices[i] = NORMALIZED_CUBE_VERTICES[i] + vector3_t(0.5f) + vector3_t((float)x, (float)y, (float)z);
+            }
+
+            for (uint32_t i = 0; i < 3; ++i) {
+                switch(edge_pair[i]) {
+                case 0: { s_push_vertex_to_triangle_array(0, 1, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 1: { s_push_vertex_to_triangle_array(1, 2, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 2: { s_push_vertex_to_triangle_array(2, 3, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 3: { s_push_vertex_to_triangle_array(3, 0, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 4: { s_push_vertex_to_triangle_array(4, 5, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 5: { s_push_vertex_to_triangle_array(5, 6, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 6: { s_push_vertex_to_triangle_array(6, 7, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 7: { s_push_vertex_to_triangle_array(7, 4, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 8: { s_push_vertex_to_triangle_array(0, 4, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 9: { s_push_vertex_to_triangle_array(1, 5, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 10: { s_push_vertex_to_triangle_array(2, 6, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 11: { s_push_vertex_to_triangle_array(3, 7, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                }
+            }
+        }
+
+        ++edge;
+    }
+}
+
+static void s_update_chunk_mesh(
+    VkCommandBuffer command_buffer,
+    uint8_t surface_level,
+    vector3_t *mesh_vertices,
+    chunk_t *c,
+    chunk_world_t *world) {
+    uint32_t vertex_count = 0;
+
+    chunk_t *x_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z), world);
+    chunk_t *y_superior = w_get_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z), world);
+    chunk_t *z_superior = w_get_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1), world);
+    
+    chunk_t *xy_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y + 1, c->chunk_coord.z), world);
+    chunk_t *xz_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z + 1), world);
+    chunk_t *yz_superior = w_get_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z + 1), world);
+    chunk_t *xyz_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y + 1, c->chunk_coord.z + 1), world);
+
+    bool doesnt_exist = 0;
+    if (x_superior) {
+        // x_superior
+        for (uint32_t z = 0; z < CHUNK_EDGE_LENGTH; ++z) {
+            for (uint32_t y = 0; y < CHUNK_EDGE_LENGTH - 1; ++y) {
+                doesnt_exist = 0;
+                
+                uint32_t x = CHUNK_EDGE_LENGTH - 1;
+
+                uint8_t voxel_values[8] = {
+                    c->voxels[w_get_voxel_index(x, y, z)],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
+                    
+                    c->voxels[w_get_voxel_index(x, y + 1, z)],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z,&doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, world) };//voxels[x]    [y + 1][z + 1] };
+
+                if (!doesnt_exist) {
+                    s_update_chunk_mesh_voxel_pair(
+                        voxel_values,
+                        x, y, z,
+                        surface_level,
+                        mesh_vertices,
+                        &vertex_count);
+                }
+            }
+        }
+    }
+
+    if (y_superior) {
+        // y_superior    
+        for (uint32_t z = 0; z < CHUNK_EDGE_LENGTH; ++z) {
+            for (uint32_t x = 0; x < CHUNK_EDGE_LENGTH; ++x) {
+                doesnt_exist = 0;
+                
+                uint32_t y = CHUNK_EDGE_LENGTH - 1;
+
+                uint8_t voxel_values[8] = {
+                    c->voxels[w_get_voxel_index(x, y, z)],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
+                    
+                    s_chunk_edge_voxel_value(x, y + 1, z, &doesnt_exist, c->chunk_coord, world),
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, world) };//voxels[x]    [y + 1][z + 1] };
+
+                if (!doesnt_exist) {
+                    s_update_chunk_mesh_voxel_pair(
+                        voxel_values,
+                        x, y, z,
+                        surface_level,
+                        mesh_vertices,
+                        &vertex_count);
+                }
+            }
+        }
+    }
+
+    if (z_superior) {
+        // z_superior
+        for (uint32_t y = 0; y < CHUNK_EDGE_LENGTH - 1; ++y) {
+            for (uint32_t x = 0; x < CHUNK_EDGE_LENGTH - 1; ++x) {
+                doesnt_exist = 0;
+                
+                uint32_t z = CHUNK_EDGE_LENGTH - 1;
+
+                uint8_t voxel_values[8] = {
+                    c->voxels[w_get_voxel_index(x, y, z)],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
+                    
+                    c->voxels[w_get_voxel_index(x, y + 1, z)],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, world) };//voxels[x]    [y + 1][z + 1] };
+
+                if (!doesnt_exist) {
+                    s_update_chunk_mesh_voxel_pair(
+                        voxel_values,
+                        x, y, z,
+                        surface_level,
+                        mesh_vertices,
+                        &vertex_count);
+                }
+            }
+        }
+    }
+    
+    for (uint32_t z = 0; z < CHUNK_EDGE_LENGTH - 1; ++z) {
+        for (uint32_t y = 0; y < CHUNK_EDGE_LENGTH - 1; ++y) {
+            for (uint32_t x = 0; x < CHUNK_EDGE_LENGTH - 1; ++x) {
+                uint8_t voxel_values[8] = {
+                    c->voxels[w_get_voxel_index(x, y, z)],
+                    c->voxels[w_get_voxel_index(x + 1, y, z)],
+                    c->voxels[w_get_voxel_index(x + 1, y, z + 1)],
+                    c->voxels[w_get_voxel_index(x, y, z + 1)],
+                    
+                    c->voxels[w_get_voxel_index(x, y + 1, z)],
+                    c->voxels[w_get_voxel_index(x + 1, y + 1, z)],
+                    c->voxels[w_get_voxel_index(x + 1, y + 1, z + 1)],
+                    c->voxels[w_get_voxel_index(x, y + 1, z + 1)] };
+
+                s_update_chunk_mesh_voxel_pair(
+                    voxel_values,
+                    x, y, z,
+                    surface_level,
+                    mesh_vertices,
+                    &vertex_count);
+            }
+        }
+    }
+
+    update_gpu_buffer(
+        command_buffer,
+        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+        vertex_count * sizeof(vector3_t),
+        mesh_vertices,
+        &c->render->chunk_vertices_gpu_buffer);
+
+    c->render->mesh.vertex_count = vertex_count;
+
+    if (vertex_count) {
+        c->flags.active_vertices = 1;
+    }
+}
+
+void w_chunk_gpu_sync_and_render(
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer,
+    chunk_world_t *world) {
+    uint8_t surface_level = 70;
+    
     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
         chunk_t *c = world->chunks[i];
 
@@ -55,9 +346,25 @@ void w_chunk_gpu_sync(
             w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord), vector3_t(1.0f));
         }
 
+
         if (c->flags.made_modification) {
+            c->flags.made_modification = 0;
             // Update chunk mesh and put on GPU + send to command buffer
             // TODO:
+            s_update_chunk_mesh(
+                transfer_command_buffer,
+                surface_level,
+                temp_mesh_vertices,
+                c,
+                world);
+        }
+
+        if (c->flags.active_vertices) {
+            submit_mesh(
+                render_command_buffer,
+                &c->render->mesh,
+                &chunk_shader,
+                &c->render->render_data);
         }
     }
 }
@@ -161,7 +468,7 @@ void w_add_sphere_m(
 
                         ivector3_t voxel_coord = w_convert_voxel_to_local_chunk(vs_position);
 
-                        current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) / (float)MAX_VOXEL_VALUE_I);
+                        current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) / (float)MAX_VOXEL_VALUE_I);
                     }
                     else {
                         // In another chunk, need to switch current_chunk pointer
@@ -173,7 +480,7 @@ void w_add_sphere_m(
 
                         ivector3_t voxel_coord = w_convert_voxel_to_local_chunk(vs_position);
 
-                        current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) / (float)MAX_VOXEL_VALUE_I);
+                        current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) / (float)MAX_VOXEL_VALUE_I);
                     }
                 }
             }

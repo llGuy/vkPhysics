@@ -10,20 +10,19 @@
 #define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
 
 // Push constant
-struct chunk_render_data_t {
-    matrix4_t model_matrix;
-};
+// chunk_render_data_t may become a different structure in the future.
+typedef mesh_render_data_t chunk_render_data_t;
 
 struct chunk_render_t {
     mesh_t mesh;
     chunk_render_data_t render_data;
     gpu_buffer_t chunk_vertices_gpu_buffer;
-    bool should_do_gpu_sync = 0;
 };
 
 struct chunk_t {
     struct flags_t {
         uint32_t made_modification: 1;
+        uint32_t active_vertices: 1;
     } flags;
     
     uint32_t chunk_stack_index;
@@ -35,7 +34,7 @@ struct chunk_t {
     chunk_render_t *render;
 };
 
-uint32_t get_voxel(
+uint32_t w_get_voxel_index(
     uint32_t x,
     uint32_t y,
     uint32_t z);
@@ -74,6 +73,9 @@ struct chunk_world_t {
     // Works like a stack
     stack_container_t<chunk_t *> chunks;
 
+    uint32_t render_count;
+    chunk_t **chunks_to_render;
+
     hash_table_t<uint32_t, 40, 5, 5> chunk_indices;
 };
 
@@ -86,7 +88,9 @@ void w_chunk_world_init(
     chunk_world_t *world,
     uint32_t loaded_radius);
 
-void w_chunk_gpu_sync(
+void w_chunk_gpu_sync_and_render(
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer,
     chunk_world_t *world);
 
 // Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpusync
