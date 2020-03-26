@@ -25,10 +25,18 @@ void world_init() {
     shader_binding_info_t cube_info = {};
     load_mesh_internal(IM_CUBE, &cube, &cube_info);
 
-    const char *cube_paths[] = { "../shaders/SPV/untextured_mesh.vert.spv", "../shaders/SPV/untextured_mesh.geom.spv", "../shaders/SPV/untextured_mesh.frag.spv" };
-    const char *cube_shadow_paths[] = { "../shaders/SPV/untextured_mesh_shadow.vert.spv", "../shaders/SPV/shadow.frag.spv" };    
+    const char *cube_paths[] = {
+        "../shaders/SPV/untextured_mesh.vert.spv",
+        "../shaders/SPV/untextured_mesh.geom.spv",
+        "../shaders/SPV/untextured_mesh.frag.spv" };
+    const char *cube_shadow_paths[] = {
+        "../shaders/SPV/untextured_mesh_shadow.vert.spv",
+        "../shaders/SPV/shadow.frag.spv" };    
 
-    cube_shader = create_mesh_shader_color(&cube_info, cube_paths, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    cube_shader = create_mesh_shader_color(
+        &cube_info,
+        cube_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     
     cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
     cube_data.color = vector4_t(1.0f);
@@ -54,6 +62,9 @@ void world_init() {
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.2f;
     render_data.pbr_info.y = 0.8;
+
+    free_mesh_binding_info(&cube_info);
+    free_mesh_binding_info(&sphere_info);
 #endif
 #if 1
     w_chunk_data_init();
@@ -63,6 +74,11 @@ void world_init() {
 
     player.position = vector3_t(0.0f);
     player.direction = vector3_t(1.0f, 0.0f, 0.0f);
+}
+
+void destroy_world() {
+    w_destroy_chunk_world(&world);
+    w_destroy_chunk_data();
 }
 
 void handle_world_input() {

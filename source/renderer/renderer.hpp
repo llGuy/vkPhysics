@@ -29,6 +29,9 @@ DECLARE_VOID_RENDERER_PROC(void, renderer_init,
     uint32_t window_width,
     uint32_t window_height);
 
+DECLARE_VOID_RENDERER_PROC(void, destroy_renderer,
+    void);
+
 /* Swapchain */
 DECLARE_VOID_RENDERER_PROC(void, handle_resize,
     uint32_t width,
@@ -303,6 +306,9 @@ DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
 
 DECLARE_RENDERER_PROC(shader_binding_info_t, create_mesh_binding_info,
     mesh_t *mesh);
+
+DECLARE_VOID_RENDERER_PROC(void, free_mesh_binding_info,
+    shader_binding_info_t *);
 
 // Submits only one mesh
 DECLARE_VOID_RENDERER_PROC(void, submit_mesh,

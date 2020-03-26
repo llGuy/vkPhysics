@@ -4,6 +4,8 @@
 
 void world_init();
 
+void destory_world();
+
 void handle_world_input();
 
 void tick_world(

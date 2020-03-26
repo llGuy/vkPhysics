@@ -742,6 +742,15 @@ void renderer_init(
     s_imgui_init(window, debug_proc);
 }
 
+void destroy_renderer() {
+    FL_FREE(swapchain_support.available_formats);
+    FL_FREE(swapchain_support.available_present_modes);
+    FL_FREE(swapchain.images);
+    FL_FREE(swapchain.image_views);
+    FL_FREE(primary_command_buffers);
+    FL_FREE(final_framebuffers);
+}
+
 static uint32_t current_frame = 0;
 static uint32_t image_index = 0;
 
@@ -1515,14 +1524,14 @@ VkPipelineShaderStageCreateInfo *r_fill_shader_stage_create_infos(
         }
     }
 
-    free(modules);
+    FL_FREE(modules);
 
     return infos;
 }
 
 void r_free_shader_stage_create_info(
     VkPipelineShaderStageCreateInfo *info) {
-    free(info);
+    FL_FREE(info);
 }
 
 attachment_t r_create_color_attachment(
@@ -1674,7 +1683,7 @@ VkFramebuffer r_create_framebuffer(
     VkFramebuffer framebuffer;
     vkCreateFramebuffer(r_device(), &framebuffer_info, NULL, &framebuffer);
 
-    free(attachments);
+    FL_FREE(attachments);
 
     return framebuffer;
 }

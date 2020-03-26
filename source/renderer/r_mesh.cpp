@@ -85,6 +85,12 @@ shader_binding_info_t create_mesh_binding_info(
     return info;
 }
 
+void free_mesh_binding_info(
+    shader_binding_info_t *info) {
+    FL_FREE(info->attribute_descriptions);
+    FL_FREE(info->binding_descriptions);
+}
+
 shader_t create_mesh_shader_color(
     shader_binding_info_t *binding_info,
     const char **shader_paths,
@@ -230,10 +236,10 @@ static void s_load_sphere(
 
     create_mesh_vbo_final_list(mesh);
 
-    free(positions);
-    free(normals);
-    free(uvs);
-    free(indices);
+    FL_FREE(positions);
+    FL_FREE(normals);
+    FL_FREE(uvs);
+    FL_FREE(indices);
 }
 
 // TODO:

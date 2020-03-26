@@ -83,6 +83,11 @@ uint32_t w_hash_chunk_coord(
 
 void w_chunk_data_init();
 
+void w_destroy_chunk_world(
+    chunk_world_t *world);
+
+void w_destroy_chunk_data();
+
 void w_chunk_world_init(
     chunk_world_t *world,
     uint32_t loaded_radius);

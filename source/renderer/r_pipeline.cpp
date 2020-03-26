@@ -9,6 +9,18 @@
 #include <iostream>
 #include <vector>
 
+void r_free_rpipeline_stage(
+    rpipeline_stage_t *stage) {
+    if (stage->color_attachments) {
+        FL_FREE(stage->color_attachments);
+        stage->color_attachments = NULL;
+    }
+    if (stage->depth_attachment) {
+        FL_FREE(stage->depth_attachment);
+        stage->depth_attachment = NULL;
+    }
+}
+
 VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(rpipeline_stage_t *stage) {
     VkPipelineColorBlendAttachmentState *attachment_states = FL_MALLOC(VkPipelineColorBlendAttachmentState, stage->color_attachment_count);
     memset(attachment_states, 0, sizeof(VkPipelineColorBlendAttachmentState) * stage->color_attachment_count);
@@ -54,7 +66,7 @@ VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(rpipeline_stage_t *s
 }
 
 void r_free_blend_state_info(VkPipelineColorBlendStateCreateInfo *info) {
-    free((void *)info->pAttachments);
+    FL_FREE((void *)info->pAttachments);
 }
 
 struct rpipeline_shader_t {
@@ -164,7 +176,8 @@ void destroy_rpipeline_stage(
         vkDestroySampler(r_device(), stage->depth_attachment->sampler, NULL);
         vkFreeMemory(r_device(), stage->depth_attachment->image_memory, NULL);
         vkDestroyImage(r_device(), stage->depth_attachment->image, NULL);
-        //FL_FREE(stage->depth_attachment);
+        FL_FREE(stage->depth_attachment);
+        stage->depth_attachment = NULL;
     }
 
     if (stage->descriptor_set != VK_NULL_HANDLE) {
@@ -172,7 +185,8 @@ void destroy_rpipeline_stage(
     }
 
     if (stage->color_attachments) {
-        //FL_FREE(stage->color_attachments);
+        FL_FREE(stage->color_attachments);
+        stage->color_attachments = NULL;
     }
 }
 
@@ -331,8 +345,8 @@ static void s_deferred_render_pass_init() {
 
     VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &deferred.render_pass));
 
-    free(attachment_descriptions);
-    free(attachment_references);
+    FL_FREE(attachment_descriptions);
+    FL_FREE(attachment_references);
 }
 
 static void s_deferred_init() {
@@ -746,7 +760,6 @@ static void s_lighting_init() {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
@@ -803,7 +816,6 @@ void r_execute_lighting_pass(
         r_integral_lookup(),
         r_specular_ibl(),
         ssao_blur_stage.descriptor_set,
-        shadow_stage.descriptor_set
     };
     
     vkCmdBindDescriptorSets(
@@ -1204,7 +1216,7 @@ void r_execute_final_pass(
 }
 
 void r_pipeline_init() {
-    s_shadow_init();
+    //s_shadow_init();
     
     s_deferred_render_pass_init();
     s_deferred_init();

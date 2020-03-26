@@ -105,6 +105,9 @@ struct rpipeline_stage_t {
     VkDescriptorSet descriptor_set;
 };
 
+void r_free_rpipeline_stage(
+    rpipeline_stage_t *stage);
+
 attachment_t r_create_color_attachment(
     VkExtent3D extent, 
     VkFormat format);
@@ -167,6 +170,7 @@ void r_lighting_gpu_sync(
     lighting_info_t *lighting);
 
 void r_environment_init();
+void r_destroy_environment();
 
 void r_render_environment(
     VkCommandBuffer command_buffer);

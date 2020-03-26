@@ -832,6 +832,13 @@ void r_environment_init() {
     end_single_time_command_buffer(command_buffer);
 }
 
+void r_destroy_environment() {
+    r_free_rpipeline_stage(&base_cubemap_init);
+    r_free_rpipeline_stage(&hdr_environment_init);
+    r_free_rpipeline_stage(&integral_lookup_init);
+    r_free_rpipeline_stage(&specular_ibl_init);
+}
+
 void render_environment(VkCommandBuffer command_buffer) {
     VkViewport viewport = {};
     viewport.width = r_swapchain_extent().width;

@@ -20,7 +20,6 @@ layout(binding = 0, set = 4) uniform sampler2D u_integral_lookup;
 layout(binding = 0, set = 5) uniform samplerCube u_prefilter_map;
 
 layout(binding = 0, set = 6) uniform sampler2D u_ao;
-layout(binding = 0, set = 7) uniform sampler2D u_shadow_map;
 
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[10];
@@ -98,6 +97,7 @@ vec3 fresnel_roughness(
 }
 
 // Not being used for the moment
+#if 0
 bool get_shadow_factor(
     vec3 ws_position,
     out float occlusion) {
@@ -131,6 +131,7 @@ bool get_shadow_factor(
 
     return occluded;
 }
+#endif
 
 vec3 round_edge(
     in vec4 raw_vs_normal,

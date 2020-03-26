@@ -1,3 +1,4 @@
+#include <string.h>
 #include "w_internal.hpp"
 #include <common/math.hpp>
 #include <common/tools.hpp>
@@ -87,9 +88,12 @@ static uint8_t s_chunk_edge_voxel_value(
         chunk_coord_offset_z = 1;
     }
 
-    chunk_t *chunk_ptr = w_get_chunk(ivector3_t(chunk_coord.x + chunk_coord_offset_x,
-                                                 chunk_coord.y + chunk_coord_offset_y,
-                                                 chunk_coord.z + chunk_coord_offset_z), world);
+    chunk_t *chunk_ptr = w_get_chunk(
+        ivector3_t(chunk_coord.x + chunk_coord_offset_x,
+                   chunk_coord.y + chunk_coord_offset_y,
+                   chunk_coord.z + chunk_coord_offset_z),
+        world);
+    
     *doesnt_exist = (bool)(chunk_ptr == nullptr);
     if (*doesnt_exist) {
         return 0;
@@ -464,9 +468,26 @@ void w_chunk_data_init() {
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
+void w_destroy_chunk_world(
+    chunk_world_t *world) {
+    for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
+        w_destroy_chunk(world->chunks[i]);
+    }
+    
+    world->chunks.destroy();
+
+    //FL_FREE(world->chunks_to_render);
+}
+
+void w_destroy_chunk_data() {
+    FL_FREE(temp_mesh_vertices);
+}
+
 void w_chunk_world_init(
     chunk_world_t *world,
     uint32_t loaded_radius) {
+    memset(world, 0, sizeof(chunk_world_t));
+
     world->loaded_radius = loaded_radius;
 
     world->chunks.init(MAX_LOADED_CHUNKS);
