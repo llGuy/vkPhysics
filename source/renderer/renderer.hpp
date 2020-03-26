@@ -11,11 +11,15 @@ typedef void(*imgui_proc_t)();
 #if LINK_AGAINST_RENDERER
 #define DECLARE_RENDERER_PROC(return_type, name, ...)   \
     return_type name(__VA_ARGS__)
+#define DECLARE_POINTER_RENDERER_PROC(return_type, name, ...) \
+    return_type name(__VA_ARGS__)
 #define DECLARE_VOID_RENDERER_PROC(return_type, name, ...)   \
     return_type name(__VA_ARGS__)
 #else
 #define DECLARE_RENDERER_PROC(return_type, name, ...)   \
-    inline return_type name(__VA_ARGS__) { return (return_type){}; }
+    inline return_type name(__VA_ARGS__) { return return_type{}; }
+#define DECLARE_POINTER_RENDERER_PROC(return_type, name, ...) \
+    inline return_type name(__VA_ARGS__) {return NULL;}
 #define DECLARE_VOID_RENDERER_PROC(return_type, name, ...)   \
     inline return_type name(__VA_ARGS__) {}
 #endif
@@ -221,7 +225,7 @@ DECLARE_VOID_RENDERER_PROC(bool, mesh_has_buffer,
     buffer_type_t buffer_type,
     mesh_t *mesh);
 
-DECLARE_VOID_RENDERER_PROC(mesh_buffer_t, *get_mesh_buffer,
+DECLARE_POINTER_RENDERER_PROC(mesh_buffer_t *, get_mesh_buffer,
     buffer_type_t buffer_type,
     mesh_t *mesh);
 

@@ -30,7 +30,7 @@ DECLARE_RENDERER_PROC(float, get_current_time, void);
 DECLARE_RENDERER_PROC(float, surface_delta_time, void);
 
 // TODO: Will remove this in the future once proper engine input handling is implemented
-DECLARE_RENDERER_PROC(void *, surface_window, void);
+DECLARE_POINTER_RENDERER_PROC(void *, surface_window, void);
 
 enum button_type_t {
     BT_A, BT_B, BT_C, BT_D, BT_E, BT_F, BT_G, BT_H, BT_I, BT_J, BT_K, BT_L, BT_M, BT_N, BT_O, BT_P, BT_Q, BT_R, BT_S, BT_T, BT_U, BT_V, BT_W, BT_X, BT_Y, BT_Z,
@@ -110,5 +110,5 @@ struct game_input_t {
 
 DECLARE_VOID_RENDERER_PROC(void, translate_raw_to_game_input, void);
 
-DECLARE_RENDERER_PROC(raw_input_t *, get_raw_input, void);
-DECLARE_RENDERER_PROC(game_input_t *, get_game_input, void);
+DECLARE_POINTER_RENDERER_PROC(raw_input_t *, get_raw_input, void);
+DECLARE_POINTER_RENDERER_PROC(game_input_t *, get_game_input, void);

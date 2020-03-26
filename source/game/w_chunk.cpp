@@ -488,6 +488,8 @@ void w_chunk_world_init(
     uint32_t loaded_radius) {
     memset(world, 0, sizeof(chunk_world_t));
 
+    world->chunk_indices.init();
+
     world->loaded_radius = loaded_radius;
 
     world->chunks.init(MAX_LOADED_CHUNKS);
