@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 typedef glm::vec2 vector2_t;
 typedef glm::vec3 vector3_t;

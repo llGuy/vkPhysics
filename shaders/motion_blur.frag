@@ -72,7 +72,7 @@ void main() {
 
     out_final_color = color;
 
-    const int SAMPLES = 35;
+    const int SAMPLES = 50;
     const float DENSITY = 1.0;
     const float DECAY = 0.9;
     const float WEIGHT = 0.03;

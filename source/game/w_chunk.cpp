@@ -34,11 +34,6 @@ void w_chunk_render_init(
 
     uint32_t buffer_size = sizeof(vector3_t) * MAX_VERTICES_PER_CHUNK;
 
-    /*chunk->render->chunk_vertices_gpu_buffer = create_gpu_buffer(
-        buffer_size,
-        NULL,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);*/
-
     push_buffer_to_mesh(BT_VERTEX, &chunk->render->mesh);
     mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, &chunk->render->mesh);
     vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
@@ -56,7 +51,7 @@ void w_chunk_render_init(
     create_mesh_vbo_final_list(&chunk->render->mesh);
 
     chunk->render->render_data.model = glm::scale(ws_size) * glm::translate(ws_position);
-    chunk->render->render_data.pbr_info.x = 0.2f;
+    chunk->render->render_data.pbr_info.x = 0.8f;
     chunk->render->render_data.pbr_info.y = 0.8f;
     chunk->render->render_data.color = vector4_t(1.0f);
 }
@@ -494,7 +489,7 @@ void w_chunk_world_init(
 
     world->chunks.init(MAX_LOADED_CHUNKS);
 
-    w_add_sphere_m(vector3_t(0.0f), 20.0f, world);
+    w_add_sphere_m(vector3_t(0.0f), 8.0f, world);
 }
 
 void w_add_sphere_m(
@@ -542,8 +537,12 @@ void w_add_sphere_m(
                     }
                     else {
                         ivector3_t c = w_convert_voxel_to_chunk(vs_position);
+
+                        printf("Switchin from %s to %s\n", glm::to_string(current_chunk_coord).c_str(), glm::to_string(c).c_str());
+                        
                         // In another chunk, need to switch current_chunk pointer
                         current_chunk = w_get_chunk(c, world);
+                        current_chunk_coord = c;
 
                         current_chunk->flags.made_modification = 1;
 
