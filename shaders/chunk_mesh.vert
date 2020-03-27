@@ -24,6 +24,7 @@ layout(set = 0, binding = 0) uniform camera_transforms_t {
 } u_camera_transforms;
 
 void main() {
-    gl_Position = u_camera_transforms.view_projection * u_push_constant.model * vec4(in_position, 1.0f);
-    out_vs.vs_position = u_camera_transforms.view * vec4(in_position, 1.0f);
+    vec4 ms_position = u_push_constant.model * vec4(in_position, 1.0f);
+    gl_Position = u_camera_transforms.view_projection * ms_position;
+    out_vs.vs_position = u_camera_transforms.view * vec4(ms_position.xyz, 1.0f);
 }
