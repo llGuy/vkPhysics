@@ -38,7 +38,7 @@ template <
     }
 
     void insert(
-        uint32_t hash, 
+        uint32_t hash,
         T value) {
         bucket_t *bucket = &buckets[hash % Bucket_Count];
 

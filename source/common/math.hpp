@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tools.hpp"
+#include <glm/gtx/hash.hpp>
 
 inline vector3_t interpolate(
     const vector3_t &a,

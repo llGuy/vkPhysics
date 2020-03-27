@@ -50,7 +50,7 @@ void w_chunk_render_init(
 
     create_mesh_vbo_final_list(&chunk->render->mesh);
 
-    chunk->render->render_data.model = glm::scale(ws_size) * glm::translate(ws_position);
+    chunk->render->render_data.model = glm::translate(ws_position);
     chunk->render->render_data.pbr_info.x = 0.8f;
     chunk->render->render_data.pbr_info.y = 0.8f;
     chunk->render->render_data.color = vector4_t(1.0f);
@@ -375,6 +375,9 @@ static void s_update_chunk_mesh(
     if (vertex_count) {
         c->flags.active_vertices = 1;
     }
+    else {
+        c->flags.active_vertices = 0;
+    }
 }
 
 void w_chunk_gpu_sync_and_render(
@@ -402,7 +405,7 @@ void w_chunk_gpu_sync_and_render(
                 c,
                 world);
         }
-
+        
         if (c->flags.active_vertices) {
             submit_mesh(
                 render_command_buffer,
@@ -434,11 +437,13 @@ chunk_t *w_destroy_chunk(
 
 uint32_t w_hash_chunk_coord(
     const ivector3_t &coord) {
-    uint32_t result_hash = 2166136261u ^ coord[0] * 16777619u;
-    result_hash ^= coord[1] * 16777619u;
-    result_hash ^= coord[2] * 16777619u;
-    
-    return result_hash;
+    //uint32_t result_hash = 2166136261u ^ coord[0] * 16777619u;
+    //result_hash ^= coord[1] * 16777619u;
+    //result_hash ^= coord[2] * 16777619u;
+
+    static std::hash<glm::ivec3> hasher;
+
+    return hasher(coord);
 }
 
 void w_chunk_data_init() {
@@ -489,7 +494,7 @@ void w_chunk_world_init(
 
     world->chunks.init(MAX_LOADED_CHUNKS);
 
-    w_add_sphere_m(vector3_t(16.0f), 8.0f, world);
+    w_add_sphere_m(vector3_t(0.0f), 16.0f, world);
 }
 
 void w_add_sphere_m(
@@ -510,8 +515,8 @@ void w_add_sphere_m(
     int32_t diameter = (int32_t)ws_radius * 2 + 1;
 
     int32_t start_z = vs_center.z - (int32_t)ws_radius;
-    int32_t start_y = vs_center.z - (int32_t)ws_radius;
-    int32_t start_x = vs_center.z - (int32_t)ws_radius;
+    int32_t start_y = vs_center.y - (int32_t)ws_radius;
+    int32_t start_x = vs_center.x - (int32_t)ws_radius;
 
     float radius_squared = ws_radius * ws_radius;
 
@@ -527,19 +532,23 @@ void w_add_sphere_m(
                 if (distance_squared <= radius_squared) {
                     ivector3_t c = w_convert_voxel_to_chunk(vs_position);
 
-                    if (c.x == current_chunk_coord.x && c.y == current_chunk_coord.y && c.z == current_chunk_coord.z) {
+                    ivector3_t chunk_origin_diff = vs_position - current_chunk_coord * (int32_t)CHUNK_EDGE_LENGTH;
+                    //if (c.x == current_chunk_coord.x && c.y == current_chunk_coord.y && c.z == current_chunk_coord.z) {
+                    if (chunk_origin_diff.x >= 0 && chunk_origin_diff.x < 16 &&
+                        chunk_origin_diff.y >= 0 && chunk_origin_diff.y < 16 &&
+                        chunk_origin_diff.z >= 0 && chunk_origin_diff.z < 16) {
                         // Is within current chunk boundaries
                         float proportion = 1.0f - (distance_squared / radius_squared);
 
-                        ivector3_t voxel_coord = w_convert_voxel_to_local_chunk(vs_position);
+                        ivector3_t voxel_coord = chunk_origin_diff;
 
+                        //printf("%s: %s -> %s\n", glm::to_string(current_chunk_coord).c_str(), glm::to_string(vs_position).c_str(), glm::to_string(voxel_coord).c_str());
+                        
                         current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
                     }
                     else {
                         ivector3_t c = w_convert_voxel_to_chunk(vs_position);
 
-                        printf("Switchin from %s to %s\n", glm::to_string(current_chunk_coord).c_str(), glm::to_string(c).c_str());
-                        
                         // In another chunk, need to switch current_chunk pointer
                         current_chunk = w_get_chunk(c, world);
                         current_chunk_coord = c;
@@ -548,7 +557,9 @@ void w_add_sphere_m(
 
                         float proportion = 1.0f - (distance_squared / radius_squared);
 
-                        ivector3_t voxel_coord = w_convert_voxel_to_local_chunk(vs_position);
+                        ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
+
+                        //printf("%s: %s -> %s\n", glm::to_string(current_chunk_coord).c_str(), glm::to_string(vs_position).c_str(), glm::to_string(voxel_coord).c_str());
 
                         current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
                     }
@@ -586,14 +597,17 @@ ivector3_t w_convert_voxel_to_local_chunk(
 chunk_t *w_get_chunk(
     const ivector3_t &coord,
     chunk_world_t *world) {
+    
     uint32_t hash = w_hash_chunk_coord(coord);
     uint32_t *index = world->chunk_indices.get(hash);
-
+    
     if (index) {
         // Chunk was already added
         return world->chunks[*index];
     }
     else {
+        //printf("\t\t\tAdded chunk %s\n", glm::to_string(coord).c_str());
+
         uint32_t i = world->chunks.add();
         chunk_t *&chunk = world->chunks[i];
         chunk = FL_MALLOC(chunk_t, 1);
