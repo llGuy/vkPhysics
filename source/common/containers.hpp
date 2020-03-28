@@ -143,6 +143,7 @@ template <
 
     void remove(
         uint32_t index) {
+        data[index] = T{};
         removed[removed_count++] = index;
     }
 };

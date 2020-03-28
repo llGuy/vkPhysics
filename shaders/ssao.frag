@@ -56,7 +56,7 @@ void main() {
         float kernel_size = mix(0.6f, 3.0f, pixel_distance * div_fade_distance_cap);
         float bias = mix(0.02f, 0.2f, pixel_distance * div_fade_distance_cap);
         
-        for (int i = 0; i < 30; ++i) {
+        for (int i = 0; i < 40; ++i) {
             vec3 sample_kernel = tangent_space * vec3(u_kernels.kernels[i]);
 
             sample_kernel = vs_position + sample_kernel * kernel_size;

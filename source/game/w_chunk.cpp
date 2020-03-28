@@ -51,8 +51,8 @@ void w_chunk_render_init(
     create_mesh_vbo_final_list(&chunk->render->mesh);
 
     chunk->render->render_data.model = glm::translate(ws_position);
-    chunk->render->render_data.pbr_info.x = 0.8f;
-    chunk->render->render_data.pbr_info.y = 0.8f;
+    chunk->render->render_data.pbr_info.x = 0.1f;
+    chunk->render->render_data.pbr_info.y = 0.1f;
     chunk->render->render_data.color = vector4_t(1.0f);
 }
 
@@ -380,38 +380,41 @@ static void s_update_chunk_mesh(
     }
 }
 
+static uint8_t surface_level = 70;
+
 void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     chunk_world_t *world) {
-    uint8_t surface_level = 70;
-    
     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
         chunk_t *c = world->chunks[i];
+        if (c) {
+            // Create render struct if not created yet
+            if (!c->render) {
+                w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord), vector3_t(1.0f));
+            }
 
-        // Create render struct if not created yet
-        if (!c->render) {
-            w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord), vector3_t(1.0f));
-        }
-
-        if (c->flags.made_modification) {
-            c->flags.made_modification = 0;
-            // Update chunk mesh and put on GPU + send to command buffer
-            // TODO:
-            s_update_chunk_mesh(
-                transfer_command_buffer,
-                surface_level,
-                temp_mesh_vertices,
-                c,
-                world);
-        }
+            bool has_vertices = c->flags.active_vertices;
+            
+            if (c->flags.made_modification) {
+                c->flags.made_modification = 0;
+                // Update chunk mesh and put on GPU + send to command buffer
+                // TODO:
+                s_update_chunk_mesh(
+                    transfer_command_buffer,
+                    surface_level,
+                    temp_mesh_vertices,
+                    c,
+                    world);
+            }
         
-        if (c->flags.active_vertices) {
-            submit_mesh(
-                render_command_buffer,
-                &c->render->mesh,
-                &chunk_shader,
-                &c->render->render_data);
+            if (c->flags.active_vertices) {
+                submit_mesh(
+                    render_command_buffer,
+                    &c->render->mesh,
+                    &chunk_shader,
+                    &c->render->render_data);
+            }
         }
     }
 }
@@ -542,9 +545,13 @@ void w_add_sphere_m(
 
                         ivector3_t voxel_coord = chunk_origin_diff;
 
-                        //printf("%s: %s -> %s\n", glm::to_string(current_chunk_coord).c_str(), glm::to_string(vs_position).c_str(), glm::to_string(voxel_coord).c_str());
-                        
-                        current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
+                        //current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
+
+                        uint8_t *v = &current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t new_value = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
+                        if (*v < new_value) {
+                            *v = new_value;
+                        }
                     }
                     else {
                         ivector3_t c = w_convert_voxel_to_chunk(vs_position);
@@ -559,9 +566,11 @@ void w_add_sphere_m(
 
                         ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
 
-                        //printf("%s: %s -> %s\n", glm::to_string(current_chunk_coord).c_str(), glm::to_string(vs_position).c_str(), glm::to_string(voxel_coord).c_str());
-
-                        current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
+                        uint8_t *v = &current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t new_value = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
+                        if (*v < new_value) {
+                            *v = new_value;
+                        }
                     }
                 }
             }
@@ -594,10 +603,24 @@ ivector3_t w_convert_voxel_to_local_chunk(
     return (ivector3_t)(from_origin - xs_sized * (float)CHUNK_EDGE_LENGTH);
 }
 
+chunk_t *w_access_chunk(
+    const ivector3_t &coord,
+    chunk_world_t *world) {
+    uint32_t hash = w_hash_chunk_coord(coord);
+    uint32_t *index = world->chunk_indices.get(hash);
+
+    if (index) {
+        // Chunk was already added
+        return world->chunks[*index];
+    }
+    else {
+        return NULL;
+    }
+}
+
 chunk_t *w_get_chunk(
     const ivector3_t &coord,
     chunk_world_t *world) {
-    
     uint32_t hash = w_hash_chunk_coord(coord);
     uint32_t *index = world->chunk_indices.get(hash);
     
@@ -616,5 +639,99 @@ chunk_t *w_get_chunk(
         world->chunk_indices.insert(hash, i);
 
         return chunk;
+    }
+}
+
+void w_terraform(
+    terraform_type_t type,
+    const vector3_t &ws_ray_start,
+    const vector3_t &ws_ray_direction,
+    float max_reach,
+    float radius,
+    float speed,
+    float dt,
+    chunk_world_t *world) {
+    vector3_t vs_position = ws_ray_start;
+    vector3_t vs_dir = ws_ray_direction;
+
+    static const float PRECISION = 1.0f / 10.0f;
+    
+    vector3_t vs_step = vs_dir * max_reach * PRECISION;
+
+    float max_reach_squared = max_reach * max_reach;
+
+    for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
+        ivector3_t voxel = w_convert_world_to_voxel(vs_position);
+        ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
+        chunk_t *chunk = w_access_chunk(chunk_coord, world);
+
+        if (chunk) {
+            ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
+            if (chunk->voxels[w_get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                chunk->flags.made_modification = 1;
+
+                float coeff = 0.0f;
+                switch(type) {
+                case TT_DESTROY: {
+                    coeff = -1.0f;
+                    break;
+                }
+                case TT_BUILD: {
+                    coeff = +1.0f;
+                    break;
+                }
+                }
+
+                float radius_squared = radius * radius;
+                ivector3_t bottom_corner = voxel - ivector3_t((int32_t)radius);
+                int32_t diameter = (int32_t)radius * 2 + 1;
+
+                for (int32_t z = bottom_corner.z; z < bottom_corner.z + diameter; ++z) {
+                    for (int32_t y = bottom_corner.y; y < bottom_corner.y + diameter; ++y) {
+                        for (int32_t x = bottom_corner.x; x < bottom_corner.x + diameter; ++x) {
+                            vector3_t current_voxel = vector3_t((float)x, (float)y, (float)z);
+                            vector3_t diff = current_voxel - (vector3_t)voxel;
+                            float distance_squared = glm::dot(diff, diff);
+
+                            if (distance_squared <= radius_squared) {
+                                ivector3_t current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
+                                
+                                if (current_local_coord.x < 0 || current_local_coord.x >= 16 ||
+                                    current_local_coord.y < 0 || current_local_coord.y >= 16 ||
+                                    current_local_coord.z < 0 || current_local_coord.z >= 16) {
+                                    // If the current voxel coord is out of bounds, switch chunks
+                                    ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
+                                    chunk_t *new_chunk = w_get_chunk(chunk_coord, world);
+
+                                    chunk = new_chunk;
+                                    chunk->flags.made_modification = 1;
+
+                                    current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
+                                }
+
+                                uint8_t *voxel = &chunk->voxels[w_get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z)];
+                                float proportion = 1.0f - (distance_squared / radius_squared);
+
+                                int32_t current_voxel_value = (int32_t)*voxel;
+
+                                int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
+
+                                if (new_value > (int32_t)MAX_VOXEL_VALUE_I) {
+                                    *voxel = (int32_t)MAX_VOXEL_VALUE_I;
+                                }
+                                else if (new_value < 0) {
+                                    *voxel = 0;
+                                }
+                                else {
+                                    *voxel = (uint8_t)new_value;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                break;
+            }
+        }
     }
 }

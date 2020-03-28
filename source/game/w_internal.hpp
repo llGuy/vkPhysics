@@ -53,14 +53,9 @@ void w_destroy_chunk_render(
     chunk_t *chunk);
 
 // Returns NULL
-// Usage: chunk = w_destroy_chunk(chun);
+// Usage: chunk = w_destroy_chunk(chun)
 chunk_t *w_destroy_chunk(
     chunk_t *chunk);
-
-struct chunk_pointer_t {
-    // Index into the loaded_chunk_list
-    uint32_t chunk_index;
-};
 
 // Max loaded chunks for now (loaded chunk = chunk with active voxels)
 #define MAX_LOADED_CHUNKS 1000
@@ -75,7 +70,7 @@ struct chunk_world_t {
     uint32_t render_count;
     chunk_t **chunks_to_render;
 
-    hash_table_t<uint32_t, 50, 15, 5> chunk_indices;
+    hash_table_t<uint32_t, 100, 15, 5> chunk_indices;
 };
 
 uint32_t w_hash_chunk_coord(
@@ -115,6 +110,24 @@ vector3_t w_convert_chunk_to_world(
 ivector3_t w_convert_voxel_to_local_chunk(
     const ivector3_t &vs_position);
 
+// Does not create a chunk if it wasn't already created
+chunk_t *w_access_chunk(
+    const ivector3_t &coord,
+    chunk_world_t *world);
+
+// If chunk was not created, create it
 chunk_t *w_get_chunk(
     const ivector3_t &coord,
+    chunk_world_t *world);
+
+enum terraform_type_t { TT_DESTROY, TT_BUILD };
+
+void w_terraform(
+    terraform_type_t type,
+    const vector3_t &ws_ray_start,
+    const vector3_t &ws_ray_direction,
+    float max_reach,
+    float radius,
+    float speed,
+    float dt,
     chunk_world_t *world);

@@ -113,6 +113,8 @@ void handle_world_input() {
             player.position -= vector3_t(0.0f, 1.0f, 0.0f) * surface_delta_time() * 10.0f;
         }
 
+
+
         vector2_t new_mouse_position = vector2_t((float)game_input->mouse_x, (float)game_input->mouse_y);
         vector2_t delta = new_mouse_position - vector2_t(game_input->previous_mouse_x, game_input->previous_mouse_y);
     
@@ -130,6 +132,17 @@ void handle_world_input() {
         res = glm::normalize(res);
                 
         player.direction = res;
+
+
+
+        
+        if (game_input->actions[GIAT_TRIGGER1].state == BS_DOWN) {
+            w_terraform(TT_DESTROY, player.position, player.direction, 10.0f, 4.0f, 300.0f, surface_delta_time(), &world);
+        }
+        
+        if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
+            w_terraform(TT_BUILD, player.position, player.direction, 10.0f, 4.0f, 300.0f, surface_delta_time(), &world);
+        }
     }
     else {
         enable_cursor_display();
