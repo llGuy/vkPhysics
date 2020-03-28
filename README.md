@@ -2,6 +2,8 @@
 
 ![photo](/assets/screenshots/screenshot.png)
 
+![photo](/assets/screenshots/coolstructure.png)
+
 For now, an engine which will hopefully become a real-time multiplayer game!
 
 # Build

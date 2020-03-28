@@ -172,6 +172,8 @@ void r_update_lighting(
         lighting_data.light_colors[i] = lighting->light_colors[i];
     }
 
+    lighting_data.point_light_count = lighting->lights_count;
+    
     lighting_data.ws_directional_light = -lighting->ws_directional_light;
     lighting_data.vs_directional_light = transforms->view * lighting_data.ws_directional_light;
 

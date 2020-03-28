@@ -213,6 +213,9 @@ lighting_info_t create_lighting_info() {
     lighting_info_t info = {};
     
     info.ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
+    info.ws_light_positions[0] = vector4_t(player.position, 1.0f);
+    info.ws_light_directions[0] = vector4_t(player.direction, 0.0f);
+    info.light_colors[0] = vector4_t(100.0f);
     info.lights_count = 0;
 
     return info;

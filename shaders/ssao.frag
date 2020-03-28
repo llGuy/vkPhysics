@@ -32,8 +32,8 @@ layout(binding = 0, set = 3) uniform kernel_t {
     float resolution_coefficient;
 } u_kernels;
 
-const float div_magic = 1.0f / (4.0f * 0.0000001f);
-const float div_total = 1.0f / 30.0f;
+const float div_magic = 1.0f / (4.0f * 0.00000001f);
+const float div_total = 1.0f / 40.0f;
 const float div_fade_distance_cap = 1.0f / 100.0f;
 
 void main() {
@@ -53,7 +53,7 @@ void main() {
 
         // Depends on pixel distance to camera
         float pixel_distance = abs(vs_position.z);
-        float kernel_size = mix(0.6f, 3.0f, pixel_distance * div_fade_distance_cap);
+        float kernel_size = mix(0.5f, 3.0f, pixel_distance * div_fade_distance_cap);
         float bias = mix(0.02f, 0.2f, pixel_distance * div_fade_distance_cap);
         
         for (int i = 0; i < 40; ++i) {
