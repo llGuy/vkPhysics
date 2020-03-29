@@ -16,8 +16,14 @@ inline void free_debug(
     free(ptr);
 }
 
+// Free list allocator
 #define FL_MALLOC(type, n) (type *)malloc_debug(sizeof(type) * (n))
 #define FL_FREE(ptr) free_debug(ptr)
+
+// Linear allocator
+#define LN_MALLOC(type, n) (type *)malloc_debug(sizeof(type) * (n))
+// TODO: Implement other allocators (custom allocators, replace malloc with custom calls)
+#define LN_CLEAR()
 
 #define ALLOCA(type, n) (type *)alloca(sizeof(type) * (n))
 

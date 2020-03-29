@@ -51,7 +51,7 @@ void w_chunk_render_init(
     create_mesh_vbo_final_list(&chunk->render->mesh);
 
     chunk->render->render_data.model = glm::translate(ws_position);
-    chunk->render->render_data.pbr_info.x = 0.1f;
+    chunk->render->render_data.pbr_info.x = 0.2f;
     chunk->render->render_data.pbr_info.y = 0.1f;
     chunk->render->render_data.color = vector4_t(1.0f);
 }

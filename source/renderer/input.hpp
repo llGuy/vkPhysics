@@ -60,6 +60,10 @@ struct raw_input_t {
     float cursor_pos_x = 0.0f, cursor_pos_y = 0.0f;
     float previous_cursor_pos_x = 0.0f, previous_cursor_pos_y = 0.0f;
 
+    bool in_fullscreen = 0;
+    int32_t desktop_window_width, desktop_window_height;
+    int32_t window_pos_x, window_pos_y;
+    
     bool resized = 0;
     int32_t window_width, window_height;
 
@@ -70,7 +74,6 @@ struct raw_input_t {
     bool show_cursor = 1;
 
     bool toggled_fullscreen = 0;
-    bool in_fullscreen = 0;
     bool has_focus = 1;
 };
 

@@ -134,14 +134,13 @@ void handle_world_input() {
         player.direction = res;
 
 
-
         
         if (game_input->actions[GIAT_TRIGGER1].state == BS_DOWN) {
-            w_terraform(TT_DESTROY, player.position, player.direction, 10.0f, 4.0f, 300.0f, surface_delta_time(), &world);
+            w_terraform(TT_DESTROY, player.position, player.direction, 10.0f, 4.0f, 100.0f, surface_delta_time(), &world);
         }
         
         if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
-            w_terraform(TT_BUILD, player.position, player.direction, 10.0f, 4.0f, 300.0f, surface_delta_time(), &world);
+            w_terraform(TT_BUILD, player.position, player.direction, 10.0f, 4.0f, 100.0f, surface_delta_time(), &world);
         }
     }
     else {

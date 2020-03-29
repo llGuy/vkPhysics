@@ -196,6 +196,10 @@ void *surface_window() {
     return window;
 }
 
+static void s_error_callback(int, const char *msg) {
+    printf(msg);
+}
+
 input_interface_data_t input_interface_init() {
     if (!glfwInit()) {
         printf("Failed to initialize GLFW\n");
@@ -217,6 +221,7 @@ input_interface_data_t input_interface_init() {
     glfwSetMouseButtonCallback(window, s_window_mouse_button_callback);
     glfwSetCharCallback(window, s_window_character_callback);
     glfwSetCursorPosCallback(window, s_window_cursor_position_callback);
+    glfwSetErrorCallback(s_error_callback);
 
     glfwGetFramebufferSize(window, &width, &height);
 
@@ -257,14 +262,36 @@ void poll_input_events(event_submissions_t *submissions) {
 
     // Check if user resized to trigger event
     if (raw_input.buttons[BT_F11].instant) {
-        // TODO: Toggle fullscreen
-        const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        if (raw_input.in_fullscreen) {
+            glfwSetWindowMonitor(
+                window,
+                NULL,
+                raw_input.window_pos_x,
+                raw_input.window_pos_y,
+                raw_input.desktop_window_width,
+                raw_input.desktop_window_height,
+                0);
 
-        glfwSetWindowMonitor(window, glfwGetWindowMonitor(window), 0, 0, vidmode->width, vidmode->height, 0);
+            glfwGetFramebufferSize(window, &raw_input.window_width, &raw_input.window_height);
+            
+            raw_input.in_fullscreen = 0;
+            raw_input.resized = 1;
+        }
+        else {
+            glfwGetWindowPos(window, &raw_input.window_pos_x, &raw_input.window_pos_y);
+            glfwGetWindowSize(window, &raw_input.desktop_window_width, &raw_input.desktop_window_height);
+            //raw_input.desktop_window_width = raw_input.window_width;
+            //raw_input.desktop_window_height = raw_input.window_height;
+            
+            const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
-        raw_input.resized = 1;
-        raw_input.window_width = vidmode->width;
-        raw_input.window_height = vidmode->height;
+            glfwSetWindowMonitor(window, glfwGetWindowMonitor(window), 0, 0, vidmode->width, vidmode->height, 0);
+
+            raw_input.resized = 1;
+            raw_input.in_fullscreen = 1;
+            raw_input.window_width = vidmode->width;
+            raw_input.window_height = vidmode->height;
+        }
     }
 
     if (raw_input.resized) {
