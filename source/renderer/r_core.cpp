@@ -2166,7 +2166,8 @@ shader_t create_3d_shader_color(
     VkDescriptorType *descriptor_layout_types,
     uint32_t descriptor_layout_count,
     const char **shader_paths,
-    VkShaderStageFlags shader_flags) {
+    VkShaderStageFlags shader_flags,
+    VkCullModeFlags culling) {
     return s_create_3d_shader(
         binding_info,
         push_constant_size,
@@ -2175,7 +2176,7 @@ shader_t create_3d_shader_color(
         shader_paths,
         shader_flags,
         r_deferred_stage(),
-        VK_CULL_MODE_NONE);
+        culling);
 }
 
 shader_t create_3d_shader_shadow(

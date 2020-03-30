@@ -2,6 +2,7 @@
 #include "w_internal.hpp"
 #include <common/math.hpp>
 #include <common/tools.hpp>
+#include <common/allocators.hpp>
 #include <renderer/renderer.hpp>
 
 uint32_t w_get_voxel_index(
@@ -214,11 +215,6 @@ static void s_update_chunk_mesh(
     chunk_t *y_superior = w_get_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z), world);
     chunk_t *z_superior = w_get_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1), world);
     
-    chunk_t *xy_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y + 1, c->chunk_coord.z), world);
-    chunk_t *xz_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z + 1), world);
-    chunk_t *yz_superior = w_get_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z + 1), world);
-    chunk_t *xyz_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y + 1, c->chunk_coord.z + 1), world);
-
     bool doesnt_exist = 0;
     if (x_superior) {
         // x_superior
@@ -468,7 +464,8 @@ void w_chunk_data_init() {
     chunk_shader = create_mesh_shader_color(
         &binding_info,
         shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_FRONT_BIT);
 }
 
 void w_destroy_chunk_world(
@@ -497,7 +494,7 @@ void w_chunk_world_init(
 
     world->chunks.init(MAX_LOADED_CHUNKS);
 
-    w_add_sphere_m(vector3_t(0.0f), 16.0f, world);
+    w_add_sphere_m(vector3_t(0.0f), 50.0f, world);
 }
 
 void w_add_sphere_m(

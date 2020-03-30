@@ -94,7 +94,8 @@ void free_mesh_binding_info(
 shader_t create_mesh_shader_color(
     shader_binding_info_t *binding_info,
     const char **shader_paths,
-    VkShaderStageFlags shader_flags) {
+    VkShaderStageFlags shader_flags,
+    VkCullModeFlags culling) {
     VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     
     return create_3d_shader_color(
@@ -102,7 +103,8 @@ shader_t create_mesh_shader_color(
         sizeof(mesh_render_data_t),
         &ubo_type, 1,
         shader_paths,
-        shader_flags);
+        shader_flags,
+        culling);
 }
 
 shader_t create_mesh_shader_shadow(

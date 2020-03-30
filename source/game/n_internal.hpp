@@ -11,20 +11,17 @@ struct network_address_t {
 
 typedef int32_t socket_t;
 
-socket_t n_add_network_socket();
+enum socket_protocol_t { SP_TCP, SP_UDP };
 
-void n_initialize_network_socket(
-    socket_t s,
-    int32_t family,
-    int32_t type,
-    int32_t protocol);
+socket_t n_network_socket_init(
+    socket_protocol_t protocol);
 
 void n_bind_network_socket_to_port(
     socket_t s,
     network_address_t address);
 
 void n_set_socket_to_non_blocking_mode(
-    socket_t *s);
+    socket_t s);
 
 int32_t n_receive_from(
     char *buffer,

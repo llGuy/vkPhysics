@@ -296,12 +296,14 @@ DECLARE_RENDERER_PROC(shader_t, create_3d_shader_color,
     VkDescriptorType *descriptor_layout_types,
     uint32_t descriptor_layout_count,
     const char **shader_paths,
-    VkShaderStageFlags shader_flags);
+    VkShaderStageFlags shader_flags,
+    VkCullModeFlags culling);
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_color,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
-    VkShaderStageFlags shader_flags);
+    VkShaderStageFlags shader_flags,
+    VkCullModeFlags culling);
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
     shader_binding_info_t *binding_info,

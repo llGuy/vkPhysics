@@ -814,7 +814,8 @@ static void s_cubemap_shader_init() {
         descriptor_types,
         sizeof(descriptor_types) / sizeof(descriptor_types[0]),
         shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE);
 }
 
 void r_environment_init() {
