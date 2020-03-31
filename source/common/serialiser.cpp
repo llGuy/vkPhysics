@@ -1,27 +1,32 @@
 #include "tools.hpp"
 #include "serialiser.hpp"
+#include "allocators.hpp"
 
-void serialiser_t::initialize(uint32_t max_size) {
+void serialiser_t::init(
+    uint32_t max_size) {
     data_buffer = (uint8_t *)LN_MALLOC(uint8_t, max_size * sizeof(uint8_t));
 }
 
-uint8_t *serialiser_t::grow_data_buffer(uint32_t bytes) {
+uint8_t *serialiser_t::grow_data_buffer(
+    uint32_t bytes) {
     uint32_t previous = data_buffer_head;
     data_buffer_head += bytes;
     return(&data_buffer[previous]);
 }
 
-void serialiser_t::serialize_uint8(uint8_t u8) {
+void serialiser_t::serialise_uint8(
+    uint8_t u8) {
     uint8_t *pointer = grow_data_buffer(1);
     *pointer = u8;
 }
 
-uint8_t serialiser_t::deserialize_uint8() {
+uint8_t serialiser_t::deserialise_uint8() {
     uint8_t *pointer = grow_data_buffer(1);
     return(*pointer);
 }
 
-void serialiser_t::serialize_float32(float f32) {
+void serialiser_t::serialise_float32(
+    float f32) {
     uint8_t *pointer = grow_data_buffer(4);
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     *(float *)pointer = f32;
@@ -34,7 +39,7 @@ void serialiser_t::serialize_float32(float f32) {
 #endif
 }
 
-float serialiser_t::deserialize_float32() {
+float serialiser_t::deserialise_float32() {
     uint8_t *pointer = grow_data_buffer(4);
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     return(*(float *)pointer);
@@ -49,22 +54,24 @@ float serialiser_t::deserialize_float32() {
 #endif
 }
 
-void serialiser_t::serialize_vector3(const vector3_t &v3) {
-    serialize_float32(v3.x);
-    serialize_float32(v3.y);
-    serialize_float32(v3.z);
+void serialiser_t::serialise_vector3(
+    const vector3_t &v3) {
+    serialise_float32(v3.x);
+    serialise_float32(v3.y);
+    serialise_float32(v3.z);
 }
 
-vector3_t serialiser_t::deserialize_vector3() {
+vector3_t serialiser_t::deserialise_vector3() {
     vector3_t v3 = {};
-    v3.x = deserialize_float32();
-    v3.y = deserialize_float32();
-    v3.z = deserialize_float32();
+    v3.x = deserialise_float32();
+    v3.y = deserialise_float32();
+    v3.z = deserialise_float32();
 
     return(v3);
 }
 
-void serialiser_t::serialize_uint16(uint16_t u16) {
+void serialiser_t::serialise_uint16(
+    uint16_t u16) {
     uint8_t *pointer = grow_data_buffer(2);
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     *(uint16_t *)pointer = u16;
@@ -74,7 +81,7 @@ void serialiser_t::serialize_uint16(uint16_t u16) {
 #endif
 }
 
-uint16_t serialiser_t::deserialize_uint16() {
+uint16_t serialiser_t::deserialise_uint16() {
     uint8_t *pointer = grow_data_buffer(2);
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     return(*(uint16_t *)pointer);
@@ -86,7 +93,8 @@ uint16_t serialiser_t::deserialize_uint16() {
 #endif
 }
 
-void serialiser_t::serialize_uint32(uint32_t u32) {
+void serialiser_t::serialise_uint32(
+    uint32_t u32) {
     uint8_t *pointer = grow_data_buffer(4);
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     *(uint32_t *)pointer = u32;
@@ -98,7 +106,7 @@ void serialiser_t::serialize_uint32(uint32_t u32) {
 #endif
 }
 
-uint32_t serialiser_t::deserialize_uint32() {
+uint32_t serialiser_t::deserialise_uint32() {
     uint8_t *pointer = grow_data_buffer(4);
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     return(*(uint32_t *)pointer);
@@ -112,7 +120,8 @@ uint32_t serialiser_t::deserialize_uint32() {
 #endif
 }
 
-void serialiser_t::serialize_uint64(uint64_t u64) {
+void serialiser_t::serialise_uint64(
+    uint64_t u64) {
     uint8_t *pointer = grow_data_buffer(8);
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     *(uint64_t *)pointer = u64;
@@ -128,7 +137,7 @@ void serialiser_t::serialize_uint64(uint64_t u64) {
 #endif
 }
 
-uint64_t serialiser_t::deserialize_uint64() {
+uint64_t serialiser_t::deserialise_uint64() {
     uint8_t *pointer = grow_data_buffer(8);
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     return(*(uint64_t *)pointer);
@@ -146,7 +155,8 @@ uint64_t serialiser_t::deserialize_uint64() {
 #endif
 }
 
-void serialiser_t::serialize_string(const char *string) {
+void serialiser_t::serialise_string(
+    const char *string) {
     uint32_t string_length = (uint32_t)strlen(string);
     
     uint8_t *pointer = grow_data_buffer((uint32_t)strlen(string) + 1);
@@ -154,23 +164,27 @@ void serialiser_t::serialize_string(const char *string) {
 }
 
 
-const char *serialiser_t::deserialize_string() {
+const char *serialiser_t::deserialise_string() {
     uint8_t *pointer = &data_buffer[data_buffer_head];
     uint32_t string_length = (uint32_t)strlen((char *)pointer);
     grow_data_buffer(string_length + 1);
 
-    char *ret = (char *)FL_MALLOC(char, string_length + 1);
+    char *ret = (char *)LN_MALLOC(char, string_length + 1);
     memcpy(ret, pointer, string_length + 1);
     return(ret);
 }
 
-void serialiser_t::serialize_bytes(uint8_t *bytes, uint32_t size) {
+void serialiser_t::serialise_bytes(
+    uint8_t *bytes,
+    uint32_t size) {
     uint8_t *pointer = grow_data_buffer(size);
     memcpy(pointer, bytes, size);
 }
 
 
-void serialiser_t::deserialize_bytes(uint8_t *bytes, uint32_t size) {
+void serialiser_t::deserialise_bytes(
+    uint8_t *bytes,
+    uint32_t size) {
     uint8_t *pointer = grow_data_buffer(size);
     memcpy(bytes, pointer, size);
 }

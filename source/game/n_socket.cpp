@@ -267,12 +267,12 @@ uint32_t n_str_to_ipv4_int32(
     return inet_addr(address);
 }
 
-uint32_t n_host_to_network_byte_order(
-    uint32_t bytes) {
+uint16_t n_host_to_network_byte_order(
+    uint16_t bytes) {
     return htons(bytes);
 }
 
-uint32_t n_network_to_host_byte_order(
-    uint32_t bytes) {
+uint16_t n_network_to_host_byte_order(
+    uint16_t bytes) {
     return ntohl(bytes);
 }

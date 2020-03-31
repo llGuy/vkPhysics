@@ -5,9 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vulkan/vulkan.h>
-
-#include <iostream>
-#include <vector>
+#include <common/allocators.hpp>
 
 void r_free_rpipeline_stage(
     rpipeline_stage_t *stage) {

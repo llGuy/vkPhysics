@@ -5,6 +5,7 @@
 #include "r_internal.hpp"
 #include <vulkan/vulkan.h>
 #include <common/tools.hpp>
+#include <common/allocators.hpp>
 
 void push_buffer_to_mesh(
     buffer_type_t buffer_type,

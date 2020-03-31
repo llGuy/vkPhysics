@@ -1,19 +1,18 @@
 // Renderer core
-
-#include "renderer.hpp"
-#include "r_internal.hpp"
-
 #include <stdio.h>
+#include <imgui.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-#include <imgui.h>
 #include <stb_image.h>
+#include "renderer.hpp"
 #include <GLFW/glfw3.h>
+#include "r_internal.hpp"
 #include <vulkan/vulkan.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
+#include <common/allocators.hpp>
+#include <common/containers.hpp>
 
 static VkInstance instance;
 static int32_t enable_validation_layers;
@@ -715,6 +714,40 @@ static void s_global_descriptor_layouts_init() {
     VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.uniform_buffer[0]));
 }
 
+struct sensitive_gpu_buffer_t {
+    uint64_t frame_id;
+    gpu_buffer_t buffer;
+};
+
+#define MAX_DELETIONS 1000
+static flexible_stack_container_t<sensitive_gpu_buffer_t> buffer_deletions;
+
+static void s_sensitive_buffer_deletion_init() {
+    buffer_deletions.init(MAX_DELETIONS);
+}
+
+static uint64_t frame_id;
+
+void destroy_sensitive_gpu_buffer(
+    gpu_buffer_t gpu_buffer) {
+    uint32_t i = buffer_deletions.add();
+    buffer_deletions[i].buffer = gpu_buffer;
+    buffer_deletions[i].frame_id = frame_id;
+}
+
+static void s_update_sensitive_buffer_deletions() {
+    if (buffer_deletions.data_count) {
+        for (int32_t i = buffer_deletions.data_count - 1; i >= 0; --i) {
+            sensitive_gpu_buffer_t *b = buffer_deletions.get(i);
+            if (b->frame_id + 3 <= frame_id) {
+                // Delete the buffer
+                destroy_gpu_buffer(b->buffer);
+                buffer_deletions.remove(i);
+            }
+        }
+    }
+}
+
 void renderer_init(
     const char *application_name,
     surface_proc_t create_surface,
@@ -740,6 +773,10 @@ void renderer_init(
     r_environment_init();
     
     s_imgui_init(window, debug_proc);
+
+    s_sensitive_buffer_deletion_init();
+
+    frame_id = 0;
 }
 
 void destroy_renderer() {
@@ -895,6 +932,10 @@ void end_frame() {
     VkResult result = vkQueuePresentKHR(present_queue, &present_info);
 
     current_frame = (current_frame + 1) % FRAMES_IN_FLIGHT;
+
+    s_update_sensitive_buffer_deletions();
+    
+    ++frame_id;
 }
 
 void create_command_buffers(

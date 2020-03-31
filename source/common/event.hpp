@@ -12,7 +12,7 @@ enum event_type_t {
     ET_RESIZE_SURFACE,
     ET_CLOSED_WINDOW,
     ET_REQUEST_TO_JOIN_SERVER,
-    ET_ENTER_SERVER_WORLD,
+    ET_ENTER_SERVER,
     ET_LAUNCH_MAP_EDITOR,
     ET_OPEN_MENU,
     ET_EXIT_MENU,
@@ -33,7 +33,11 @@ struct event_data_request_to_join_server_t {
     const char *ip_address;
 };
 
-struct event_data_launch_map_editor_t {
+struct event_enter_server_t {
+    uint16_t local_client_id;
+};
+
+struct event_launch_map_editor_t {
     char *map_name;
 };
 

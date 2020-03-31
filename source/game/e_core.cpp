@@ -5,6 +5,7 @@
 #include "e_internal.hpp"
 #include <common/event.hpp>
 #include <renderer/input.hpp>
+#include <common/allocators.hpp>
 #include <renderer/renderer.hpp>
 
 // Gonna use these when multithreading gets added
@@ -197,6 +198,8 @@ static void s_not_windowed_game_main(
 
 void game_main(
     game_init_data_t *game_init_data) {
+    global_linear_allocator_init(megabytes(10));
+
     game_core_listener = set_listener_callback(&s_game_event_listener, NULL, &events);
 
     running = 1;

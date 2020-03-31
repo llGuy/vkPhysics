@@ -54,7 +54,7 @@ void w_chunk_render_init(
     chunk->render->render_data.model = glm::translate(ws_position);
     chunk->render->render_data.pbr_info.x = 0.2f;
     chunk->render->render_data.pbr_info.y = 0.1f;
-    chunk->render->render_data.color = vector4_t(1.0f);
+    chunk->render->render_data.color = vector4_t(0.0f);
 }
 
 // Array will be used anytime we need to create mesh from voxels
@@ -333,46 +333,55 @@ static void s_update_chunk_mesh(
         }
     }
 
-    static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
-    uint32_t update_size = vertex_count * sizeof(vector3_t);
-
-    uint32_t loop_count = update_size / MAX_UPDATE_BUFFER_SIZE;
-
-    typedef char copy_byte_t;
-    copy_byte_t *pointer = (copy_byte_t *)mesh_vertices;
-    uint32_t to_copy_left = update_size;
-    uint32_t copied = 0;
-    for (uint32_t i = 0; i < loop_count; ++i) {
-        update_gpu_buffer(
-            command_buffer,
-            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-            copied,
-            MAX_UPDATE_BUFFER_SIZE,
-            pointer,
-            &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
-
-        copied += MAX_UPDATE_BUFFER_SIZE;
-        pointer += MAX_UPDATE_BUFFER_SIZE;
-        to_copy_left -= MAX_UPDATE_BUFFER_SIZE;
-    }
-
-    if (to_copy_left) {
-        update_gpu_buffer(
-            command_buffer,
-            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-            copied,
-            to_copy_left,
-            pointer,
-            &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
-    }
-
-    c->render->mesh.vertex_count = vertex_count;
-
     if (vertex_count) {
         c->flags.active_vertices = 1;
+
+        if (!c->render) {
+            w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord), vector3_t(1.0f));
+        }
+
+        static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
+        uint32_t update_size = vertex_count * sizeof(vector3_t);
+
+        uint32_t loop_count = update_size / MAX_UPDATE_BUFFER_SIZE;
+
+        typedef char copy_byte_t;
+        copy_byte_t *pointer = (copy_byte_t *)mesh_vertices;
+        uint32_t to_copy_left = update_size;
+        uint32_t copied = 0;
+        for (uint32_t i = 0; i < loop_count; ++i) {
+            update_gpu_buffer(
+                command_buffer,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                copied,
+                MAX_UPDATE_BUFFER_SIZE,
+                pointer,
+                &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
+
+            copied += MAX_UPDATE_BUFFER_SIZE;
+            pointer += MAX_UPDATE_BUFFER_SIZE;
+            to_copy_left -= MAX_UPDATE_BUFFER_SIZE;
+        }
+
+        if (to_copy_left) {
+            update_gpu_buffer(
+                command_buffer,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                copied,
+                to_copy_left,
+                pointer,
+                &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
+        }
+        
+        c->render->mesh.vertex_count = vertex_count;
     }
     else {
         c->flags.active_vertices = 0;
+
+        if (c->render) {
+            w_destroy_chunk_render(c);
+            printf("Destroyed chunk data\n");
+        }
     }
 }
 
@@ -385,13 +394,6 @@ void w_chunk_gpu_sync_and_render(
     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
         chunk_t *c = world->chunks[i];
         if (c) {
-            // Create render struct if not created yet
-            if (!c->render) {
-                w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord), vector3_t(1.0f));
-            }
-
-            bool has_vertices = c->flags.active_vertices;
-            
             if (c->flags.made_modification) {
                 c->flags.made_modification = 0;
                 // Update chunk mesh and put on GPU + send to command buffer
@@ -418,7 +420,7 @@ void w_chunk_gpu_sync_and_render(
 void w_destroy_chunk_render(
     chunk_t *chunk) {
     if (chunk->render) {
-        destroy_gpu_buffer(get_mesh_buffer(BT_VERTEX, &chunk->render->mesh)->gpu_buffer);
+        destroy_sensitive_gpu_buffer(get_mesh_buffer(BT_VERTEX, &chunk->render->mesh)->gpu_buffer);
         FL_FREE(chunk->render);
         chunk->render = NULL;
     }
@@ -494,7 +496,7 @@ void w_chunk_world_init(
 
     world->chunks.init(MAX_LOADED_CHUNKS);
 
-    w_add_sphere_m(vector3_t(0.0f), 50.0f, world);
+    w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
 }
 
 void w_add_sphere_m(

@@ -62,3 +62,36 @@ void *arena_allocator_t::free_arena(
 void arena_allocator_t::free_pool() {
     free(pool);
 }
+
+void linear_allocator_t::init(
+    uint32_t msize) {
+    max_size = msize;
+    start = current = malloc(max_size);
+}
+
+void *linear_allocator_t::allocate(
+    uint32_t size) {
+    void *p = current;
+    current = (void *)((uint8_t *)(current) + size);
+    return p;
+}
+
+void linear_allocator_t::clear() {
+    current = start;
+}
+
+static linear_allocator_t linear_allocator;
+
+void global_linear_allocator_init(
+    uint32_t size) {
+    linear_allocator.init(size);
+}
+
+void *linear_malloc(
+    uint32_t size) {
+    return linear_allocator.allocate(size);
+}
+
+void linear_clear() {
+    linear_allocator.clear();
+}

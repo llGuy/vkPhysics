@@ -2,6 +2,7 @@
 #include <string.h>
 #include "renderer.hpp"
 #include "r_internal.hpp"
+#include <common/allocators.hpp>
 
 static attachment_t s_create_cubemap(
     VkExtent3D extent,

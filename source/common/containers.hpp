@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tools.hpp"
+#include "allocators.hpp"
 
 // Simple hash table implementation
 template <
@@ -101,6 +102,7 @@ template <
     }
 };
 
+// Makes it so that when items are deleted, the array indices of all other items don't change
 template <
     typename T> struct stack_container_t {
     uint32_t max_size = 0;
@@ -145,5 +147,50 @@ template <
         uint32_t index) {
         data[index] = T{};
         removed[removed_count++] = index;
+    }
+};
+
+// Makes it so that when items are deleted, it is possible that the array indices of all other items change
+template <
+    typename T> struct flexible_stack_container_t {
+    uint32_t max_size = 0;
+    uint32_t data_count = 0;
+    T *data;
+
+    void init(
+        uint32_t max) {
+        max_size = max;
+        data = FL_MALLOC(T, max_size);
+    }
+
+    void destroy() {
+        FL_FREE(data);
+    }
+    
+    uint32_t add() {
+        return data_count++;
+    }
+
+    T *get(
+        uint32_t index) {
+        return &data[index];
+    }
+
+    T &operator[](
+        uint32_t i) {
+        return data[i];
+    }
+
+    void remove(
+        uint32_t index) {
+        // Is at end
+        if (index == data_count -1) {
+            --data_count;
+        }
+        else {
+            // Get last item and put fill the currently deleted item here
+            data[index] = data[data_count - 1];
+            --data_count;
+        }
     }
 };

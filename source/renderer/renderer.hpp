@@ -155,6 +155,12 @@ DECLARE_VOID_RENDERER_PROC(void, update_gpu_buffer,
 DECLARE_VOID_RENDERER_PROC(void, destroy_gpu_buffer,
     gpu_buffer_t gpu_buffer);
 
+#define MAX_SENSITIVE_DELETIONS 1000
+
+// Pushes this buffer to a queue which 
+DECLARE_VOID_RENDERER_PROC(void, destroy_sensitive_gpu_buffer,
+    gpu_buffer_t gpu_buffer);
+
 /* Pipeline barriers */
 DECLARE_RENDERER_PROC(VkImageMemoryBarrier, create_image_barrier,
     VkImageLayout old_image_layout,

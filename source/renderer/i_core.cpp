@@ -1,8 +1,9 @@
 // Input core
 
+#include <stdio.h>
 #include "input.hpp"
 #include <common/tools.hpp>
-#include <stdio.h>
+#include <common/allocators.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
