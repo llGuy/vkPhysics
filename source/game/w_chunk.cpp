@@ -496,7 +496,11 @@ void w_chunk_world_init(
 
     world->chunks.init(MAX_LOADED_CHUNKS);
 
+    w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
+    w_add_sphere_m(vector3_t(80.0f), 17.0f, world);
     w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
+
+    w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
 }
 
 void w_add_sphere_m(

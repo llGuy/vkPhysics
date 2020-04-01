@@ -13,14 +13,10 @@ enum event_type_t {
     ET_CLOSED_WINDOW,
     ET_REQUEST_TO_JOIN_SERVER,
     ET_ENTER_SERVER,
-    ET_LAUNCH_MAP_EDITOR,
-    ET_OPEN_MENU,
-    ET_EXIT_MENU,
-    ET_OPEN_CONSOLE,
-    ET_EXIT_CONSOLE,
-    ET_REQUEST_USERNAME,
-    ET_ENTERED_USERNAME,
-    ET_CACHE_PLAYER_COMMAND,
+    ET_NEW_PLAYER_JOINED,
+    ET_START_CLIENT,
+    ET_START_SERVER,
+    ET_PRESSED_ESCAPE,
     ET_INVALID_EVENT_TYPE
 };
 
@@ -37,8 +33,8 @@ struct event_enter_server_t {
     uint16_t local_client_id;
 };
 
-struct event_launch_map_editor_t {
-    char *map_name;
+struct event_new_player_joined_t {
+    struct client_t *client_data;
 };
 
 struct event_t {

@@ -1,14 +1,10 @@
 #pragma once
 
+#include "net.hpp"
 #include <common/tools.hpp>
 #include <common/serialiser.hpp>
 
 void n_socket_api_init();
-
-struct network_address_t {
-    uint16_t port;
-    uint32_t ipv4_address;
-};
 
 typedef int32_t socket_t;
 

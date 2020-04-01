@@ -55,7 +55,7 @@ void main() {
     mat4 view_rotation = u_camera_transforms.view;
     view_rotation[3][0] = 0.0f;
     view_rotation[3][1] = 0.0f;
-    view_rotation[3][1] = 0.0f;
+    view_rotation[3][2] = 0.0f;
 
     vec4 vs_position = view_rotation * u_push_constant.model * vec4(ms_vertex_position * 1000.0f, 1.0);
     

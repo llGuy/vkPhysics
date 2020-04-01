@@ -93,6 +93,4 @@ void main() {
 
         illumination_decay *= DECAY;
     }
-
-    //out_final_color = texture(u_diffuse, in_fs.uvs);
 }

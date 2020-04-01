@@ -198,7 +198,7 @@ void *surface_window() {
 }
 
 static void s_error_callback(int, const char *msg) {
-    printf(msg);
+    //printf(msg);
 }
 
 input_interface_data_t input_interface_init() {
@@ -261,6 +261,10 @@ void poll_input_events(event_submissions_t *submissions) {
         submit_event(ET_CLOSED_WINDOW, NULL, submissions);
     }
 
+    if (raw_input.buttons[BT_ESCAPE].instant) {
+        submit_event(ET_PRESSED_ESCAPE, NULL, submissions);
+    }
+    
     // Check if user resized to trigger event
     if (raw_input.buttons[BT_F11].instant) {
         if (raw_input.in_fullscreen) {

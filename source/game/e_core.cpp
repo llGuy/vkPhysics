@@ -1,4 +1,5 @@
 // Engine core
+#include "net.hpp"
 #include <stdio.h>
 #include "world.hpp"
 #include "engine.hpp"
@@ -16,11 +17,15 @@ static bool running;
 
 static event_submissions_t events = {};
 
+static enum highlevel_focus_t {
+    HF_WORLD, HF_UI
+} focus;
+
 static void s_game_event_listener(
     void *object,
     event_t *event) {
-
     switch(event->type) {
+        
     case ET_CLOSED_WINDOW: {
         running = 0;
         break;
@@ -29,6 +34,28 @@ static void s_game_event_listener(
     case ET_RESIZE_SURFACE: {
         event_surface_resize_t *data = (event_surface_resize_t *)event->data;
         handle_resize(data->width, data->height);
+        break;
+    }
+
+    case ET_PRESSED_ESCAPE: {
+        // Handle focus change
+        // TODO: Have proper focus sort of stack system
+        switch (focus) {
+            
+        case HF_WORLD: {
+            focus = HF_UI;
+            enable_cursor_display();
+            break;
+        }
+
+        case HF_UI: {
+            focus = HF_WORLD;
+            disable_cursor_display();
+            break;
+        }
+
+        }
+        
         break;
     }
         
@@ -43,34 +70,32 @@ static uint32_t secondary_command_buffer_count;
 static VkCommandBuffer render_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 static VkCommandBuffer transfer_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 
-static enum highlevel_focus_t {
-    HF_WORLD, HF_UI
-} focus;
-
 static void s_handle_input() {
-    handle_world_input();
+    switch(focus) {
 
-    /*switch(focus) {
-        
     case HF_WORLD: {
         handle_world_input();
         break;
     }
-        
+
     case HF_UI: {
         break;  
-    } 
-        
-    }*/
+    }
+
+    }
 }
 
 // Records a secondary 
 static void s_tick(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
+    tick_net(
+        &events);
+
     tick_world(
         render_command_buffer,
-        transfer_command_buffer);
+        transfer_command_buffer,
+        &events);
 }
 
 static void s_render(
@@ -150,7 +175,11 @@ static void s_windowed_game_main(
     game_init_data_t *game_init_data) {
     subscribe_to_event(ET_CLOSED_WINDOW, game_core_listener, &events);
     subscribe_to_event(ET_RESIZE_SURFACE, game_core_listener, &events);
+    subscribe_to_event(ET_PRESSED_ESCAPE, game_core_listener, &events);
 
+    net_init(&events);
+
+    focus = HF_WORLD;
     input_interface_data_t input_interface = input_interface_init();
 
     game_input_settings_init();
@@ -193,6 +222,7 @@ static void s_run_not_windowed_game() {
 
 static void s_not_windowed_game_main(
     game_init_data_t *game_init_data) {
+    net_init(&events);
     world_init();
 }
 
@@ -200,7 +230,10 @@ void game_main(
     game_init_data_t *game_init_data) {
     global_linear_allocator_init(megabytes(10));
 
-    game_core_listener = set_listener_callback(&s_game_event_listener, NULL, &events);
+    game_core_listener = set_listener_callback(
+        &s_game_event_listener,
+        NULL,
+        &events);
 
     running = 1;
 
