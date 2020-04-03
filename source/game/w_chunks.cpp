@@ -67,7 +67,7 @@ static uint8_t s_chunk_edge_voxel_value(
     int32_t z,
     bool *doesnt_exist,
     ivector3_t chunk_coord,
-    chunk_world_t *world) {
+    world_t *world) {
     int32_t chunk_coord_offset_x = 0, chunk_coord_offset_y = 0, chunk_coord_offset_z = 0;
     int32_t final_x = x, final_y = y, final_z = z;
 
@@ -208,7 +208,7 @@ static void s_update_chunk_mesh(
     uint8_t surface_level,
     vector3_t *mesh_vertices,
     chunk_t *c,
-    chunk_world_t *world) {
+    world_t *world) {
     uint32_t vertex_count = 0;
 
     chunk_t *x_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z), world);
@@ -390,7 +390,7 @@ static uint8_t surface_level = 70;
 void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,
-    chunk_world_t *world) {
+    world_t *world) {
     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
         chunk_t *c = world->chunks[i];
         if (c) {
@@ -438,16 +438,12 @@ chunk_t *w_destroy_chunk(
 
 uint32_t w_hash_chunk_coord(
     const ivector3_t &coord) {
-    //uint32_t result_hash = 2166136261u ^ coord[0] * 16777619u;
-    //result_hash ^= coord[1] * 16777619u;
-    //result_hash ^= coord[2] * 16777619u;
-
     static std::hash<glm::ivec3> hasher;
 
     return hasher(coord);
 }
 
-void w_chunk_data_init() {
+void w_chunks_data_init() {
     temp_mesh_vertices = FL_MALLOC(vector3_t, MAX_VERTICES_PER_CHUNK);
 
     mesh_t chunk_mesh_prototype = {};
@@ -471,7 +467,7 @@ void w_chunk_data_init() {
 }
 
 void w_destroy_chunk_world(
-    chunk_world_t *world) {
+    world_t *world) {
     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
         w_destroy_chunk(world->chunks[i]);
     }
@@ -486,9 +482,9 @@ void w_destroy_chunk_data() {
 }
 
 void w_chunk_world_init(
-    chunk_world_t *world,
+    world_t *world,
     uint32_t loaded_radius) {
-    memset(world, 0, sizeof(chunk_world_t));
+    memset(world, 0, sizeof(world_t));
 
     world->chunk_indices.init();
 
@@ -506,7 +502,7 @@ void w_chunk_world_init(
 void w_add_sphere_m(
     const vector3_t &ws_center,
     float ws_radius,
-    chunk_world_t *world) {
+    world_t *world) {
     ivector3_t vs_center = w_convert_world_to_voxel(ws_center);
     vector3_t vs_float_center = (vector3_t)(vs_center);
 
@@ -608,7 +604,7 @@ ivector3_t w_convert_voxel_to_local_chunk(
 
 chunk_t *w_access_chunk(
     const ivector3_t &coord,
-    chunk_world_t *world) {
+    world_t *world) {
     uint32_t hash = w_hash_chunk_coord(coord);
     uint32_t *index = world->chunk_indices.get(hash);
 
@@ -623,7 +619,7 @@ chunk_t *w_access_chunk(
 
 chunk_t *w_get_chunk(
     const ivector3_t &coord,
-    chunk_world_t *world) {
+    world_t *world) {
     uint32_t hash = w_hash_chunk_coord(coord);
     uint32_t *index = world->chunk_indices.get(hash);
     
@@ -653,7 +649,7 @@ void w_terraform(
     float radius,
     float speed,
     float delta_time,
-    chunk_world_t *world) {
+    world_t *world) {
     vector3_t vs_position = ws_ray_start;
     vector3_t vs_dir = ws_ray_direction;
 

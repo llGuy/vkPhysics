@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/tools.hpp>
+#include <renderer/input.hpp>
 #include <common/containers.hpp>
 #include <renderer/renderer.hpp>
 
@@ -8,6 +9,81 @@
 #define MAX_VOXEL_VALUE_F 254.0f
 #define MAX_VOXEL_VALUE_I 254
 #define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
+
+typedef mesh_render_data_t player_render_data_t;
+
+struct player_render_t {
+    player_render_data_t render_data;
+};
+
+// There can be multiple of these (can be sent over network)
+struct player_actions_t {
+    union {
+        struct {
+            uint16_t move_forward: 1;
+            uint16_t move_left: 1;
+            uint16_t move_back: 1;
+            uint16_t move_right: 1;
+            uint16_t jump: 1;
+            uint16_t crouch: 1;
+            uint16_t trigger_left: 1;
+            uint16_t trigger_right: 1;
+        };
+
+        uint16_t bytes;
+    };
+    
+    float dmouse_x;
+    float dmouse_y;
+    float dt;
+};
+
+#define MAX_PLAYER_ACTIONS 15
+
+// To initialise player, need to fill everything (except for player_render_t *render)
+struct player_t {
+    // Character name of player
+    const char *name;
+    // When accessing client information which holds stuff like IP address, etc...
+    uint16_t client_id;
+    // When accessing local player information
+    uint32_t local_id;
+
+    vector3_t ws_position;
+    vector3_t ws_view_direction;
+    vector3_t ws_up_vector;
+    float default_speed;
+
+    player_render_t *render;
+
+    // Maximum player actions
+    uint32_t player_action_count;
+    player_actions_t player_actions[MAX_PLAYER_ACTIONS];
+};
+
+void w_push_player_actions(
+    player_t *player,
+    player_actions_t *action);
+
+void w_players_data_init();
+
+void w_player_render_init(
+    player_t *player);
+
+player_t *w_add_player(
+    struct world_t *world);
+
+void w_handle_input(
+    game_input_t *input,
+    float dt);
+
+void w_players_gpu_sync_and_render(
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer,
+    struct world_t *world);
+
+player_t *w_get_local_player(
+    struct world_t *world);
 
 // Push constant
 // chunk_render_data_t may become a different structure in the future.
@@ -59,44 +135,47 @@ chunk_t *w_destroy_chunk(
 
 // Max loaded chunks for now (loaded chunk = chunk with active voxels)
 #define MAX_LOADED_CHUNKS 1000
+#define MAX_PLAYERS 50
 
-struct chunk_world_t {
+struct world_t {
+    int32_t local_player;
+    stack_container_t<player_t *> players;
+    // Actions that were given from (keyboard / mouse) input
+    player_actions_t actions_from_input;
+
     uint32_t loaded_radius;
-
     // List of chunks
     // Works like a stack
     stack_container_t<chunk_t *> chunks;
-
     uint32_t render_count;
     chunk_t **chunks_to_render;
-
     hash_table_t<uint32_t, 200, 15, 5> chunk_indices;
 };
 
 uint32_t w_hash_chunk_coord(
     const ivector3_t &coord);
 
-void w_chunk_data_init();
+void w_chunks_data_init();
 
 void w_destroy_chunk_world(
-    chunk_world_t *world);
+    world_t *world);
 
 void w_destroy_chunk_data();
 
 void w_chunk_world_init(
-    chunk_world_t *world,
+    world_t *world,
     uint32_t loaded_radius);
 
 void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,
-    chunk_world_t *world);
+    world_t *world);
 
 // Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpusync
 void w_add_sphere_m(
     const vector3_t &ws_center,
     float ws_radius,
-    chunk_world_t *world);
+    world_t *world);
 
 ivector3_t w_convert_world_to_voxel(
     const vector3_t &ws_position);
@@ -113,12 +192,12 @@ ivector3_t w_convert_voxel_to_local_chunk(
 // Does not create a chunk if it wasn't already created
 chunk_t *w_access_chunk(
     const ivector3_t &coord,
-    chunk_world_t *world);
+    world_t *world);
 
 // If chunk was not created, create it
 chunk_t *w_get_chunk(
     const ivector3_t &coord,
-    chunk_world_t *world);
+    world_t *world);
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
@@ -130,4 +209,4 @@ void w_terraform(
     float radius,
     float speed,
     float dt,
-    chunk_world_t *world);
+    world_t *world);

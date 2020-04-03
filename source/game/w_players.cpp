@@ -1,0 +1,231 @@
+#include "w_internal.hpp"
+
+static mesh_t player_mesh;
+static shader_t player_shader;
+
+void w_players_data_init() {
+    shader_binding_info_t mesh_info = {};
+    load_mesh_internal(IM_CUBE, &player_mesh, &mesh_info);
+
+    const char *shader_paths[] = {
+        "../shaders/SPV/untextured_mesh.vert.spv",
+        "../shaders/SPV/untextured_mesh.geom.spv",
+        "../shaders/SPV/untextured_mesh.frag.spv"
+    };
+
+    player_shader = create_mesh_shader_color(
+        &mesh_info,
+        shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE);
+}
+
+void w_player_render_init(
+    player_t *player) {
+    player->render = FL_MALLOC(player_render_t, 1);
+}
+
+player_t *w_add_player(
+    world_t *world) {
+    uint32_t player_index = world->players.add();
+    player_t *p = world->players[player_index];
+    p = FL_MALLOC(player_t, 1);
+    memset(p, 0, sizeof(player_t));
+    p->local_id = player_index;
+
+    return p;
+}
+
+void w_handle_input(
+    game_input_t *game_input,
+    float dt,
+    world_t *world) {
+    player_t *local_player = w_get_local_player(world);
+    if (local_player) {
+        player_actions_t actions;
+    
+        actions.bytes = 0;
+
+        actions.dt = dt;
+        actions.dmouse_x = game_input->mouse_x - game_input->previous_mouse_x;
+        actions.dmouse_y = game_input->mouse_y - game_input->previous_mouse_y;
+
+        if (game_input->actions[GIAT_MOVE_FORWARD].state == BS_DOWN) {
+            actions.move_forward = 1;
+        }
+    
+        if (game_input->actions[GIAT_MOVE_LEFT].state == BS_DOWN) {
+            actions.move_left = 1;
+        }
+    
+        if (game_input->actions[GIAT_MOVE_BACK].state == BS_DOWN) {
+            actions.move_back = 1;
+        }
+    
+        if (game_input->actions[GIAT_MOVE_RIGHT].state == BS_DOWN) {
+            actions.move_right = 1;
+        }
+    
+        if (game_input->actions[GIAT_TRIGGER4].state == BS_DOWN) { // Space
+            actions.jump = 1;
+        }
+    
+        if (game_input->actions[GIAT_TRIGGER6].state == BS_DOWN) { // Left shift
+            actions.crouch = 1;
+        }
+
+        if (game_input->actions[GIAT_TRIGGER1].state == BS_DOWN) {
+            actions.trigger_left = 1;
+        }
+        
+        if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
+            actions.trigger_right = 1;
+        }
+
+        w_push_player_actions(local_player, &actions);
+    }
+}
+
+void w_push_player_actions(
+    player_t *player,
+    player_actions_t *action) {
+    if (player->player_action_count < MAX_PLAYER_ACTIONS) {
+        player->player_actions[player->player_action_count++] = *action;
+    }
+    else {
+        // ...
+        printf("%s:%i: Too many player actions\n", __FILE__, __LINE__);
+    }
+}
+
+static void s_execute_player_triggers(
+    player_t *player,
+    player_actions_t *player_actions,
+    world_t *world) {
+    if (player_actions->trigger_left) {
+        w_terraform(
+            TT_DESTROY,
+            player->ws_position,
+            player->ws_view_direction,
+            10.0f,
+            4.0f,
+            300.0f,
+            player_actions->dt,
+            world);
+    }
+    if (player_actions->trigger_right) {
+        w_terraform(
+            TT_BUILD,
+            player->ws_position,
+            player->ws_view_direction,
+            10.0f,
+            4.0f,
+            300.0f,
+            player_actions->dt,
+            world);
+    }
+}
+
+static void s_execute_player_direction_change(
+    player_t *player,
+    player_actions_t *player_actions) {
+    vector2_t delta = vector2_t(player_actions->dmouse_x, player_actions->dmouse_y);
+
+    static constexpr float SENSITIVITY = 30.0f;
+    
+    vector3_t res = player->ws_view_direction;
+	    
+    float x_angle = glm::radians(-delta.x) * SENSITIVITY * player_actions->dt;// *elapsed;
+    float y_angle = glm::radians(-delta.y) * SENSITIVITY * player_actions->dt;// *elapsed;
+                
+    res = matrix3_t(glm::rotate(x_angle, vector3_t(0.0f, 1.0f, 0.0f))) * res;
+    vector3_t rotate_y = glm::cross(res, vector3_t(0.0f, 1.0f, 0.0f));
+    res = matrix3_t(glm::rotate(y_angle, rotate_y)) * res;
+
+    res = glm::normalize(res);
+                
+    player->ws_view_direction = res;
+}
+
+static void s_execute_player_movement(
+    player_t *player,
+    player_actions_t *actions) {
+    vector3_t right = glm::normalize(glm::cross(player->ws_view_direction, player->ws_up_vector));
+    vector3_t forward = glm::normalize(glm::cross(player->ws_up_vector, right));
+    
+    if (actions->move_forward) {
+        player->ws_position += forward * actions->dt * player->default_speed;
+    }
+    if (actions->move_left) {
+        player->ws_position -= right * actions->dt * player->default_speed;
+    }
+    if (actions->move_back) {
+        player->ws_position -= forward * actions->dt * player->default_speed;
+    }
+    if (actions->move_right) {
+        player->ws_position += right * actions->dt * player->default_speed;
+    }
+    if (actions->jump) {
+        player->ws_position += player->ws_up_vector * actions->dt * player->default_speed;
+    }
+    if (actions->crouch) {
+        player->ws_position -= player->ws_up_vector * actions->dt * player->default_speed;
+    }
+}
+
+static void w_execute_player_actions(
+    player_t *player,
+    world_t *world) {
+    for (uint32_t i = 0; i < player->player_action_count; ++i) {
+        player_actions_t *actions = &player->player_actions[i];
+        s_execute_player_direction_change(player, actions);
+        s_execute_player_movement(player, actions);
+        s_execute_player_triggers(player, actions, world);
+    }
+
+    player->player_action_count = 0;
+}
+
+void w_tick_players(
+    world_t *world) {
+    // Handle networking stuff
+    for (uint32_t i = 0; i < world->players.data_count; ++i) {
+        player_t *p = world->players[i];
+        if (p) {
+            w_execute_player_actions(p, world);
+        }
+    }
+}
+
+// When skeletal animation is implemented, this function will do stuff like handle that
+void w_players_gpu_sync_and_render(
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer,
+    struct world_t *world) {
+    (void)transfer_command_buffer;
+    for (uint32_t i = 0; i < world->players.data_count; ++i) {
+        player_t *p = world->players[i];
+        if (p) {
+            if (!p->render) {
+                w_player_render_init(p);
+            }
+
+            // Handle difference between rendering animations
+            submit_mesh(
+                render_command_buffer,
+                &player_mesh,
+                &player_shader,
+                &p->render->render_data);
+        }
+    }
+}
+
+player_t *w_get_local_player(
+    world_t *world) {
+    if (world->local_player >= 0) {
+        return world->players[world->local_player];
+    }
+    else {
+        return NULL;
+    }
+}

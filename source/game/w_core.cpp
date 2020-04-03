@@ -18,7 +18,7 @@ static struct player_info_t {
     vector3_t direction;
 } player;
 
-static chunk_world_t world;
+static world_t world;
 
 static void s_world_event_listener(
     void *object,
@@ -29,7 +29,8 @@ static void s_world_event_listener(
         break;
     }
 
-    case ET_NEW_PLAYER_JOINED: {
+    case ET_NEW_PLAYER: {
+        
         break;
     }
 
@@ -83,7 +84,7 @@ void world_init() {
     free_mesh_binding_info(&sphere_info);
 #endif
 #if 1
-    w_chunk_data_init();
+    w_chunks_data_init();
 
     w_chunk_world_init(&world, 4);
 #endif
@@ -101,7 +102,6 @@ void handle_world_input() {
     game_input_t *game_input = get_game_input();
     raw_input_t *raw_input = get_raw_input();
 
-    disable_cursor_display();
     vector3_t right = glm::normalize(glm::cross(player.direction, vector3_t(0.0f, 1.0f, 0.0f)));
     
     if (game_input->actions[GIAT_MOVE_FORWARD].state == BS_DOWN) {
@@ -128,8 +128,6 @@ void handle_world_input() {
         player.position -= vector3_t(0.0f, 1.0f, 0.0f) * surface_delta_time() * 10.0f;
     }
 
-
-
     vector2_t new_mouse_position = vector2_t((float)game_input->mouse_x, (float)game_input->mouse_y);
     vector2_t delta = new_mouse_position - vector2_t(game_input->previous_mouse_x, game_input->previous_mouse_y);
     
@@ -147,8 +145,6 @@ void handle_world_input() {
     res = glm::normalize(res);
                 
     player.direction = res;
-
-
         
     if (game_input->actions[GIAT_TRIGGER1].state == BS_DOWN) {
         w_terraform(TT_DESTROY, player.position, player.direction, 10.0f, 4.0f, 300.0f, surface_delta_time(), &world);

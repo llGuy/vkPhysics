@@ -176,6 +176,10 @@ template <
         return &data[index];
     }
 
+    void clear() {
+        data_count = 0;
+    }
+
     T &operator[](
         uint32_t i) {
         return data[i];
@@ -191,6 +195,156 @@ template <
             // Get last item and put fill the currently deleted item here
             data[index] = data[data_count - 1];
             --data_count;
+        }
+    }
+};
+
+template <
+    typename T> struct circular_buffer_heap_t {
+    uint32_t head_tail_difference = 0;
+    uint32_t head = 0;
+    uint32_t tail = 0;
+    uint32_t buffer_size;
+    T *buffer;
+
+    void initialize(
+        uint32_t count) {
+        buffer_size = count;
+        uint32_t byte_count = buffer_size * sizeof(T);
+        buffer = (T *)FL_MALLOC(uint8_t, byte_count);
+    }
+
+    void push_item(
+        T *item) {
+        buffer[head++] = *item;
+
+        if (head == buffer_size) {
+            head = 0;
+        }
+
+        ++head_tail_difference;
+    }
+
+    T *push_item() {
+        T *new_item = &buffer[head++];
+
+        if (head == buffer_size) {
+            head = 0;
+        }
+
+        ++head_tail_difference;
+
+        return(new_item);
+    }
+
+    T *get_next_item() {
+        if (head_tail_difference > 0) {
+            T *item = &buffer[tail++];
+
+            if (tail == buffer_size) {
+                tail = 0;
+            }
+                
+            --head_tail_difference;
+
+            return(item);
+        }
+
+        return(nullptr);
+    }
+
+    void deinitialize() {
+        if (buffer) {
+            FL_FREE(buffer);
+        }
+        buffer = nullptr;
+        buffer_size = 0;
+        head = 0;
+        tail = 0;
+        head_tail_difference = 0;
+    }
+
+    uint32_t decrement_index(
+        uint32_t index) {
+        if (index == 0) {
+            return (buffer_size - 1);
+        }
+        else {
+            return (index - 1);
+        }
+    }
+};
+
+template <
+    typename T,
+    uint32_t MAX> struct circular_buffer_array_t {
+    uint32_t head_tail_difference = 0;
+    uint32_t head = 0;
+    uint32_t tail = 0;
+    uint32_t buffer_size;
+    T buffer[MAX];
+
+    void initialize() {
+        buffer_size = MAX;
+        head_tail_difference = 0;
+        head = 0;
+        tail = 0;
+        uint32_t byte_count = buffer_size * sizeof(T);
+    }
+
+    void push_item(
+        T *item) {
+        buffer[head++] = *item;
+
+        if (head == buffer_size) {
+            head = 0;
+        }
+
+        ++head_tail_difference;
+    }
+
+    T *push_item() {
+        T *new_item = &buffer[head++];
+
+        if (head == buffer_size) {
+            head = 0;
+        }
+
+        ++head_tail_difference;
+
+        return(new_item);
+    }
+
+    T *get_next_item() {
+        if (head_tail_difference > 0) {
+            T *item = &buffer[tail++];
+
+            if (tail == buffer_size) {
+                tail = 0;
+            }
+                
+            --head_tail_difference;
+
+            return(item);
+        }
+
+        return(nullptr);
+    }
+
+    void deinitialize() {
+        buffer_size = 0;
+        head = 0;
+        tail = 0;
+        head_tail_difference = 0;
+    }
+
+    uint32_t decrement_index(
+        uint32_t index) {
+        if (index == 0) {
+            return (buffer_size - 1);
+        }
+        else {
+            return (index - 1);
         }
     }
 };

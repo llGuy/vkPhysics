@@ -13,7 +13,7 @@ enum event_type_t {
     ET_CLOSED_WINDOW,
     ET_REQUEST_TO_JOIN_SERVER,
     ET_ENTER_SERVER,
-    ET_NEW_PLAYER_JOINED,
+    ET_NEW_PLAYER,
     ET_START_CLIENT,
     ET_START_SERVER,
     ET_PRESSED_ESCAPE,
@@ -33,8 +33,15 @@ struct event_enter_server_t {
     uint16_t local_client_id;
 };
 
-struct event_new_player_joined_t {
+struct event_new_player_t {
     struct client_t *client_data;
+    // A bunch of shit (more will come)
+    // (name and client_id are already in client_data)
+    uint32_t local_id;
+    vector3_t ws_position;
+    vector3_t ws_view_direction;
+    vector3_t ws_up_vector;
+    float default_speed;
 };
 
 struct event_t {
