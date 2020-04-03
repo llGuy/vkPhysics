@@ -72,13 +72,11 @@ static void s_window_key_callback(
         
     case GLFW_PRESS: case GLFW_REPEAT: {
         state = BS_DOWN;
-        break;
-    }
+    } break;
 
     case GLFW_RELEASE: {
         state = BS_NOT_DOWN;
-        break;
-    }
+    } break;
             
     }
     
@@ -154,13 +152,11 @@ static void s_window_mouse_button_callback(
         
     case GLFW_PRESS: case GLFW_REPEAT: {
         state = BS_DOWN;
-        break;
-    }
+    } break;
 
     case GLFW_RELEASE: {
         state = BS_NOT_DOWN;
-        break;
-    }
+    } break;
             
     }
 

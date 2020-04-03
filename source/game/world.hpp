@@ -3,7 +3,8 @@
 #include <common/event.hpp>
 #include <renderer/renderer.hpp>
 
-void world_init();
+void world_init(
+    event_submissions_t *events);
 
 void destory_world();
 

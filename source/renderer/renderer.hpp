@@ -6,7 +6,6 @@
 
 typedef int32_t result_t;
 typedef void(*surface_proc_t)(struct VkInstance_T *instance, struct VkSurfaceKHR_T **surface, void *window);
-typedef void(*imgui_proc_t)();
 
 #if LINK_AGAINST_RENDERER
 #define DECLARE_RENDERER_PROC(return_type, name, ...)   \
@@ -28,7 +27,6 @@ typedef void(*imgui_proc_t)();
 DECLARE_VOID_RENDERER_PROC(void, renderer_init,
     const char *application_name,
     surface_proc_t create_surface,
-    imgui_proc_t imgui_proc,
     void *window,
     uint32_t window_width,
     uint32_t window_height);
@@ -374,3 +372,8 @@ DECLARE_RENDERER_PROC(texture_t, create_texture,
     void *data,
     uint32_t width, uint32_t height,
     VkFilter filter);
+
+// Debug stuff
+typedef void (*debug_ui_proc_t)();
+DECLARE_VOID_RENDERER_PROC(void, add_debug_ui_proc,
+    debug_ui_proc_t proc);

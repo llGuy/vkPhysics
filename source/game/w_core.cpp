@@ -1,8 +1,10 @@
+#include "net.hpp"
+#include <imgui.h>
 #include "world.hpp"
 #include "engine.hpp"
 #include "w_internal.hpp"
-#include "renderer/input.hpp"
-#include "renderer/renderer.hpp"
+#include <renderer/input.hpp>
+#include <renderer/renderer.hpp>
 
 static mesh_t cube = {};
 static shader_t cube_shader;
@@ -22,22 +24,47 @@ static world_t world;
 
 static void s_world_event_listener(
     void *object,
-    event_t* event) {
+    event_t *event) {
     switch(event->type) {
 
     case ET_ENTER_SERVER: {
-        break;
-    }
+        // Initialise chunks / players
+    } break;
 
     case ET_NEW_PLAYER: {
+        event_new_player_t *data = (event_new_player_t *)event->data;
+
+        player_t *p = w_add_player(&world);
         
-        break;
-    }
+        if (data->client_data) {
+            p->name = data->client_data->name;
+            p->client_id = data->client_data->client_id;
+            // Now the network module can use w_get_player_from_client_id to get access to player directly
+            w_link_client_id_to_local_id(p->client_id, p->local_id, &world);
+        }
+        
+        p->ws_position = data->ws_position;
+        p->ws_view_direction = data->ws_view_direction;
+        p->ws_up_vector = data->ws_up_vector;
+        p->player_action_count = 0;
+        p->default_speed = data->default_speed;
+        memset(p->player_actions, 0, sizeof(p->player_actions));
+
+        if (data->is_local) {
+            w_set_local_player(p->local_id, &world);
+        }
+    } break;
 
     }
 }
 
-void world_init() {
+static listener_t world_listener;
+
+void world_init(
+    event_submissions_t *events) {
+    world_listener = set_listener_callback(s_world_event_listener, NULL, events);
+    subscribe_to_event(ET_ENTER_SERVER, world_listener, events);
+    subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
 #if 0
     shader_binding_info_t cube_info = {};
     load_mesh_internal(IM_CUBE, &cube, &cube_info);
@@ -84,8 +111,12 @@ void world_init() {
     free_mesh_binding_info(&sphere_info);
 #endif
 #if 1
-    w_chunks_data_init();
+    memset(&world, 0, sizeof(world_t));
 
+    w_players_data_init();
+    w_player_world_init(&world);
+
+    w_chunks_data_init();
     w_chunk_world_init(&world, 4);
 #endif
 
@@ -100,7 +131,9 @@ void destroy_world() {
 
 void handle_world_input() {
     game_input_t *game_input = get_game_input();
-    raw_input_t *raw_input = get_raw_input();
+    
+    w_handle_input(game_input, surface_delta_time(), &world);
+#if 0
 
     vector3_t right = glm::normalize(glm::cross(player.direction, vector3_t(0.0f, 1.0f, 0.0f)));
     
@@ -153,6 +186,7 @@ void handle_world_input() {
     if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
         w_terraform(TT_BUILD, player.position, player.direction, 10.0f, 4.0f, 300.0f, surface_delta_time(), &world);
     }
+#endif
 }
 
 void tick_world(
@@ -161,6 +195,13 @@ void tick_world(
     event_submissions_t *events) {
     (void)events;
 #if 1
+    w_tick_players(&world);
+
+    w_players_gpu_sync_and_render(
+        render_command_buffer,
+        transfer_command_buffer,
+        &world);
+
     w_chunk_gpu_sync_and_render(
         render_command_buffer,
         transfer_command_buffer,
@@ -206,9 +247,20 @@ void tick_world(
 eye_3d_info_t create_eye_info() {
     eye_3d_info_t info = {};
 
-    info.position = player.position;
-    info.direction = player.direction;
-    info.up = vector3_t(0.0f, 1.0f, 0.0f);
+    player_t *player = w_get_local_player(&world);
+    
+    if (player) {
+        info.position = player->ws_position;
+        info.direction = player->ws_view_direction;
+        info.up = player->ws_up_vector;
+    }
+
+    else {
+        info.position = vector3_t(0.0f);
+        info.direction = vector3_t(1.0f, 0.0f, 0.0f);
+        info.up = vector3_t(0.0f, 1.0f, 0.0f);
+    }
+
     info.fov = 60.0f;
     info.near = 0.1f;
     info.far = 10000.0f;

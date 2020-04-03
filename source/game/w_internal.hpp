@@ -75,7 +75,8 @@ player_t *w_add_player(
 
 void w_handle_input(
     game_input_t *input,
-    float dt);
+    float dt,
+    world_t *world);
 
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
@@ -84,6 +85,25 @@ void w_players_gpu_sync_and_render(
 
 player_t *w_get_local_player(
     struct world_t *world);
+
+player_t *w_get_player_from_client_id(
+    uint16_t client_id,
+    struct world_t *world);
+
+void w_link_client_id_to_local_id(
+    uint16_t client_id,
+    uint32_t local_id,
+    struct world_t *world);
+
+void w_player_world_init(
+    world_t *world);
+
+void w_tick_players(
+    world_t *world);
+
+void w_set_local_player(
+    int32_t local_id,
+    world_t *world);
 
 // Push constant
 // chunk_render_data_t may become a different structure in the future.
@@ -140,8 +160,8 @@ chunk_t *w_destroy_chunk(
 struct world_t {
     int32_t local_player;
     stack_container_t<player_t *> players;
-    // Actions that were given from (keyboard / mouse) input
-    player_actions_t actions_from_input;
+    // From client id, get player
+    int16_t local_id_from_client_id[MAX_PLAYERS];
 
     uint32_t loaded_radius;
     // List of chunks

@@ -37,11 +37,11 @@ struct event_new_player_t {
     struct client_t *client_data;
     // A bunch of shit (more will come)
     // (name and client_id are already in client_data)
-    uint32_t local_id;
     vector3_t ws_position;
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
     float default_speed;
+    bool is_local;
 };
 
 struct event_t {

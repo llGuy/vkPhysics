@@ -606,12 +606,12 @@ static void s_imgui_callback(VkResult result) {
 }
 
 static VkRenderPass imgui_render_pass;
+#define MAX_DEBUG_UI_PROCS 10
+static uint32_t debug_ui_proc_count;
+static debug_ui_proc_t debug_ui_procs[MAX_DEBUG_UI_PROCS];
 
-static imgui_proc_t imgui_proc;
-
-
-static void s_imgui_init(void *vwindow, imgui_proc_t proc) {
-    imgui_proc = proc;
+static void s_imgui_init(void *vwindow) {
+    debug_ui_proc_count = 0;
 
     GLFWwindow *window = (GLFWwindow *)vwindow;
     IMGUI_CHECKVERSION();
@@ -677,6 +677,11 @@ static void s_imgui_init(void *vwindow, imgui_proc_t proc) {
     VkCommandBuffer command_buffer = begin_single_time_command_buffer();
     ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
     end_single_time_command_buffer(command_buffer);
+}
+
+void add_debug_ui_proc(
+    debug_ui_proc_t proc) {
+    debug_ui_procs[debug_ui_proc_count++] = proc;
 }
 
 #define MAX_DESCRIPTOR_SET_LAYOUTS_PER_TYPE 5
@@ -751,7 +756,6 @@ static void s_update_sensitive_buffer_deletions() {
 void renderer_init(
     const char *application_name,
     surface_proc_t create_surface,
-    imgui_proc_t debug_proc,
     void *window, 
     uint32_t window_width, 
     uint32_t window_height) {
@@ -767,12 +771,12 @@ void renderer_init(
     s_final_render_pass_init();
     s_global_descriptor_layouts_init();
     
+    s_imgui_init(window);
+    
     r_camera_init(window);
     r_lighting_init();
     r_pipeline_init();
     r_environment_init();
-    
-    s_imgui_init(window, debug_proc);
 
     s_sensitive_buffer_deletion_init();
 
@@ -895,8 +899,10 @@ void end_frame() {
     ImGui::Begin("General");
     ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
 
-    r_environment_debug_menu();
-    
+    for (uint32_t i = 0; i < debug_ui_proc_count; ++i) {
+        (debug_ui_procs[i])();
+    }
+
     ImGui::End();
 
     ImGui::Render();

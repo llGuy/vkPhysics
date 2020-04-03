@@ -1,5 +1,19 @@
 #include "w_internal.hpp"
 
+void w_player_world_init(
+    world_t *world) {
+    for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
+        world->local_id_from_client_id[i] = -1;
+    }
+
+    world->local_player = -1;
+
+    world->players.init(MAX_PLAYERS);
+    for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
+        world->players.data[i] = NULL;
+    }
+}
+
 static mesh_t player_mesh;
 static shader_t player_shader;
 
@@ -28,12 +42,32 @@ void w_player_render_init(
 player_t *w_add_player(
     world_t *world) {
     uint32_t player_index = world->players.add();
+    world->players[player_index] = FL_MALLOC(player_t, 1);
     player_t *p = world->players[player_index];
-    p = FL_MALLOC(player_t, 1);
     memset(p, 0, sizeof(player_t));
     p->local_id = player_index;
 
     return p;
+}
+
+// TODO: May need to remove check in future, when it is sure that a player has a client id
+player_t *w_get_player_from_client_id(
+    uint16_t client_id,
+    world_t *world) {
+    int16_t id = world->local_id_from_client_id[client_id];
+    if (id >= 0) {
+        return world->players[id];
+    }
+    else {
+        return NULL;
+    }
+}
+
+void w_link_client_id_to_local_id(
+    uint16_t client_id,
+    uint32_t local_id,
+    world_t *world) {
+    world->local_id_from_client_id[client_id] = local_id;
 }
 
 void w_handle_input(
@@ -197,6 +231,12 @@ void w_tick_players(
     }
 }
 
+void w_set_local_player(
+    int32_t local_id,
+    world_t *world) {
+    world->local_player = local_id;
+}
+
 // When skeletal animation is implemented, this function will do stuff like handle that
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
@@ -210,12 +250,19 @@ void w_players_gpu_sync_and_render(
                 w_player_render_init(p);
             }
 
-            // Handle difference between rendering animations
-            submit_mesh(
-                render_command_buffer,
-                &player_mesh,
-                &player_shader,
-                &p->render->render_data);
+            p->render->render_data.model = glm::translate(p->ws_position);
+            p->render->render_data.color = vector4_t(1.0f);
+            p->render->render_data.pbr_info.x = 0.1f;
+            p->render->render_data.pbr_info.y = 0.1f;
+
+            if ((int32_t)i != (int32_t)world->local_player) {
+                // Handle difference between rendering animations (and first / third person)
+                submit_mesh(
+                    render_command_buffer,
+                    &player_mesh,
+                    &player_shader,
+                    &p->render->render_data);
+            }
         }
     }
 }

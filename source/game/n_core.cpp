@@ -18,13 +18,11 @@ static void s_net_event_listener(
 
     case ET_START_CLIENT: {
         start_client();
-        break;
-    }
+    } break;
 
     case ET_START_SERVER: {
         start_server();
-        break;
-    }
+    } break;
 
     }
 }
@@ -103,8 +101,7 @@ void tick_client(
             s_process_connection_handshake(
                 &in_serialiser,
                 events);
-            break;
-        }
+        } break;
 
         }
         
@@ -166,10 +163,10 @@ static void s_process_connection_request(
     client->client_id = client_id;
     client->name = create_fl_string(request.name);
 
-    event_new_player_joined_t *event_data = FL_MALLOC(event_new_player_joined_t, 1);
+    event_new_player_t *event_data = FL_MALLOC(event_new_player_t, 1);
     event_data->client_data = client;
     
-    submit_event(ET_NEW_PLAYER_JOINED, event_data, events);
+    submit_event(ET_NEW_PLAYER, event_data, events);
 }
 
 void tick_server(
@@ -197,8 +194,7 @@ void tick_server(
                 s_process_connection_request(
                     &in_serialiser,
                     events);
-                break;
-            }
+            } break;
 
             }
         }

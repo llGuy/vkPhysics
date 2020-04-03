@@ -484,8 +484,6 @@ void w_destroy_chunk_data() {
 void w_chunk_world_init(
     world_t *world,
     uint32_t loaded_radius) {
-    memset(world, 0, sizeof(world_t));
-
     world->chunk_indices.init();
 
     world->loaded_radius = loaded_radius;
@@ -685,14 +683,15 @@ void w_terraform(
 
                     float coeff = 0.0f;
                     switch(type) {
+                        
                     case TT_DESTROY: {
                         coeff = -1.0f;
-                        break;
-                    }
+                    } break;
+                        
                     case TT_BUILD: {
                         coeff = +1.0f;
-                        break;
-                    }
+                    } break;
+                        
                     }
 
                     float radius_squared = radius * radius;

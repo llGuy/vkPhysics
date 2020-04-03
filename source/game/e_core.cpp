@@ -1,6 +1,7 @@
 // Engine core
 #include "net.hpp"
 #include <stdio.h>
+#include <imgui.h>
 #include "world.hpp"
 #include "engine.hpp"
 #include "e_internal.hpp"
@@ -28,14 +29,12 @@ static void s_game_event_listener(
         
     case ET_CLOSED_WINDOW: {
         running = 0;
-        break;
-    }
+    } break;
 
     case ET_RESIZE_SURFACE: {
         event_surface_resize_t *data = (event_surface_resize_t *)event->data;
         handle_resize(data->width, data->height);
-        break;
-    }
+    } break;
 
     case ET_PRESSED_ESCAPE: {
         // Handle focus change
@@ -45,19 +44,16 @@ static void s_game_event_listener(
         case HF_WORLD: {
             focus = HF_UI;
             enable_cursor_display();
-            break;
-        }
+        } break;
 
         case HF_UI: {
             focus = HF_WORLD;
             disable_cursor_display();
-            break;
-        }
+        } break;
 
         }
-        
-        break;
-    }
+
+    } break;
         
     }
 }
@@ -75,12 +71,10 @@ static void s_handle_input() {
 
     case HF_WORLD: {
         handle_world_input();
-        break;
-    }
+    } break;
 
     case HF_UI: {
-        break;  
-    }
+    } break;
 
     }
 }
@@ -171,6 +165,42 @@ static void s_run_windowed_game() {
     }
 }
 
+// Will remove this once have own UI system
+#if LINK_AGAINST_RENDERER
+static void s_world_ui_proc() {
+    ImGui::Separator();
+    ImGui::Text("-- World --");
+    static vector3_t position = { 0.0f, 0.0f, 0.0f };
+    ImGui::SliderFloat3("Position", &position[0], -100.0f, +100.0f);
+
+    static vector3_t direction = { 1.0f, 0.0f, 0.0f};
+    ImGui::SliderFloat3("Direction", &direction[0], -1.0f, +1.0f);
+
+    static vector3_t up = { 0.0f, 1.0f, 0.0f};
+    ImGui::SliderFloat3("Up", &up[0], -1.0f, +1.0f);
+
+    static float default_speed = 10.0f;
+    ImGui::SliderFloat("Speed", &default_speed, -1.0f, +1.0f);
+
+    static bool is_local = 0;
+    ImGui::Checkbox("Local", &is_local);
+
+    bool add_player = ImGui::Button("Add player");
+    
+    if (add_player) {
+        event_new_player_t *data = FL_MALLOC(event_new_player_t, 1);;
+        memset(data, 0, sizeof(event_new_player_t));
+        data->ws_position = position;
+        data->ws_view_direction = direction;
+        data->ws_up_vector = up;
+        data->default_speed = default_speed;
+        data->client_data = NULL;
+        data->is_local = is_local;
+        submit_event(ET_NEW_PLAYER, data, &events);
+    }
+}
+#endif
+
 static void s_windowed_game_main(
     game_init_data_t *game_init_data) {
     subscribe_to_event(ET_CLOSED_WINDOW, game_core_listener, &events);
@@ -179,7 +209,7 @@ static void s_windowed_game_main(
 
     net_init(&events);
 
-    focus = HF_WORLD;
+    focus = HF_UI;
     input_interface_data_t input_interface = input_interface_init();
 
     game_input_settings_init();
@@ -187,10 +217,14 @@ static void s_windowed_game_main(
     renderer_init(
         input_interface.application_name,
         input_interface.surface_creation_proc,
-        NULL,
         input_interface.window,
         input_interface.surface_width,
         input_interface.surface_height);
+
+#if LINK_AGAINST_RENDERER
+    // TODO: If debugging
+    add_debug_ui_proc(s_world_ui_proc);
+#endif
 
     swapchain_information_t swapchain_info = {};
     swapchain_information(&swapchain_info);
@@ -207,7 +241,7 @@ static void s_windowed_game_main(
         transfer_command_buffers,
         secondary_command_buffer_count);
 
-    world_init();
+    world_init(&events);
     
     s_run_windowed_game();
 }
@@ -222,8 +256,11 @@ static void s_run_not_windowed_game() {
 
 static void s_not_windowed_game_main(
     game_init_data_t *game_init_data) {
+    (void)game_init_data;
     net_init(&events);
-    world_init();
+    world_init(&events);
+
+    s_run_not_windowed_game();
 }
 
 void game_main(
