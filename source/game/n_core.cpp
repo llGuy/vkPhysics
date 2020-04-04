@@ -11,9 +11,7 @@
 #define MAX_MESSAGE_SIZE 40000
 
 static char *message_buffer;
-
 static socket_t main_udp_socket;
-
 static uint64_t current_packet;
 
 #define GAME_OUTPUT_PORT_CLIENT 6001
@@ -39,9 +37,14 @@ static bool s_send_to(
 
 static bool started_client = 0;
 
+#define MAX_CLIENTS 50
+static stack_container_t<client_t> clients;
+
 static void s_start_client() {
     s_main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
 
+    clients.init(MAX_CLIENTS);
+    
     started_client = 1;
 }
 
@@ -55,14 +58,38 @@ static void s_process_connection_handshake(
 
     LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
 
+    event_enter_server_t *data = FL_MALLOC(event_enter_server_t, 1);
+    data->info_count = handshake.player_count;
+    data->infos = FL_MALLOC(player_init_info_t, data->info_count);
+
+    int32_t highest_client_index = -1;
+    
     // Add all the players
     for (uint32_t i = 0; i < handshake.player_count; ++i) {
-        
+        if (highest_client_index < (int32_t)handshake.player_infos[i].client_id) {
+            highest_client_index = handshake.player_infos[i].client_id;
+        }
+
+        uint16_t client_id = handshake.player_infos[i].client_id;
+
+        clients.data[client_id].client_id = client_id;
+        clients.data[client_id].name = handshake.player_infos[i].name;
+
+        data->infos[i].client_data = &clients.data[client_id];
+        data->infos[i].ws_position = handshake.player_infos[i].ws_position;
+        data->infos[i].ws_view_direction = handshake.player_infos[i].ws_view_direction;
+        data->infos[i].ws_up_vector = handshake.player_infos[i].ws_up_vector;
+        data->infos[i].default_speed = handshake.player_infos[i].default_speed;
+        data->infos[i].is_local = handshake.player_infos[i].is_local;
+
+        if (data->infos[i].is_local) {
+            data->local_client_id = clients.data[i].client_id;
+        }
     }
 
-    /*event_enter_server_t *data = FL_MALLOC(event_enter_server_t, 1);
-    data->local_client_id = handshake.client_id;
-    submit_event(ET_ENTER_SERVER, data, events);*/
+    clients.data_count = (uint16_t)highest_client_index + 1;
+
+    submit_event(ET_ENTER_SERVER, data, events);
 }
 
 void tick_client(
@@ -134,10 +161,6 @@ static void s_send_connect_request_to_server(
         LOG_ERROR("Failed to send connection request\n");
     }
 }
-
-#define MAX_CLIENTS 50
-
-static stack_container_t<client_t> clients;
 
 static bool started_server = 0;
 

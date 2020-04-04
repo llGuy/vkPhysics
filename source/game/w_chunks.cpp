@@ -472,8 +472,9 @@ void w_destroy_chunk_world(
     if (world->chunks.data) {
         for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
             w_destroy_chunk(world->chunks[i]);
+            world->chunks[i] = NULL;
         }
-    
+
         world->chunks.destroy();
 
         LOG_INFO("Destroyed chunk world\n");

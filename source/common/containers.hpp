@@ -122,6 +122,8 @@ template <
     void destroy() {
         FL_FREE(data);
         FL_FREE(removed);
+
+        data_count = 0;
     }
     
     uint32_t add() {

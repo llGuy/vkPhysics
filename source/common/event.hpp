@@ -45,7 +45,10 @@ struct player_init_info_t {
 struct event_enter_server_t {
     uint16_t local_client_id;
 
+    uint32_t info_count;
     player_init_info_t *infos;
+
+    // Will need to have other stuff
 };
 
 struct event_new_player_t {

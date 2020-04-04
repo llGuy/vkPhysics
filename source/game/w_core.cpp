@@ -8,6 +8,29 @@
 
 static world_t world;
 
+static void s_add_player_from_info(
+    player_init_info_t *init_info) {
+    player_t *p = w_add_player(&world);
+        
+    if (init_info->client_data) {
+        p->name = init_info->client_data->name;
+        p->client_id = init_info->client_data->client_id;
+        // Now the network module can use w_get_player_from_client_id to get access to player directly
+        w_link_client_id_to_local_id(p->client_id, p->local_id, &world);
+    }
+        
+    p->ws_position = init_info->ws_position;
+    p->ws_view_direction = init_info->ws_view_direction;
+    p->ws_up_vector = init_info->ws_up_vector;
+    p->player_action_count = 0;
+    p->default_speed = init_info->default_speed;
+    memset(p->player_actions, 0, sizeof(p->player_actions));
+
+    if (init_info->is_local) {
+        w_set_local_player(p->local_id, &world);
+    }
+}
+
 static void s_world_event_listener(
     void *,
     event_t *event) {
@@ -18,30 +41,21 @@ static void s_world_event_listener(
 
         // Reinitialise chunks / players
         w_destroy_chunk_world(&world);
+
+        event_enter_server_t *data = (event_enter_server_t *)event->data;
+
+        for (uint32_t i = 0; i < data->info_count; ++i) {
+            s_add_player_from_info(&data->infos[i]);
+        }
+
+        FL_FREE(data->infos);
+        FL_FREE(event->data);
     } break;
 
     case ET_NEW_PLAYER: {
         event_new_player_t *data = (event_new_player_t *)event->data;
 
-        player_t *p = w_add_player(&world);
-        
-        if (data->info.client_data) {
-            p->name = data->info.client_data->name;
-            p->client_id = data->info.client_data->client_id;
-            // Now the network module can use w_get_player_from_client_id to get access to player directly
-            w_link_client_id_to_local_id(p->client_id, p->local_id, &world);
-        }
-        
-        p->ws_position = data->info.ws_position;
-        p->ws_view_direction = data->info.ws_view_direction;
-        p->ws_up_vector = data->info.ws_up_vector;
-        p->player_action_count = 0;
-        p->default_speed = data->info.default_speed;
-        memset(p->player_actions, 0, sizeof(p->player_actions));
-
-        if (data->info.is_local) {
-            w_set_local_player(p->local_id, &world);
-        }
+        s_add_player_from_info(&data->info);
 
         FL_FREE(event->data);
     } break;
