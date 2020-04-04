@@ -1,4 +1,5 @@
 #include "n_internal.hpp"
+#include <common/log.hpp>
 #include <common/containers.hpp>
 
 #ifdef _WIN32
@@ -13,7 +14,7 @@ static void s_api_init() {
 
     WSADATA winsock_data;
     if (WSAStartup(0x202, &winsock_data)) {
-        printf("Failed to initialise Winsock\n");
+        LOG_ERROR("Failed to initialise Winsock\n");
         assert(0);
     }
 }
@@ -45,13 +46,13 @@ static void s_bind_network_socket_to_port(
     address_struct.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(*api_s, (sockaddr *)&address_struct, sizeof(address_struct)) < 0) {
-        printf("Failed to bind socket to port, trying another\n");
+        LOG_WARNING("Failed to bind socket to port, trying another\n");
 
         ++address.port;
         s_bind_network_socket_to_port(s, address);
     }
     else {
-        printf("Sucess bind socket to port\n");
+        LOG_INFO("Sucess bind socket to port\n");
     }
 }
 
@@ -110,7 +111,8 @@ static bool s_send_to(
     if (sendto_ret == SOCKET_ERROR) {
         char error_n[32];
         sprintf_s(error_n, "sendto failed: %d\n", WSAGetLastError());
-        OutputDebugString(error_n);
+        //OutputDebugString(error_n);
+        LOG_ERROR(error_n);
         assert(0);
     }
 
@@ -142,13 +144,13 @@ static void s_bind_network_socket_to_port(
     address_struct.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(s, (sockaddr *)&address_struct, sizeof(address_struct)) < 0) {
-        printf("Failed to bind socket to port, trying another\n");
+        LOG_WARNING("Failed to bind socket to port, trying another\n");
 
         ++address.port;
         s_bind_network_socket_to_port(s, address);
     }
     else {
-        printf("Success bind socket to port\n");
+        LOG_INFO("Success bind socket to port\n");
     }
 }
 
@@ -178,7 +180,6 @@ static int32_t s_receive_from(
         return 0;
     }
     else {
-        printf("Received bytes\n");
         buffer[bytes_received] = 0;
     }
 

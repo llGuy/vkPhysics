@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include "input.hpp"
+#include <common/log.hpp>
 #include <common/tools.hpp>
 #include <common/allocators.hpp>
 
@@ -19,7 +20,7 @@ static void s_create_vulkan_surface_proc(
     struct VkSurfaceKHR_T **surface,
     void *window) {
     if (glfwCreateWindowSurface(instance, (GLFWwindow *)window, NULL, surface) != VK_SUCCESS) {
-        printf("Failed to create surface\n");
+        LOG_ERROR("Failed to create surface\n");
         exit(1);
     }
 }
@@ -194,12 +195,12 @@ void *surface_window() {
 }
 
 static void s_error_callback(int, const char *msg) {
-    //printf(msg);
+    
 }
 
 input_interface_data_t input_interface_init() {
     if (!glfwInit()) {
-        printf("Failed to initialize GLFW\n");
+        LOG_ERROR("Failed to initialize GLFW\n");
         exit(1);
     }
 

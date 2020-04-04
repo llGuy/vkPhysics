@@ -3,8 +3,9 @@
 #include <stdint.h>
 
 #include "renderer.hpp"
+#include <common/log.hpp>
 
-#define VK_CHECK(call) if (call != VK_SUCCESS) { printf("%s failed\n", #call); }
+#define VK_CHECK(call) if (call != VK_SUCCESS) { LOG_ERRORV("%s failed\n", #call); }
 
 void r_handle_resize(
     uint32_t width,

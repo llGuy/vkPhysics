@@ -1,3 +1,4 @@
+#include <common/log.hpp>
 #include "w_internal.hpp"
 
 void w_player_world_init(
@@ -137,7 +138,7 @@ void w_push_player_actions(
     }
     else {
         // ...
-        printf("%s:%i: Too many player actions\n", __FILE__, __LINE__);
+        LOG_WARNING("Too many player actions");
     }
 }
 

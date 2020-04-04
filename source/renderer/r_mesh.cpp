@@ -68,7 +68,7 @@ shader_binding_info_t create_mesh_binding_info(
             stride = sizeof(vector2_t);
         } break;
         default: {
-            printf("Mesh buffer not supported\n");
+            LOG_ERROR("Mesh buffer not supported\n");
             exit(1);
         } break;
         }
@@ -140,8 +140,6 @@ void create_mesh_vbo_final_list(mesh_t *mesh) {
 
     memset(mesh->vertex_buffers_offsets, 0, sizeof(VkDeviceSize) * vb_count);
 }
-
-#define MCHECK(index, max) if (index >= max) { printf("%d, %d", index, max); assert(0); }
 
 static void s_load_sphere(
     mesh_t *mesh,

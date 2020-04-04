@@ -5,6 +5,7 @@
 #include "world.hpp"
 #include "engine.hpp"
 #include "e_internal.hpp"
+#include <common/log.hpp>
 #include <common/event.hpp>
 #include <renderer/input.hpp>
 #include <common/allocators.hpp>
@@ -317,7 +318,7 @@ void game_main(
             game_init_data);
     }
     else {
-        ERROR_LOG("Couldn't initialise game because of invalid game init flags");
+        LOG_ERROR("Couldn't initialise game because of invalid game init flags");
         exit(1);
     }
 }

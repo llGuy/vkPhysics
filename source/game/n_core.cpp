@@ -1,5 +1,6 @@
 #include "net.hpp"
 #include "n_internal.hpp"
+#include <common/log.hpp>
 #include <common/event.hpp>
 #include <common/string.hpp>
 #include <common/containers.hpp>
@@ -105,10 +106,10 @@ static void s_send_connect_request_to_server(
     n_serialise_connection_request(&request, &serialiser);
 
     if (n_send_to(main_udp_socket, bound_server_address, (char *)serialiser.data_buffer, serialiser.data_buffer_head)) {
-        printf("Success sent connection request\n");
+        LOG_INFO("Success sent connection request\n");
     }
     else {
-        printf("Failed to send connection request\n");
+        LOG_ERROR("Failed to send connection request\n");
     }
 }
 
@@ -161,8 +162,6 @@ void tick_server(
             &received_address);
 
         if (received) {
-            printf("Received packet\n");
-
             serialiser_t in_serialiser = {};
             in_serialiser.data_buffer = (uint8_t *)message_buffer;
             in_serialiser.data_buffer_size = received;

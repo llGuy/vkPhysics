@@ -8,6 +8,7 @@
 #include "renderer.hpp"
 #include <GLFW/glfw3.h>
 #include "r_internal.hpp"
+#include <common/log.hpp>
 #include <vulkan/vulkan.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
@@ -45,7 +46,7 @@ static void s_verify_layer_support(
         }
 
         if (!found) {
-            printf("Validation layer %s not supported\n", layers[requested]);
+            LOG_ERRORV("Validation layer %s not supported\n", layers[requested]);
         }
     }
 
@@ -110,7 +111,7 @@ static VKAPI_ATTR VkBool32 VKAPI_PTR s_debug_messenger_callback(
     VkDebugUtilsMessageTypeFlagsEXT,
     const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
     void *) {
-    printf("Validation layer: %s\n", callback_data->pMessage);
+    LOG_ERRORV("Validation layer: %s\n", callback_data->pMessage);
     return 0;
 }
 #endif
@@ -128,7 +129,7 @@ static void s_debug_messenger_init() {
 
     PFN_vkCreateDebugUtilsMessengerEXT ptr_vkCreateDebugUtilsMessenger = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (ptr_vkCreateDebugUtilsMessenger(instance, &debug_messenger_info, NULL, &debug_messenger)) {
-        printf("Failed to create debug utils messenger\n");
+        LOG_ERROR("Failed to create debug utils messenger\n");
     }
 #endif
 }
@@ -278,14 +279,14 @@ static void s_device_init() {
     VkPhysicalDevice *devices = ALLOCA(VkPhysicalDevice, device_count);
     vkEnumeratePhysicalDevices(instance, &device_count, devices);
 
-    printf("Found %d devices\n", device_count);
+    LOG_INFOV("Found %d devices\n", device_count);
     
     for (uint32_t i = 0; i < device_count; ++i) {
         hardware = devices[i];
 
         vkGetPhysicalDeviceProperties(hardware, &hardware_properties);
         
-        printf("Device name: %s\n", hardware_properties.deviceName);
+        LOG_INFOV("Device name: %s\n", hardware_properties.deviceName);
         
         if (s_verify_hardware_meets_requirements(extensions, extension_count)) {
             break;
@@ -509,7 +510,7 @@ static void s_synchronisation_init() {
         if (vkCreateSemaphore(device, &semaphore_info, NULL, &image_ready_semaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(device, &semaphore_info, NULL, &render_finished_semaphores[i]) != VK_SUCCESS ||
             vkCreateFence(device, &fence_info, NULL, &fences[i]) != VK_SUCCESS) {
-            printf("Failed to create synchronisation primitives\n");
+            LOG_ERROR("Failed to create synchronisation primitives\n");
             exit(1);
         }
     }
@@ -1333,7 +1334,7 @@ VkDescriptorSetLayout r_descriptor_layout(
     VkDescriptorType type,
     uint32_t count) {
     if (count > MAX_DESCRIPTOR_SET_LAYOUTS_PER_TYPE) {
-        printf("Descriptor count for layout is too high\n");
+        LOG_ERROR("Descriptor count for layout is too high\n");
         exit(1);
         return VK_NULL_HANDLE;
     }
@@ -1404,7 +1405,7 @@ VkDescriptorSetLayout r_descriptor_layout(
         return descriptor_layouts.uniform_buffer[count - 1];
     }
     default:
-        printf("Specified invalid descriptor type\n");
+        LOG_ERROR("Specified invalid descriptor type\n");
         return (VkDescriptorSetLayout)0;
     }
 }
@@ -1811,7 +1812,7 @@ texture_t create_texture(
             break;
         }
         default: {
-            printf("Need to handle format type for creating texture\n");
+            LOG_ERROR("Need to handle format type for creating texture\n");
             exit(1);
             break;
         }

@@ -1,5 +1,6 @@
 #include <string.h>
 #include "w_internal.hpp"
+#include <common/log.hpp>
 #include <common/math.hpp>
 #include <common/tools.hpp>
 #include <common/allocators.hpp>
@@ -380,7 +381,7 @@ static void s_update_chunk_mesh(
 
         if (c->render) {
             w_destroy_chunk_render(c);
-            printf("Destroyed chunk data\n");
+            LOG_INFO("Destroyed chunk data\n");
         }
     }
 }
@@ -626,8 +627,6 @@ chunk_t *w_get_chunk(
         return world->chunks[*index];
     }
     else {
-        //printf("\t\t\tAdded chunk %s\n", glm::to_string(coord).c_str());
-
         uint32_t i = world->chunks.add();
         chunk_t *&chunk = world->chunks[i];
         chunk = FL_MALLOC(chunk_t, 1);
