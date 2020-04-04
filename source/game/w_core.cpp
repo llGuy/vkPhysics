@@ -2,32 +2,22 @@
 #include "world.hpp"
 #include "engine.hpp"
 #include "w_internal.hpp"
+#include <common/log.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
-
-static mesh_t cube = {};
-static shader_t cube_shader;
-static mesh_render_data_t cube_data = {};
-
-static mesh_t sphere = {};
-static shader_t sphere_shader;
-static mesh_render_data_t render_data = {};
-
-// Temporary
-static struct player_info_t {
-    vector3_t position;
-    vector3_t direction;
-} player;
 
 static world_t world;
 
 static void s_world_event_listener(
-    void *object,
+    void *,
     event_t *event) {
     switch(event->type) {
 
     case ET_ENTER_SERVER: {
-        // Initialise chunks / players
+        LOG_INFO("Entering server world\n");
+
+        // Reinitialise chunks / players
+        w_destroy_chunk_world(&world);
     } break;
 
     case ET_NEW_PLAYER: {
@@ -56,6 +46,9 @@ static void s_world_event_listener(
         FL_FREE(event->data);
     } break;
 
+    default: {
+    } break;
+
     }
 }
 
@@ -74,9 +67,6 @@ void world_init(
 
     w_chunks_data_init();
     w_chunk_world_init(&world, 4);
-
-    player.position = vector3_t(100.0f);
-    player.direction = vector3_t(1.0f, 0.0f, 0.0f);
 }
 
 void destroy_world() {
@@ -136,11 +126,16 @@ eye_3d_info_t create_eye_info() {
 lighting_info_t create_lighting_info() {
     lighting_info_t info = {};
     
-    info.ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
+    /*info.ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     info.ws_light_positions[0] = vector4_t(player.position, 1.0f);
     info.ws_light_directions[0] = vector4_t(player.direction, 0.0f);
-    info.light_colors[0] = vector4_t(100.0f);
+    info.light_colors[0] = vector4_t(100.0f);*/
     info.lights_count = 0;
 
     return info;
+}
+
+struct player_t *get_player(
+    uint16_t client_id) {
+    return w_get_player_from_client_id(client_id, &world);
 }

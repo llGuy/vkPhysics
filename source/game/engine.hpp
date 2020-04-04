@@ -3,10 +3,10 @@
 #include <common/tools.hpp>
 
 enum game_init_flags_t : int32_t {
-                                  GIF_WINDOWED = 1 << 0,
-                                  GIF_NOT_WINDOWED = 1 << 1,
-                                  GIF_CLIENT = 1 << 2,
-                                  GIF_SERVER = 1 << 3
+    GIF_WINDOWED = 1 << 0,
+    GIF_NOT_WINDOWED = 1 << 1,
+    GIF_CLIENT = 1 << 2,
+    GIF_SERVER = 1 << 3
 };
 
 struct game_init_data_t {
@@ -19,3 +19,5 @@ void game_main(
     game_init_data_t *game_init_data);
 
 float logic_delta_time();
+
+uint64_t get_current_tick();

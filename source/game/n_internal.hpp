@@ -94,14 +94,35 @@ void n_serialise_connection_request(
     packet_connection_request_t *packet,
     serialiser_t *serialiser);
 
-struct packet_connection_handshake_t {
+struct full_player_info_t {
+    const char *name;
     uint16_t client_id;
+    vector3_t ws_position;
+    vector3_t ws_view_direction;
+    vector3_t ws_up_vector;
+    float default_speed;
+    bool is_local;
 };
 
+// Will use this when new player joins
+struct packet_connection_handshake_t {
+    uint32_t player_count;
+    full_player_info_t *player_infos;
+    // Chunks will be sent in separate packets (too much data)
+};
+
+uint32_t n_packed_connection_handshake_size(
+    packet_connection_handshake_t *game_state);
+
 void n_serialise_connection_handshake(
-    packet_connection_handshake_t *packet,
+    packet_connection_handshake_t *full_game_state,
     serialiser_t *serialiser);
 
 void n_deserialise_connection_handshake(
-    packet_connection_handshake_t *handshake,
+    packet_connection_handshake_t *full_game_state,
     serialiser_t *serialiser);
+
+// Will use this during game play
+struct game_state_snapshot_t {
+    
+};

@@ -1,4 +1,5 @@
 #include "n_internal.hpp"
+#include <common/allocators.hpp>
 
 uint32_t n_packed_packet_header_size() {
     return
@@ -11,11 +12,6 @@ uint32_t n_packed_packet_header_size() {
 uint32_t n_packed_connection_request_size(
     packet_connection_request_t *connection_request) {
     return sizeof(uint8_t) * strlen(connection_request->name);
-}
-
-constexpr uint32_t n_packed_connection_handshake_size() {
-    return
-        sizeof(packet_connection_handshake_t::client_id);
 }
 
 void n_serialise_packet_header(
@@ -48,14 +44,42 @@ void n_deserialise_connection_request(
     request->name = serialiser->deserialise_string();
 }
 
+uint32_t n_packed_connection_handshake_size(
+    packet_connection_handshake_t *game_state) {
+    uint32_t final_size = 0;
+    final_size += sizeof(game_state->player_count);
+    final_size += game_state->player_count * sizeof(full_player_info_t);
+
+    // Other information...
+    return final_size;
+}
+
 void n_serialise_connection_handshake(
-    packet_connection_handshake_t *packet,
+    packet_connection_handshake_t *full_game_state,
     serialiser_t *serialiser) {
-    serialiser->serialise_uint16(packet->client_id);
+    serialiser->serialise_uint32(full_game_state->player_count);
+    for (uint32_t i = 0; i < full_game_state->player_count; ++i) {
+        serialiser->serialise_string(full_game_state->player_infos[i].name);
+        serialiser->serialise_uint16(full_game_state->player_infos[i].client_id);
+        serialiser->serialise_vector3(full_game_state->player_infos[i].ws_position);
+        serialiser->serialise_vector3(full_game_state->player_infos[i].ws_view_direction);
+        serialiser->serialise_float32(full_game_state->player_infos[i].default_speed);
+        serialiser->serialise_uint8(full_game_state->player_infos[i].is_local);
+    }
 }
 
 void n_deserialise_connection_handshake(
-    packet_connection_handshake_t *packet,
+    packet_connection_handshake_t *full_game_state,
     serialiser_t *serialiser) {
-    packet->client_id = serialiser->deserialise_uint16();
+    full_game_state->player_count = serialiser->deserialise_uint32();
+    full_game_state->player_infos = LN_MALLOC(full_player_info_t, full_game_state->player_count);
+
+    for (uint32_t i = 0; i < full_game_state->player_count; ++i) {
+        full_game_state->player_infos[i].name = serialiser->deserialise_string();
+        full_game_state->player_infos[i].client_id = serialiser->deserialise_uint16();
+        full_game_state->player_infos[i].ws_position = serialiser->deserialise_vector3();
+        full_game_state->player_infos[i].ws_view_direction = serialiser->deserialise_vector3();
+        full_game_state->player_infos[i].default_speed = serialiser->deserialise_float32();
+        full_game_state->player_infos[i].is_local = serialiser->deserialise_uint8();
+    }
 }

@@ -82,6 +82,8 @@ static void s_handle_input() {
     }
 }
 
+static uint64_t current_tick;
+
 // Records a secondary 
 static void s_tick(
     VkCommandBuffer render_command_buffer,
@@ -133,6 +135,9 @@ static void s_run_windowed_game() {
         translate_raw_to_game_input();
         dispatch_events(&events);
 
+        LN_CLEAR();
+        ++current_tick;
+
         s_handle_input();
 
         static uint32_t command_buffer_index = 0;
@@ -165,8 +170,6 @@ static void s_run_windowed_game() {
         ldelta_time = surface_delta_time();
 
         command_buffer_index = (command_buffer_index + 1) % secondary_command_buffer_count;
-
-        LN_CLEAR();
     }
 }
 
@@ -285,6 +288,7 @@ static void s_run_not_windowed_game() {
             VK_NULL_HANDLE,
             VK_NULL_HANDLE);
 
+        ++current_tick;
         LN_CLEAR();
     }
 }
@@ -309,6 +313,7 @@ void game_main(
 
     running = 1;
 
+    current_tick = 0;
     if (game_init_data->flags & GIF_WINDOWED) {
         s_windowed_game_main(
             game_init_data);
@@ -329,4 +334,8 @@ void finish_game() {
 
 float logic_delta_time() {
     return ldelta_time;
+}
+
+uint64_t get_current_tick() {
+    return current_tick;
 }

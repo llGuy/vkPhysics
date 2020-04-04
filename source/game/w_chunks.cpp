@@ -469,13 +469,15 @@ void w_chunks_data_init() {
 
 void w_destroy_chunk_world(
     world_t *world) {
-    for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
-        w_destroy_chunk(world->chunks[i]);
-    }
+    if (world->chunks.data) {
+        for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
+            w_destroy_chunk(world->chunks[i]);
+        }
     
-    world->chunks.destroy();
+        world->chunks.destroy();
 
-    //FL_FREE(world->chunks_to_render);
+        LOG_INFO("Destroyed chunk world\n");
+    }
 }
 
 void w_destroy_chunk_data() {
