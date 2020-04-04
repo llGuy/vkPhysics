@@ -25,21 +25,21 @@ static void s_world_event_listener(
 
         player_t *p = w_add_player(&world);
         
-        if (data->client_data) {
-            p->name = data->client_data->name;
-            p->client_id = data->client_data->client_id;
+        if (data->info.client_data) {
+            p->name = data->info.client_data->name;
+            p->client_id = data->info.client_data->client_id;
             // Now the network module can use w_get_player_from_client_id to get access to player directly
             w_link_client_id_to_local_id(p->client_id, p->local_id, &world);
         }
         
-        p->ws_position = data->ws_position;
-        p->ws_view_direction = data->ws_view_direction;
-        p->ws_up_vector = data->ws_up_vector;
+        p->ws_position = data->info.ws_position;
+        p->ws_view_direction = data->info.ws_view_direction;
+        p->ws_up_vector = data->info.ws_up_vector;
         p->player_action_count = 0;
-        p->default_speed = data->default_speed;
+        p->default_speed = data->info.default_speed;
         memset(p->player_actions, 0, sizeof(p->player_actions));
 
-        if (data->is_local) {
+        if (data->info.is_local) {
             w_set_local_player(p->local_id, &world);
         }
 
@@ -126,8 +126,8 @@ eye_3d_info_t create_eye_info() {
 lighting_info_t create_lighting_info() {
     lighting_info_t info = {};
     
-    /*info.ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
-    info.ws_light_positions[0] = vector4_t(player.position, 1.0f);
+    info.ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
+    /*info.ws_light_positions[0] = vector4_t(player.position, 1.0f);
     info.ws_light_directions[0] = vector4_t(player.direction, 0.0f);
     info.light_colors[0] = vector4_t(100.0f);*/
     info.lights_count = 0;

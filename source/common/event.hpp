@@ -3,7 +3,7 @@
 #include "tools.hpp"
 
 // Engine events
-#define MAX_EVENTS 20
+#define MAX_EVENTS 40
 #define MAX_LISTENERS 20
 
 typedef uint32_t listener_t;
@@ -31,11 +31,7 @@ struct event_data_request_to_join_server_t {
     const char *client_name;
 };
 
-struct event_enter_server_t {
-    uint16_t local_client_id;
-};
-
-struct event_new_player_t {
+struct player_init_info_t {
     struct client_t *client_data;
     // A bunch of shit (more will come)
     // (name and client_id are already in client_data)
@@ -44,6 +40,16 @@ struct event_new_player_t {
     vector3_t ws_up_vector;
     float default_speed;
     bool is_local;
+};
+
+struct event_enter_server_t {
+    uint16_t local_client_id;
+
+    player_init_info_t *infos;
+};
+
+struct event_new_player_t {
+    player_init_info_t info;
 };
 
 struct event_t {

@@ -199,12 +199,12 @@ static void s_world_ui_proc() {
     if (add_player) {
         event_new_player_t *data = FL_MALLOC(event_new_player_t, 1);
         memset(data, 0, sizeof(event_new_player_t));
-        data->ws_position = position;
-        data->ws_view_direction = direction;
-        data->ws_up_vector = up;
-        data->default_speed = default_speed;
-        data->client_data = NULL;
-        data->is_local = is_local;
+        data->info.ws_position = position;
+        data->info.ws_view_direction = direction;
+        data->info.ws_up_vector = up;
+        data->info.default_speed = default_speed;
+        data->info.client_data = NULL;
+        data->info.is_local = is_local;
         submit_event(ET_NEW_PLAYER, data, &events);
     }
 

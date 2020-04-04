@@ -55,6 +55,11 @@ static void s_process_connection_handshake(
 
     LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
 
+    // Add all the players
+    for (uint32_t i = 0; i < handshake.player_count; ++i) {
+        
+    }
+
     /*event_enter_server_t *data = FL_MALLOC(event_enter_server_t, 1);
     data->local_client_id = handshake.client_id;
     submit_event(ET_ENTER_SERVER, data, events);*/
@@ -87,6 +92,7 @@ void tick_client(
             s_process_connection_handshake(
                 &in_serialiser,
                 events);
+            return;
         } break;
 
         }
@@ -157,10 +163,10 @@ static void s_send_game_state_to_new_client(
             if (i == client_id) {
                 info->name = client->name;
                 info->client_id = client->client_id;
-                info->ws_position = player_info->ws_position;
-                info->ws_view_direction = player_info->ws_view_direction;
-                info->ws_up_vector = player_info->ws_up_vector;
-                info->default_speed = player_info->default_speed;
+                info->ws_position = player_info->info.ws_position;
+                info->ws_view_direction = player_info->info.ws_view_direction;
+                info->ws_up_vector = player_info->info.ws_up_vector;
+                info->default_speed = player_info->info.default_speed;
                 info->is_local = 1;
             }
             else {
@@ -220,18 +226,19 @@ static void s_process_connection_request(
     client->address = address;
 
     event_new_player_t *event_data = FL_MALLOC(event_new_player_t, 1);
-    event_data->client_data = client;
+    event_data->info.client_data = client;
     // Need to calculate a random position
     // TODO: In future, make it so that there is like some sort of startup screen when joining a server (like choose team, etc..)
-    event_data->ws_position = vector3_t(0.0f);
-    event_data->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
-    event_data->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
-    event_data->default_speed = 10.0f;
-    event_data->is_local = 0;
+    event_data->info.ws_position = vector3_t(0.0f);
+    event_data->info.ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
+    event_data->info.ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+    event_data->info.default_speed = 10.0f;
+    event_data->info.is_local = 0;
     
     submit_event(ET_NEW_PLAYER, event_data, events);
 
     // Send game state to new player
+    s_send_game_state_to_new_client(client_id, event_data);
     // Dispatch to all players newly joined player information
 }
 
