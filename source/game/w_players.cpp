@@ -12,6 +12,12 @@ void w_player_world_init(
     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
         world->players.data[i] = NULL;
     }
+
+    world->spectator = FL_MALLOC(player_t, 1);
+    memset(world->spectator, 0, sizeof(player_t));
+    world->spectator->default_speed = 20.0f;
+    world->spectator->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
+    world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
 }
 
 static mesh_t player_mesh;
@@ -74,49 +80,52 @@ void w_handle_input(
     game_input_t *game_input,
     float dt,
     world_t *world) {
+    player_actions_t actions;
+    
+    actions.bytes = 0;
+
+    actions.dt = dt;
+    actions.dmouse_x = game_input->mouse_x - game_input->previous_mouse_x;
+    actions.dmouse_y = game_input->mouse_y - game_input->previous_mouse_y;
+
+    if (game_input->actions[GIAT_MOVE_FORWARD].state == BS_DOWN) {
+        actions.move_forward = 1;
+    }
+    
+    if (game_input->actions[GIAT_MOVE_LEFT].state == BS_DOWN) {
+        actions.move_left = 1;
+    }
+    
+    if (game_input->actions[GIAT_MOVE_BACK].state == BS_DOWN) {
+        actions.move_back = 1;
+    }
+    
+    if (game_input->actions[GIAT_MOVE_RIGHT].state == BS_DOWN) {
+        actions.move_right = 1;
+    }
+    
+    if (game_input->actions[GIAT_TRIGGER4].state == BS_DOWN) { // Space
+        actions.jump = 1;
+    }
+    
+    if (game_input->actions[GIAT_TRIGGER6].state == BS_DOWN) { // Left shift
+        actions.crouch = 1;
+    }
+
+    if (game_input->actions[GIAT_TRIGGER1].state == BS_DOWN) {
+        actions.trigger_left = 1;
+    }
+        
+    if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
+        actions.trigger_right = 1;
+    }
+    
     player_t *local_player = w_get_local_player(world);
     if (local_player) {
-        player_actions_t actions;
-    
-        actions.bytes = 0;
-
-        actions.dt = dt;
-        actions.dmouse_x = game_input->mouse_x - game_input->previous_mouse_x;
-        actions.dmouse_y = game_input->mouse_y - game_input->previous_mouse_y;
-
-        if (game_input->actions[GIAT_MOVE_FORWARD].state == BS_DOWN) {
-            actions.move_forward = 1;
-        }
-    
-        if (game_input->actions[GIAT_MOVE_LEFT].state == BS_DOWN) {
-            actions.move_left = 1;
-        }
-    
-        if (game_input->actions[GIAT_MOVE_BACK].state == BS_DOWN) {
-            actions.move_back = 1;
-        }
-    
-        if (game_input->actions[GIAT_MOVE_RIGHT].state == BS_DOWN) {
-            actions.move_right = 1;
-        }
-    
-        if (game_input->actions[GIAT_TRIGGER4].state == BS_DOWN) { // Space
-            actions.jump = 1;
-        }
-    
-        if (game_input->actions[GIAT_TRIGGER6].state == BS_DOWN) { // Left shift
-            actions.crouch = 1;
-        }
-
-        if (game_input->actions[GIAT_TRIGGER1].state == BS_DOWN) {
-            actions.trigger_left = 1;
-        }
-        
-        if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
-            actions.trigger_right = 1;
-        }
-
         w_push_player_actions(local_player, &actions);
+    }
+    else {
+        w_push_player_actions(world->spectator, &actions);
     }
 }
 
@@ -229,6 +238,8 @@ void w_tick_players(
             w_execute_player_actions(p, world);
         }
     }
+
+    w_execute_player_actions(world->spectator, world);
 }
 
 void w_set_local_player(
@@ -275,4 +286,9 @@ player_t *w_get_local_player(
     else {
         return NULL;
     }
+}
+
+player_t *w_get_spectator(
+    world_t *world) {
+    return world->spectator;
 }

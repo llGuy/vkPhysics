@@ -65,52 +65,7 @@ void world_init(
     world_listener = set_listener_callback(s_world_event_listener, NULL, events);
     subscribe_to_event(ET_ENTER_SERVER, world_listener, events);
     subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
-#if 0
-    shader_binding_info_t cube_info = {};
-    load_mesh_internal(IM_CUBE, &cube, &cube_info);
 
-    const char *cube_paths[] = {
-        "../shaders/SPV/untextured_mesh.vert.spv",
-        "../shaders/SPV/untextured_mesh.geom.spv",
-        "../shaders/SPV/untextured_mesh.frag.spv" };
-    const char *cube_shadow_paths[] = {
-        "../shaders/SPV/untextured_mesh_shadow.vert.spv",
-        "../shaders/SPV/shadow.frag.spv" };    
-
-    cube_shader = create_mesh_shader_color(
-        &cube_info,
-        cube_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-    
-    cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
-    cube_data.color = vector4_t(1.0f);
-    cube_data.pbr_info.x = 0.07f;
-    cube_data.pbr_info.y = 0.1f;
-    
-    // Temporary stuff, just to test lighing
-    shader_binding_info_t sphere_info = {};
-    
-    load_mesh_internal(
-        IM_SPHERE,
-        &sphere,
-        &sphere_info);
-
-    const char *paths[] = { "../shaders/SPV/mesh.vert.spv", "../shaders/SPV/mesh.frag.spv" };
-    const char *shadow_paths[] = { "../shaders/SPV/mesh_shadow.vert.spv", "../shaders/SPV/shadow.frag.spv" };
-    sphere_shader = create_mesh_shader_color(
-        &sphere_info,
-        paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    render_data.model = matrix4_t(1.0f);
-    render_data.color = vector4_t(1.0f);
-    render_data.pbr_info.x = 0.2f;
-    render_data.pbr_info.y = 0.8;
-
-    free_mesh_binding_info(&cube_info);
-    free_mesh_binding_info(&sphere_info);
-#endif
-#if 1
     memset(&world, 0, sizeof(world_t));
 
     w_players_data_init();
@@ -118,7 +73,6 @@ void world_init(
 
     w_chunks_data_init();
     w_chunk_world_init(&world, 4);
-#endif
 
     player.position = vector3_t(100.0f);
     player.direction = vector3_t(1.0f, 0.0f, 0.0f);
@@ -133,60 +87,6 @@ void handle_world_input() {
     game_input_t *game_input = get_game_input();
     
     w_handle_input(game_input, surface_delta_time(), &world);
-#if 0
-
-    vector3_t right = glm::normalize(glm::cross(player.direction, vector3_t(0.0f, 1.0f, 0.0f)));
-    
-    if (game_input->actions[GIAT_MOVE_FORWARD].state == BS_DOWN) {
-        player.position += player.direction * surface_delta_time() * 10.0f;
-    }
-    
-    if (game_input->actions[GIAT_MOVE_LEFT].state == BS_DOWN) {
-        player.position -= right * surface_delta_time() * 10.0f;
-    }
-    
-    if (game_input->actions[GIAT_MOVE_BACK].state == BS_DOWN) {
-        player.position -= player.direction * surface_delta_time() * 10.0f;
-    }
-    
-    if (game_input->actions[GIAT_MOVE_RIGHT].state == BS_DOWN) {
-        player.position += right * surface_delta_time() * 10.0f;
-    }
-    
-    if (game_input->actions[GIAT_TRIGGER4].state == BS_DOWN) { // Space
-        player.position += vector3_t(0.0f, 1.0f, 0.0f) * surface_delta_time() * 10.0f;
-    }
-    
-    if (game_input->actions[GIAT_TRIGGER6].state == BS_DOWN) { // Left shift
-        player.position -= vector3_t(0.0f, 1.0f, 0.0f) * surface_delta_time() * 10.0f;
-    }
-
-    vector2_t new_mouse_position = vector2_t((float)game_input->mouse_x, (float)game_input->mouse_y);
-    vector2_t delta = new_mouse_position - vector2_t(game_input->previous_mouse_x, game_input->previous_mouse_y);
-    
-    static constexpr float SENSITIVITY = 30.0f;
-    
-    vector3_t res = player.direction;
-	    
-    float x_angle = glm::radians(-delta.x) * SENSITIVITY * surface_delta_time();// *elapsed;
-    float y_angle = glm::radians(-delta.y) * SENSITIVITY * surface_delta_time();// *elapsed;
-                
-    res = matrix3_t(glm::rotate(x_angle, vector3_t(0.0f, 1.0f, 0.0f))) * res;
-    vector3_t rotate_y = glm::cross(res, vector3_t(0.0f, 1.0f, 0.0f));
-    res = matrix3_t(glm::rotate(y_angle, rotate_y)) * res;
-
-    res = glm::normalize(res);
-                
-    player.direction = res;
-        
-    if (game_input->actions[GIAT_TRIGGER1].state == BS_DOWN) {
-        w_terraform(TT_DESTROY, player.position, player.direction, 10.0f, 4.0f, 300.0f, surface_delta_time(), &world);
-    }
-        
-    if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
-        w_terraform(TT_BUILD, player.position, player.direction, 10.0f, 4.0f, 300.0f, surface_delta_time(), &world);
-    }
-#endif
 }
 
 void tick_world(
@@ -248,18 +148,14 @@ eye_3d_info_t create_eye_info() {
     eye_3d_info_t info = {};
 
     player_t *player = w_get_local_player(&world);
-    
-    if (player) {
-        info.position = player->ws_position;
-        info.direction = player->ws_view_direction;
-        info.up = player->ws_up_vector;
-    }
 
-    else {
-        info.position = vector3_t(0.0f);
-        info.direction = vector3_t(1.0f, 0.0f, 0.0f);
-        info.up = vector3_t(0.0f, 1.0f, 0.0f);
+    if (!player) {
+        player = w_get_spectator(&world);
     }
+    
+    info.position = player->ws_position;
+    info.direction = player->ws_view_direction;
+    info.up = player->ws_up_vector;
 
     info.fov = 60.0f;
     info.near = 0.1f;
