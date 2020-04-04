@@ -1,5 +1,4 @@
 #include "net.hpp"
-#include <imgui.h>
 #include "world.hpp"
 #include "engine.hpp"
 #include "w_internal.hpp"
@@ -53,6 +52,8 @@ static void s_world_event_listener(
         if (data->is_local) {
             w_set_local_player(p->local_id, &world);
         }
+
+        FL_FREE(event->data);
     } break;
 
     }
@@ -94,7 +95,6 @@ void tick_world(
     VkCommandBuffer transfer_command_buffer,
     event_submissions_t *events) {
     (void)events;
-#if 1
     w_tick_players(&world);
 
     w_players_gpu_sync_and_render(
@@ -106,42 +106,10 @@ void tick_world(
         render_command_buffer,
         transfer_command_buffer,
         &world);
-#endif
     
     if (render_command_buffer != VK_NULL_HANDLE) {
         render_environment(render_command_buffer);
     }
-
-#if 0
-    cube_data.model = glm::scale(vector3_t(20.0f, 0.3f, 20.0f));
-    cube_data.color = vector4_t(0.0f);
-    cube_data.pbr_info.x = 0.07f;
-    cube_data.pbr_info.y = 0.1f;
-    submit_mesh(render_command_buffer, &cube, &cube_shader, &cube_data);
-
-    cube_data.model = glm::translate(vector3_t(15.0f, 0.0f, 0.0f)) * glm::rotate(glm::radians(60.0f), vector3_t(1.0f, 1.0f, 0.0f)) * glm::scale(vector3_t(2.0f, 10.0f, 1.0f));
-    cube_data.color = vector4_t(1.0f);
-    cube_data.pbr_info.x = 0.07f;
-    cube_data.pbr_info.y = 0.1f;
-    submit_mesh(render_command_buffer, &cube, &cube_shader, &cube_data);
-
-    for (uint32_t x = 0; x < 7; ++x) {
-        for (uint32_t y = 0; y < 7; ++y) {
-            vector2_t xz = vector2_t((float)x, (float)y);
-
-            xz -= vector2_t(3.5f);
-            xz *= 3.5f;
-
-            vector3_t ws_position = vector3_t(xz.x, 1.25f, xz.y);
-
-            render_data.model = glm::translate(ws_position);
-            render_data.pbr_info.x = glm::clamp((float)x / 7.0f, 0.05f, 1.0f);
-            render_data.pbr_info.y = (float)y / 7.0f;
-                
-            submit_mesh(render_command_buffer, &sphere, &sphere_shader, &render_data);
-        }
-    }
-#endif
 }
 
 eye_3d_info_t create_eye_info() {

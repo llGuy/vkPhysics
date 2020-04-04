@@ -27,6 +27,8 @@ struct event_surface_resize_t {
 
 struct event_data_request_to_join_server_t {
     const char *ip_address;
+    // TODO: Later, need to put this in some sort of file
+    const char *client_name;
 };
 
 struct event_enter_server_t {

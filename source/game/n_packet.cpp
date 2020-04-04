@@ -24,7 +24,7 @@ void n_serialise_packet_header(
     serialiser->serialise_uint32(header->flags.bytes);
     serialiser->serialise_uint64(header->current_tick);
     serialiser->serialise_uint64(header->current_packet_count);
-    serialiser->serialise_uint32(header->client_id);
+    serialiser->serialise_uint16(header->client_id);
 }
 
 void n_deserialise_packet_header(
@@ -45,7 +45,7 @@ void n_serialise_connection_request(
 void n_deserialise_connection_request(
     packet_connection_request_t *request,
     serialiser_t *serialiser) {
-    
+    request->name = serialiser->deserialise_string();
 }
 
 void n_serialise_connection_handshake(

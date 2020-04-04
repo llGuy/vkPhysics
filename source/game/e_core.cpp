@@ -34,6 +34,8 @@ static void s_game_event_listener(
     case ET_RESIZE_SURFACE: {
         event_surface_resize_t *data = (event_surface_resize_t *)event->data;
         handle_resize(data->width, data->height);
+
+        FL_FREE(data);
     } break;
 
     case ET_PRESSED_ESCAPE: {
@@ -162,10 +164,13 @@ static void s_run_windowed_game() {
         ldelta_time = surface_delta_time();
 
         command_buffer_index = (command_buffer_index + 1) % secondary_command_buffer_count;
+
+        LN_CLEAR();
     }
 }
 
 // Will remove this once have own UI system
+// For now though, basically just dispatches events
 #if LINK_AGAINST_RENDERER
 static void s_world_ui_proc() {
     ImGui::Separator();
@@ -188,7 +193,7 @@ static void s_world_ui_proc() {
     bool add_player = ImGui::Button("Add player");
     
     if (add_player) {
-        event_new_player_t *data = FL_MALLOC(event_new_player_t, 1);;
+        event_new_player_t *data = FL_MALLOC(event_new_player_t, 1);
         memset(data, 0, sizeof(event_new_player_t));
         data->ws_position = position;
         data->ws_view_direction = direction;
@@ -198,6 +203,33 @@ static void s_world_ui_proc() {
         data->is_local = is_local;
         submit_event(ET_NEW_PLAYER, data, &events);
     }
+
+    ImGui::Separator();
+    ImGui::Text("-- Net --");
+    bool started_client = ImGui::Button("Start client");
+    if (started_client) {
+        submit_event(ET_START_CLIENT, NULL, &events);
+    }
+
+    bool started_server = ImGui::Button("Start server");
+    if (started_server) {
+        submit_event(ET_START_SERVER, NULL, &events);
+    }
+
+    static char address_buffer[50] = {};
+    ImGui::InputText("Connect to", address_buffer, sizeof(address_buffer));
+
+    static char name_buffer[50] = {};
+    ImGui::InputText("Client name", name_buffer, sizeof(name_buffer));
+    
+    bool request_connection = ImGui::Button("Request connection");
+    if (request_connection) {
+        event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
+        memset(data, 0, sizeof(event_data_request_to_join_server_t));
+        data->ip_address = address_buffer;
+        data->client_name = name_buffer;
+        submit_event(ET_REQUEST_TO_JOIN_SERVER, data, &events);
+    }
 }
 #endif
 
@@ -206,8 +238,6 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_CLOSED_WINDOW, game_core_listener, &events);
     subscribe_to_event(ET_RESIZE_SURFACE, game_core_listener, &events);
     subscribe_to_event(ET_PRESSED_ESCAPE, game_core_listener, &events);
-
-    net_init(&events);
 
     focus = HF_UI;
     input_interface_data_t input_interface = input_interface_init();
@@ -220,6 +250,8 @@ static void s_windowed_game_main(
         input_interface.window,
         input_interface.surface_width,
         input_interface.surface_height);
+    
+    net_init(&events);
 
 #if LINK_AGAINST_RENDERER
     // TODO: If debugging
@@ -251,6 +283,8 @@ static void s_run_not_windowed_game() {
         s_tick(
             VK_NULL_HANDLE,
             VK_NULL_HANDLE);
+
+        LN_CLEAR();
     }
 }
 

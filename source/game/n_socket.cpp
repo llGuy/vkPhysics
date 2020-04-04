@@ -50,6 +50,9 @@ static void s_bind_network_socket_to_port(
         ++address.port;
         s_bind_network_socket_to_port(s, address);
     }
+    else {
+        printf("Sucess bind socket to port\n");
+    }
 }
 
 static void s_set_socket_to_non_blocking_mode(
@@ -144,6 +147,9 @@ static void s_bind_network_socket_to_port(
         ++address.port;
         s_bind_network_socket_to_port(s, address);
     }
+    else {
+        printf("Success bind socket to port\n");
+    }
 }
 
 static void s_set_socket_to_non_blocking_mode(
@@ -172,6 +178,7 @@ static int32_t s_receive_from(
         return 0;
     }
     else {
+        printf("Received bytes\n");
         buffer[bytes_received] = 0;
     }
 
