@@ -18,6 +18,7 @@ enum event_type_t {
     ET_START_SERVER,
     ET_PRESSED_ESCAPE,
     ET_LEAVE_SERVER,
+    ET_PLAYER_DISCONNECTED,
     ET_INVALID_EVENT_TYPE
 };
 
@@ -54,6 +55,10 @@ struct event_enter_server_t {
 
 struct event_new_player_t {
     player_init_info_t info;
+};
+
+struct event_player_disconnected_t {
+    uint16_t client_id;
 };
 
 struct event_t {

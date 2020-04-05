@@ -54,8 +54,6 @@ static void s_world_event_listener(
     } break;
 
     case ET_LEAVE_SERVER: {
-        LOG_INFO("Disconnecting\n");
-
         w_clear_players(&world);
         w_clear_chunk_world(&world);
     } break;
@@ -64,6 +62,16 @@ static void s_world_event_listener(
         event_new_player_t *data = (event_new_player_t *)event->data;
 
         s_add_player_from_info(&data->info);
+
+        FL_FREE(event->data);
+    } break;
+
+    case ET_PLAYER_DISCONNECTED: {
+        event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
+
+        player_t *p = w_get_player_from_client_id(data->client_id, &world);
+
+        w_destroy_player(p->local_id, &world);
 
         FL_FREE(event->data);
     } break;
@@ -82,6 +90,7 @@ void world_init(
     subscribe_to_event(ET_ENTER_SERVER, world_listener, events);
     subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
     subscribe_to_event(ET_LEAVE_SERVER, world_listener, events);
+    subscribe_to_event(ET_PLAYER_DISCONNECTED, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 

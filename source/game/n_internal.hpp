@@ -49,7 +49,7 @@ float n_host_to_network_byte_order_f32(
 float n_network_to_host_byte_order_f32(
     float bytes);
 
-enum packet_type_t { PT_CONNECTION_REQUEST, PT_CONNECTION_HANDSHAKE, PT_PLAYER_JOINED };
+enum packet_type_t { PT_CONNECTION_REQUEST, PT_CONNECTION_HANDSHAKE, PT_PLAYER_JOINED, PT_CLIENT_DISCONNECT, PT_PLAYER_LEFT };
 
 struct packet_header_t {
     union {

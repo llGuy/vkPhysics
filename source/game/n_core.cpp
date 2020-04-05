@@ -36,6 +36,7 @@ static bool s_send_to(
 }
 
 static bool started_client = 0;
+static uint16_t current_client_id;
 static bool client_check_incoming_packets = 0;
 
 #define MAX_CLIENTS 50
@@ -75,6 +76,7 @@ static void s_process_connection_handshake(
 
         clients.data[client_id].client_id = client_id;
         clients.data[client_id].name = handshake.player_infos[i].name;
+        clients.data[client_id].initialised = 1;
 
         data->infos[i].client_data = &clients.data[client_id];
         data->infos[i].ws_position = handshake.player_infos[i].ws_position;
@@ -85,6 +87,7 @@ static void s_process_connection_handshake(
 
         if (data->infos[i].is_local) {
             data->local_client_id = clients.data[i].client_id;
+            current_client_id = data->local_client_id;
         }
     }
 
@@ -115,6 +118,20 @@ static void s_process_player_joined(
     new_player->info.is_local = 0;
 
     submit_event(ET_NEW_PLAYER, new_player, events);
+}
+
+static void s_process_player_left(
+    serialiser_t *in_serialiser,
+    event_submissions_t *events) {
+    uint16_t disconnected_client = in_serialiser->deserialise_uint16();
+
+    clients.data[disconnected_client].initialised = 0;
+
+    event_player_disconnected_t *data = FL_MALLOC(event_player_disconnected_t, 1);
+    data->client_id = disconnected_client;
+    submit_event(ET_PLAYER_DISCONNECTED, data, events);
+
+    LOG_INFO("Player disconnected\n");
 }
 
 void tick_client(
@@ -150,6 +167,12 @@ void tick_client(
 
             case PT_PLAYER_JOINED: {
                 s_process_player_joined(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            case PT_PLAYER_LEFT: {
+                s_process_player_left(
                     &in_serialiser,
                     events);
             } break;
@@ -194,6 +217,22 @@ static void s_send_connect_request_to_server(
     else {
         LOG_ERROR("Failed to send connection request\n");
     }
+}
+
+static void s_send_disconnect_to_server() {
+    serialiser_t serialiser = {};
+    serialiser.init(100);
+
+    packet_header_t header = {};
+    header.current_tick = get_current_tick();
+    header.current_packet_count = current_packet;
+    header.client_id = current_client_id;
+    header.flags.packet_type = PT_CLIENT_DISCONNECT;
+    header.flags.total_packet_size = n_packed_packet_header_size();
+
+    n_serialise_packet_header(&header, &serialiser);
+    
+    s_send_to(&serialiser, bound_server_address);
 }
 
 static bool started_server = 0;
@@ -333,6 +372,38 @@ static void s_process_connection_request(
     s_inform_all_players_on_newcomer(event_data);
 }
 
+static void s_process_client_disconnect(
+    serialiser_t *serialiser,
+    uint16_t client_id,
+    event_submissions_t *events) {
+    LOG_INFO("Client disconnected\n");
+
+    clients[client_id].initialised = 0;
+    clients.remove(client_id);
+
+    event_player_disconnected_t *data = FL_MALLOC(event_player_disconnected_t, 1);
+    data->client_id = client_id;
+    submit_event(ET_PLAYER_DISCONNECTED, data, events);
+
+    serialiser_t out_serialiser = {};
+    out_serialiser.init(100);
+    packet_header_t header = {};
+    header.current_tick = get_current_tick();
+    header.current_packet_count = current_packet;
+    header.flags.packet_type = PT_PLAYER_LEFT;
+    header.flags.total_packet_size = n_packed_packet_header_size() + sizeof(uint16_t);
+
+    n_serialise_packet_header(&header, &out_serialiser);
+    out_serialiser.serialise_uint16(client_id);
+    
+    for (uint32_t i = 0; i < clients.data_count; ++i) {
+        client_t *c = &clients[i];
+        if (c->initialised) {
+            s_send_to(&out_serialiser, c->address);
+        }
+    }
+}
+
 void tick_server(
     event_submissions_t *events) {
     // In future, have a separate thread capturing these
@@ -358,6 +429,13 @@ void tick_server(
                 s_process_connection_request(
                     &in_serialiser,
                     received_address,
+                    events);
+            } break;
+
+            case PT_CLIENT_DISCONNECT: {
+                s_process_client_disconnect(
+                    &in_serialiser,
+                    header.client_id,
                     events);
             } break;
 
@@ -401,9 +479,12 @@ static void s_net_event_listener(
     } break;
 
     case ET_LEAVE_SERVER: {
+        // Send to server message
+        s_send_disconnect_to_server();
+        
         memset(&bound_server_address, 0, sizeof(bound_server_address));
         memset(clients.data, 0, sizeof(client_t) * clients.max_size);
-
+        
         LOG_INFO("Disconnecting\n");
     } break;
 
