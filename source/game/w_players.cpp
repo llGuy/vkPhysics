@@ -1,3 +1,4 @@
+#include "net.hpp"
 #include <common/log.hpp>
 #include "w_internal.hpp"
 
@@ -66,6 +67,7 @@ player_t *w_get_player_from_client_id(
         return world->players[id];
     }
     else {
+        LOG_INFO("Something is wrong\n");
         return NULL;
     }
 }
@@ -225,6 +227,16 @@ static void w_execute_player_actions(
         s_execute_player_direction_change(player, actions);
         s_execute_player_movement(player, actions);
         s_execute_player_triggers(player, actions, world);
+
+        // If this is local player, need to cache these commands to later send to server
+        if ((int32_t)player->local_id == world->local_player && connected_to_server()) {
+            if (player->cached_player_action_count < MAX_PLAYER_ACTIONS) {
+                player->cached_player_actions[player->cached_player_action_count++] = *actions;
+            }
+            else {
+                LOG_WARNING("Too many cached player actions");
+            }
+        }
     }
 
     player->player_action_count = 0;
@@ -306,6 +318,8 @@ void w_destroy_player(
         world->players[id] = NULL;
         // TODO: Free const char *name?
         world->players.remove(id);
+
+        FL_FREE(p);
     }
 }
 
@@ -318,4 +332,8 @@ void w_clear_players(
     }
 
     world->players.clear();
+
+    for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
+        world->local_id_from_client_id[i] = -1;
+    }
 }

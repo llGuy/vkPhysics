@@ -123,3 +123,54 @@ void n_deserialise_player_joined(
     packet->player_info.default_speed = serialiser->deserialise_float32();
     packet->player_info.is_local = serialiser->deserialise_uint8();
 }
+
+uint32_t n_packed_player_commands_size(
+    packet_player_commands_t *commands) {
+    uint32_t final_size = 0;
+    final_size += sizeof(packet_player_commands_t::command_count);
+
+    uint32_t command_size =
+        sizeof(player_actions_t::bytes) +
+        sizeof(player_actions_t::dmouse_x) +
+        sizeof(player_actions_t::dmouse_y) +
+        sizeof(player_actions_t::dt);
+
+    final_size += command_size * commands->command_count;
+
+    return final_size;
+}
+
+void n_serialise_player_commands(
+    packet_player_commands_t *packet,
+    serialiser_t *serialiser) {
+    serialiser->serialise_uint8(packet->command_count);
+
+    for (uint32_t i = 0; i < packet->command_count; ++i) {
+        serialiser->serialise_uint16(packet->actions[i].bytes);
+        serialiser->serialise_float32(packet->actions[i].dmouse_x);
+        serialiser->serialise_float32(packet->actions[i].dmouse_y);
+        serialiser->serialise_float32(packet->actions[i].dt);
+    }
+
+    serialiser->serialise_vector3(packet->ws_final_position);
+    serialiser->serialise_vector3(packet->ws_final_view_direction);
+    serialiser->serialise_vector3(packet->ws_final_up_vector);
+}
+
+void n_deserialise_player_commands(
+    packet_player_commands_t *packet,
+    serialiser_t *serialiser) {
+    packet->command_count = serialiser->deserialise_uint8();
+
+    packet->actions = LN_MALLOC(player_actions_t, packet->command_count);
+    for (uint32_t i = 0; i < packet->command_count; ++i) {
+        packet->actions[i].bytes = serialiser->deserialise_uint16();
+        packet->actions[i].dmouse_x = serialiser->deserialise_float32();
+        packet->actions[i].dmouse_y = serialiser->deserialise_float32();
+        packet->actions[i].dt = serialiser->deserialise_float32();
+    }
+
+    packet->ws_final_position = serialiser->deserialise_vector3();
+    packet->ws_final_view_direction = serialiser->deserialise_vector3();
+    packet->ws_final_up_vector = serialiser->deserialise_vector3();
+}

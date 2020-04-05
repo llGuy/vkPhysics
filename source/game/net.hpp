@@ -39,3 +39,5 @@ struct local_client_info_t {
 
 void tick_net(
     event_submissions_t *events);
+
+bool connected_to_server();

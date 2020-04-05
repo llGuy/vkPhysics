@@ -67,6 +67,10 @@ struct player_t {
     // Maximum player actions
     uint32_t player_action_count;
     player_actions_t player_actions[MAX_PLAYER_ACTIONS];
+
+    // Only allocated for local player
+    uint32_t cached_player_action_count;
+    player_actions_t *cached_player_actions;
 };
 
 player_t *get_player(

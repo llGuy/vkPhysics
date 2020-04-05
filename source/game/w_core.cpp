@@ -27,8 +27,13 @@ static void s_add_player_from_info(
     memset(p->player_actions, 0, sizeof(p->player_actions));
 
     if (init_info->is_local) {
+        // If this is the local player (controlled by mouse and keyboard, need to cache all player actions to send to the server)
         w_set_local_player(p->local_id, &world);
+        p->cached_player_action_count = 0;
+        p->cached_player_actions = FL_MALLOC(player_actions_t, MAX_PLAYER_ACTIONS * 2);
     }
+
+    LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
 }
 
 static void s_world_event_listener(

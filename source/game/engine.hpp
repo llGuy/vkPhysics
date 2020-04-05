@@ -18,6 +18,7 @@ struct game_init_data_t {
 void game_main(
     game_init_data_t *game_init_data);
 
+// Make sure that this gets thought through in entire engine
 float logic_delta_time();
 
 uint64_t get_current_tick();

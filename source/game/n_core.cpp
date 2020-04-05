@@ -8,6 +8,9 @@
 #include <common/containers.hpp>
 #include <common/allocators.hpp>
 
+static float client_command_output_interval = 1.0f / 25.0f;
+static float server_snapshot_output_interval = 1.0f / 20.0f;
+
 #define MAX_MESSAGE_SIZE 40000
 
 static char *message_buffer;
@@ -50,7 +53,7 @@ static void s_start_client() {
     started_client = 1;
 }
 
-static network_address_t bound_server_address;
+static network_address_t bound_server_address = {};
 
 static void s_process_connection_handshake(
     serialiser_t *serialiser,
@@ -134,9 +137,56 @@ static void s_process_player_left(
     LOG_INFO("Player disconnected\n");
 }
 
+static void s_send_commands_to_server() {
+    player_t *p = get_player(current_client_id);
+
+    // Means that world hasn't been initialised yet (could be timing issues when submitting ENTER_SERVER event and send commands interval, so just to make sure, check that player is not NULL)
+    if (p) {
+        packet_player_commands_t packet = {};
+        packet.command_count = (uint8_t)p->cached_player_action_count;
+        packet.actions = LN_MALLOC(player_actions_t, packet.command_count);
+
+        for (uint32_t i = 0; i < packet.command_count; ++i) {
+            packet.actions[i].bytes = p->cached_player_actions[i].bytes;
+            packet.actions[i].dmouse_x = p->cached_player_actions[i].dmouse_x;
+            packet.actions[i].dmouse_y = p->cached_player_actions[i].dmouse_y;
+            packet.actions[i].dt = p->cached_player_actions[i].dt;
+        }
+
+        packet.ws_final_position = p->ws_position;
+        packet.ws_final_view_direction = p->ws_view_direction;
+        packet.ws_final_up_vector = p->ws_up_vector;
+
+        packet_header_t header = {};
+        header.current_tick = get_current_tick();
+        header.current_packet_count = current_packet;
+        header.client_id = current_client_id;
+        header.flags.packet_type = PT_CLIENT_COMMANDS;
+        header.flags.total_packet_size = n_packed_packet_header_size() + n_packed_player_commands_size(&packet);
+
+        serialiser_t serialiser = {};
+        serialiser.init(header.flags.total_packet_size);
+        n_serialise_packet_header(&header, &serialiser);
+        n_serialise_player_commands(&packet, &serialiser);
+
+        s_send_to(&serialiser, bound_server_address);
+    
+        p->cached_player_action_count = 0;
+    }
+}
+
 void tick_client(
     event_submissions_t *events) {
     if (client_check_incoming_packets) {
+        static float elapsed = 0.0f;
+        elapsed += logic_delta_time();
+        if (elapsed >= client_command_output_interval) {
+            // Send commands to the server
+            s_send_commands_to_server();
+
+            elapsed = 0.0f;
+        }
+
         network_address_t received_address = {};
         int32_t received = n_receive_from(
             main_udp_socket,
@@ -376,6 +426,7 @@ static void s_process_client_disconnect(
     serialiser_t *serialiser,
     uint16_t client_id,
     event_submissions_t *events) {
+    (void)serialiser;
     LOG_INFO("Client disconnected\n");
 
     clients[client_id].initialised = 0;
@@ -439,6 +490,10 @@ void tick_server(
                     events);
             } break;
 
+            case PT_CLIENT_COMMANDS: {
+                LOG_INFO("Received client commands\n");
+            } break;
+
             }
         }
     }
@@ -479,13 +534,17 @@ static void s_net_event_listener(
     } break;
 
     case ET_LEAVE_SERVER: {
-        // Send to server message
-        s_send_disconnect_to_server();
+        if (bound_server_address.ipv4_address > 0) {
+            // Send to server message
+            s_send_disconnect_to_server();
         
-        memset(&bound_server_address, 0, sizeof(bound_server_address));
-        memset(clients.data, 0, sizeof(client_t) * clients.max_size);
+            memset(&bound_server_address, 0, sizeof(bound_server_address));
+            memset(clients.data, 0, sizeof(client_t) * clients.max_size);
+
+            client_check_incoming_packets = 0;
         
-        LOG_INFO("Disconnecting\n");
+            LOG_INFO("Disconnecting\n");
+        }
     } break;
 
     }
@@ -506,4 +565,8 @@ void net_init(
     n_socket_api_init();
 
     message_buffer = FL_MALLOC(char, MAX_MESSAGE_SIZE);
+}
+
+bool connected_to_server() {
+    return bound_server_address.ipv4_address != 0;
 }

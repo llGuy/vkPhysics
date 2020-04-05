@@ -1,6 +1,7 @@
 #pragma once
 
 #include "net.hpp"
+#include "world.hpp"
 #include <common/tools.hpp>
 #include <common/serialiser.hpp>
 
@@ -49,7 +50,20 @@ float n_host_to_network_byte_order_f32(
 float n_network_to_host_byte_order_f32(
     float bytes);
 
-enum packet_type_t { PT_CONNECTION_REQUEST, PT_CONNECTION_HANDSHAKE, PT_PLAYER_JOINED, PT_CLIENT_DISCONNECT, PT_PLAYER_LEFT };
+enum packet_type_t {
+    // Client sends to server when requesting to join game
+    PT_CONNECTION_REQUEST,
+    // Server sends to client when join request was acknowledged and client can join
+    PT_CONNECTION_HANDSHAKE,
+    // Server sends to clients when a new player joins
+    PT_PLAYER_JOINED,
+    // Client sends to server when wishing to disconnect
+    PT_CLIENT_DISCONNECT,
+    // Server sends to clients when player has disconnected
+    PT_PLAYER_LEFT,
+    // Client sends to server at short time intervals with player actions (movement, looking, etc...)
+    PT_CLIENT_COMMANDS,
+};
 
 struct packet_header_t {
     union {
@@ -136,6 +150,27 @@ void n_serialise_player_joined(
 
 void n_deserialise_player_joined(
     packet_player_joined_t *packet,
+    serialiser_t *serialiser);
+
+struct packet_player_commands_t {
+    uint8_t command_count;
+    player_actions_t *actions;
+
+    // Stuff that the server will use to compare server-calculated data
+    vector3_t ws_final_position;
+    vector3_t ws_final_view_direction;
+    vector3_t ws_final_up_vector;
+};
+
+uint32_t n_packed_player_commands_size(
+    packet_player_commands_t *commands);
+
+void n_serialise_player_commands(
+    packet_player_commands_t *packet,
+    serialiser_t *serialiser);
+
+void n_deserialise_player_commands(
+    packet_player_commands_t *packet,
     serialiser_t *serialiser);
 
 // Will use this during game play
