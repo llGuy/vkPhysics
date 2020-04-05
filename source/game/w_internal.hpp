@@ -58,6 +58,13 @@ void w_set_local_player(
 player_t *w_get_spectator(
     struct world_t *world);
 
+void w_destroy_player(
+    uint32_t id,
+    world_t *world);
+
+void w_clear_players(
+    world_t *world);
+
 // Push constant
 // chunk_render_data_t may become a different structure in the future.
 typedef mesh_render_data_t chunk_render_data_t;
@@ -131,7 +138,7 @@ uint32_t w_hash_chunk_coord(
 
 void w_chunks_data_init();
 
-void w_destroy_chunk_world(
+void w_clear_chunk_world(
     world_t *world);
 
 void w_destroy_chunk_data();

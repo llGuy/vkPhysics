@@ -17,6 +17,7 @@ enum event_type_t {
     ET_START_CLIENT,
     ET_START_SERVER,
     ET_PRESSED_ESCAPE,
+    ET_LEAVE_SERVER,
     ET_INVALID_EVENT_TYPE
 };
 

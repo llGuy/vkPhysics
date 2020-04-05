@@ -234,6 +234,11 @@ static void s_world_ui_proc() {
         data->client_name = name_buffer;
         submit_event(ET_REQUEST_TO_JOIN_SERVER, data, &events);
     }
+
+    bool leave_server = ImGui::Button("Disconnect");
+    if (leave_server) {
+        submit_event(ET_LEAVE_SERVER, NULL, &events);
+    }
 }
 #endif
 

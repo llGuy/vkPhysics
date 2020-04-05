@@ -85,3 +85,41 @@ void n_deserialise_connection_handshake(
         full_game_state->player_infos[i].is_local = serialiser->deserialise_uint8();
     }
 }
+
+uint32_t n_packed_player_joined_size(
+    packet_player_joined_t *packet) {
+    uint32_t total_size = 0;
+    total_size += strlen(packet->player_info.name);
+    total_size += sizeof(full_player_info_t::client_id);
+    total_size += sizeof(full_player_info_t::ws_position);
+    total_size += sizeof(full_player_info_t::ws_view_direction);
+    total_size += sizeof(full_player_info_t::ws_up_vector);
+    total_size += sizeof(full_player_info_t::default_speed);
+    total_size += sizeof(full_player_info_t::is_local);
+
+    return total_size;
+}
+
+void n_serialise_player_joined(
+    packet_player_joined_t *packet,
+    serialiser_t *serialiser) {
+    serialiser->serialise_string(packet->player_info.name);
+    serialiser->serialise_uint16(packet->player_info.client_id);
+    serialiser->serialise_vector3(packet->player_info.ws_position);
+    serialiser->serialise_vector3(packet->player_info.ws_view_direction);
+    serialiser->serialise_vector3(packet->player_info.ws_up_vector);
+    serialiser->serialise_float32(packet->player_info.default_speed);
+    serialiser->serialise_uint8(packet->player_info.is_local);
+}
+
+void n_deserialise_player_joined(
+    packet_player_joined_t *packet,
+    serialiser_t *serialiser) {
+    packet->player_info.name = serialiser->deserialise_string();
+    packet->player_info.client_id = serialiser->deserialise_uint16();
+    packet->player_info.ws_position = serialiser->deserialise_vector3();
+    packet->player_info.ws_view_direction = serialiser->deserialise_vector3();
+    packet->player_info.ws_up_vector = serialiser->deserialise_vector3();
+    packet->player_info.default_speed = serialiser->deserialise_float32();
+    packet->player_info.is_local = serialiser->deserialise_uint8();
+}

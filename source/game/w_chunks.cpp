@@ -467,15 +467,15 @@ void w_chunks_data_init() {
         VK_CULL_MODE_FRONT_BIT);
 }
 
-void w_destroy_chunk_world(
+void w_clear_chunk_world(
     world_t *world) {
-    if (world->chunks.data) {
+    if (world->chunks.data_count) {
         for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
             w_destroy_chunk(world->chunks[i]);
             world->chunks[i] = NULL;
         }
 
-        world->chunks.destroy();
+        world->chunks.clear();
 
         LOG_INFO("Destroyed chunk world\n");
     }

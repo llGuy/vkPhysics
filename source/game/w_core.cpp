@@ -40,7 +40,8 @@ static void s_world_event_listener(
         LOG_INFO("Entering server world\n");
 
         // Reinitialise chunks / players
-        w_destroy_chunk_world(&world);
+        w_clear_players(&world);
+        w_clear_chunk_world(&world);
 
         event_enter_server_t *data = (event_enter_server_t *)event->data;
 
@@ -50,6 +51,13 @@ static void s_world_event_listener(
 
         FL_FREE(data->infos);
         FL_FREE(event->data);
+    } break;
+
+    case ET_LEAVE_SERVER: {
+        LOG_INFO("Disconnecting\n");
+
+        w_clear_players(&world);
+        w_clear_chunk_world(&world);
     } break;
 
     case ET_NEW_PLAYER: {
@@ -73,6 +81,7 @@ void world_init(
     world_listener = set_listener_callback(s_world_event_listener, NULL, events);
     subscribe_to_event(ET_ENTER_SERVER, world_listener, events);
     subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
+    subscribe_to_event(ET_LEAVE_SERVER, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 
@@ -84,7 +93,7 @@ void world_init(
 }
 
 void destroy_world() {
-    w_destroy_chunk_world(&world);
+    w_clear_chunk_world(&world);
     w_destroy_chunk_data();
 }
 

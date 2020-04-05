@@ -119,11 +119,18 @@ template <
         removed = FL_MALLOC(uint32_t, max_size);
     }
 
+    void clear() {
+        data_count = 0;
+        removed_count = 0;
+    }
+    
     void destroy() {
         FL_FREE(data);
         FL_FREE(removed);
 
+        data = NULL;
         data_count = 0;
+        removed_count = 0;
     }
     
     uint32_t add() {
@@ -167,6 +174,8 @@ template <
 
     void destroy() {
         FL_FREE(data);
+        data = 0;
+        data_count = 0;
     }
     
     uint32_t add() {
@@ -333,7 +342,7 @@ template <
         return(nullptr);
     }
 
-    void deinitialize() {
+    void destroy() {
         buffer_size = 0;
         head = 0;
         tail = 0;

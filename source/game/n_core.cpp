@@ -36,6 +36,7 @@ static bool s_send_to(
 }
 
 static bool started_client = 0;
+static bool client_check_incoming_packets = 0;
 
 #define MAX_CLIENTS 50
 static stack_container_t<client_t> clients;
@@ -87,50 +88,82 @@ static void s_process_connection_handshake(
         }
     }
 
-    clients.data_count = (uint16_t)highest_client_index + 1;
+    // Don't keep track for client
+    //clients.data_count = (uint16_t)highest_client_index + 1;
 
     submit_event(ET_ENTER_SERVER, data, events);
 }
 
+static void s_process_player_joined(
+    serialiser_t *in_serialiser,
+    event_submissions_t *events) {
+    packet_player_joined_t packet = {};
+    n_deserialise_player_joined(&packet, in_serialiser);
+
+    LOG_INFOV("%s joined the game\n", packet.player_info.name);
+
+    event_new_player_t *new_player = FL_MALLOC(event_new_player_t, 1);
+    client_t *c = &clients.data[packet.player_info.client_id];
+    c->name = packet.player_info.name;
+    c->client_id = packet.player_info.client_id;
+
+    new_player->info.client_data = c;
+    new_player->info.ws_position = packet.player_info.ws_position;
+    new_player->info.ws_view_direction = packet.player_info.ws_view_direction;
+    new_player->info.ws_up_vector = packet.player_info.ws_up_vector;
+    new_player->info.default_speed = packet.player_info.default_speed;
+    new_player->info.is_local = 0;
+
+    submit_event(ET_NEW_PLAYER, new_player, events);
+}
+
 void tick_client(
     event_submissions_t *events) {
-    network_address_t received_address = {};
-    int32_t received = n_receive_from(
-        main_udp_socket,
-        message_buffer,
-        sizeof(char) * MAX_MESSAGE_SIZE,
-        &received_address);
-
-    // In future, separate thread will be capturing all these packets
-    static const uint32_t MAX_RECEIVED_PER_TICK = 3;
-    uint32_t i = 0;
-
-    while (received && i < MAX_RECEIVED_PER_TICK) {
-        serialiser_t in_serialiser = {};
-        in_serialiser.data_buffer = (uint8_t *)message_buffer;
-        in_serialiser.data_buffer_size = received;
-
-        packet_header_t header = {};
-        n_deserialise_packet_header(&header, &in_serialiser);
-
-        switch(header.flags.packet_type) {
-
-        case PT_CONNECTION_HANDSHAKE: {
-            s_process_connection_handshake(
-                &in_serialiser,
-                events);
-            return;
-        } break;
-
-        }
-        
-        received = n_receive_from(
+    if (client_check_incoming_packets) {
+        network_address_t received_address = {};
+        int32_t received = n_receive_from(
             main_udp_socket,
             message_buffer,
             sizeof(char) * MAX_MESSAGE_SIZE,
             &received_address);
 
-        ++i;
+        // In future, separate thread will be capturing all these packets
+        static const uint32_t MAX_RECEIVED_PER_TICK = 3;
+        uint32_t i = 0;
+
+        while (received && i < MAX_RECEIVED_PER_TICK) {
+            serialiser_t in_serialiser = {};
+            in_serialiser.data_buffer = (uint8_t *)message_buffer;
+            in_serialiser.data_buffer_size = received;
+
+            packet_header_t header = {};
+            n_deserialise_packet_header(&header, &in_serialiser);
+
+            switch(header.flags.packet_type) {
+
+            case PT_CONNECTION_HANDSHAKE: {
+                s_process_connection_handshake(
+                    &in_serialiser,
+                    events);
+                return;
+            } break;
+
+            case PT_PLAYER_JOINED: {
+                s_process_player_joined(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            }
+        
+            received = n_receive_from(
+                main_udp_socket,
+                message_buffer,
+                sizeof(char) * MAX_MESSAGE_SIZE,
+                &received_address);
+
+            ++i;
+        }
     }
 }
 
@@ -156,6 +189,7 @@ static void s_send_connect_request_to_server(
 
     if (s_send_to(&serialiser, bound_server_address)) {
         LOG_INFO("Success sent connection request\n");
+        client_check_incoming_packets = 1;
     }
     else {
         LOG_ERROR("Failed to send connection request\n");
@@ -233,6 +267,39 @@ static void s_send_game_state_to_new_client(
     }
 }
 
+static void s_inform_all_players_on_newcomer(
+    event_new_player_t *info) {
+    packet_player_joined_t packet = {};
+    packet.player_info.name = info->info.client_data->name;
+    packet.player_info.client_id = info->info.client_data->client_id;
+    packet.player_info.ws_position = info->info.ws_position;
+    packet.player_info.ws_view_direction = info->info.ws_view_direction;
+    packet.player_info.ws_up_vector = info->info.ws_up_vector;
+    packet.player_info.default_speed = info->info.default_speed;
+    packet.player_info.is_local = 0;
+
+    packet_header_t header = {};
+    header.current_tick = get_current_tick();
+    header.current_packet_count = current_packet;
+    header.flags.total_packet_size = n_packed_packet_header_size() + n_packed_player_joined_size(&packet);
+    header.flags.packet_type = PT_PLAYER_JOINED;
+    
+    serialiser_t serialiser = {};
+    serialiser.init(header.flags.total_packet_size);
+    
+    n_serialise_packet_header(&header, &serialiser);
+    n_serialise_player_joined(&packet, &serialiser);
+    
+    for (uint32_t i = 0; i < clients.data_count; ++i) {
+        if (i != packet.player_info.client_id) {
+            client_t *c = clients.get(i);
+            if (c->initialised) {
+                s_send_to(&serialiser, c->address);
+            }
+        }
+    }
+}
+
 static void s_process_connection_request(
     serialiser_t *serialiser,
     network_address_t address,
@@ -263,6 +330,7 @@ static void s_process_connection_request(
     // Send game state to new player
     s_send_game_state_to_new_client(client_id, event_data);
     // Dispatch to all players newly joined player information
+    s_inform_all_players_on_newcomer(event_data);
 }
 
 void tick_server(
@@ -332,6 +400,13 @@ static void s_net_event_listener(
         FL_FREE(data);
     } break;
 
+    case ET_LEAVE_SERVER: {
+        memset(&bound_server_address, 0, sizeof(bound_server_address));
+        memset(clients.data, 0, sizeof(client_t) * clients.max_size);
+
+        LOG_INFO("Disconnecting\n");
+    } break;
+
     }
 }
 
@@ -345,6 +420,7 @@ void net_init(
     subscribe_to_event(ET_START_CLIENT, net_listener_id, events);
     subscribe_to_event(ET_START_SERVER, net_listener_id, events);
     subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, net_listener_id, events);
+    subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
 
     n_socket_api_init();
 

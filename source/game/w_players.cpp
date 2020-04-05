@@ -293,3 +293,29 @@ player_t *w_get_spectator(
     world_t *world) {
     return world->spectator;
 }
+
+void w_destroy_player(
+    uint32_t id,
+    world_t *world) {
+    player_t *p = world->players[id];
+    if (p) {
+        if (p->render) {
+            FL_FREE(p->render);
+        }
+
+        world->players[id] = NULL;
+        // TODO: Free const char *name?
+        world->players.remove(id);
+    }
+}
+
+void w_clear_players(
+    world_t *world) {
+    world->local_player = -1;
+
+    for (uint32_t i = 0; i < world->players.data_count; ++i) {
+        w_destroy_player(i, world);
+    }
+
+    world->players.clear();
+}

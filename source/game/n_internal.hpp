@@ -49,7 +49,7 @@ float n_host_to_network_byte_order_f32(
 float n_network_to_host_byte_order_f32(
     float bytes);
 
-enum packet_type_t { PT_CONNECTION_REQUEST, PT_CONNECTION_HANDSHAKE };
+enum packet_type_t { PT_CONNECTION_REQUEST, PT_CONNECTION_HANDSHAKE, PT_PLAYER_JOINED };
 
 struct packet_header_t {
     union {
@@ -120,6 +120,22 @@ void n_serialise_connection_handshake(
 
 void n_deserialise_connection_handshake(
     packet_connection_handshake_t *full_game_state,
+    serialiser_t *serialiser);
+
+// Will be sent from server to all players
+struct packet_player_joined_t {
+    full_player_info_t player_info;
+};
+
+uint32_t n_packed_player_joined_size(
+    packet_player_joined_t *packet);
+
+void n_serialise_player_joined(
+    packet_player_joined_t *packet,
+    serialiser_t *serialiser);
+
+void n_deserialise_player_joined(
+    packet_player_joined_t *packet,
     serialiser_t *serialiser);
 
 // Will use this during game play
