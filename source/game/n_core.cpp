@@ -455,9 +455,55 @@ static void s_process_client_disconnect(
     }
 }
 
+static void s_process_client_commands(
+    serialiser_t *serialiser,
+    uint16_t client_id,
+    event_submissions_t *events) {
+    player_t *p = get_player(client_id);
+
+    if (p) {
+        packet_player_commands_t commands = {};
+        n_deserialise_player_commands(&commands, serialiser);
+
+        for (uint32_t i = 0; i < commands.command_count; ++i) {
+            push_player_actions(p, &commands.actions[i]);
+        }
+
+        client_t *c = &clients[p->client_id];
+        c->ws_predicted_position = commands.ws_final_position;
+        c->ws_predicted_view_direction = commands.ws_final_view_direction;
+        c->ws_predicted_up_vector = commands.ws_final_up_vector;
+    }
+    else {
+        // There is a problem
+        LOG_ERROR("Player was not initialised yet, cannot process client commands!\n");
+    }
+}
+
+static void s_dispatch_game_state_snapshot() {
+    for (uint32_t i = 0; i < clients.data_count; ++i) {
+        client_t *c = &clients[i];
+
+        if (c->initialised) {
+            // Check if the data that the client predicted was correct, if not, force client to correct position
+            // Until server is sure that the client has done a correction, server will not process this client's commands
+            
+        }
+    }
+}
+
 void tick_server(
     event_submissions_t *events) {
-    // In future, have a separate thread capturing these
+    // In future, have a separate thread do this kind of stuff
+    static float elapsed = 0.0f;
+    elapsed += logic_delta_time();
+    if (elapsed >= server_snapshot_output_interval) {
+        // Send commands to the server
+        s_dispatch_game_state_snapshot();
+
+        elapsed = 0.0f;
+    }
+
     for (uint32_t i = 0; i < clients.data_count + 1; ++i) {
         network_address_t received_address = {};
         int32_t received = n_receive_from(
@@ -491,7 +537,10 @@ void tick_server(
             } break;
 
             case PT_CLIENT_COMMANDS: {
-                LOG_INFO("Received client commands\n");
+                s_process_client_commands(
+                    &in_serialiser,
+                    header.client_id,
+                    events);
             } break;
 
             }

@@ -30,6 +30,7 @@ static void s_game_event_listener(
         
     case ET_CLOSED_WINDOW: {
         running = 0;
+        submit_event(ET_LEAVE_SERVER, NULL, &events);
     } break;
 
     case ET_RESIZE_SURFACE: {
@@ -285,6 +286,8 @@ static void s_windowed_game_main(
     world_init(&events);
     
     s_run_windowed_game();
+
+    dispatch_events(&events);
 }
 
 static void s_run_not_windowed_game() {
@@ -305,6 +308,8 @@ static void s_not_windowed_game_main(
     world_init(&events);
 
     s_run_not_windowed_game();
+
+    dispatch_events(&events);
 }
 
 void game_main(

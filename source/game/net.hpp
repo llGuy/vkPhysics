@@ -31,6 +31,10 @@ struct client_t {
     const char *name;
     uint16_t client_id;
     network_address_t address;
+
+    vector3_t ws_predicted_position;
+    vector3_t ws_predicted_view_direction;
+    vector3_t ws_predicted_up_vector;
 };
 
 struct local_client_info_t {

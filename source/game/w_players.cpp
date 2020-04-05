@@ -144,6 +144,14 @@ void w_push_player_actions(
     }
 }
 
+void push_player_actions(
+    player_t *player,
+    player_actions_t *actions) {
+    w_push_player_actions(
+        player,
+        actions);
+}
+
 static void s_execute_player_triggers(
     player_t *player,
     player_actions_t *player_actions,
@@ -230,11 +238,11 @@ static void w_execute_player_actions(
 
         // If this is local player, need to cache these commands to later send to server
         if ((int32_t)player->local_id == world->local_player && connected_to_server()) {
-            if (player->cached_player_action_count < MAX_PLAYER_ACTIONS) {
+            if (player->cached_player_action_count < MAX_PLAYER_ACTIONS * 2) {
                 player->cached_player_actions[player->cached_player_action_count++] = *actions;
             }
             else {
-                LOG_WARNING("Too many cached player actions");
+                LOG_WARNING("Too many cached player actions\n");
             }
         }
     }

@@ -173,7 +173,41 @@ void n_deserialise_player_commands(
     packet_player_commands_t *packet,
     serialiser_t *serialiser);
 
-// Will use this during game play
-struct game_state_snapshot_t {
+struct player_snapshot_t {
+    union {
+        struct {
+            uint8_t client_needs_to_correct: 1;
+            // Will use in future
+            uint8_t b1: 1;
+            uint8_t b2: 1;
+            uint8_t b3: 1;
+            uint8_t b4: 1;
+            uint8_t b5: 1;
+            uint8_t b6: 1;
+            uint8_t b7: 1;
+        };
+        uint8_t flags;
+    };
     
+    uint16_t client_id;
+    vector3_t ws_position;
+    vector3_t ws_view_direction;
+    vector3_t ws_up_vector;
 };
+
+// Will use this during game play
+struct packet_game_state_snapshot_t {
+    uint32_t player_data_count;
+    player_snapshot_t *player_snapshots;
+};
+
+uint32_t n_packed_game_state_snapshot_size(
+    packet_game_state_snapshot_t *packet);
+
+void n_serialise_game_state_snapshot(
+    packet_game_state_snapshot_t *packet,
+    serialiser_t *serialiser);
+
+void n_deserialise_game_state_snapshot(
+    packet_game_state_snapshot_t *packet,
+    serialiser_t *serialiser);

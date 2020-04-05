@@ -46,7 +46,7 @@ struct player_actions_t {
     float dt;
 };
 
-#define MAX_PLAYER_ACTIONS 15
+#define MAX_PLAYER_ACTIONS 30
 
 // To initialise player, need to fill everything (except for player_render_t *render)
 struct player_t {
@@ -75,3 +75,8 @@ struct player_t {
 
 player_t *get_player(
     uint16_t client_id);
+
+// Just calls w_push_player_actions()
+void push_player_actions(
+    player_t *player,
+    player_actions_t *actions);
