@@ -70,7 +70,7 @@ player_t *w_get_player_from_client_id(
         return world->players[id];
     }
     else {
-        LOG_INFO("Something is wrong\n");
+        LOG_ERROR("Client ID not yet registered to local ID\n");
         return NULL;
     }
 }

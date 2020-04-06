@@ -305,6 +305,8 @@ static void s_windowed_game_main(
 
 static void s_run_not_windowed_game() {
     while (running) {
+        clock_t begin = clock();
+
         dispatch_events(&events);
 
         ++current_tick;
@@ -314,15 +316,18 @@ static void s_run_not_windowed_game() {
             VK_NULL_HANDLE,
             VK_NULL_HANDLE);
 
-        ldelta_time = surface_delta_time();
+        clock_t end = clock();
+
+        clock_t delta = end - begin;
+        ldelta_time = (float)(delta / (double)CLOCKS_PER_SEC);
     }
 }
 
 static void s_not_windowed_game_main(
     game_init_data_t *game_init_data) {
     (void)game_init_data;
-    net_init(&events);
     world_init(&events);
+    net_init(&events);
 
     submit_event(ET_START_SERVER, NULL, &events);
 
