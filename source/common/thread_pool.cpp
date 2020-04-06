@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "thread_pool.hpp"
 
 void thread_pool_init() {
@@ -5,12 +6,12 @@ void thread_pool_init() {
 }
 
 mutex_t *request_mutex() {
-    
+    return NULL;
 }
 
 bool wait_for_mutex_and_own(
     mutex_t *mutex) {
-    
+    return 0;
 }
 
 void release_mutex(

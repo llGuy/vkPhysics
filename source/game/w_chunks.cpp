@@ -55,7 +55,7 @@ void w_chunk_render_init(
     chunk->render->render_data.model = glm::translate(ws_position);
     chunk->render->render_data.pbr_info.x = 0.1f;
     chunk->render->render_data.pbr_info.y = 0.2f;
-    chunk->render->render_data.color = vector4_t(0.0f);
+    chunk->render->render_data.color = vector4_t(1.0f);
 }
 
 // Array will be used anytime we need to create mesh from voxels
@@ -85,7 +85,7 @@ static uint8_t s_chunk_edge_voxel_value(
         chunk_coord_offset_z = 1;
     }
 
-    chunk_t *chunk_ptr = w_get_chunk(
+    chunk_t *chunk_ptr = w_access_chunk(
         ivector3_t(chunk_coord.x + chunk_coord_offset_x,
                    chunk_coord.y + chunk_coord_offset_y,
                    chunk_coord.z + chunk_coord_offset_z),
@@ -212,9 +212,9 @@ static void s_update_chunk_mesh(
     world_t *world) {
     uint32_t vertex_count = 0;
 
-    chunk_t *x_superior = w_get_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z), world);
-    chunk_t *y_superior = w_get_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z), world);
-    chunk_t *z_superior = w_get_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1), world);
+    chunk_t *x_superior = w_access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z), world);
+    chunk_t *y_superior = w_access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z), world);
+    chunk_t *z_superior = w_access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1), world);
     
     bool doesnt_exist = 0;
     if (x_superior) {
@@ -441,7 +441,7 @@ uint32_t w_hash_chunk_coord(
     const ivector3_t &coord) {
     static std::hash<glm::ivec3> hasher;
 
-    return hasher(coord);
+    return (uint32_t)hasher(coord);
 }
 
 void w_chunks_data_init() {
@@ -496,7 +496,7 @@ void w_chunk_world_init(
 
     w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
     w_add_sphere_m(vector3_t(80.0f), 17.0f, world);
-    w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
+    w_add_sphere_m(vector3_t(8.0f), 40.0f, world);
 
     w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
 }

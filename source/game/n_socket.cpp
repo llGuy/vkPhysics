@@ -7,7 +7,7 @@
 #include <ws2tcpip.h>
 #define _WINSOCKAPI_
 
-#pragma lib()
+#pragma comment(lib, "Ws2_32.lib")
 
 static stack_container_t<SOCKET> sockets;
 
@@ -22,7 +22,7 @@ static void s_api_init() {
 }
 
 static SOCKET *get_network_socket(socket_t socket) {
-    return(sockets.get(socket->socket));
+    return(sockets.get(socket));
 }
 
 static socket_t s_network_socket_init(
@@ -274,6 +274,7 @@ bool n_send_to(
 
 uint32_t n_str_to_ipv4_int32(
     const char *address) {
+    // Use inet_pton maybe?
     return inet_addr(address);
 }
 
@@ -282,7 +283,7 @@ uint16_t n_host_to_network_byte_order(
     return htons(bytes);
 }
 
-uint16_t n_network_to_host_byte_order(
-    uint16_t bytes) {
+/*uint32_t n_network_to_host_byte_order(
+    uint32_t bytes) {
     return ntohl(bytes);
-}
+}*/

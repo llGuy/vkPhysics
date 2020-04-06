@@ -332,8 +332,8 @@ void submit_mesh(
     shader_t *shader,
     mesh_render_data_t *render_data) {
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -376,8 +376,8 @@ void submit_mesh_shadow(
     shader_t *shader,
     mesh_render_data_t * render_data) {
     VkViewport viewport = {};
-    viewport.width = r_shadow_extent().width;
-    viewport.height = r_shadow_extent().height;
+    viewport.width = (float)r_shadow_extent().width;
+    viewport.height = (float)r_shadow_extent().height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 

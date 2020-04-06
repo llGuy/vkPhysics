@@ -1532,8 +1532,8 @@ VkRenderPass r_final_render_pass() {
 static char *s_read_shader(
     const char *path,
     uint32_t *file_size) {
-    uint32_t strlen_path = strlen(path);
-    uint32_t strlen_root = strlen(PROJECT_ROOT);
+    uint32_t strlen_path = (uint32_t)strlen(path);
+    uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
     
     char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
     memcpy(final_path, PROJECT_ROOT, strlen_root);
@@ -2034,8 +2034,8 @@ shader_t create_2d_shader(
     input_assembly_info.topology = topology;
 
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1.0f;
 
     VkRect2D rect = {};
@@ -2142,8 +2142,8 @@ static shader_t s_create_3d_shader(
     input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1.0f;
 
     VkRect2D rect = {};

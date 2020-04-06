@@ -221,8 +221,8 @@ static void s_render_to_base_cubemap(VkCommandBuffer command_buffer) {
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport = {};
-    viewport.width = base_cubemap_extent.width;
-    viewport.height = base_cubemap_extent.height;
+    viewport.width = (float)base_cubemap_extent.width;
+    viewport.height = (float)base_cubemap_extent.height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -367,8 +367,8 @@ static void s_render_to_diffuse_ibl_cubemap(VkCommandBuffer command_buffer) {
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport = {};
-    viewport.width = hdr_environment_extent.width;
-    viewport.height = hdr_environment_extent.height;
+    viewport.width = (float)hdr_environment_extent.width;
+    viewport.height = (float)hdr_environment_extent.height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -686,8 +686,8 @@ static void s_render_to_specular_ibl(VkCommandBuffer command_buffer) {
             vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
             VkViewport viewport = {};
-            viewport.width = width;
-            viewport.height = height;
+            viewport.width = (float)width;
+            viewport.height = (float)height;
             viewport.maxDepth = 1;
             vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -909,8 +909,8 @@ void r_destroy_environment() {
 
 void render_environment(VkCommandBuffer command_buffer) {
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 

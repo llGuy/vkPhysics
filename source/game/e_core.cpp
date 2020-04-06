@@ -333,7 +333,7 @@ static void s_not_windowed_game_main(
 
 void game_main(
     game_init_data_t *game_init_data) {
-    global_linear_allocator_init(megabytes(10));
+    global_linear_allocator_init((uint32_t)megabytes(10));
 
     game_core_listener = set_listener_callback(
         &s_game_event_listener,

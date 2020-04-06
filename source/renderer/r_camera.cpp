@@ -25,7 +25,7 @@ cpu_camera_data_t *r_cpu_camera_data() {
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     if (camera_data.fov >= 1.0f && camera_data.fov <= 90.0f)
-        camera_data.fov -= yoffset;
+        camera_data.fov -= (float)yoffset;
     if (camera_data.fov <= 1.0f)
         camera_data.fov = 1.0f;
     if (camera_data.fov >= 90.0f)
@@ -99,7 +99,7 @@ void r_camera_gpu_sync(
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         &transforms_uniform_buffer,
         0,
-        transforms_uniform_buffer.size);
+        (uint32_t)transforms_uniform_buffer.size);
 
     vkCmdPipelineBarrier(
         command_buffer,
@@ -122,7 +122,7 @@ void r_camera_gpu_sync(
         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
         &transforms_uniform_buffer,
         0,
-        transforms_uniform_buffer.size);
+        (uint32_t)transforms_uniform_buffer.size);
 
     vkCmdPipelineBarrier(
         command_buffer,

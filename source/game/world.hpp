@@ -49,7 +49,7 @@ struct player_actions_t {
     float dt;
 };
 
-#define MAX_PLAYER_ACTIONS 30
+#define MAX_PLAYER_ACTIONS 100
 
 struct player_snapshot_t {
     union {

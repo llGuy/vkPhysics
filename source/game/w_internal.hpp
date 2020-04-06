@@ -130,7 +130,7 @@ struct world_t {
     stack_container_t<chunk_t *> chunks;
     uint32_t render_count;
     chunk_t **chunks_to_render;
-    hash_table_t<uint32_t, 200, 15, 5> chunk_indices;
+    hash_table_t<uint32_t, 200, 30, 5> chunk_indices;
 };
 
 uint32_t w_hash_chunk_coord(

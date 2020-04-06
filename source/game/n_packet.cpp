@@ -11,7 +11,7 @@ uint32_t n_packed_packet_header_size() {
 
 uint32_t n_packed_connection_request_size(
     packet_connection_request_t *connection_request) {
-    return sizeof(uint8_t) * strlen(connection_request->name);
+    return sizeof(uint8_t) * (uint32_t)strlen(connection_request->name);
 }
 
 void n_serialise_packet_header(
@@ -89,7 +89,7 @@ void n_deserialise_connection_handshake(
 uint32_t n_packed_player_joined_size(
     packet_player_joined_t *packet) {
     uint32_t total_size = 0;
-    total_size += strlen(packet->player_info.name);
+    total_size += (uint32_t)strlen(packet->player_info.name);
     total_size += sizeof(full_player_info_t::client_id);
     total_size += sizeof(full_player_info_t::ws_position);
     total_size += sizeof(full_player_info_t::ws_view_direction);

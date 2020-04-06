@@ -89,8 +89,8 @@ static rpipeline_shader_t s_create_rendering_pipeline_shader(
     input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1.0f;
 
     VkRect2D rect = {};
@@ -587,8 +587,8 @@ void r_execute_ssao_pass(
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
     VkViewport viewport = {};
-    viewport.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
-    viewport.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
+    viewport.width = ((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    viewport.height = ((float)r_swapchain_extent().height / kernels.resolution_coefficient);
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -640,8 +640,8 @@ void r_execute_ssao_blur_pass(
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
     VkViewport viewport = {};
-    viewport.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
-    viewport.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
+    viewport.width = ((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+    viewport.height = ((float)r_swapchain_extent().height / kernels.resolution_coefficient);
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -793,8 +793,8 @@ void r_execute_lighting_pass(
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -939,8 +939,8 @@ void r_execute_motion_blur_pass(
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -1113,8 +1113,8 @@ void r_execute_bloom_pass(
         vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
         VkViewport viewport = {};
-        viewport.width = r_swapchain_extent().width;
-        viewport.height = r_swapchain_extent().height;
+        viewport.width = (float)r_swapchain_extent().width;
+        viewport.height = (float)r_swapchain_extent().height;
         viewport.maxDepth = 1;
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
@@ -1181,8 +1181,8 @@ static void s_final_init() {
 void r_execute_final_pass(
     VkCommandBuffer command_buffer) {
     VkViewport viewport = {};
-    viewport.width = r_swapchain_extent().width;
-    viewport.height = r_swapchain_extent().height;
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 

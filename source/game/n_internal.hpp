@@ -41,8 +41,8 @@ uint32_t n_str_to_ipv4_int32(
 uint16_t n_host_to_network_byte_order(
     uint16_t bytes);
 
-uint16_t n_network_to_host_byte_order(
-    uint16_t bytes);
+/*uint16_t n_network_to_host_byte_order(
+    uint16_t bytes);*/
 
 float n_host_to_network_byte_order_f32(
     float bytes);
