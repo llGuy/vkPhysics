@@ -49,7 +49,7 @@ if(BUILD_GRAPHICAL_APPLICATION)
   add_library(renderer STATIC "${RENDERER_SOURCES}")
   target_include_directories(renderer PUBLIC "${CMAKE_SOURCE_DIR}/source" "${CMAKE_SOURCE_DIR}/dependencies/stb" "${CMAKE_SOURCE_DIR}/imgui/include")
   set_target_properties(renderer PROPERTIES PREFIX "")
-  target_link_libraries(renderer PUBLIC "${Vulkan_LIBRARY}" "common")
+  target_link_libraries(renderer "${Vulkan_LIBRARY}" "common")
   target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
 
   if(WIN32)

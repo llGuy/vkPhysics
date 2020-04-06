@@ -478,6 +478,7 @@ static void s_process_connection_request(
     client->client_id = client_id;
     client->name = create_fl_string(request.name);
     client->address = address;
+    client->received_first_commands_packet = 0;
 
     event_new_player_t *event_data = FL_MALLOC(event_new_player_t, 1);
     event_data->info.client_data = client;
@@ -539,6 +540,8 @@ static void s_process_client_commands(
     if (p) {
         client_t *c = &clients[p->client_id];
 
+        c->received_first_commands_packet = 1;
+
         packet_player_commands_t commands = {};
         n_deserialise_player_commands(&commands, serialiser);
 
@@ -575,16 +578,22 @@ static bool s_check_if_client_has_to_correct(
     bool incorrect_position = 0;
     if (dposition.x >= precision || dposition.y >= precision || dposition.z >= precision) {
         incorrect_position = 1;
+
+        LOG_INFOV("Position is wrong: %s => %s\n", glm::to_string(c->ws_predicted_position).c_str(), glm::to_string(p->ws_position).c_str());
     }
 
     bool incorrect_direction = 0;
     if (ddirection.x >= precision || ddirection.y >= precision || ddirection.z >= precision) {
         incorrect_direction = 1;
+
+        LOG_INFOV("Direction is wrong: %s => %s\n", glm::to_string(c->ws_predicted_view_direction).c_str(), glm::to_string(p->ws_view_direction).c_str());
     }
 
     bool incorrect_up = 0;
     if (dup.x >= precision || dup.y >= precision || dup.z >= precision) {
         incorrect_up = 1;
+
+        LOG_INFOV("Up is wrong: %s => %s\n", glm::to_string(c->ws_predicted_up_vector).c_str(), glm::to_string(p->ws_up_vector).c_str());
     }
 
     return incorrect_position || incorrect_direction || incorrect_up;
@@ -598,16 +607,17 @@ static void s_dispatch_game_state_snapshot() {
     for (uint32_t i = 0; i < clients.data_count; ++i) {
         client_t *c = &clients[i];
 
-        if (c->initialised) {
+        if (c->initialised && c->received_first_commands_packet) {
             // Check if the data that the client predicted was correct, if not, force client to correct position
             // Until server is sure that the client has done a correction, server will not process this client's commands
             player_snapshot_t *snapshot = &packet.player_snapshots[packet.player_data_count];
+            snapshot->flags = 0;
 
             player_t *p = get_player(c->client_id);
             bool has_to_correct = s_check_if_client_has_to_correct(p, c);
-            snapshot->client_needs_to_correct = has_to_correct;
             if (has_to_correct) {
                 LOG_INFOV("Client needs to do correction: tick %i\n", (int32_t)get_current_tick());
+                snapshot->client_needs_to_correct = has_to_correct;
                 c->waiting_on_correction = 1;
             }
 
@@ -637,7 +647,7 @@ static void s_dispatch_game_state_snapshot() {
     for (uint32_t i = 0; i < clients.data_count; ++i) {
         client_t *c = &clients[i];
 
-        if (c->initialised) {
+        if (c->initialised && c->received_first_commands_packet) {
             s_send_to(&serialiser, c->address);
         }
     }

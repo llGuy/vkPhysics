@@ -16,6 +16,7 @@ struct client_t {
         struct {
             uint32_t initialised: 1;
             uint32_t waiting_on_correction: 1;
+            uint32_t received_first_commands_packet: 1;
             //uint32_t server_received_correction: 1;
             // Will use other bits in future
         };
