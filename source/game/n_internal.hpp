@@ -63,14 +63,16 @@ enum packet_type_t {
     PT_PLAYER_LEFT,
     // Client sends to server at short time intervals with player actions (movement, looking, etc...)
     PT_CLIENT_COMMANDS,
+    // Server sends this to clients at intervals with current game state
+    PT_GAME_STATE_SNAPSHOT
 };
 
 struct packet_header_t {
     union {
         struct {
-            uint32_t packet_type: 5;
+            uint32_t packet_type: 10;
             // Includes header
-            uint32_t total_packet_size: 26;
+            uint32_t total_packet_size: 22;
         };
 
         uint32_t bytes;
@@ -153,6 +155,14 @@ void n_deserialise_player_joined(
     serialiser_t *serialiser);
 
 struct packet_player_commands_t {
+    union {
+        struct {
+            uint8_t did_correction: 1;
+        };
+
+        uint8_t flags;
+    };
+
     uint8_t command_count;
     player_actions_t *actions;
 
@@ -177,8 +187,8 @@ struct player_snapshot_t {
     union {
         struct {
             uint8_t client_needs_to_correct: 1;
+            uint8_t waiting_for_correction: 1;
             // Will use in future
-            uint8_t b1: 1;
             uint8_t b2: 1;
             uint8_t b3: 1;
             uint8_t b4: 1;

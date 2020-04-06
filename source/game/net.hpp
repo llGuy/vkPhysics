@@ -14,18 +14,14 @@ struct network_address_t {
 struct client_t {
     union {
         struct {
-            uint8_t initialised: 1;
-            // Will use in future
-            uint8_t b1: 1;
-            uint8_t b2: 1;
-            uint8_t b3: 1;
-            uint8_t b4: 1;
-            uint8_t b5: 1;
-            uint8_t b6: 1;
-            uint8_t b7: 1;
+            uint32_t initialised: 1;
+            uint32_t waiting_on_correction: 1;
+            //uint32_t server_received_correction: 1;
+            uint32_t waiting_for_server_to_receive_correction: 1;
+            // Will use other bits in future
         };
 
-        uint8_t flags = 0;
+        uint32_t flags = 0;
     };
 
     const char *name;

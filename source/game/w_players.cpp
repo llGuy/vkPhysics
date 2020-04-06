@@ -140,7 +140,7 @@ void w_push_player_actions(
     }
     else {
         // ...
-        LOG_WARNING("Too many player actions");
+        LOG_WARNING("Too many player actions\n");
     }
 }
 

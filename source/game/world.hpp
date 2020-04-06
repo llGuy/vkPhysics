@@ -80,3 +80,7 @@ player_t *get_player(
 void push_player_actions(
     player_t *player,
     player_actions_t *actions);
+
+#include <common/containers.hpp>
+
+stack_container_t<player_t *> &DEBUG_get_players();

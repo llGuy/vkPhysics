@@ -22,6 +22,8 @@ In the directory containing CMakeLists.txt:
 
 ## Linux
 
+- Add the necessary package repos from this [link](https://packages.lunarg.com/).
+
 - Install Vulkan SDK: `sudo apt update`, `sudo apt install vulkan-sdk`
 
 - In the directory containing CMakeLists.txt

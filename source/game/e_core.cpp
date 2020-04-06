@@ -209,6 +209,17 @@ static void s_world_ui_proc() {
         submit_event(ET_NEW_PLAYER, data, &events);
     }
 
+    auto &ps = DEBUG_get_players();
+    for (uint32_t i = 0; i < ps.data_count; ++i) {
+        player_t *p = ps.data[i];
+        if (p) {
+            ImGui::Text("%s:", p->name);
+            ImGui::Text("- Position: %s", glm::to_string(p->ws_position).c_str());
+            ImGui::Text("- Direction: %s", glm::to_string(p->ws_view_direction).c_str());
+        }
+    }
+
+
     ImGui::Separator();
     ImGui::Text("-- Net --");
     bool started_client = ImGui::Button("Start client");
@@ -346,6 +357,6 @@ float logic_delta_time() {
     return ldelta_time;
 }
 
-uint64_t get_current_tick() {
+uint64_t &get_current_tick() {
     return current_tick;
 }

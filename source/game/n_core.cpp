@@ -7,6 +7,7 @@
 #include <common/string.hpp>
 #include <common/containers.hpp>
 #include <common/allocators.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 static float client_command_output_interval = 1.0f / 25.0f;
 static float server_snapshot_output_interval = 1.0f / 20.0f;
@@ -137,46 +138,110 @@ static void s_process_player_left(
     LOG_INFO("Player disconnected\n");
 }
 
+#include <renderer/input.hpp>
+
+// Debugging!
+static bool simulate_lag = 0;
+
 static void s_send_commands_to_server() {
     player_t *p = get_player(current_client_id);
 
-    // Means that world hasn't been initialised yet (could be timing issues when submitting ENTER_SERVER event and send commands interval, so just to make sure, check that player is not NULL)
+    // Means that world hasn't been initialised yet (could be timing issues when submitting ENTER_SERVER
+    // event and send commands interval, so just to make sure, check that player is not NULL)
     if (p) {
-        packet_player_commands_t packet = {};
-        packet.command_count = (uint8_t)p->cached_player_action_count;
-        packet.actions = LN_MALLOC(player_actions_t, packet.command_count);
-
-        for (uint32_t i = 0; i < packet.command_count; ++i) {
-            packet.actions[i].bytes = p->cached_player_actions[i].bytes;
-            packet.actions[i].dmouse_x = p->cached_player_actions[i].dmouse_x;
-            packet.actions[i].dmouse_y = p->cached_player_actions[i].dmouse_y;
-            packet.actions[i].dt = p->cached_player_actions[i].dt;
+        if (simulate_lag) {
+            p->cached_player_action_count = 0;
         }
+        else {
+            client_t *c = &clients[p->client_id];
 
-        packet.ws_final_position = p->ws_position;
-        packet.ws_final_view_direction = p->ws_view_direction;
-        packet.ws_final_up_vector = p->ws_up_vector;
+            packet_player_commands_t packet = {};
+            packet.did_correction = c->waiting_on_correction;
+            packet.command_count = (uint8_t)p->cached_player_action_count;
+            packet.actions = LN_MALLOC(player_actions_t, packet.command_count);
 
-        packet_header_t header = {};
-        header.current_tick = get_current_tick();
-        header.current_packet_count = current_packet;
-        header.client_id = current_client_id;
-        header.flags.packet_type = PT_CLIENT_COMMANDS;
-        header.flags.total_packet_size = n_packed_packet_header_size() + n_packed_player_commands_size(&packet);
+            for (uint32_t i = 0; i < packet.command_count; ++i) {
+                packet.actions[i].bytes = p->cached_player_actions[i].bytes;
+                packet.actions[i].dmouse_x = p->cached_player_actions[i].dmouse_x;
+                packet.actions[i].dmouse_y = p->cached_player_actions[i].dmouse_y;
+                packet.actions[i].dt = p->cached_player_actions[i].dt;
+            }
 
-        serialiser_t serialiser = {};
-        serialiser.init(header.flags.total_packet_size);
-        n_serialise_packet_header(&header, &serialiser);
-        n_serialise_player_commands(&packet, &serialiser);
+            packet.ws_final_position = p->ws_position;
+            packet.ws_final_view_direction = p->ws_view_direction;
+            packet.ws_final_up_vector = p->ws_up_vector;
 
-        s_send_to(&serialiser, bound_server_address);
+            packet_header_t header = {};
+            header.current_tick = get_current_tick();
+            header.current_packet_count = current_packet;
+            header.client_id = current_client_id;
+            header.flags.packet_type = PT_CLIENT_COMMANDS;
+            header.flags.total_packet_size = n_packed_packet_header_size() + n_packed_player_commands_size(&packet);
+
+            serialiser_t serialiser = {};
+            serialiser.init(header.flags.total_packet_size);
+            n_serialise_packet_header(&header, &serialiser);
+            n_serialise_player_commands(&packet, &serialiser);
+
+            s_send_to(&serialiser, bound_server_address);
     
-        p->cached_player_action_count = 0;
+            p->cached_player_action_count = 0;
+
+            c->waiting_on_correction = 0;
+        }
+    }
+}
+
+static void s_process_game_state_snapshot(
+    serialiser_t *serialiser,
+    uint64_t received_tick,
+    event_submissions_t *events) {
+    packet_game_state_snapshot_t packet = {};
+    n_deserialise_game_state_snapshot(&packet, serialiser);
+
+    for (uint32_t i = 0; i < packet.player_data_count; ++i) {
+        player_snapshot_t *snapshot = &packet.player_snapshots[i];
+
+        if (snapshot->client_id == current_client_id) {
+            client_t *c = &clients[snapshot->client_id];
+            player_t *p = get_player(snapshot->client_id);
+
+            c->waiting_for_server_to_receive_correction = snapshot->waiting_for_correction;
+
+            if (snapshot->waiting_for_correction) {
+                LOG_INFO("Server is waiting for correction\n");
+            }
+
+            // TODO: Watch out for this:
+            if (snapshot->client_needs_to_correct && !c->waiting_for_server_to_receive_correction) {
+                LOG_INFOV("Did correction at tick %i!\n", received_tick);
+
+                get_current_tick() = received_tick;
+                
+                // Do correction!
+                p->ws_position = snapshot->ws_position;
+                p->ws_view_direction = snapshot->ws_view_direction;
+                p->ws_up_vector = snapshot->ws_up_vector;
+                p->cached_player_action_count = 0;
+
+                // Basically says that the client just did a correction - set correction flag on next packet sent to server
+                c->waiting_on_correction = 1;
+                c->waiting_for_server_to_receive_correction = 1;
+            }
+        }
     }
 }
 
 void tick_client(
     event_submissions_t *events) {
+    raw_input_t *input = get_raw_input();
+    if (input->buttons[BT_F].instant) {
+        simulate_lag = !simulate_lag;
+
+        if (simulate_lag) {LOG_INFO("Simulating lag\n");}
+        else {LOG_INFO("Not simulating lag\n");}
+    }
+    
     if (client_check_incoming_packets) {
         static float elapsed = 0.0f;
         elapsed += logic_delta_time();
@@ -224,6 +289,13 @@ void tick_client(
             case PT_PLAYER_LEFT: {
                 s_process_player_left(
                     &in_serialiser,
+                    events);
+            } break;
+
+            case PT_GAME_STATE_SNAPSHOT: {
+                s_process_game_state_snapshot(
+                    &in_serialiser,
+                    header.current_tick,
                     events);
             } break;
 
@@ -462,17 +534,27 @@ static void s_process_client_commands(
     player_t *p = get_player(client_id);
 
     if (p) {
+        client_t *c = &clients[p->client_id];
+
         packet_player_commands_t commands = {};
         n_deserialise_player_commands(&commands, serialiser);
 
-        for (uint32_t i = 0; i < commands.command_count; ++i) {
-            push_player_actions(p, &commands.actions[i]);
+        if (commands.did_correction) {
+            LOG_INFOV("Did correction: %s\n", glm::to_string(p->ws_position).c_str());
+            c->waiting_for_server_to_receive_correction = 0;
+            c->waiting_on_correction = 0;
         }
+        
+        // Only process client commands if we are not waiting on a correction
+        if (!c->waiting_on_correction) {
+            for (uint32_t i = 0; i < commands.command_count; ++i) {
+                push_player_actions(p, &commands.actions[i]);
+            }
 
-        client_t *c = &clients[p->client_id];
-        c->ws_predicted_position = commands.ws_final_position;
-        c->ws_predicted_view_direction = commands.ws_final_view_direction;
-        c->ws_predicted_up_vector = commands.ws_final_up_vector;
+            c->ws_predicted_position = commands.ws_final_position;
+            c->ws_predicted_view_direction = commands.ws_final_view_direction;
+            c->ws_predicted_up_vector = commands.ws_final_up_vector;
+        }
     }
     else {
         // There is a problem
@@ -480,14 +562,88 @@ static void s_process_client_commands(
     }
 }
 
+static bool s_check_if_client_has_to_correct(
+    player_t *p,
+    client_t *c) {
+    vector3_t dposition = glm::abs(p->ws_position - c->ws_predicted_position);
+    vector3_t ddirection = glm::abs(p->ws_view_direction - c->ws_predicted_view_direction);
+    vector3_t dup = glm::abs(p->ws_up_vector - c->ws_predicted_up_vector);
+
+    float precision = 0.000001f;
+    bool incorrect_position = 0;
+    if (dposition.x >= precision || dposition.y >= precision || dposition.z >= precision) {
+        incorrect_position = 1;
+    }
+
+    bool incorrect_direction = 0;
+    if (ddirection.x >= precision || ddirection.y >= precision || ddirection.z >= precision) {
+        incorrect_direction = 1;
+    }
+
+    bool incorrect_up = 0;
+    if (dup.x >= precision || dup.y >= precision || dup.z >= precision) {
+        incorrect_up = 1;
+    }
+
+    return incorrect_position || incorrect_direction || incorrect_up;
+}
+
 static void s_dispatch_game_state_snapshot() {
+    packet_game_state_snapshot_t packet = {};
+    packet.player_data_count = 0;
+    packet.player_snapshots = LN_MALLOC(player_snapshot_t, clients.data_count);
+
     for (uint32_t i = 0; i < clients.data_count; ++i) {
         client_t *c = &clients[i];
 
         if (c->initialised) {
             // Check if the data that the client predicted was correct, if not, force client to correct position
             // Until server is sure that the client has done a correction, server will not process this client's commands
+            player_snapshot_t *snapshot = &packet.player_snapshots[packet.player_data_count];
+
+            snapshot->waiting_for_correction = c->waiting_for_server_to_receive_correction;
             
+            player_t *p = get_player(c->client_id);
+            bool has_to_correct = s_check_if_client_has_to_correct(p, c);
+            snapshot->client_needs_to_correct = has_to_correct;
+            if (has_to_correct) {
+                LOG_INFOV("Client needs to do correction: tick %i\n", (int32_t)get_current_tick());
+                c->waiting_on_correction = 1;
+                c->waiting_for_server_to_receive_correction = 1;
+            }
+
+            snapshot->client_id = c->client_id;
+            snapshot->ws_position = p->ws_position;
+            snapshot->ws_view_direction = p->ws_view_direction;
+            snapshot->ws_up_vector = p->ws_up_vector;
+
+            if (snapshot->waiting_for_correction) {
+                LOG_INFO("Server is waiting for correction\n");
+            }
+
+            ++packet.player_data_count;
+        }
+    }
+
+    packet_header_t header = {};
+    header.current_tick = get_current_tick();
+    header.current_packet_count = current_packet;
+    // Don't need to fill this
+    header.client_id = 0;
+    header.flags.packet_type = PT_GAME_STATE_SNAPSHOT;
+    header.flags.total_packet_size = n_packed_packet_header_size() + n_packed_game_state_snapshot_size(&packet);
+
+    serialiser_t serialiser = {};
+    serialiser.init(header.flags.total_packet_size);
+
+    n_serialise_packet_header(&header, &serialiser);
+    n_serialise_game_state_snapshot(&packet, &serialiser);
+
+    for (uint32_t i = 0; i < clients.data_count; ++i) {
+        client_t *c = &clients[i];
+
+        if (c->initialised) {
+            s_send_to(&serialiser, c->address);
         }
     }
 }

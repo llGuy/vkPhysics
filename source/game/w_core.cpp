@@ -176,3 +176,7 @@ struct player_t *get_player(
     uint16_t client_id) {
     return w_get_player_from_client_id(client_id, &world);
 }
+
+stack_container_t<player_t *> &DEBUG_get_players() {
+    return world.players;
+}

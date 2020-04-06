@@ -21,4 +21,4 @@ void game_main(
 // Make sure that this gets thought through in entire engine
 float logic_delta_time();
 
-uint64_t get_current_tick();
+uint64_t &get_current_tick();

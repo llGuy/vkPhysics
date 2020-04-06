@@ -143,6 +143,7 @@ uint32_t n_packed_player_commands_size(
 void n_serialise_player_commands(
     packet_player_commands_t *packet,
     serialiser_t *serialiser) {
+    serialiser->serialise_uint8(packet->flags);
     serialiser->serialise_uint8(packet->command_count);
 
     for (uint32_t i = 0; i < packet->command_count; ++i) {
@@ -160,6 +161,7 @@ void n_serialise_player_commands(
 void n_deserialise_player_commands(
     packet_player_commands_t *packet,
     serialiser_t *serialiser) {
+    packet->flags = serialiser->deserialise_uint8();
     packet->command_count = serialiser->deserialise_uint8();
 
     packet->actions = LN_MALLOC(player_actions_t, packet->command_count);
