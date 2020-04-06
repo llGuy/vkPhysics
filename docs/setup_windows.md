@@ -1,10 +1,10 @@
 ## Step 1: Prerequisites
 
-Make sure to install the following, it they have not been already:
+Make sure to install the following, if they have not been already:
 
-- Visual Studio installed - if not, you can get it from this [link](https://visualstudio.microsoft.com/downloads/)
-- CMake from this [link](https://cmake.org/download/)
-- Vulkan SDK from this [link](https://vulkan.lunarg.com/sdk/home#windows)
+- [Visual Studio](https://visualstudio.microsoft.com/downloads/)
+- [CMake](https://cmake.org/download/)
+- [Vulkan SDK](https://vulkan.lunarg.com/sdk/home#windows)
 
 ## Step 2: Setting up the project
 
@@ -18,6 +18,7 @@ Make sure to install the following, it they have not been already:
 ![photo](/docs/assets/cmake0.png)
 
 - Press the `Configure button`
+- When asked to create the new directory, press ok
 - A window should pop up with the following options:
 
 ![photo](/docs/assets/cmake1.png)
@@ -33,5 +34,8 @@ Make sure to install the following, it they have not been already:
 ![photo](/docs/assets/vs0.png)
 
 - Right click on `vkPhysics_client` and click on `Set up as StartUp Project`
+
+## Step 3: Build and run
+
 - Now build with `Ctrl-Shift-B`
 - Run with `Ctrl-F5`
