@@ -1,6 +1,9 @@
+#include <math.h>
 #include "net.hpp"
+#include "engine.hpp"
 #include <common/log.hpp>
 #include "w_internal.hpp"
+#include <common/math.hpp>
 
 void w_player_world_init(
     world_t *world) {
@@ -250,13 +253,65 @@ static void w_execute_player_actions(
     player->player_action_count = 0;
 }
 
+static void s_interpolate_remote_player_snapshots(
+    player_t *p) {
+    // This adds a little delay
+    // Makes sure that there is always snapshots to interpolate between
+    if (p->remote_snapshots.head_tail_difference >= 3) {
+        uint32_t previous_snapshot_index = p->remote_snapshots.tail;
+        uint32_t next_snapshot_index = p->remote_snapshots.tail;
+
+        if (++next_snapshot_index == p->remote_snapshots.buffer_size) {
+            next_snapshot_index = 0;
+        }
+
+        p->elapsed += logic_delta_time();
+
+        float progression = p->elapsed / server_snapshot_interval();
+        
+        LOG_INFOV("%f => %f\n", p->elapsed, progression);
+
+        // It is possible that progression went way past maximum (in case of extreme lag, so need to
+        // take into account how many times over maximum time we went)
+        if (progression >= 1.0f) {
+            int32_t skip_count = (int32_t)(floor(progression));
+            //progression = fmod(progression, 1.0f);
+            progression -= (float)skip_count;
+            p->elapsed -= server_snapshot_interval() * (float)skip_count;
+
+            for (int32_t i = 0; i < skip_count; ++i) {
+                p->remote_snapshots.get_next_item();
+            }
+
+            previous_snapshot_index = p->remote_snapshots.tail;
+            next_snapshot_index = p->remote_snapshots.tail;
+
+            if (++next_snapshot_index == p->remote_snapshots.buffer_size) {
+                next_snapshot_index = 0;
+            }
+        }
+
+        player_snapshot_t *previous_snapshot = &p->remote_snapshots.buffer[previous_snapshot_index];
+        player_snapshot_t *next_snapshot = &p->remote_snapshots.buffer[next_snapshot_index];
+
+        p->ws_position = interpolate(previous_snapshot->ws_position, next_snapshot->ws_position, progression);
+        p->ws_view_direction = interpolate(previous_snapshot->ws_view_direction, next_snapshot->ws_view_direction, progression);
+        p->ws_up_vector = interpolate(previous_snapshot->ws_up_vector, next_snapshot->ws_up_vector, progression);
+    }
+}
+
 void w_tick_players(
     world_t *world) {
     // Handle networking stuff
     for (uint32_t i = 0; i < world->players.data_count; ++i) {
         player_t *p = world->players[i];
         if (p) {
+            // Will be 0 for remote players
             w_execute_player_actions(p, world);
+
+            if (p->is_remote) {
+                s_interpolate_remote_player_snapshots(p);
+            }
         }
     }
 

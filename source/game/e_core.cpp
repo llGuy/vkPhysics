@@ -93,8 +93,6 @@ static void s_tick(
         &events);
 
     tick_world(
-        render_command_buffer,
-        transfer_command_buffer,
         &events);
 }
 
@@ -158,6 +156,10 @@ static void s_run_windowed_game() {
             &inheritance_info);
 
         s_tick(
+            render_command_buffer,
+            transfer_command_buffer);
+
+        gpu_sync_world(
             render_command_buffer,
             transfer_command_buffer);
 
@@ -303,12 +305,16 @@ static void s_windowed_game_main(
 
 static void s_run_not_windowed_game() {
     while (running) {
+        dispatch_events(&events);
+
+        ++current_tick;
+        LN_CLEAR();
+
         s_tick(
             VK_NULL_HANDLE,
             VK_NULL_HANDLE);
 
-        ++current_tick;
-        LN_CLEAR();
+        ldelta_time = surface_delta_time();
     }
 }
 
@@ -317,6 +323,8 @@ static void s_not_windowed_game_main(
     (void)game_init_data;
     net_init(&events);
     world_init(&events);
+
+    submit_event(ET_START_SERVER, NULL, &events);
 
     s_run_not_windowed_game();
 

@@ -183,28 +183,6 @@ void n_deserialise_player_commands(
     packet_player_commands_t *packet,
     serialiser_t *serialiser);
 
-struct player_snapshot_t {
-    union {
-        struct {
-            uint8_t client_needs_to_correct: 1;
-            uint8_t b1: 1;
-            // Will use in future
-            uint8_t b2: 1;
-            uint8_t b3: 1;
-            uint8_t b4: 1;
-            uint8_t b5: 1;
-            uint8_t b6: 1;
-            uint8_t b7: 1;
-        };
-        uint8_t flags;
-    };
-    
-    uint16_t client_id;
-    vector3_t ws_position;
-    vector3_t ws_view_direction;
-    vector3_t ws_up_vector;
-};
-
 // Will use this during game play
 struct packet_game_state_snapshot_t {
     uint32_t player_data_count;

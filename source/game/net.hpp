@@ -40,3 +40,5 @@ void tick_net(
     event_submissions_t *events);
 
 bool connected_to_server();
+float server_snapshot_interval();
+float client_command_interval();

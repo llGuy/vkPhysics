@@ -31,6 +31,17 @@ static void s_add_player_from_info(
         w_set_local_player(p->local_id, &world);
         p->cached_player_action_count = 0;
         p->cached_player_actions = FL_MALLOC(player_actions_t, MAX_PLAYER_ACTIONS * 2);
+
+        p->is_remote = 0;
+        p->is_local = 1;
+    }
+    else {
+        p->is_remote = 1;
+        p->is_local = 0;
+
+        // Initialise remote snapshots
+        p->remote_snapshots.init();
+        p->elapsed = 0.0f;
     }
 
     LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
@@ -118,12 +129,14 @@ void handle_world_input() {
 }
 
 void tick_world(
-    VkCommandBuffer render_command_buffer,
-    VkCommandBuffer transfer_command_buffer,
     event_submissions_t *events) {
     (void)events;
     w_tick_players(&world);
+}
 
+void gpu_sync_world(
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer) {
     w_players_gpu_sync_and_render(
         render_command_buffer,
         transfer_command_buffer,

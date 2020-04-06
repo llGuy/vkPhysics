@@ -295,12 +295,11 @@ template <
     uint32_t buffer_size;
     T buffer[MAX];
 
-    void initialize() {
+    void init() {
         buffer_size = MAX;
         head_tail_difference = 0;
         head = 0;
         tail = 0;
-        uint32_t byte_count = buffer_size * sizeof(T);
     }
 
     void push_item(

@@ -223,12 +223,14 @@ static void s_process_game_state_snapshot(
             }
         }
         else {
-            client_t *c = &clients[snapshot->client_id];
+            //client_t *c = &clients[snapshot->client_id];
             player_t *p = get_player(snapshot->client_id);
-
-            p->ws_position = snapshot->ws_position;
+            
+            p->remote_snapshots.push_item(snapshot);
+            
+            /*p->ws_position = snapshot->ws_position;
             p->ws_view_direction = snapshot->ws_view_direction;
-            p->ws_up_vector = snapshot->ws_up_vector;
+            p->ws_up_vector = snapshot->ws_up_vector;*/
         }
     }
 }
@@ -767,4 +769,12 @@ void net_init(
 
 bool connected_to_server() {
     return bound_server_address.ipv4_address != 0;
+}
+
+float server_snapshot_interval() {
+    return server_snapshot_output_interval;
+}
+
+float client_command_interval() {
+    return client_command_output_interval;
 }
