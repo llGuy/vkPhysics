@@ -1,31 +1,19 @@
 # vkPhysics
 
-![photo](/assets/screenshots/screenshot.png)
+For now, an engine which will hopefully become a real-time multiplayer game!
+
+## Setting up
+
+[Windows](https://github.com/llGuy/vkPhysics/blob/master/docs/setup_windows.md)
+
+[Linux](https://github.com/llGuy/vkPhysics/blob/master/docs/setup_linux.md)
+
+## Screenshots
+
+### Terrain deformation
 
 ![photo](/assets/screenshots/coolstructure.png)
 
-For now, an engine which will hopefully become a real-time multiplayer game!
+### Graphics rendering tests
 
-# Build
-
-## Windows
-
-In the directory containing CMakeLists.txt:
-
-- Create a directory called `build`
-
-- Run CMake and specify the binaries directory to be this new build directory (also specify x64 and prompted)
-
-- Build in the IDE you are using and it should be up and running!
-
-- Repo comes with bundled vulkan lib / headers, BUT if the shaders have trouble being loaded, may need to install Vulkan SDK
-
-## Linux
-
-- Add the necessary package repos from this [link](https://packages.lunarg.com/).
-
-- Install Vulkan SDK: `sudo apt update`, `sudo apt install vulkan-sdk`
-
-- In the directory containing CMakeLists.txt
-
-- `mkdir build`, `cd build`, `cmake -DCMAKE_BUILD_TYPE=DEBUG ..`, `make`
+![photo](/assets/screenshots/screenshot.png)
