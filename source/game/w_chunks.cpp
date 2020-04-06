@@ -456,9 +456,9 @@ void w_chunks_data_init() {
         &chunk_mesh_prototype);
     
     const char *shader_paths[] = {
-        "../shaders/SPV/chunk_mesh.vert.spv",
-        "../shaders/SPV/chunk_mesh.geom.spv",
-        "../shaders/SPV/chunk_mesh.frag.spv" };
+        "shaders/SPV/chunk_mesh.vert.spv",
+        "shaders/SPV/chunk_mesh.geom.spv",
+        "shaders/SPV/chunk_mesh.frag.spv" };
     
     chunk_shader = create_mesh_shader_color(
         &binding_info,

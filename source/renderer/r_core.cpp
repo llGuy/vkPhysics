@@ -1532,7 +1532,20 @@ VkRenderPass r_final_render_pass() {
 static char *s_read_shader(
     const char *path,
     uint32_t *file_size) {
-    FILE *shader = fopen(path, "rb");
+    uint32_t strlen_path = strlen(path);
+    uint32_t strlen_root = strlen(PROJECT_ROOT);
+    
+    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
+    memcpy(final_path, PROJECT_ROOT, strlen_root);
+    // May need to vary for Windows
+    final_path[strlen_root] = '/';
+    memcpy(final_path + strlen_root + 1, path, strlen_path + 1);
+
+    FILE *shader = fopen(final_path, "rb");
+    if (!shader) {
+        LOG_ERROR("Failed to load shader\n");
+    }
+
     fseek(shader, 0L, SEEK_END);
     *file_size = ftell(shader);
     char *code = (char *)malloc(sizeof(char) * (*file_size));

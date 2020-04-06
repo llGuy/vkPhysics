@@ -177,9 +177,9 @@ static void s_base_cubemap_init() {
     r_rpipeline_descriptor_set_output_init(&base_cubemap_init);
 
     const char *paths[] = {
-        "../shaders/SPV/atmosphere_scatter_cubemap_init.vert.spv",
-        "../shaders/SPV/atmosphere_scatter_cubemap_init.geom.spv",
-        "../shaders/SPV/atmosphere_scatter_cubemap_init.frag.spv"  };
+        "shaders/SPV/atmosphere_scatter_cubemap_init.vert.spv",
+        "shaders/SPV/atmosphere_scatter_cubemap_init.geom.spv",
+        "shaders/SPV/atmosphere_scatter_cubemap_init.frag.spv"  };
     base_cubemap_init_shader = create_2d_shader(
         NULL,
         sizeof(base_cubemap_render_data_t),
@@ -334,9 +334,9 @@ static void s_hdr_environment_pass_init() {
 
     VkDescriptorType types[] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
     const char *paths[] = {
-        "../shaders/SPV/diffuse_ibl.vert.spv",
-        "../shaders/SPV/diffuse_ibl.geom.spv",
-        "../shaders/SPV/diffuse_ibl.frag.spv"  };
+        "shaders/SPV/diffuse_ibl.vert.spv",
+        "shaders/SPV/diffuse_ibl.geom.spv",
+        "shaders/SPV/diffuse_ibl.frag.spv"  };
     hdr_environment_init_shader = create_2d_shader(
         NULL,
         0,
@@ -469,8 +469,8 @@ static void s_integral_look_pass_init() {
     r_rpipeline_descriptor_set_output_init(&integral_lookup_init);
 
     const char *paths[] = {
-        "../shaders/SPV/integral_lookup.vert.spv",
-        "../shaders/SPV/integral_lookup.frag.spv"  };
+        "shaders/SPV/integral_lookup.vert.spv",
+        "shaders/SPV/integral_lookup.frag.spv"  };
     integral_lookup_init_shader = create_2d_shader(
         NULL,
         0,
@@ -615,8 +615,8 @@ static void s_specular_ibl_init() {
         1);
 
     const char *paths[] = {
-        "../shaders/SPV/specular_ibl.vert.spv",
-        "../shaders/SPV/specular_ibl.frag.spv" };
+        "shaders/SPV/specular_ibl.vert.spv",
+        "shaders/SPV/specular_ibl.frag.spv" };
 
     VkDescriptorType input_types[] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
     
@@ -808,7 +808,7 @@ struct cubemap_render_data_t {
 static void s_cubemap_shader_init() {
     shader_binding_info_t binding_info = {};
     VkDescriptorType descriptor_types[] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
-    const char *shader_paths[] = { "../shaders/SPV/cubemap.vert.spv", "../shaders/SPV/cubemap.frag.spv" };
+    const char *shader_paths[] = { "shaders/SPV/cubemap.vert.spv", "shaders/SPV/cubemap.frag.spv" };
     
     cubemap_shader = create_3d_shader_color(
         &binding_info,

@@ -7,6 +7,8 @@
 #include <ws2tcpip.h>
 #define _WINSOCKAPI_
 
+#pragma lib()
+
 static stack_container_t<SOCKET> sockets;
 
 static void s_api_init() {

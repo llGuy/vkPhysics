@@ -522,8 +522,8 @@ static void s_ssao_init() {
     vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
     
     ssao_shader = s_create_rendering_pipeline_shader(
-        "../shaders/SPV/ssao.vert.spv",
-        "../shaders/SPV/ssao.frag.spv",
+        "shaders/SPV/ssao.vert.spv",
+        "shaders/SPV/ssao.frag.spv",
         &ssao_stage,
         pipeline_layout);
 
@@ -562,8 +562,8 @@ static void s_ssao_init() {
     vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
     
     ssao_blur_shader = s_create_rendering_pipeline_shader(
-        "../shaders/SPV/ssao_blur.vert.spv",
-        "../shaders/SPV/ssao_blur.frag.spv",
+        "shaders/SPV/ssao_blur.vert.spv",
+        "shaders/SPV/ssao_blur.frag.spv",
         &ssao_blur_stage,
         pipeline_layout);
 }
@@ -769,8 +769,8 @@ static void s_lighting_init() {
     vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
     
     lighting_shader = s_create_rendering_pipeline_shader(
-        "../shaders/SPV/lighting.vert.spv",
-        "../shaders/SPV/lighting.frag.spv",
+        "shaders/SPV/lighting.vert.spv",
+        "shaders/SPV/lighting.frag.spv",
         &lighting_stage,
         pipeline_layout);
 }
@@ -915,8 +915,8 @@ static void s_motion_blur_init() {
     vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
     
     motion_blur_shader = s_create_rendering_pipeline_shader(
-        "../shaders/SPV/motion_blur.vert.spv",
-        "../shaders/SPV/motion_blur.frag.spv",
+        "shaders/SPV/motion_blur.vert.spv",
+        "shaders/SPV/motion_blur.frag.spv",
         &motion_blur_stage,
         pipeline_layout);
 }
@@ -1076,8 +1076,8 @@ static void s_blur_init() {
     vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
     
     blur_shader = s_create_rendering_pipeline_shader(
-        "../shaders/SPV/gauss_blur.vert.spv",
-        "../shaders/SPV/gauss_blur.frag.spv",
+        "shaders/SPV/gauss_blur.vert.spv",
+        "shaders/SPV/gauss_blur.frag.spv",
         &blur_stage,
         pipeline_layout);
 }
@@ -1172,8 +1172,8 @@ static void s_final_init() {
     vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
     
     final_shader = s_create_rendering_pipeline_shader(
-        "../shaders/SPV/final.vert.spv",
-        "../shaders/SPV/final.frag.spv",
+        "shaders/SPV/final.vert.spv",
+        "shaders/SPV/final.frag.spv",
         &final_stage,
         pipeline_layout);
 }

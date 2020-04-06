@@ -33,9 +33,9 @@ void w_players_data_init() {
     load_mesh_internal(IM_CUBE, &player_mesh, &mesh_info);
 
     const char *shader_paths[] = {
-        "../shaders/SPV/untextured_mesh.vert.spv",
-        "../shaders/SPV/untextured_mesh.geom.spv",
-        "../shaders/SPV/untextured_mesh.frag.spv"
+        "shaders/SPV/untextured_mesh.vert.spv",
+        "shaders/SPV/untextured_mesh.geom.spv",
+        "shaders/SPV/untextured_mesh.frag.spv"
     };
 
     player_shader = create_mesh_shader_color(
