@@ -1,8 +1,4 @@
-#include <iostream>
-
 #include "engine.hpp"
-
-#include <common/allocators.hpp>
 
 int32_t main(
     int32_t argc,

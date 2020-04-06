@@ -206,15 +206,9 @@ static void s_process_game_state_snapshot(
             client_t *c = &clients[snapshot->client_id];
             player_t *p = get_player(snapshot->client_id);
 
-            c->waiting_for_server_to_receive_correction = snapshot->waiting_for_correction;
-
-            if (snapshot->waiting_for_correction) {
-                LOG_INFO("Server is waiting for correction\n");
-            }
-
             // TODO: Watch out for this:
-            if (snapshot->client_needs_to_correct && !c->waiting_for_server_to_receive_correction) {
-                LOG_INFOV("Did correction at tick %i!\n", received_tick);
+            if (snapshot->client_needs_to_correct) {
+                LOG_INFOV("Did correction at tick %llu!\n", (unsigned long long)received_tick);
 
                 get_current_tick() = received_tick;
                 
@@ -226,8 +220,15 @@ static void s_process_game_state_snapshot(
 
                 // Basically says that the client just did a correction - set correction flag on next packet sent to server
                 c->waiting_on_correction = 1;
-                c->waiting_for_server_to_receive_correction = 1;
             }
+        }
+        else {
+            client_t *c = &clients[snapshot->client_id];
+            player_t *p = get_player(snapshot->client_id);
+
+            p->ws_position = snapshot->ws_position;
+            p->ws_view_direction = snapshot->ws_view_direction;
+            p->ws_up_vector = snapshot->ws_up_vector;
         }
     }
 }
@@ -541,7 +542,6 @@ static void s_process_client_commands(
 
         if (commands.did_correction) {
             LOG_INFOV("Did correction: %s\n", glm::to_string(p->ws_position).c_str());
-            c->waiting_for_server_to_receive_correction = 0;
             c->waiting_on_correction = 0;
         }
         
@@ -601,25 +601,18 @@ static void s_dispatch_game_state_snapshot() {
             // Until server is sure that the client has done a correction, server will not process this client's commands
             player_snapshot_t *snapshot = &packet.player_snapshots[packet.player_data_count];
 
-            snapshot->waiting_for_correction = c->waiting_for_server_to_receive_correction;
-            
             player_t *p = get_player(c->client_id);
             bool has_to_correct = s_check_if_client_has_to_correct(p, c);
             snapshot->client_needs_to_correct = has_to_correct;
             if (has_to_correct) {
                 LOG_INFOV("Client needs to do correction: tick %i\n", (int32_t)get_current_tick());
                 c->waiting_on_correction = 1;
-                c->waiting_for_server_to_receive_correction = 1;
             }
 
             snapshot->client_id = c->client_id;
             snapshot->ws_position = p->ws_position;
             snapshot->ws_view_direction = p->ws_view_direction;
             snapshot->ws_up_vector = p->ws_up_vector;
-
-            if (snapshot->waiting_for_correction) {
-                LOG_INFO("Server is waiting for correction\n");
-            }
 
             ++packet.player_data_count;
         }

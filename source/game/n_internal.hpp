@@ -187,7 +187,7 @@ struct player_snapshot_t {
     union {
         struct {
             uint8_t client_needs_to_correct: 1;
-            uint8_t waiting_for_correction: 1;
+            uint8_t b1: 1;
             // Will use in future
             uint8_t b2: 1;
             uint8_t b3: 1;
