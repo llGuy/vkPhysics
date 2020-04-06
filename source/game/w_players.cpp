@@ -269,8 +269,6 @@ static void s_interpolate_remote_player_snapshots(
 
         float progression = p->elapsed / server_snapshot_interval();
         
-        LOG_INFOV("%f => %f\n", p->elapsed, progression);
-
         // It is possible that progression went way past maximum (in case of extreme lag, so need to
         // take into account how many times over maximum time we went)
         if (progression >= 1.0f) {
