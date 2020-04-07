@@ -93,6 +93,29 @@ uint16_t serialiser_t::deserialise_uint16() {
 #endif
 }
 
+void serialiser_t::serialise_int16(
+    int16_t u16) {
+    uint8_t *pointer = grow_data_buffer(2);
+#if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
+    *(int16_t *)pointer = u16;
+#else
+    *pointer++ = (uint8_t)u16;
+    *pointer++ = (uint8_t)(u16 >> 8);
+#endif
+}
+
+int16_t serialiser_t::deserialise_int16() {
+    uint8_t *pointer = grow_data_buffer(2);
+#if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
+    return(*(int16_t *)pointer);
+#else
+    uint16_t ret = 0;
+    ret += (*pointer++);
+    ret += ((int16_t)(*pointer++)) << 8;
+    return(ret);
+#endif
+}
+
 void serialiser_t::serialise_uint32(
     uint32_t u32) {
     uint8_t *pointer = grow_data_buffer(4);
@@ -182,9 +205,14 @@ void serialiser_t::serialise_bytes(
 }
 
 
-void serialiser_t::deserialise_bytes(
+uint8_t *serialiser_t::deserialise_bytes(
     uint8_t *bytes,
     uint32_t size) {
     uint8_t *pointer = grow_data_buffer(size);
-    memcpy(bytes, pointer, size);
+
+    if (bytes) {
+        memcpy(bytes, pointer, size);
+    }
+
+    return pointer;
 }

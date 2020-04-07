@@ -6,7 +6,6 @@
 #include <common/containers.hpp>
 #include <renderer/renderer.hpp>
 
-#define CHUNK_EDGE_LENGTH 16
 #define MAX_VOXEL_VALUE_F 254.0f
 #define MAX_VOXEL_VALUE_I 254
 #define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
@@ -64,30 +63,6 @@ void w_destroy_player(
 
 void w_clear_players(
     world_t *world);
-
-// Push constant
-// chunk_render_data_t may become a different structure in the future.
-typedef mesh_render_data_t chunk_render_data_t;
-
-struct chunk_render_t {
-    mesh_t mesh;
-    chunk_render_data_t render_data;
-};
-
-struct chunk_t {
-    struct flags_t {
-        uint32_t made_modification: 1;
-        uint32_t active_vertices: 1;
-    } flags;
-    
-    uint32_t chunk_stack_index;
-    ivector3_t xs_bottom_corner;
-    ivector3_t chunk_coord;
-
-    uint8_t voxels[CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH];
-
-    chunk_render_t *render;
-};
 
 uint32_t w_get_voxel_index(
     uint32_t x,

@@ -57,8 +57,8 @@ void main() {
     view_rotation[3][1] = 0.0f;
     view_rotation[3][2] = 0.0f;
 
-    vec4 vs_position = view_rotation * u_push_constant.model * vec4(ms_vertex_position * 1000.0f, 1.0);
-    
+    vec4 vs_position = view_rotation * vec4(ms_vertex_position * 1000.0f, 1.0f);
+
     gl_Position = u_camera_transforms.projection * vs_position;
 
     out_vs.cubemap_direction = normalize(ms_vertex_position);

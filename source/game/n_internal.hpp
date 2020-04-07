@@ -64,7 +64,9 @@ enum packet_type_t {
     // Client sends to server at short time intervals with player actions (movement, looking, etc...)
     PT_CLIENT_COMMANDS,
     // Server sends this to clients at intervals with current game state
-    PT_GAME_STATE_SNAPSHOT
+    PT_GAME_STATE_SNAPSHOT,
+    // Server sends this to the clients when they join at the beginning
+    PT_CHUNK_VOXELS,
 };
 
 struct packet_header_t {
@@ -122,9 +124,13 @@ struct full_player_info_t {
 
 // Will use this when new player joins
 struct packet_connection_handshake_t {
+    // Chunks will be sent in separate packets (too much data)
+    // These are the number of chunks that are incoming
+    uint32_t loaded_chunk_count;
+    // TODO: In future, find a way to only have chunks nearby to be sent to the client possibly?
+
     uint32_t player_count;
     full_player_info_t *player_infos;
-    // Chunks will be sent in separate packets (too much data)
 };
 
 uint32_t n_packed_connection_handshake_size(
@@ -198,4 +204,26 @@ void n_serialise_game_state_snapshot(
 
 void n_deserialise_game_state_snapshot(
     packet_game_state_snapshot_t *packet,
+    serialiser_t *serialiser);
+
+struct voxel_chunk_values_t {
+    // Chunk coord
+    int16_t x, y, z;
+    uint8_t *voxel_values;
+};
+
+struct packet_chunk_voxels_t {
+    uint32_t chunk_in_packet_count;
+    voxel_chunk_values_t *values;
+};
+
+uint32_t n_packed_chunk_voxels_size(
+    packet_chunk_voxels_t *packet);
+
+void n_serialise_packet_chunk_voxels(
+    packet_chunk_voxels_t *packet,
+    serialiser_t *serialiser);
+
+void n_deserialise_packet_chunk_voxels(
+    packet_chunk_voxels_t *packet,
     serialiser_t *serialiser);

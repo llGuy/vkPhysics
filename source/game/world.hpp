@@ -119,5 +119,37 @@ void push_player_actions(
     player_t *player,
     player_actions_t *actions);
 
+// Push constant
+// chunk_render_data_t may become a different structure in the future.
+typedef mesh_render_data_t chunk_render_data_t;
+
+struct chunk_render_t {
+    mesh_t mesh;
+    chunk_render_data_t render_data;
+};
+
+#define CHUNK_EDGE_LENGTH 16
+
+struct chunk_t {
+    struct flags_t {
+        uint32_t made_modification: 1;
+        uint32_t active_vertices: 1;
+    } flags;
+    
+    uint32_t chunk_stack_index;
+    ivector3_t xs_bottom_corner;
+    ivector3_t chunk_coord;
+
+    uint8_t voxels[CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH];
+
+    chunk_render_t *render;
+};
+
+chunk_t *get_chunk(
+    ivector3_t coord);
+
+chunk_t **get_active_chunks(
+    uint32_t *count);
+
 // For debugging only
 stack_container_t<player_t *> &DEBUG_get_players();

@@ -190,6 +190,17 @@ struct player_t *get_player(
     return w_get_player_from_client_id(client_id, &world);
 }
 
+chunk_t *get_chunk(
+    ivector3_t coord) {
+    return w_get_chunk(coord, &world);
+}
+
+chunk_t **get_active_chunks(
+    uint32_t *count) {
+    *count = world.chunks.data_count;
+    return world.chunks.data;
+}
+
 stack_container_t<player_t *> &DEBUG_get_players() {
     return world.players;
 }

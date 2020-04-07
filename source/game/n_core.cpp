@@ -370,10 +370,12 @@ static void s_start_server() {
     started_server = 1;
 }
 
-static void s_send_game_state_to_new_client(
+static bool s_send_handshake(
     uint16_t client_id,
-    event_new_player_t *player_info) {
+    event_new_player_t *player_info,
+    uint32_t loaded_chunk_count) {
     packet_connection_handshake_t connection_handshake = {};
+    connection_handshake.loaded_chunk_count = loaded_chunk_count;
     connection_handshake.player_infos = LN_MALLOC(full_player_info_t, clients.data_count);
 
     for (uint32_t i = 0; i < clients.data_count; ++i) {
@@ -424,10 +426,34 @@ static void s_send_game_state_to_new_client(
     client_t *c = clients.get(client_id);
 
     if (s_send_to(&serialiser, c->address)) {
-        LOG_INFOV("Send handshake to client: %s\n", c->name);
+        LOG_INFOV("Sent handshake to client: %s\n", c->name);
+        return 1;
     }
     else {
         LOG_INFOV("Failed to send handshake to client: %s\n", c->name);
+        return 0;
+    }
+}
+
+static constexpr uint32_t maximum_chunks_per_packet() {
+    return ((65507 - sizeof(uint32_t)) / (sizeof(int16_t) * 3 + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH));
+}
+
+static void s_send_game_state_to_new_client(
+    uint16_t client_id,
+    event_new_player_t *player_info) {
+    uint32_t loaded_chunk_count = 0;
+    chunk_t **chunks = get_active_chunks(&loaded_chunk_count);
+    
+    if (s_send_handshake(
+        client_id,
+        player_info,
+        loaded_chunk_count)) {
+        // Send chunk information
+        uint32_t max_chunks_per_packet = maximum_chunks_per_packet();
+        LOG_INFOV("Maximum chunks per packet: %i\n", max_chunks_per_packet);
+
+        
     }
 }
 

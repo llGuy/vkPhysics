@@ -173,16 +173,16 @@ void r_update_lighting(
     }
 
     lighting_data.point_light_count = lighting->lights_count;
-    
-    lighting_data.ws_directional_light = -lighting->ws_directional_light;
-    lighting_data.vs_directional_light = transforms->view * lighting_data.ws_directional_light;
-
-    vector4_t light_position = vector4_t(light_direction * 1000000.0f, 0.0f);
 
     matrix4_t view_rotation = transforms->view;
     view_rotation[3][0] = 0.0f;
     view_rotation[3][1] = 0.0f;
     view_rotation[3][2] = 0.0f;
+    
+    lighting_data.ws_directional_light = -lighting->ws_directional_light;
+    lighting_data.vs_directional_light = view_rotation * lighting_data.ws_directional_light;
+
+    vector4_t light_position = vector4_t(light_direction * 1000000.0f, 0.0f);
     
     light_position = transforms->projection * view_rotation * light_position;
     light_position.x /= light_position.w;

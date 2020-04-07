@@ -134,6 +134,7 @@ static void s_run_windowed_game() {
         translate_raw_to_game_input();
         dispatch_events(&events);
 
+        // Linear allocations stay until events get dispatched
         LN_CLEAR();
         ++current_tick;
 

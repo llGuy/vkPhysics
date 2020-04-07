@@ -1,3 +1,4 @@
+#include "world.hpp"
 #include "n_internal.hpp"
 #include <common/allocators.hpp>
 
@@ -57,6 +58,7 @@ uint32_t n_packed_connection_handshake_size(
 void n_serialise_connection_handshake(
     packet_connection_handshake_t *full_game_state,
     serialiser_t *serialiser) {
+    serialiser->serialise_uint32(full_game_state->loaded_chunk_count);
     serialiser->serialise_uint32(full_game_state->player_count);
     for (uint32_t i = 0; i < full_game_state->player_count; ++i) {
         serialiser->serialise_string(full_game_state->player_infos[i].name);
@@ -72,6 +74,7 @@ void n_serialise_connection_handshake(
 void n_deserialise_connection_handshake(
     packet_connection_handshake_t *full_game_state,
     serialiser_t *serialiser) {
+    full_game_state->loaded_chunk_count = serialiser->deserialise_uint32();
     full_game_state->player_count = serialiser->deserialise_uint32();
     full_game_state->player_infos = LN_MALLOC(full_player_info_t, full_game_state->player_count);
 
@@ -219,5 +222,48 @@ void n_deserialise_game_state_snapshot(
         packet->player_snapshots[i].ws_position = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_view_direction = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_up_vector = serialiser->deserialise_vector3();
+    }
+}
+
+uint32_t n_packed_chunk_voxels_size(
+    packet_chunk_voxels_t *packet) {
+    uint32_t final_size = 0;
+    final_size += sizeof(packet_chunk_voxels_t::chunk_in_packet_count);
+
+    uint32_t voxel_chunk_values_size = 3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(uint8_t);
+
+    final_size += voxel_chunk_values_size * packet->chunk_in_packet_count;
+
+    return final_size;
+}
+
+void n_serialise_packet_chunk_voxels(
+    packet_chunk_voxels_t *packet,
+    serialiser_t *serialiser) {
+    serialiser->serialise_uint32(packet->chunk_in_packet_count);
+
+    for (uint32_t i = 0; i < packet->chunk_in_packet_count; ++i) {
+        serialiser->serialise_int16(packet->values[i].x);
+        serialiser->serialise_int16(packet->values[i].y);
+        serialiser->serialise_int16(packet->values[i].z);
+        // TODO: In future, optimise this, use the fact that the maximum value for a voxel is 254.
+        // Make 255 a marker for: no more values that are not 0 or something
+        serialiser->serialise_bytes(packet->values[i].voxel_values, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
+    }
+}
+
+void n_deserialise_packet_chunk_voxels(
+    packet_chunk_voxels_t *packet,
+    serialiser_t *serialiser) {
+    packet->chunk_in_packet_count = serialiser->deserialise_uint32();
+
+    packet->values = LN_MALLOC(voxel_chunk_values_t, packet->chunk_in_packet_count);
+
+    for (uint32_t i = 0; i < packet->chunk_in_packet_count; ++i) {
+        packet->values[i].x = serialiser->deserialise_int16();
+        packet->values[i].y = serialiser->deserialise_int16();
+        packet->values[i].z = serialiser->deserialise_int16();
+
+        packet->values[i].voxel_values = serialiser->deserialise_bytes(NULL, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
     }
 }

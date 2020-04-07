@@ -72,9 +72,11 @@ void main() {
 
     out_final_color = color;
 
+    out_final_color = color;
+
     const int SAMPLES = 50;
     const float DENSITY = 1.0;
-    const float DECAY = 0.93;
+    const float DECAY = 0.91;
     const float WEIGHT = 0.03;
 
     vec2 blur_vector = (u_lighting.light_screen_coord - in_fs.uvs) * (1.0 / float(SAMPLES));

@@ -23,6 +23,9 @@ struct serialiser_t {
     
     void serialise_uint16(
         uint16_t u16);
+
+    void serialise_int16(
+        int16_t u16);
     
     void serialise_uint32(
         uint32_t u32);
@@ -42,6 +45,8 @@ struct serialiser_t {
     uint8_t deserialise_uint8();
     
     uint16_t deserialise_uint16();
+
+    int16_t deserialise_int16();
     
     uint32_t deserialise_uint32();
     
@@ -53,7 +58,7 @@ struct serialiser_t {
     
     const char *deserialise_string();
     
-    void deserialise_bytes(
+    uint8_t *deserialise_bytes(
         uint8_t *bytes,
         uint32_t size);
 };
