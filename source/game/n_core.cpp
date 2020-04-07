@@ -90,6 +90,8 @@ static void s_process_connection_handshake(
         data->infos[i].is_local = handshake.player_infos[i].is_local;
 
         if (data->infos[i].is_local) {
+            clients.data[client_id].chunks_to_wait_for = handshake.loaded_chunk_count;
+
             data->local_client_id = clients.data[i].client_id;
             current_client_id = data->local_client_id;
         }
@@ -235,6 +237,30 @@ static void s_process_game_state_snapshot(
     }
 }
 
+static void s_process_chunk_voxels(
+    serialiser_t *serialiser,
+    event_submissions_t *events) {
+    packet_chunk_voxels_t *packet = LN_MALLOC(packet_chunk_voxels_t, 1);
+    n_deserialise_packet_chunk_voxels(packet, serialiser);
+
+    event_chunk_voxel_packet_t *data = FL_MALLOC(event_chunk_voxel_packet_t, 1);
+    data->packet = packet;
+
+    LOG_INFO("Received chunk values packet\n");
+
+    submit_event(ET_CHUNK_VOXEL_PACKET, data, events);
+
+    client_t *c = &clients[current_client_id];
+    c->chunks_to_wait_for -= packet->chunk_in_packet_count;
+
+    if (c->chunks_to_wait_for == 0) {
+        submit_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, NULL, events);
+    }
+    else {
+        submit_event(ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA, NULL, events);
+    }
+}
+
 void tick_client(
     event_submissions_t *events) {
     raw_input_t *input = get_raw_input();
@@ -263,7 +289,7 @@ void tick_client(
             &received_address);
 
         // In future, separate thread will be capturing all these packets
-        static const uint32_t MAX_RECEIVED_PER_TICK = 3;
+        static const uint32_t MAX_RECEIVED_PER_TICK = 4;
         uint32_t i = 0;
 
         while (received && i < MAX_RECEIVED_PER_TICK) {
@@ -300,6 +326,16 @@ void tick_client(
                     &in_serialiser,
                     header.current_tick,
                     events);
+            } break;
+
+            case PT_CHUNK_VOXELS: {
+                s_process_chunk_voxels(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            default: {
+                LOG_INFO("Received unidentifiable packet\n");
             } break;
 
             }
@@ -444,16 +480,87 @@ static void s_send_game_state_to_new_client(
     event_new_player_t *player_info) {
     uint32_t loaded_chunk_count = 0;
     chunk_t **chunks = get_active_chunks(&loaded_chunk_count);
-    
+
     if (s_send_handshake(
         client_id,
         player_info,
         loaded_chunk_count)) {
+        client_t *client = clients.get(client_id);
+
         // Send chunk information
         uint32_t max_chunks_per_packet = maximum_chunks_per_packet();
         LOG_INFOV("Maximum chunks per packet: %i\n", max_chunks_per_packet);
 
+        voxel_chunk_values_t *voxel_chunks = LN_MALLOC(voxel_chunk_values_t, loaded_chunk_count);
+
+        uint32_t count = 0;
+        for (uint32_t i = 0; i < loaded_chunk_count; ++i) {
+            chunk_t *c = chunks[i];
+            if (c) {
+                voxel_chunks[count].x = c->chunk_coord.x;
+                voxel_chunks[count].y = c->chunk_coord.y;
+                voxel_chunks[count].z = c->chunk_coord.z;
+
+                voxel_chunks[count].voxel_values = c->voxels;
+
+                ++count;
+            }
+        }
+
+        loaded_chunk_count = count;
         
+        uint32_t full_packets = loaded_chunk_count / max_chunks_per_packet;
+        uint32_t chunks_left = loaded_chunk_count;
+
+        serialiser_t serialiser = {};
+        serialiser.init(max_chunks_per_packet * (3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH));
+
+        packet_header_t header = {};
+        header.flags.packet_type = PT_CHUNK_VOXELS;
+        header.flags.total_packet_size = max_chunks_per_packet * (3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
+        header.current_tick = get_current_tick();
+        header.current_packet_count = current_packet;
+        
+        voxel_chunk_values_t *current = voxel_chunks;
+        for (uint32_t i = 0; i < full_packets; ++i) {
+            packet_chunk_voxels_t packet = {};
+            packet.chunk_in_packet_count = max_chunks_per_packet;
+            packet.values = current;
+
+            n_serialise_packet_header(&header, &serialiser);
+            n_serialise_packet_chunk_voxels(&packet, &serialiser);
+
+            if (s_send_to(&serialiser, client->address)) {
+                LOG_INFOV("Sent data for %i chunks\n", max_chunks_per_packet);
+            }
+            else {
+                LOG_ERROR("Failed to send chunks\n");
+            }
+
+            current += max_chunks_per_packet;
+            chunks_left -= max_chunks_per_packet;
+            // Reset serialiser for next packet
+            serialiser.data_buffer_head = 0;
+
+        }
+
+        if (chunks_left) {
+            packet_chunk_voxels_t packet = {};
+            packet.chunk_in_packet_count = chunks_left;
+            packet.values = current;
+
+            n_serialise_packet_header(&header, &serialiser);
+            n_serialise_packet_chunk_voxels(&packet, &serialiser);
+
+            s_send_to(&serialiser, client->address);
+
+            LOG_INFOV("Sent data for %i chunks\n", chunks_left);
+            
+            current += max_chunks_per_packet;
+            chunks_left -= max_chunks_per_packet;
+            // Reset serialiser for next packet
+            serialiser.data_buffer_head = 0;
+        }
     }
 }
 

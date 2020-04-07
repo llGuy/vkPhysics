@@ -392,10 +392,13 @@ void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     world_t *world) {
+    const uint32_t max_chunks_loaded_per_frame = 10;
+    uint32_t chunks_loaded = 0;
+
     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
         chunk_t *c = world->chunks[i];
         if (c) {
-            if (c->flags.made_modification) {
+            if (c->flags.made_modification && chunks_loaded < max_chunks_loaded_per_frame && !world->wait_mesh_update) {
                 c->flags.made_modification = 0;
                 // Update chunk mesh and put on GPU + send to command buffer
                 // TODO:
@@ -405,6 +408,8 @@ void w_chunk_gpu_sync_and_render(
                     temp_mesh_vertices,
                     c,
                     world);
+
+                ++chunks_loaded;
             }
         
             if (c->flags.active_vertices) {
@@ -476,6 +481,7 @@ void w_clear_chunk_world(
         }
 
         world->chunks.clear();
+        world->chunk_indices.clear();
 
         LOG_INFO("Destroyed chunk world\n");
     }
@@ -493,6 +499,8 @@ void w_chunk_world_init(
     world->loaded_radius = loaded_radius;
 
     world->chunks.init(MAX_LOADED_CHUNKS);
+
+    world->wait_mesh_update = 0;
 
     w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
     w_add_sphere_m(vector3_t(80.0f), 17.0f, world);
@@ -751,4 +759,10 @@ void w_terraform(
 
         dt = 0.0f;
     }
+}
+
+void w_toggle_mesh_update_wait(
+    bool value,
+    world_t *world) {
+    world->wait_mesh_update = value;
 }

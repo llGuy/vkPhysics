@@ -82,6 +82,24 @@ static void s_world_event_listener(
         FL_FREE(event->data);
     } break;
 
+    case ET_CHUNK_VOXEL_PACKET: {
+        event_chunk_voxel_packet_t *data = (event_chunk_voxel_packet_t *)event->data;
+        packet_chunk_voxels_t *packet = data->packet;
+
+        for (uint32_t i = 0; i < packet->chunk_in_packet_count; ++i) {
+            voxel_chunk_values_t *c_values = &packet->values[i];
+            ivector3_t coord = ivector3_t(c_values->x, c_values->y, c_values->z);
+            chunk_t *c = w_get_chunk(coord, &world);
+
+            memcpy(c->voxels, c_values->voxel_values, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
+            c->flags.made_modification = 1;
+        }
+
+        LOG_INFOV("Loaded %i chunks\n", packet->chunk_in_packet_count);
+
+        FL_FREE(data);
+    } break;
+
     case ET_PLAYER_DISCONNECTED: {
         event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
@@ -90,6 +108,14 @@ static void s_world_event_listener(
         w_destroy_player(p->local_id, &world);
 
         FL_FREE(event->data);
+    } break;
+
+    case ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA: {
+        w_toggle_mesh_update_wait(1, &world);
+    } break;
+
+    case ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA: {
+        w_toggle_mesh_update_wait(0, &world);
     } break;
 
     default: {
@@ -107,6 +133,9 @@ void world_init(
     subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
     subscribe_to_event(ET_LEAVE_SERVER, world_listener, events);
     subscribe_to_event(ET_PLAYER_DISCONNECTED, world_listener, events);
+    subscribe_to_event(ET_CHUNK_VOXEL_PACKET, world_listener, events);
+    subscribe_to_event(ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
+    subscribe_to_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 

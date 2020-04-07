@@ -19,6 +19,9 @@ enum event_type_t {
     ET_PRESSED_ESCAPE,
     ET_LEAVE_SERVER,
     ET_PLAYER_DISCONNECTED,
+    ET_CHUNK_VOXEL_PACKET,
+    ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA,
+    ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA,
     ET_INVALID_EVENT_TYPE
 };
 
@@ -59,6 +62,10 @@ struct event_new_player_t {
 
 struct event_player_disconnected_t {
     uint16_t client_id;
+};
+
+struct event_chunk_voxel_packet_t {
+    struct packet_chunk_voxels_t *packet;
 };
 
 struct event_t {

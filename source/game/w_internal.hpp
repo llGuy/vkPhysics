@@ -106,6 +106,8 @@ struct world_t {
     uint32_t render_count;
     chunk_t **chunks_to_render;
     hash_table_t<uint32_t, 200, 30, 5> chunk_indices;
+
+    bool wait_mesh_update = 0;
 };
 
 uint32_t w_hash_chunk_coord(
@@ -165,4 +167,8 @@ void w_terraform(
     float radius,
     float speed,
     float dt,
+    world_t *world);
+
+void w_toggle_mesh_update_wait(
+    bool value,
     world_t *world);

@@ -9,11 +9,11 @@ template <
     uint32_t Bucket_Count,
     uint32_t Bucket_Size,
     uint32_t Bucket_Search_Count> struct hash_table_t {
-    enum { UNINITIALIZED_HASH = 0xFFFFFFFF };
+    enum { UNINITIALISED_HASH = 0xFFFFFFFF };
     enum { ITEM_POUR_LIMIT    = Bucket_Search_Count };
 
     struct item_t {
-        uint32_t hash = UNINITIALIZED_HASH;
+        uint32_t hash = UNINITIALISED_HASH;
         T value = T();
     };
 
@@ -27,11 +27,21 @@ template <
     void init() {
         for (uint32_t bucket_index = 0; bucket_index < Bucket_Count; ++bucket_index) {
             for (uint32_t item_index = 0; item_index < Bucket_Size; ++item_index) {
-                buckets[bucket_index].items[item_index].hash = UNINITIALIZED_HASH;
+                buckets[bucket_index].items[item_index].hash = UNINITIALISED_HASH;
             }
         }
     }
 
+    void clear() {
+        for (uint32_t i = 0; i < Bucket_Count; ++i) {
+            buckets[i].bucket_usage_count = 0;
+
+            for (uint32_t item = 0; item < Bucket_Size; ++item) {
+                buckets[i].items[item].hash = UNINITIALISED_HASH;
+            }
+        }
+    }
+    
     void clean_up() {
         for (uint32_t i = 0; i < Bucket_Count; ++i) {
             buckets[i].bucket_usage_count = 0;
@@ -45,7 +55,7 @@ template <
 
         for (uint32_t bucket_item = 0; bucket_item < Bucket_Size; ++bucket_item) {
             item_t *item = &bucket->items[bucket_item];
-            if (item->hash == UNINITIALIZED_HASH) {
+            if (item->hash == UNINITIALISED_HASH) {
                 /* found a slot for the object */
                 item->hash = hash;
                 item->value = value;
@@ -64,8 +74,8 @@ template <
 
             item_t *item = &bucket->items[bucket_item];
 
-            if (item->hash == hash && item->hash != UNINITIALIZED_HASH) {
-                item->hash = UNINITIALIZED_HASH;
+            if (item->hash == hash && item->hash != UNINITIALISED_HASH) {
+                item->hash = UNINITIALISED_HASH;
                 item->value = T();
                 return;
             }
@@ -86,7 +96,7 @@ template <
 
         for (; bucket_item < Bucket_Size; ++bucket_item) {
             item_t *item = &bucket->items[bucket_item];
-            if (item->hash != UNINITIALIZED_HASH) {
+            if (item->hash != UNINITIALISED_HASH) {
                 ++filled_items;
                 if (hash == item->hash) {
                     return(&item->value);

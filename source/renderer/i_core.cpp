@@ -209,8 +209,8 @@ input_interface_data_t input_interface_init() {
     const char *application_name = "vkPhysics";
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    int32_t width = vidmode->width / 4;
-    int32_t height = vidmode->height / 4;
+    int32_t width = vidmode->width / 2;
+    int32_t height = vidmode->height / 2;
 
     window = glfwCreateWindow(width, height, application_name, NULL, NULL);
 

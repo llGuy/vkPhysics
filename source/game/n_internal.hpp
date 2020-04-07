@@ -206,17 +206,7 @@ void n_deserialise_game_state_snapshot(
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser);
 
-struct voxel_chunk_values_t {
-    // Chunk coord
-    int16_t x, y, z;
-    uint8_t *voxel_values;
-};
-
-struct packet_chunk_voxels_t {
-    uint32_t chunk_in_packet_count;
-    voxel_chunk_values_t *values;
-};
-
+// packet_chunk_voxels_t defined in net.hpp
 uint32_t n_packed_chunk_voxels_size(
     packet_chunk_voxels_t *packet);
 
