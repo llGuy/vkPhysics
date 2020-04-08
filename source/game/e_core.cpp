@@ -213,12 +213,18 @@ static void s_world_ui_proc() {
     }
 
     auto &ps = DEBUG_get_players();
+
     for (uint32_t i = 0; i < ps.data_count; ++i) {
         player_t *p = ps.data[i];
         if (p) {
-            ImGui::Text("%s:", p->name);
-            ImGui::Text("- Position: %s", glm::to_string(p->ws_position).c_str());
-            ImGui::Text("- Direction: %s", glm::to_string(p->ws_view_direction).c_str());
+            if (p->is_local) {
+                ImGui::Text("- Position: %s", glm::to_string(p->ws_position).c_str());
+                ImGui::Text("- Direction: %s", glm::to_string(p->ws_view_direction).c_str());
+                vector3_t cc = glm::floor(p->ws_position);
+                vector3_t from_origin = (vector3_t)cc;
+                vector3_t xs_sized = glm::floor(from_origin / (float)CHUNK_EDGE_LENGTH);
+                ImGui::Text("- Chunk coord: %s", glm::to_string((ivector3_t)xs_sized).c_str());
+            }
         }
     }
 
@@ -339,7 +345,7 @@ static void s_not_windowed_game_main(
 
 void game_main(
     game_init_data_t *game_init_data) {
-    global_linear_allocator_init((uint32_t)megabytes(10));
+    global_linear_allocator_init((uint32_t)megabytes(30));
 
     game_core_listener = set_listener_callback(
         &s_game_event_listener,

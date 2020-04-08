@@ -12,7 +12,7 @@
 static float client_command_output_interval = 1.0f / 25.0f;
 static float server_snapshot_output_interval = 1.0f / 20.0f;
 
-#define MAX_MESSAGE_SIZE 40000
+#define MAX_MESSAGE_SIZE 65507
 
 static char *message_buffer;
 static socket_t main_udp_socket;
@@ -289,10 +289,10 @@ void tick_client(
             &received_address);
 
         // In future, separate thread will be capturing all these packets
-        static const uint32_t MAX_RECEIVED_PER_TICK = 4;
+        static const uint32_t MAX_RECEIVED_PER_TICK = 1;
         uint32_t i = 0;
 
-        while (received && i < MAX_RECEIVED_PER_TICK) {
+        while (received) {
             serialiser_t in_serialiser = {};
             in_serialiser.data_buffer = (uint8_t *)message_buffer;
             in_serialiser.data_buffer_size = received;
@@ -339,12 +339,17 @@ void tick_client(
             } break;
 
             }
-        
-            received = n_receive_from(
-                main_udp_socket,
-                message_buffer,
-                sizeof(char) * MAX_MESSAGE_SIZE,
-                &received_address);
+
+            if (i < MAX_RECEIVED_PER_TICK) {
+                received = n_receive_from(
+                    main_udp_socket,
+                    message_buffer,
+                    sizeof(char) * MAX_MESSAGE_SIZE,
+                    &received_address);
+            }
+            else {
+                received = false;
+            } 
 
             ++i;
         }
