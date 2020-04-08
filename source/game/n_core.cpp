@@ -289,7 +289,7 @@ void tick_client(
             &received_address);
 
         // In future, separate thread will be capturing all these packets
-        static const uint32_t MAX_RECEIVED_PER_TICK = 1;
+        static const uint32_t MAX_RECEIVED_PER_TICK = 4;
         uint32_t i = 0;
 
         while (received) {
@@ -557,9 +557,13 @@ static void s_send_game_state_to_new_client(
             n_serialise_packet_header(&header, &serialiser);
             n_serialise_packet_chunk_voxels(&packet, &serialiser);
 
-            s_send_to(&serialiser, client->address);
-
-            LOG_INFOV("Sent data for %i chunks\n", chunks_left);
+            if (s_send_to(&serialiser, client->address)) {
+                LOG_INFOV("Sent data for %i chunks\n", chunks_left);
+            }
+            else {
+                LOG_INFO("Failed to send chunks\n");
+            }
+            
             
             current += max_chunks_per_packet;
             chunks_left -= max_chunks_per_packet;

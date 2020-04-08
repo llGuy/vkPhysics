@@ -125,6 +125,7 @@ static bool s_send_to(
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <fcntl.h>
+#include <errno.h>
 
 static void s_api_init() {
     // Doesn't do anything
@@ -208,6 +209,8 @@ static bool s_send_to(
 
     if (sendto_ret < 0) {
         // Error
+        LOG_ERRORV("sendto: %s\n", strerror(errno));
+
         return 0;
     }
     else {
