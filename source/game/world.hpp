@@ -130,6 +130,8 @@ struct chunk_render_t {
 
 #define CHUNK_EDGE_LENGTH 16
 
+#define MAX_VOXEL_VALUE_I 254
+
 struct chunk_t {
     struct flags_t {
         uint32_t made_modification: 1;

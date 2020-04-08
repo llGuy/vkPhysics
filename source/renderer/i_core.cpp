@@ -251,6 +251,7 @@ void poll_input_events(event_submissions_t *submissions) {
     glfwPollEvents();
 
     sdelta_time = get_current_time() - current_time;
+
     // Start timing
     current_time = get_current_time();
 

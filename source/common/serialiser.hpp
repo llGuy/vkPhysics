@@ -16,6 +16,10 @@ struct serialiser_t {
     // Basic serialisation
     void serialise_uint8(
         uint8_t u8);
+
+    void serialise_uint8(
+        uint8_t u8,
+        uint8_t *pointer);
     
     void serialise_bytes(
         uint8_t *bytes,
@@ -29,6 +33,10 @@ struct serialiser_t {
     
     void serialise_uint32(
         uint32_t u32);
+
+    void serialise_uint32(
+        uint32_t u32,
+        uint8_t *byte);
     
     void serialise_uint64(
         uint64_t u64);

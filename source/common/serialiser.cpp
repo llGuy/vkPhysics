@@ -5,6 +5,7 @@
 void serialiser_t::init(
     uint32_t max_size) {
     data_buffer = (uint8_t *)LN_MALLOC(uint8_t, max_size * sizeof(uint8_t));
+    data_buffer_size = max_size;
 }
 
 uint8_t *serialiser_t::grow_data_buffer(
@@ -17,6 +18,12 @@ uint8_t *serialiser_t::grow_data_buffer(
 void serialiser_t::serialise_uint8(
     uint8_t u8) {
     uint8_t *pointer = grow_data_buffer(1);
+    *pointer = u8;
+}
+
+void serialiser_t::serialise_uint8(
+    uint8_t u8,
+    uint8_t *pointer) {
     *pointer = u8;
 }
 
@@ -119,6 +126,20 @@ int16_t serialiser_t::deserialise_int16() {
 void serialiser_t::serialise_uint32(
     uint32_t u32) {
     uint8_t *pointer = grow_data_buffer(4);
+#if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
+    *(uint32_t *)pointer = u32;
+#else
+    *pointer++ = (uint8_t)u32;
+    *pointer++ = (uint8_t)(u32 >> 8);
+    *pointer++ = (uint8_t)(u32 >> 16);
+    *pointer++ = (uint8_t)(u32 >> 24);
+#endif
+}
+
+void serialiser_t::serialise_uint32(
+    uint32_t u32,
+    uint8_t *byte) {
+    uint8_t *pointer = byte;
 #if defined (__i386) || defined (__x86_64__) || defined (_M_IX86) || defined(_M_X64)
     *(uint32_t *)pointer = u32;
 #else

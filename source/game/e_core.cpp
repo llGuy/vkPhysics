@@ -172,7 +172,7 @@ static void s_run_windowed_game() {
             transfer_command_buffer);
 
         ldelta_time = surface_delta_time();
-
+        
         command_buffer_index = (command_buffer_index + 1) % secondary_command_buffer_count;
     }
 }

@@ -7,7 +7,6 @@
 #include <renderer/renderer.hpp>
 
 #define MAX_VOXEL_VALUE_F 254.0f
-#define MAX_VOXEL_VALUE_I 254
 #define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
 
 void w_push_player_actions(
