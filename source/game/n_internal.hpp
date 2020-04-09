@@ -16,6 +16,10 @@ void n_socket_api_init();
 socket_t n_network_socket_init(
     socket_protocol_t protocol);
 
+void n_set_socket_recv_buffer_size(
+    socket_t s,
+    uint32_t size);
+
 void n_bind_network_socket_to_port(
     socket_t s,
     network_address_t address);

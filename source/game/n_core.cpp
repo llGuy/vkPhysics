@@ -30,6 +30,7 @@ static void s_main_udp_socket_init(
     address.port = n_host_to_network_byte_order(output_port);
     n_bind_network_socket_to_port(main_udp_socket, address);
     n_set_socket_to_non_blocking_mode(main_udp_socket);
+    n_set_socket_recv_buffer_size(main_udp_socket, 1024 * 1024);
 }
 
 static bool s_send_to(
@@ -277,6 +278,8 @@ static void s_process_chunk_voxels(
             }
         }
     }
+
+    LOG_INFOV("Received %i chunks\n", loaded_chunk_count);
 }
 
 void tick_client(

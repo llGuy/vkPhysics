@@ -502,17 +502,13 @@ void w_chunk_world_init(
 
     world->wait_mesh_update = 0;
 
-    /*w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
-      w_add_sphere_m(vector3_t(80.0f), 17.0f, world);*/
-    for (uint32_t i = 0; i < 12; ++i) {
-        for (uint32_t j = 0; j < 6; ++j) {
-            w_add_sphere_m(vector3_t(8.0f + j * 16.0f, 8.0f + i * 16.0f, 8.0f), 7.0f, world);
-        }
-    }
+    w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
+    w_add_sphere_m(vector3_t(80.0f), 17.0f, world);
 
-    /*w_add_sphere_m(vector3_t(-8.0f), 7.0f, world);
+    w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
+    w_add_sphere_m(vector3_t(-70.0f), 30.0f, world);
 
-      w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);*/
+    w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
 }
 
 void w_add_sphere_m(

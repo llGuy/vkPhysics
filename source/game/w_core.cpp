@@ -82,6 +82,7 @@ static void s_world_event_listener(
         FL_FREE(event->data);
     } break;
 
+#if 0
     case ET_CHUNK_VOXEL_PACKET: {
         event_chunk_voxel_packet_t *data = (event_chunk_voxel_packet_t *)event->data;
         packet_chunk_voxels_t *packet = data->packet;
@@ -99,6 +100,7 @@ static void s_world_event_listener(
 
         FL_FREE(data);
     } break;
+#endif
 
     case ET_PLAYER_DISCONNECTED: {
         event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
@@ -133,7 +135,9 @@ void world_init(
     subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
     subscribe_to_event(ET_LEAVE_SERVER, world_listener, events);
     subscribe_to_event(ET_PLAYER_DISCONNECTED, world_listener, events);
+#if 0
     subscribe_to_event(ET_CHUNK_VOXEL_PACKET, world_listener, events);
+#endif
     subscribe_to_event(ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
     subscribe_to_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
 

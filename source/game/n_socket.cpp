@@ -138,6 +138,14 @@ static socket_t s_network_socket_init(
     return socket(family, type, protocol);
 }
 
+static void s_set_socket_recv_buffer_size(
+    socket_t s,
+    uint32_t size) {
+    if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)) == -1) {
+        LOG_ERROR("Failed to set socket buffer size\n");
+    }
+}
+
 static void s_bind_network_socket_to_port(
     socket_t s,
     network_address_t address) {
@@ -286,7 +294,8 @@ uint16_t n_host_to_network_byte_order(
     return htons(bytes);
 }
 
-/*uint32_t n_network_to_host_byte_order(
-    uint32_t bytes) {
-    return ntohl(bytes);
-}*/
+void n_set_socket_recv_buffer_size(
+    socket_t s,
+    uint32_t size) {
+    s_set_socket_recv_buffer_size(s, size);
+}
