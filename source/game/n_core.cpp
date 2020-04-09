@@ -240,24 +240,42 @@ static void s_process_game_state_snapshot(
 static void s_process_chunk_voxels(
     serialiser_t *serialiser,
     event_submissions_t *events) {
-    packet_chunk_voxels_t *packet = LN_MALLOC(packet_chunk_voxels_t, 1);
-    n_deserialise_packet_chunk_voxels(packet, serialiser);
+    uint32_t loaded_chunk_count = serialiser->deserialise_uint32();
 
-    event_chunk_voxel_packet_t *data = FL_MALLOC(event_chunk_voxel_packet_t, 1);
-    data->packet = packet;
+    for (uint32_t c = 0; c < loaded_chunk_count; ++c) {
+        int16_t x = serialiser->deserialise_int16();
+        int16_t y = serialiser->deserialise_int16();
+        int16_t z = serialiser->deserialise_int16();
 
-    LOG_INFO("Received chunk values packet\n");
+        chunk_t *chunk = get_chunk(ivector3_t(x, y, z));
+        chunk->flags.made_modification = 1;
 
-    submit_event(ET_CHUNK_VOXEL_PACKET, data, events);
+        for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
+            uint8_t current_value = serialiser->deserialise_uint8();
 
-    client_t *c = &clients[current_client_id];
-    c->chunks_to_wait_for -= packet->chunk_in_packet_count;
+            if (current_value == 255) {
+                chunk->voxels[v] = 0;
+                ++v;
 
-    if (c->chunks_to_wait_for == 0) {
-        submit_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, NULL, events);
-    }
-    else {
-        submit_event(ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA, NULL, events);
+                // Repeating zeros
+                uint32_t zero_count = serialiser->deserialise_uint32();
+                chunk->voxels[v + 1] = 0;
+                chunk->voxels[v + 2] = 0;
+                chunk->voxels[v + 3] = 0;
+                chunk->voxels[v + 4] = 0;
+
+                v += 4;
+
+                uint32_t previous_v = v;
+                for (; v < previous_v + zero_count - 5; ++v) {
+                    chunk->voxels[v] = 0;
+                }
+            }
+            else {
+                chunk->voxels[v] = current_value;
+                ++v;
+            }
+        }
     }
 }
 
@@ -480,7 +498,7 @@ static constexpr uint32_t maximum_chunks_per_packet() {
     return ((65507 - sizeof(uint32_t)) / (sizeof(int16_t) * 3 + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH));
 }
 
-static uint32_t s_serialise_voxel_chunks_and_send(
+static void s_serialise_voxel_chunks_and_send(
     client_t *client,
     voxel_chunk_values_t *values,
     uint32_t count) {
@@ -523,9 +541,9 @@ static uint32_t s_serialise_voxel_chunks_and_send(
 
         voxel_chunk_values_t *current_values = &values[i];
 
-        serialiser.serialise_uint16(current_values->x);
-        serialiser.serialise_uint16(current_values->y);
-        serialiser.serialise_uint16(current_values->z);
+        serialiser.serialise_int16(current_values->x);
+        serialiser.serialise_int16(current_values->y);
+        serialiser.serialise_int16(current_values->z);
 
         for (uint32_t v_index = 0; v_index < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH; ++v_index) {
             uint8_t current_voxel = current_values->voxel_values[v_index];
