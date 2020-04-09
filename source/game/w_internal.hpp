@@ -106,7 +106,10 @@ struct world_t {
     chunk_t **chunks_to_render;
     hash_table_t<uint32_t, 200, 30, 5> chunk_indices;
 
-    bool wait_mesh_update = 0;
+    struct {
+        uint8_t wait_mesh_update: 1;
+        uint8_t track_history: 1;
+    };
 };
 
 uint32_t w_hash_chunk_coord(
