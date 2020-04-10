@@ -93,7 +93,7 @@ static void s_world_event_listener(
             chunk_t *c = w_get_chunk(coord, &world);
 
             memcpy(c->voxels, c_values->voxel_values, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
-            c->flags.made_modification = 1;
+            c->flags.has_to_update_vertices = 1;
         }
 
         LOG_INFOV("Loaded %i chunks\n", packet->chunk_in_packet_count);
@@ -236,4 +236,26 @@ chunk_t **get_active_chunks(
 
 stack_container_t<player_t *> &DEBUG_get_players() {
     return world.players;
+}
+
+chunk_t **get_modified_chunks(
+    uint32_t *count) {
+    *count = world.modified_chunk_count;
+    return world.modified_chunks;
+}
+
+void reset_modification_tracker() {
+    for (uint32_t i = 0; i < world.modified_chunk_count; ++i) {
+        chunk_t *c = world.modified_chunks[i];
+
+        c->flags.made_modification = 0;
+
+        for (int32_t v = 0; v < c->history.modification_count; ++v) {
+            c->history.modification_pool[c->history.modification_stack[v]] = SPECIAL_VALUE;
+        }
+
+        c->history.modification_count = 0;
+    }
+
+    world.modified_chunk_count = 0;
 }

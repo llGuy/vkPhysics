@@ -75,8 +75,7 @@ void w_chunk_init(
 
 void w_chunk_render_init(
     chunk_t *chunk,
-    const vector3_t &ws_position,
-    const vector3_t &ws_size);
+    const vector3_t &ws_position);
 
 // Would call this at end of game or when chunk is out of chunk load radius.
 void w_destroy_chunk_render(
@@ -105,6 +104,10 @@ struct world_t {
     uint32_t render_count;
     chunk_t **chunks_to_render;
     hash_table_t<uint32_t, 200, 30, 5> chunk_indices;
+
+    uint32_t max_modified_chunks;
+    uint32_t modified_chunk_count;
+    chunk_t **modified_chunks;
 
     struct {
         uint8_t wait_mesh_update: 1;

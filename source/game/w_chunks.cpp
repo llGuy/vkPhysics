@@ -23,13 +23,15 @@ void w_chunk_init(
 
     memset(chunk->voxels, 0, sizeof(uint8_t) * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
 
+    chunk->history.modification_count = 0;
+    memset(chunk->history.modification_pool, SPECIAL_VALUE, CHUNK_VOXEL_COUNT);
+
     chunk->render = NULL;
 }
 
 void w_chunk_render_init(
     chunk_t *chunk,
-    const vector3_t &ws_position,
-    const vector3_t &ws_size) {
+    const vector3_t &ws_position) {
     chunk->render = FL_MALLOC(chunk_render_t, 1);
 
     memset(chunk->render, 0, sizeof(chunk_render_t));
@@ -338,7 +340,7 @@ static void s_update_chunk_mesh(
         c->flags.active_vertices = 1;
 
         if (!c->render) {
-            w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord), vector3_t(1.0f));
+            w_chunk_render_init(c, w_convert_chunk_to_world(c->chunk_coord));
         }
 
         static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
@@ -398,8 +400,8 @@ void w_chunk_gpu_sync_and_render(
     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
         chunk_t *c = world->chunks[i];
         if (c) {
-            if (c->flags.made_modification && chunks_loaded < max_chunks_loaded_per_frame && !world->wait_mesh_update) {
-                c->flags.made_modification = 0;
+            if (c->flags.has_to_update_vertices && chunks_loaded < max_chunks_loaded_per_frame && !world->wait_mesh_update) {
+                c->flags.has_to_update_vertices = 0;
                 // Update chunk mesh and put on GPU + send to command buffer
                 // TODO:
                 s_update_chunk_mesh(
@@ -419,6 +421,15 @@ void w_chunk_gpu_sync_and_render(
                     &chunk_shader,
                     &c->render->render_data);
             }
+        }
+    }
+
+    if (world->modified_chunk_count > 0) {
+        LOG_INFO("Modified some chunks\n");
+
+        for (uint32_t i = 0; i < world->modified_chunk_count; ++i) {
+            chunk_t *c = world->modified_chunks[i];
+            (void)c;
         }
     }
 }
@@ -500,6 +511,12 @@ void w_chunk_world_init(
 
     world->chunks.init(MAX_LOADED_CHUNKS);
 
+    world->max_modified_chunks = MAX_LOADED_CHUNKS / 2;
+    world->modified_chunks = FL_MALLOC(chunk_t *, world->max_modified_chunks);
+    world->modified_chunk_count = 0;
+
+    world->track_history = 1;
+
     world->wait_mesh_update = 0;
 
     w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
@@ -524,7 +541,7 @@ void w_add_sphere_m(
         current_chunk_coord,
         world);
 
-    current_chunk->flags.made_modification = 1;
+    current_chunk->flags.has_to_update_vertices = 1;
 
     int32_t diameter = (int32_t)ws_radius * 2 + 1;
 
@@ -571,7 +588,7 @@ void w_add_sphere_m(
                         current_chunk = w_get_chunk(c, world);
                         current_chunk_coord = c;
 
-                        current_chunk->flags.made_modification = 1;
+                        current_chunk->flags.has_to_update_vertices = 1;
 
                         float proportion = 1.0f - (distance_squared / radius_squared);
 
@@ -691,7 +708,13 @@ static void s_terraform_with_history(
             if (chunk) {
                 ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
                 if (chunk->voxels[w_get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                    if (!chunk->flags.made_modification) {
+                        // Push this chunk onto list of modified chunks
+                        world->modified_chunks[world->modified_chunk_count++] = chunk;
+                    }
+                    
                     chunk->flags.made_modification = 1;
+                    chunk->flags.has_to_update_vertices = 1;
 
                     float coeff = 0.0f;
                     switch(type) {
@@ -709,6 +732,13 @@ static void s_terraform_with_history(
                     float radius_squared = radius * radius;
                     ivector3_t bottom_corner = voxel - ivector3_t((int32_t)radius);
                     int32_t diameter = (int32_t)radius * 2 + 1;
+
+#if 0
+                    // Make sure to activate chunk history
+                    if (chunk->history == NULL) {
+                        activate_chunk_history(chunk);
+                    }
+#endif
 
                     for (int32_t z = bottom_corner.z; z < bottom_corner.z + diameter; ++z) {
                         for (int32_t y = bottom_corner.y; y < bottom_corner.y + diameter; ++y) {
@@ -728,35 +758,52 @@ static void s_terraform_with_history(
                                         chunk_t *new_chunk = w_get_chunk(chunk_coord, world);
 
                                         chunk = new_chunk;
+
+                                        if (!chunk->flags.made_modification) {
+                                            // Push this chunk onto list of modified chunks
+                                            world->modified_chunks[world->modified_chunk_count++] = chunk;
+                                        }
+                                        
                                         chunk->flags.made_modification = 1;
+                                        chunk->flags.has_to_update_vertices = 1;
+
+#if 0
+                                        if (chunk->history == NULL) {
+                                            activate_chunk_history(chunk);
+                                        }
+#endif
 
                                         current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
                                     }
 
                                     uint32_t voxel_index = w_get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
                                     uint8_t *voxel = &chunk->voxels[voxel_index];
+                                    uint8_t voxel_value = *voxel;
                                     float proportion = 1.0f - (distance_squared / radius_squared);
 
                                     int32_t current_voxel_value = (int32_t)*voxel;
 
                                     int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
 
-                                    uint8_t *vh = &chunk->history->modification_pool[voxel_index];
-                                    // Didn't add to the history yet
-                                    if (*vh == 255) {
-                                        *vh = *voxel;
-                                        chunk->history->modification_stack[chunk->history->modification_count++] = voxel_index;
-                                    }
+                                    uint8_t *vh = &chunk->history.modification_pool[voxel_index];
                                     
                                     if (new_value > (int32_t)MAX_VOXEL_VALUE_I) {
-                                        *voxel = (int32_t)MAX_VOXEL_VALUE_I;
+                                        voxel_value = (int32_t)MAX_VOXEL_VALUE_I;
                                     }
                                     else if (new_value < 0) {
-                                        *voxel = 0;
+                                        voxel_value = 0;
                                     }
                                     else {
-                                        *voxel = (uint8_t)new_value;
+                                        voxel_value = (uint8_t)new_value;
                                     }
+
+                                    // Didn't add to the history yet
+                                    if (*vh == SPECIAL_VALUE && voxel_value != *voxel) {
+                                        *vh = *voxel;
+                                        chunk->history.modification_stack[chunk->history.modification_count++] = voxel_index;
+                                    }
+                                    
+                                    *voxel = voxel_value;
                                 }
                             }
                         }
@@ -812,6 +859,7 @@ static void s_terraform_without_history(
                 ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
                 if (chunk->voxels[w_get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
                     chunk->flags.made_modification = 1;
+                    chunk->flags.has_to_update_vertices = 1;
 
                     float coeff = 0.0f;
                     switch(type) {
@@ -849,6 +897,7 @@ static void s_terraform_without_history(
 
                                         chunk = new_chunk;
                                         chunk->flags.made_modification = 1;
+                                        chunk->flags.has_to_update_vertices = 1;
 
                                         current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
                                     }
@@ -924,8 +973,7 @@ void w_toggle_mesh_update_wait(
 
 void activate_chunk_history(
     chunk_t *chunk) {
-    chunk->flags.track_modification_history = 1;
-    chunk->history = FL_MALLOC(chunk_history_t, 1);
-    chunk->history->modification_count = 0;
-    memset(chunk->history->modification_pool, 255, CHUNK_VOXEL_COUNT);
+    //chunk->history = FL_MALLOC(chunk_history_t, 1);
+    chunk->history.modification_count = 0;
+    memset(chunk->history.modification_pool, SPECIAL_VALUE, CHUNK_VOXEL_COUNT);
 }

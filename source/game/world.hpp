@@ -135,6 +135,7 @@ struct chunk_render_t {
 #define CHUNK_VOXEL_COUNT CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH
 
 #define MAX_VOXEL_VALUE_I 254
+#define SPECIAL_VALUE 255
 
 struct chunk_history_t {
     // These are all going to be set to 255 by default. If a voxel gets modified, modification_pool[voxel_index]
@@ -149,6 +150,7 @@ struct chunk_history_t {
 struct chunk_t {
     struct flags_t {
         uint32_t made_modification: 1;
+        uint32_t has_to_update_vertices: 1;
         uint32_t active_vertices: 1;
     } flags;
     
@@ -158,7 +160,8 @@ struct chunk_t {
 
     uint8_t voxels[CHUNK_VOXEL_COUNT];
 
-    chunk_history_t *history;
+    //chunk_history_t *history;
+    chunk_history_t history;
 
     chunk_render_t *render;
 };
@@ -171,6 +174,11 @@ chunk_t **get_active_chunks(
 
 void activate_chunk_history(
     chunk_t *chunk);
+
+chunk_t **get_modified_chunks(
+    uint32_t *count);
+
+void reset_modification_tracker();
 
 // For debugging only
 stack_container_t<player_t *> &DEBUG_get_players();

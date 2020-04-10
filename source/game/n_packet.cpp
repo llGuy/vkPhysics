@@ -140,6 +140,13 @@ uint32_t n_packed_player_commands_size(
 
     final_size += command_size * commands->command_count;
 
+    final_size += sizeof(packet_player_commands_t::modified_chunk_count);
+    for (uint32_t c = 0; c < commands->modified_chunk_count; ++c) {
+        final_size += sizeof(chunk_modifications_t::modified_voxels_count);
+
+        final_size += commands->chunk_modifications[c].modified_voxels_count * (sizeof(voxel_modification_t::index) + sizeof(voxel_modification_t::final_value));
+    }
+
     return final_size;
 }
 
@@ -159,6 +166,19 @@ void n_serialise_player_commands(
     serialiser->serialise_vector3(packet->ws_final_position);
     serialiser->serialise_vector3(packet->ws_final_view_direction);
     serialiser->serialise_vector3(packet->ws_final_up_vector);
+
+    serialiser->serialise_uint32(packet->modified_chunk_count);
+
+    for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
+        chunk_modifications_t *c = &packet->chunk_modifications[i];
+        serialiser->serialise_uint32(c->modified_voxels_count);
+
+        for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+            voxel_modification_t *v_ptr =  &c->modifications[v];
+            serialiser->serialise_uint16(v_ptr->index);
+            serialiser->serialise_uint8(v_ptr->final_value);
+        }
+    }
 }
 
 void n_deserialise_player_commands(
@@ -178,6 +198,22 @@ void n_deserialise_player_commands(
     packet->ws_final_position = serialiser->deserialise_vector3();
     packet->ws_final_view_direction = serialiser->deserialise_vector3();
     packet->ws_final_up_vector = serialiser->deserialise_vector3();
+
+    packet->modified_chunk_count = serialiser->deserialise_uint32();
+    packet->chunk_modifications = LN_MALLOC(chunk_modifications_t, packet->modified_chunk_count);
+
+    for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
+        chunk_modifications_t *c = &packet->chunk_modifications[i];
+        c->modified_voxels_count = serialiser->deserialise_uint32();
+
+        c->modifications = LN_MALLOC(voxel_modification_t, c->modified_voxels_count);
+
+        for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+            voxel_modification_t *v_ptr =  &c->modifications[v];
+            v_ptr->index = serialiser->deserialise_uint16();
+            v_ptr->final_value = serialiser->deserialise_uint8();
+        }
+    }
 }
 
 uint32_t n_packed_game_state_snapshot_size(

@@ -174,6 +174,38 @@ static void s_send_commands_to_server() {
             packet.ws_final_view_direction = p->ws_view_direction;
             packet.ws_final_up_vector = p->ws_up_vector;
 
+            uint32_t modified_chunk_count = 0;
+            chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
+            packet.modified_chunk_count = modified_chunk_count;
+            packet.chunk_modifications = LN_MALLOC(chunk_modifications_t, packet.modified_chunk_count);
+            
+            for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
+                chunk_modifications_t *cm_ptr = &packet.chunk_modifications[c_index];
+                chunk_t *c_ptr = chunks[c_index];
+                chunk_history_t *h_ptr = &chunks[c_index]->history;
+
+                if (h_ptr->modification_count == 0) {
+                    --c_index;
+                    --modified_chunk_count;
+                    LOG_INFO("Chunk doesn't contain any changes\n");
+                }
+                else {
+                    cm_ptr->modified_voxels_count = h_ptr->modification_count;
+                    cm_ptr->modifications = LN_MALLOC(voxel_modification_t, cm_ptr->modified_voxels_count);
+                    for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
+                        cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
+                        cm_ptr->modifications[v_index].final_value = (uint16_t)c_ptr->voxels[cm_ptr->modifications[v_index].index];
+                    }
+                }
+            }
+
+            packet.modified_chunk_count = modified_chunk_count;
+            
+            if (modified_chunk_count) {
+                LOG_INFOV("Modified %i chunks\n", modified_chunk_count);
+                reset_modification_tracker();
+            }
+            
             packet_header_t header = {};
             header.current_tick = get_current_tick();
             header.current_packet_count = current_packet;
@@ -249,12 +281,12 @@ static void s_process_chunk_voxels(
         int16_t z = serialiser->deserialise_int16();
 
         chunk_t *chunk = get_chunk(ivector3_t(x, y, z));
-        chunk->flags.made_modification = 1;
+        chunk->flags.has_to_update_vertices = 1;
 
         for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
             uint8_t current_value = serialiser->deserialise_uint8();
 
-            if (current_value == 255) {
+            if (current_value == SPECIAL_VALUE) {
                 chunk->voxels[v] = 0;
                 ++v;
 
@@ -562,7 +594,7 @@ static void s_serialise_voxel_chunks_and_send(
                     for (; current_values->voxel_values[v_index] == 0; ++v_index, ++zero_count) {}
 
                     serialiser.data_buffer_head = before_head;
-                    serialiser.serialise_uint8(255);
+                    serialiser.serialise_uint8(SPECIAL_VALUE);
                     serialiser.serialise_uint32(zero_count);
                 }
 
@@ -743,6 +775,13 @@ static void s_process_client_commands(
             c->ws_predicted_position = commands.ws_final_position;
             c->ws_predicted_view_direction = commands.ws_final_view_direction;
             c->ws_predicted_up_vector = commands.ws_final_up_vector;
+
+            // Process terraforming stuff
+            if (commands.modified_chunk_count) {
+                LOG_INFOV("Received %i chunk modifications\n", commands.modified_chunk_count);
+            }
+
+            
         }
     }
     else {
