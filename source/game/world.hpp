@@ -152,6 +152,9 @@ struct chunk_t {
         uint32_t made_modification: 1;
         uint32_t has_to_update_vertices: 1;
         uint32_t active_vertices: 1;
+        // Flag that is used temporarily
+        uint32_t modified_marker: 1;
+        uint32_t index_of_modification_struct: 10;
     } flags;
     
     uint32_t chunk_stack_index;
@@ -179,6 +182,11 @@ chunk_t **get_modified_chunks(
     uint32_t *count);
 
 void reset_modification_tracker();
+
+uint32_t get_voxel_index(
+    uint32_t x,
+    uint32_t y,
+    uint32_t z);
 
 // For debugging only
 stack_container_t<player_t *> &DEBUG_get_players();

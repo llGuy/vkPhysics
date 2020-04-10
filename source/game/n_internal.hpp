@@ -164,16 +164,6 @@ void n_deserialise_player_joined(
     packet_player_joined_t *packet,
     serialiser_t *serialiser);
 
-struct voxel_modification_t {
-    uint16_t index;
-    uint8_t final_value;
-};
-
-struct chunk_modifications_t {
-    uint32_t modified_voxels_count;
-    voxel_modification_t *modifications;
-};
-
 struct packet_player_commands_t {
     union {
         struct {
@@ -190,7 +180,7 @@ struct packet_player_commands_t {
     vector3_t ws_final_position;
     vector3_t ws_final_view_direction;
     vector3_t ws_final_up_vector;
-
+    
     uint32_t modified_chunk_count;
     chunk_modifications_t *chunk_modifications;
 };

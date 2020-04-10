@@ -11,6 +11,20 @@ struct network_address_t {
     uint32_t ipv4_address;
 };
 
+struct voxel_modification_t {
+    uint16_t index;
+    uint8_t final_value;
+};
+
+struct chunk_modifications_t {
+    int16_t x, y, z;
+    uint32_t modified_voxels_count;
+    voxel_modification_t *modifications;
+};
+
+#define MAX_PREDICTED_CHUNK_MODIFICATIONS 12
+#define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 100
+
 struct client_t {
     union {
         struct {
@@ -31,6 +45,11 @@ struct client_t {
     vector3_t ws_predicted_position;
     vector3_t ws_predicted_view_direction;
     vector3_t ws_predicted_up_vector;
+
+    // Predicted chunk modifications
+    uint32_t max_predicted_chunk_mod_count;
+    uint32_t predicted_chunk_mod_count;
+    chunk_modifications_t *predicted_modifications;
 };
 
 struct local_client_info_t {

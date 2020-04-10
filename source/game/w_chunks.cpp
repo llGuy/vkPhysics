@@ -6,7 +6,7 @@
 #include <common/allocators.hpp>
 #include <renderer/renderer.hpp>
 
-uint32_t w_get_voxel_index(
+uint32_t get_voxel_index(
     uint32_t x,
     uint32_t y,
     uint32_t z) {
@@ -98,7 +98,7 @@ static uint8_t s_chunk_edge_voxel_value(
         return 0;
     }
     
-    return chunk_ptr->voxels[w_get_voxel_index(final_x, final_y, final_z)];
+    return chunk_ptr->voxels[get_voxel_index(final_x, final_y, final_z)];
 }
 
 static const vector3_t NORMALIZED_CUBE_VERTICES[8] = {
@@ -228,12 +228,12 @@ static void s_update_chunk_mesh(
                 uint32_t x = CHUNK_EDGE_LENGTH - 1;
 
                 uint8_t voxel_values[8] = {
-                    c->voxels[w_get_voxel_index(x, y, z)],
+                    c->voxels[get_voxel_index(x, y, z)],
                     s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
                     s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
                     s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
                     
-                    c->voxels[w_get_voxel_index(x, y + 1, z)],
+                    c->voxels[get_voxel_index(x, y + 1, z)],
                     s_chunk_edge_voxel_value(x + 1, y + 1, z,&doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z],
                     s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z + 1],
                     s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, world) };//voxels[x]    [y + 1][z + 1] };
@@ -259,7 +259,7 @@ static void s_update_chunk_mesh(
                 uint32_t y = CHUNK_EDGE_LENGTH - 1;
 
                 uint8_t voxel_values[8] = {
-                    c->voxels[w_get_voxel_index(x, y, z)],
+                    c->voxels[get_voxel_index(x, y, z)],
                     s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
                     s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
                     s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
@@ -290,12 +290,12 @@ static void s_update_chunk_mesh(
                 uint32_t z = CHUNK_EDGE_LENGTH - 1;
 
                 uint8_t voxel_values[8] = {
-                    c->voxels[w_get_voxel_index(x, y, z)],
+                    c->voxels[get_voxel_index(x, y, z)],
                     s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
                     s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
                     s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
                     
-                    c->voxels[w_get_voxel_index(x, y + 1, z)],
+                    c->voxels[get_voxel_index(x, y + 1, z)],
                     s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z],
                     s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z + 1],
                     s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, world) };//voxels[x]    [y + 1][z + 1] };
@@ -316,15 +316,15 @@ static void s_update_chunk_mesh(
         for (uint32_t y = 0; y < CHUNK_EDGE_LENGTH - 1; ++y) {
             for (uint32_t x = 0; x < CHUNK_EDGE_LENGTH - 1; ++x) {
                 uint8_t voxel_values[8] = {
-                    c->voxels[w_get_voxel_index(x, y, z)],
-                    c->voxels[w_get_voxel_index(x + 1, y, z)],
-                    c->voxels[w_get_voxel_index(x + 1, y, z + 1)],
-                    c->voxels[w_get_voxel_index(x, y, z + 1)],
+                    c->voxels[get_voxel_index(x, y, z)],
+                    c->voxels[get_voxel_index(x + 1, y, z)],
+                    c->voxels[get_voxel_index(x + 1, y, z + 1)],
+                    c->voxels[get_voxel_index(x, y, z + 1)],
                     
-                    c->voxels[w_get_voxel_index(x, y + 1, z)],
-                    c->voxels[w_get_voxel_index(x + 1, y + 1, z)],
-                    c->voxels[w_get_voxel_index(x + 1, y + 1, z + 1)],
-                    c->voxels[w_get_voxel_index(x, y + 1, z + 1)] };
+                    c->voxels[get_voxel_index(x, y + 1, z)],
+                    c->voxels[get_voxel_index(x + 1, y + 1, z)],
+                    c->voxels[get_voxel_index(x + 1, y + 1, z + 1)],
+                    c->voxels[get_voxel_index(x, y + 1, z + 1)] };
 
                 s_update_chunk_mesh_voxel_pair(
                     voxel_values,
@@ -573,9 +573,9 @@ void w_add_sphere_m(
 
                         ivector3_t voxel_coord = chunk_origin_diff;
 
-                        //current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
+                        //current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
 
-                        uint8_t *v = &current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
                         if (*v < new_value) {
                             *v = new_value;
@@ -594,7 +594,7 @@ void w_add_sphere_m(
 
                         ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
 
-                        uint8_t *v = &current_chunk->voxels[w_get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
                         if (*v < new_value) {
                             *v = new_value;
@@ -707,7 +707,7 @@ static void s_terraform_with_history(
 
             if (chunk) {
                 ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
-                if (chunk->voxels[w_get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
                     if (!chunk->flags.made_modification) {
                         // Push this chunk onto list of modified chunks
                         world->modified_chunks[world->modified_chunk_count++] = chunk;
@@ -776,7 +776,7 @@ static void s_terraform_with_history(
                                         current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
                                     }
 
-                                    uint32_t voxel_index = w_get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
+                                    uint32_t voxel_index = get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
                                     uint8_t *voxel = &chunk->voxels[voxel_index];
                                     uint8_t voxel_value = *voxel;
                                     float proportion = 1.0f - (distance_squared / radius_squared);
@@ -857,7 +857,7 @@ static void s_terraform_without_history(
 
             if (chunk) {
                 ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
-                if (chunk->voxels[w_get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
                     chunk->flags.made_modification = 1;
                     chunk->flags.has_to_update_vertices = 1;
 
@@ -902,7 +902,7 @@ static void s_terraform_without_history(
                                         current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
                                     }
 
-                                    uint8_t *voxel = &chunk->voxels[w_get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z)];
+                                    uint8_t *voxel = &chunk->voxels[get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z)];
                                     float proportion = 1.0f - (distance_squared / radius_squared);
 
                                     int32_t current_voxel_value = (int32_t)*voxel;

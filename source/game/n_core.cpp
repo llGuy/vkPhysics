@@ -47,7 +47,11 @@ static bool client_check_incoming_packets = 0;
 #define MAX_CLIENTS 50
 static stack_container_t<client_t> clients;
 
+static uint8_t dummy_voxels[CHUNK_VOXEL_COUNT];
+
 static void s_start_client() {
+    memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
+
     s_main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
 
     clients.init(MAX_CLIENTS);
@@ -190,6 +194,9 @@ static void s_send_commands_to_server() {
                     LOG_INFO("Chunk doesn't contain any changes\n");
                 }
                 else {
+                    cm_ptr->x = c_ptr->chunk_coord.x;
+                    cm_ptr->y = c_ptr->chunk_coord.y;
+                    cm_ptr->z = c_ptr->chunk_coord.z;
                     cm_ptr->modified_voxels_count = h_ptr->modification_count;
                     cm_ptr->modifications = LN_MALLOC(voxel_modification_t, cm_ptr->modified_voxels_count);
                     for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
@@ -457,6 +464,8 @@ static void s_send_disconnect_to_server() {
 static bool started_server = 0;
 
 static void s_start_server() {
+    memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
+
     s_main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
 
     clients.init(MAX_CLIENTS);
@@ -695,7 +704,11 @@ static void s_process_connection_request(
     client->name = create_fl_string(request.name);
     client->address = address;
     client->received_first_commands_packet = 0;
-
+    client->max_predicted_chunk_mod_count = MAX_PREDICTED_CHUNK_MODIFICATIONS;
+    client->predicted_chunk_mod_count = 0;
+    client->predicted_modifications = FL_MALLOC(chunk_modifications_t, client->max_predicted_chunk_mod_count);
+    memset(client->predicted_modifications, 0, sizeof(chunk_modifications_t) * client->max_predicted_chunk_mod_count);
+    
     event_new_player_t *event_data = FL_MALLOC(event_new_player_t, 1);
     event_data->info.client_data = client;
     // Need to calculate a random position
@@ -747,6 +760,96 @@ static void s_process_client_disconnect(
     }
 }
 
+static void s_flag_modified_chunks(
+    client_t *c) {
+    for (uint32_t i = 0; i < c->predicted_chunk_mod_count; ++i) {
+        chunk_modifications_t *m_ptr = &c->predicted_modifications[i];
+        chunk_t *c_ptr = get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
+        c_ptr->flags.modified_marker = 1;
+        c_ptr->flags.index_of_modification_struct = i;
+    }
+}
+
+static void s_unflag_modified_chunks(
+    client_t *c) {
+    for (uint32_t i = 0; i < c->predicted_chunk_mod_count; ++i) {
+        chunk_modifications_t *m_ptr = &c->predicted_modifications[i];
+        chunk_t *c_ptr = get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
+        c_ptr->flags.modified_marker = 0;
+        c_ptr->flags.index_of_modification_struct = 0;
+    }
+}
+
+static void s_fill_dummy_voxels(
+    chunk_modifications_t *modifications) {
+    for (uint32_t i = 0; i < modifications->modified_voxels_count; ++i) {
+        voxel_modification_t *v = &modifications->modifications[i];
+        dummy_voxels[v->index] = i;
+    }
+}
+
+static void s_unfill_dummy_voxels(
+    chunk_modifications_t *modifications) {
+    for (uint32_t i = 0; i < modifications->modified_voxels_count; ++i) {
+        voxel_modification_t *v = &modifications->modifications[i];
+        dummy_voxels[v->index] = SPECIAL_VALUE;
+    }
+}
+
+static void s_handle_chunk_modifications(
+    packet_player_commands_t *commands,
+    client_t *client) {
+    s_flag_modified_chunks(client);
+
+    for (uint32_t i = 0; i < commands->modified_chunk_count; ++i) {
+        chunk_modifications_t *packet_modifications = &commands->chunk_modifications[i];
+
+        chunk_t *chunk = get_chunk(ivector3_t(packet_modifications->x, packet_modifications->y, packet_modifications->z));
+
+        // Chunk has been terraformed on before (between previous game state dispatch and next one)
+        if (chunk->flags.modified_marker) {
+            // Index of modification struct would have been filled by s_flag_modiifed_chunks(), called above;
+            chunk_modifications_t *previous_modifications = &client->predicted_modifications[chunk->flags.index_of_modification_struct];
+
+            // Has been modified, must fill dummy voxels
+            s_fill_dummy_voxels(previous_modifications);
+
+            for (uint32_t voxel = 0; voxel < packet_modifications->modified_voxels_count; ++i) {
+                voxel_modification_t *vm_ptr = &packet_modifications->modifications[voxel];
+
+                if (dummy_voxels[vm_ptr->index] == SPECIAL_VALUE) {
+                    // Voxel has not yet been modified, can just push it into array
+                    previous_modifications->modifications[previous_modifications->modified_voxels_count++] = *vm_ptr;
+                }
+                else {
+                    // Voxel has been modified
+                    uint32_t previous_index = dummy_voxels[vm_ptr->index];
+                    // Just update final value
+                    previous_modifications->modifications[previous_index].final_value = vm_ptr->final_value;
+                }
+            }
+
+            s_unfill_dummy_voxels(previous_modifications);
+        }
+        else {
+            // Chunk has not been terraformed before, need to push a new modification
+            chunk_modifications_t *m = &client->predicted_modifications[client->predicted_chunk_mod_count++];
+            if (!m->modifications) {
+                m->modifications = FL_MALLOC(voxel_modification_t, MAX_PREDICTED_CHUNK_MODIFICATIONS);
+            }
+
+            m->x = packet_modifications->x;
+            m->y = packet_modifications->y;
+            m->z = packet_modifications->z;
+
+            m->modified_voxels_count = packet_modifications->modified_voxels_count;
+            memcpy(m->modifications, packet_modifications->modifications, sizeof(voxel_modification_t) * m->modified_voxels_count);
+        }
+    }
+    
+    s_unflag_modified_chunks(client);
+}
+
 static void s_process_client_commands(
     serialiser_t *serialiser,
     uint16_t client_id,
@@ -781,7 +884,9 @@ static void s_process_client_commands(
                 LOG_INFOV("Received %i chunk modifications\n", commands.modified_chunk_count);
             }
 
-            
+            for (uint32_t c_mod = 0; c_mod < commands.modified_chunk_count; ++c_mod) {
+                
+            }
         }
     }
     else {

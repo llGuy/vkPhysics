@@ -142,7 +142,7 @@ uint32_t n_packed_player_commands_size(
 
     final_size += sizeof(packet_player_commands_t::modified_chunk_count);
     for (uint32_t c = 0; c < commands->modified_chunk_count; ++c) {
-        final_size += sizeof(chunk_modifications_t::modified_voxels_count);
+        final_size += sizeof(chunk_modifications_t::modified_voxels_count) + sizeof(chunk_modifications_t::x) * 3;
 
         final_size += commands->chunk_modifications[c].modified_voxels_count * (sizeof(voxel_modification_t::index) + sizeof(voxel_modification_t::final_value));
     }
@@ -171,6 +171,9 @@ void n_serialise_player_commands(
 
     for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
         chunk_modifications_t *c = &packet->chunk_modifications[i];
+        serialiser->serialise_int16(c->x);
+        serialiser->serialise_int16(c->y);
+        serialiser->serialise_int16(c->z);
         serialiser->serialise_uint32(c->modified_voxels_count);
 
         for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
@@ -204,6 +207,9 @@ void n_deserialise_player_commands(
 
     for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
         chunk_modifications_t *c = &packet->chunk_modifications[i];
+        c->x = serialiser->deserialise_int16();
+        c->y = serialiser->deserialise_int16();
+        c->z = serialiser->deserialise_int16();
         c->modified_voxels_count = serialiser->deserialise_uint32();
 
         c->modifications = LN_MALLOC(voxel_modification_t, c->modified_voxels_count);
