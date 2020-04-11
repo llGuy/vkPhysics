@@ -230,6 +230,17 @@ static void s_send_commands_to_server() {
             p->cached_player_action_count = 0;
 
             c->waiting_on_correction = 0;
+
+#if 1
+            // For debugging purposes
+            if (modified_chunk_count) {
+                static uint32_t m_count = 0;
+                ++m_count;
+                if (m_count == 2) {
+                    exit(1);
+                }
+            }
+#endif
         }
     }
 }
@@ -704,10 +715,8 @@ static void s_process_connection_request(
     client->name = create_fl_string(request.name);
     client->address = address;
     client->received_first_commands_packet = 0;
-    client->max_predicted_chunk_mod_count = MAX_PREDICTED_CHUNK_MODIFICATIONS;
     client->predicted_chunk_mod_count = 0;
-    client->predicted_modifications = FL_MALLOC(chunk_modifications_t, client->max_predicted_chunk_mod_count);
-    memset(client->predicted_modifications, 0, sizeof(chunk_modifications_t) * client->max_predicted_chunk_mod_count);
+    memset(client->predicted_modifications, 0, sizeof(chunk_modifications_t) * MAX_PREDICTED_CHUNK_MODIFICATIONS);
     
     event_new_player_t *event_data = FL_MALLOC(event_new_player_t, 1);
     event_data->info.client_data = client;
@@ -814,7 +823,7 @@ static void s_handle_chunk_modifications(
             // Has been modified, must fill dummy voxels
             s_fill_dummy_voxels(previous_modifications);
 
-            for (uint32_t voxel = 0; voxel < packet_modifications->modified_voxels_count; ++i) {
+            for (uint32_t voxel = 0; voxel < packet_modifications->modified_voxels_count; ++voxel) {
                 voxel_modification_t *vm_ptr = &packet_modifications->modifications[voxel];
 
                 if (dummy_voxels[vm_ptr->index] == SPECIAL_VALUE) {
@@ -835,7 +844,7 @@ static void s_handle_chunk_modifications(
             // Chunk has not been terraformed before, need to push a new modification
             chunk_modifications_t *m = &client->predicted_modifications[client->predicted_chunk_mod_count++];
             if (!m->modifications) {
-                m->modifications = FL_MALLOC(voxel_modification_t, MAX_PREDICTED_CHUNK_MODIFICATIONS);
+                m->modifications = FL_MALLOC(voxel_modification_t, MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK);
             }
 
             m->x = packet_modifications->x;
@@ -882,10 +891,7 @@ static void s_process_client_commands(
             // Process terraforming stuff
             if (commands.modified_chunk_count) {
                 LOG_INFOV("Received %i chunk modifications\n", commands.modified_chunk_count);
-            }
-
-            for (uint32_t c_mod = 0; c_mod < commands.modified_chunk_count; ++c_mod) {
-                
+                s_handle_chunk_modifications(&commands, c);
             }
         }
     }

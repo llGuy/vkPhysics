@@ -424,6 +424,7 @@ void w_chunk_gpu_sync_and_render(
         }
     }
 
+#if 0
     if (world->modified_chunk_count > 0) {
         LOG_INFO("Modified some chunks\n");
 
@@ -432,6 +433,7 @@ void w_chunk_gpu_sync_and_render(
             (void)c;
         }
     }
+#endif
 }
 
 void w_destroy_chunk_render(

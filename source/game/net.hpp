@@ -23,7 +23,7 @@ struct chunk_modifications_t {
 };
 
 #define MAX_PREDICTED_CHUNK_MODIFICATIONS 12
-#define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 100
+#define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 150
 
 struct client_t {
     union {
@@ -47,9 +47,8 @@ struct client_t {
     vector3_t ws_predicted_up_vector;
 
     // Predicted chunk modifications
-    uint32_t max_predicted_chunk_mod_count;
     uint32_t predicted_chunk_mod_count;
-    chunk_modifications_t *predicted_modifications;
+    chunk_modifications_t predicted_modifications[MAX_PREDICTED_CHUNK_MODIFICATIONS];
 };
 
 struct local_client_info_t {
