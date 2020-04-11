@@ -57,6 +57,8 @@ static void s_start_client() {
     clients.init(MAX_CLIENTS);
     
     started_client = 1;
+
+    set_chunk_history_tracker_value(1);
 }
 
 static network_address_t bound_server_address = {};
@@ -231,7 +233,7 @@ static void s_send_commands_to_server() {
 
             c->waiting_on_correction = 0;
 
-#if 1
+#if 0
             // For debugging purposes
             if (modified_chunk_count) {
                 static uint32_t m_count = 0;
@@ -482,6 +484,8 @@ static void s_start_server() {
     clients.init(MAX_CLIENTS);
 
     started_server = 1;
+
+    set_chunk_history_tracker_value(0);
 }
 
 static bool s_send_handshake(
@@ -578,22 +582,6 @@ static void s_serialise_voxel_chunks_and_send(
     uint32_t chunk_values_start = serialiser.data_buffer_head;
     
     for (uint32_t i = 0; i < count; ++i) {
-        if (serialiser.data_buffer_head + 3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH > serialiser.data_buffer_size ||
-            i + 1 == count) {
-            // Need to send in new packet
-            serialiser.serialise_uint32(chunks_in_packet, chunk_count_byte);
-
-            if (s_send_to(&serialiser, client->address)) {
-                LOG_INFOV("Sent %i chunks to %s\n", chunks_in_packet, client->name);
-            }
-            else {
-                LOG_INFOV("Failed to send %i chunks to %s\n", chunks_in_packet, client->name);
-            }
-
-            serialiser.data_buffer_head = chunk_values_start;
-            chunks_in_packet = 0;
-        }
-
         voxel_chunk_values_t *current_values = &values[i];
 
         serialiser.serialise_int16(current_values->x);
@@ -626,6 +614,22 @@ static void s_serialise_voxel_chunks_and_send(
         }
 
         ++chunks_in_packet;
+
+        if (serialiser.data_buffer_head + 3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH > serialiser.data_buffer_size ||
+            i + 1 == count) {
+            // Need to send in new packet
+            serialiser.serialise_uint32(chunks_in_packet, chunk_count_byte);
+
+            if (s_send_to(&serialiser, client->address)) {
+                LOG_INFOV("Sent %i chunks to %s\n", chunks_in_packet, client->name);
+            }
+            else {
+                LOG_INFOV("Failed to send %i chunks to %s\n", chunks_in_packet, client->name);
+            }
+
+            serialiser.data_buffer_head = chunk_values_start;
+            chunks_in_packet = 0;
+        }
     }
 }
 
@@ -901,7 +905,7 @@ static void s_process_client_commands(
     }
 }
 
-static bool s_check_if_client_has_to_correct(
+static bool s_check_if_client_has_to_correct_state(
     player_t *p,
     client_t *c) {
     vector3_t dposition = glm::abs(p->ws_position - c->ws_predicted_position);
@@ -933,7 +937,30 @@ static bool s_check_if_client_has_to_correct(
     return incorrect_position || incorrect_direction || incorrect_up;
 }
 
+static bool s_check_if_client_has_to_correct_terrain(
+    client_t *c) {
+    for (uint32_t cm_index = 0; cm_index < c->predicted_chunk_mod_count; ++cm_index) {
+        chunk_modifications_t *cm_ptr = &c->predicted_modifications[cm_index];
+
+        chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+
+        for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
+            voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+
+            uint8_t actual_value = c_ptr->voxels[vm_ptr->index];
+            uint8_t predicted_value = vm_ptr->final_value;
+
+            // Just one mistake can completely mess stuff up between the client and server
+            if (actual_value != predicted_value) {
+                LOG_INFOV("Made terraforming mistake %i -> %i\n", (int32_t)predicted_value, (int32_t)actual_value);
+            }
+        }
+    }
+}
+
 static void s_dispatch_game_state_snapshot() {
+    LOG_INFO("Dispatching game state\n");
+
     packet_game_state_snapshot_t packet = {};
     packet.player_data_count = 0;
     packet.player_snapshots = LN_MALLOC(player_snapshot_t, clients.data_count);
@@ -948,8 +975,15 @@ static void s_dispatch_game_state_snapshot() {
             snapshot->flags = 0;
 
             player_t *p = get_player(c->client_id);
-            bool has_to_correct = s_check_if_client_has_to_correct(p, c);
-            if (has_to_correct) {
+            // Check if 
+            bool has_to_correct_state = s_check_if_client_has_to_correct_state(p, c);
+            // Check if client has to correct voxel modifications
+            bool has_to_correct_terrain = s_check_if_client_has_to_correct_terrain(c);
+
+            // Clear client's predicted modification array
+            c->predicted_chunk_mod_count = 0;
+
+            if (has_to_correct_state) {
                 if (c->waiting_on_correction) {
                     LOG_INFO("Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n");
                     snapshot->client_needs_to_correct = 0;
@@ -959,7 +993,7 @@ static void s_dispatch_game_state_snapshot() {
                     c->waiting_on_correction = 1;
 
                     LOG_INFOV("Client needs to do correction: tick %i\n", (int32_t)get_current_tick());
-                    snapshot->client_needs_to_correct = has_to_correct;
+                    snapshot->client_needs_to_correct = has_to_correct_state;
                     snapshot->server_waiting_for_correction = 0;
                 }
             }

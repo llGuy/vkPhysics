@@ -69,6 +69,8 @@ static void s_world_event_listener(
         FL_FREE(event->data);
     } break;
 
+        
+
     case ET_LEAVE_SERVER: {
         w_clear_players(&world);
         w_clear_chunk_world(&world);
@@ -120,6 +122,13 @@ static void s_world_event_listener(
         w_toggle_mesh_update_wait(0, &world);
     } break;
 
+    case ET_SET_CHUNK_HISTORY_TRACKER: {
+        event_set_chunk_history_tracker_t *data = (event_set_chunk_history_tracker_t *)event->data;
+        world.track_history = data->value;
+
+        FL_FREE(data);
+    } break;
+
     default: {
     } break;
 
@@ -140,6 +149,7 @@ void world_init(
 #endif
     subscribe_to_event(ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
     subscribe_to_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
+    subscribe_to_event(ET_SET_CHUNK_HISTORY_TRACKER, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 
@@ -258,4 +268,9 @@ void reset_modification_tracker() {
     }
 
     world.modified_chunk_count = 0;
+}
+
+void set_chunk_history_tracker_value(
+    bool value) {
+    world.track_history = value;
 }

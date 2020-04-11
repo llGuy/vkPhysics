@@ -188,5 +188,8 @@ uint32_t get_voxel_index(
     uint32_t y,
     uint32_t z);
 
+void set_chunk_history_tracker_value(
+    bool value);
+
 // For debugging only
 stack_container_t<player_t *> &DEBUG_get_players();

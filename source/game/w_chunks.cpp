@@ -521,13 +521,17 @@ void w_chunk_world_init(
 
     world->wait_mesh_update = 0;
 
+    w_add_sphere_m(vector3_t(0.0f), 5.0f, world);
+
+    //w_add_sphere_m(vector3_t(24.0f), 2.0f, world);
+
     w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
     w_add_sphere_m(vector3_t(80.0f), 17.0f, world);
 
-    w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
-    w_add_sphere_m(vector3_t(-70.0f), 30.0f, world);
+    //w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
+    //w_add_sphere_m(vector3_t(-70.0f), 30.0f, world);
 
-    w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
+    //w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
 }
 
 void w_add_sphere_m(
@@ -700,6 +704,7 @@ static void s_terraform_with_history(
 
     if (max_change_i < 2) {
         // Don't do anything
+        LOG_INFO("Terraforming does nothing =========================================================\n");
     }
     else {
         for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
@@ -850,6 +855,7 @@ static void s_terraform_without_history(
 
     if (max_change_i < 2) {
         // Don't do anything
+        LOG_INFO("Terraforming does nothing =========================================================\n");
     }
     else {
         for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
@@ -911,15 +917,19 @@ static void s_terraform_without_history(
 
                                     int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
 
+                                    uint8_t voxel_value = 0;
+                                    
                                     if (new_value > (int32_t)MAX_VOXEL_VALUE_I) {
-                                        *voxel = (int32_t)MAX_VOXEL_VALUE_I;
+                                        voxel_value = (int32_t)MAX_VOXEL_VALUE_I;
                                     }
                                     else if (new_value < 0) {
-                                        *voxel = 0;
+                                        voxel_value = 0;
                                     }
                                     else {
-                                        *voxel = (uint8_t)new_value;
+                                        voxel_value = (uint8_t)new_value;
                                     }
+                                    
+                                    *voxel = voxel_value;
                                 }
                             }
                         }

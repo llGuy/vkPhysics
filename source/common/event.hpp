@@ -21,6 +21,7 @@ enum event_type_t {
     ET_PLAYER_DISCONNECTED,
     ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA,
     ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA,
+    ET_SET_CHUNK_HISTORY_TRACKER,
     ET_INVALID_EVENT_TYPE
 };
 
@@ -65,6 +66,10 @@ struct event_player_disconnected_t {
 
 struct event_chunk_voxel_packet_t {
     struct packet_chunk_voxels_t *packet;
+};
+
+struct event_set_chunk_history_tracker_t {
+    bool value;
 };
 
 struct event_t {
