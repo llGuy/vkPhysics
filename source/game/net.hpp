@@ -22,8 +22,8 @@ struct chunk_modifications_t {
     voxel_modification_t *modifications;
 };
 
-#define MAX_PREDICTED_CHUNK_MODIFICATIONS 12
-#define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 150
+#define MAX_PREDICTED_CHUNK_MODIFICATIONS 20
+#define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 250
 
 struct client_t {
     union {
@@ -49,6 +49,8 @@ struct client_t {
     // Predicted chunk modifications
     uint32_t predicted_chunk_mod_count;
     chunk_modifications_t predicted_modifications[MAX_PREDICTED_CHUNK_MODIFICATIONS];
+
+    uint64_t tick;
 };
 
 struct local_client_info_t {

@@ -47,6 +47,14 @@ struct player_actions_t {
     float dmouse_x;
     float dmouse_y;
     float dt;
+
+    // This is for terraforming
+    float accumulated_dt;
+
+    // For debugging
+#if 1
+    uint64_t tick;
+#endif
 };
 
 #define MAX_PLAYER_ACTIONS 100
@@ -112,6 +120,8 @@ struct player_t {
     // Will use this to interpolate between snapshots
     circular_buffer_array_t<player_snapshot_t, 30> remote_snapshots;
     float elapsed;
+
+    float accumulated_dt;
 };
 
 player_t *get_player(

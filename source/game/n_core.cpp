@@ -174,6 +174,8 @@ static void s_send_commands_to_server() {
                 packet.actions[i].dmouse_x = p->cached_player_actions[i].dmouse_x;
                 packet.actions[i].dmouse_y = p->cached_player_actions[i].dmouse_y;
                 packet.actions[i].dt = p->cached_player_actions[i].dt;
+                packet.actions[i].accumulated_dt = p->cached_player_actions[i].accumulated_dt;
+                packet.actions[i].tick = p->cached_player_actions[i].tick;
             }
 
             packet.ws_final_position = p->ws_position;
@@ -845,6 +847,8 @@ static void s_handle_chunk_modifications(
             s_unfill_dummy_voxels(previous_modifications);
         }
         else {
+            LOG_INFOV("Pushing new chunk modification structure: %i\n", client->predicted_chunk_mod_count);
+
             // Chunk has not been terraformed before, need to push a new modification
             chunk_modifications_t *m = &client->predicted_modifications[client->predicted_chunk_mod_count++];
             if (!m->modifications) {
@@ -866,6 +870,7 @@ static void s_handle_chunk_modifications(
 static void s_process_client_commands(
     serialiser_t *serialiser,
     uint16_t client_id,
+    uint64_t tick,
     event_submissions_t *events) {
     player_t *p = get_player(client_id);
 
@@ -876,6 +881,8 @@ static void s_process_client_commands(
 
         packet_player_commands_t commands = {};
         n_deserialise_player_commands(&commands, serialiser);
+        
+        c->tick = tick;
 
         if (commands.did_correction) {
             LOG_INFOV("Did correction: %s\n", glm::to_string(p->ws_position).c_str());
@@ -944,6 +951,8 @@ static bool s_check_if_client_has_to_correct_terrain(
 
         chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
+        bool chunk_has_mistake = 0;
+        
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
 
@@ -952,8 +961,14 @@ static bool s_check_if_client_has_to_correct_terrain(
 
             // Just one mistake can completely mess stuff up between the client and server
             if (actual_value != predicted_value) {
-                LOG_INFOV("Made terraforming mistake %i -> %i\n", (int32_t)predicted_value, (int32_t)actual_value);
+                chunk_has_mistake = 1;
+                LOG_INFOV("Made terraforming mistake at voxel %i: %i -> %i\n", vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
             }
+        }
+
+        if (chunk_has_mistake) {
+            LOG_INFOV("(Tick %llu)Above mistakes were in chunk (%i %i %i)\n", (unsigned long long)c->tick, c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z);
+            exit(1);
         }
     }
 }
@@ -1078,6 +1093,7 @@ void tick_server(
                 s_process_client_commands(
                     &in_serialiser,
                     header.client_id,
+                    header.current_tick,
                     events);
             } break;
 

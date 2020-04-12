@@ -681,7 +681,7 @@ static void s_terraform_with_history(
     float max_reach,
     float radius,
     float speed,
-    float delta_time,
+    float dt,
     world_t *world) {
     vector3_t vs_position = ws_ray_start;
     vector3_t vs_dir = ws_ray_direction;
@@ -692,136 +692,124 @@ static void s_terraform_with_history(
 
     float max_reach_squared = max_reach * max_reach;
 
-    // If the delta time is too small, it is possible that the chunks won't get modified at all
-    // Therefore, if the delta time is very small, there needs to be a sort of accumulation of delta times
+    for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
+        ivector3_t voxel = w_convert_world_to_voxel(vs_position);
+        ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
+        chunk_t *chunk = w_access_chunk(chunk_coord, world);
 
-    static float dt = 0.0f;
-
-    dt += delta_time;
-    
-    float max_change = 1.0f * dt * speed;
-    int32_t max_change_i = (int32_t)max_change;
-
-    if (max_change_i < 2) {
-        // Don't do anything
-        LOG_INFO("Terraforming does nothing =========================================================\n");
-    }
-    else {
-        for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
-            ivector3_t voxel = w_convert_world_to_voxel(vs_position);
-            ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-            chunk_t *chunk = w_access_chunk(chunk_coord, world);
-
-            if (chunk) {
-                ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
-                if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
-                    if (!chunk->flags.made_modification) {
-                        // Push this chunk onto list of modified chunks
-                        world->modified_chunks[world->modified_chunk_count++] = chunk;
-                    }
+        if (chunk) {
+            ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
+            if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                if (!chunk->flags.made_modification) {
+                    // Push this chunk onto list of modified chunks
+                    world->modified_chunks[world->modified_chunk_count++] = chunk;
+                }
                     
-                    chunk->flags.made_modification = 1;
-                    chunk->flags.has_to_update_vertices = 1;
+                chunk->flags.made_modification = 1;
+                chunk->flags.has_to_update_vertices = 1;
 
-                    float coeff = 0.0f;
-                    switch(type) {
+                float coeff = 0.0f;
+                switch(type) {
                         
-                    case TT_DESTROY: {
-                        coeff = -1.0f;
-                    } break;
+                case TT_DESTROY: {
+                    coeff = -1.0f;
+                } break;
                         
-                    case TT_BUILD: {
-                        coeff = +1.0f;
-                    } break;
+                case TT_BUILD: {
+                    coeff = +1.0f;
+                } break;
                         
-                    }
+                }
 
-                    float radius_squared = radius * radius;
-                    ivector3_t bottom_corner = voxel - ivector3_t((int32_t)radius);
-                    int32_t diameter = (int32_t)radius * 2 + 1;
+                float radius_squared = radius * radius;
+                ivector3_t bottom_corner = voxel - ivector3_t((int32_t)radius);
+                int32_t diameter = (int32_t)radius * 2 + 1;
 
 #if 0
-                    // Make sure to activate chunk history
-                    if (chunk->history == NULL) {
-                        activate_chunk_history(chunk);
-                    }
+                // Make sure to activate chunk history
+                if (chunk->history == NULL) {
+                    activate_chunk_history(chunk);
+                }
 #endif
 
-                    for (int32_t z = bottom_corner.z; z < bottom_corner.z + diameter; ++z) {
-                        for (int32_t y = bottom_corner.y; y < bottom_corner.y + diameter; ++y) {
-                            for (int32_t x = bottom_corner.x; x < bottom_corner.x + diameter; ++x) {
-                                vector3_t current_voxel = vector3_t((float)x, (float)y, (float)z);
-                                vector3_t diff = current_voxel - (vector3_t)voxel;
-                                float distance_squared = glm::dot(diff, diff);
+                for (int32_t z = bottom_corner.z; z < bottom_corner.z + diameter; ++z) {
+                    for (int32_t y = bottom_corner.y; y < bottom_corner.y + diameter; ++y) {
+                        for (int32_t x = bottom_corner.x; x < bottom_corner.x + diameter; ++x) {
+                            vector3_t current_voxel = vector3_t((float)x, (float)y, (float)z);
+                            vector3_t diff = current_voxel - (vector3_t)voxel;
+                            float distance_squared = glm::dot(diff, diff);
 
-                                if (distance_squared <= radius_squared) {
-                                    ivector3_t current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
+                            if (distance_squared <= radius_squared) {
+                                ivector3_t current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
                                 
-                                    if (current_local_coord.x < 0 || current_local_coord.x >= 16 ||
-                                        current_local_coord.y < 0 || current_local_coord.y >= 16 ||
-                                        current_local_coord.z < 0 || current_local_coord.z >= 16) {
-                                        // If the current voxel coord is out of bounds, switch chunks
-                                        ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
-                                        chunk_t *new_chunk = w_get_chunk(chunk_coord, world);
+                                if (current_local_coord.x < 0 || current_local_coord.x >= 16 ||
+                                    current_local_coord.y < 0 || current_local_coord.y >= 16 ||
+                                    current_local_coord.z < 0 || current_local_coord.z >= 16) {
+                                    // If the current voxel coord is out of bounds, switch chunks
+                                    ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
+                                    chunk_t *new_chunk = w_get_chunk(chunk_coord, world);
 
-                                        chunk = new_chunk;
+                                    chunk = new_chunk;
 
-                                        if (!chunk->flags.made_modification) {
-                                            // Push this chunk onto list of modified chunks
-                                            world->modified_chunks[world->modified_chunk_count++] = chunk;
-                                        }
+                                    if (!chunk->flags.made_modification) {
+                                        // Push this chunk onto list of modified chunks
+                                        world->modified_chunks[world->modified_chunk_count++] = chunk;
+                                    }
                                         
-                                        chunk->flags.made_modification = 1;
-                                        chunk->flags.has_to_update_vertices = 1;
+                                    chunk->flags.made_modification = 1;
+                                    chunk->flags.has_to_update_vertices = 1;
 
 #if 0
-                                        if (chunk->history == NULL) {
-                                            activate_chunk_history(chunk);
-                                        }
+                                    if (chunk->history == NULL) {
+                                        activate_chunk_history(chunk);
+                                    }
 #endif
 
-                                        current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
-                                    }
-
-                                    uint32_t voxel_index = get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
-                                    uint8_t *voxel = &chunk->voxels[voxel_index];
-                                    uint8_t voxel_value = *voxel;
-                                    float proportion = 1.0f - (distance_squared / radius_squared);
-
-                                    int32_t current_voxel_value = (int32_t)*voxel;
-
-                                    int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
-
-                                    uint8_t *vh = &chunk->history.modification_pool[voxel_index];
-                                    
-                                    if (new_value > (int32_t)MAX_VOXEL_VALUE_I) {
-                                        voxel_value = (int32_t)MAX_VOXEL_VALUE_I;
-                                    }
-                                    else if (new_value < 0) {
-                                        voxel_value = 0;
-                                    }
-                                    else {
-                                        voxel_value = (uint8_t)new_value;
-                                    }
-
-                                    // Didn't add to the history yet
-                                    if (*vh == SPECIAL_VALUE && voxel_value != *voxel) {
-                                        *vh = *voxel;
-                                        chunk->history.modification_stack[chunk->history.modification_count++] = voxel_index;
-                                    }
-                                    
-                                    *voxel = voxel_value;
+                                    current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
                                 }
+
+                                uint32_t voxel_index = get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
+                                uint8_t *voxel = &chunk->voxels[voxel_index];
+                                uint8_t voxel_value = *voxel;
+                                float proportion = 1.0f - (distance_squared / radius_squared);
+
+                                int32_t current_voxel_value = (int32_t)*voxel;
+
+                                int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
+
+                                uint8_t *vh = &chunk->history.modification_pool[voxel_index];
+                                    
+                                if (new_value > (int32_t)MAX_VOXEL_VALUE_I) {
+                                    voxel_value = (int32_t)MAX_VOXEL_VALUE_I;
+                                }
+                                else if (new_value < 0) {
+                                    voxel_value = 0;
+                                }
+                                else {
+                                    voxel_value = (uint8_t)new_value;
+                                }
+
+                                // Didn't add to the history yet
+                                if (*vh == SPECIAL_VALUE && voxel_value != *voxel) {
+                                    *vh = *voxel;
+                                    chunk->history.modification_stack[chunk->history.modification_count++] = voxel_index;
+                                }
+
+                                if (voxel_value != *voxel) {
+                                    printf("(%i %i %i):%i: %i -> %i || ", chunk->chunk_coord.x, chunk->chunk_coord.y, chunk->chunk_coord.z, voxel_index, (int32_t)*voxel, (int32_t)voxel_value);
+                                }
+                                    
+                                *voxel = voxel_value;
                             }
                         }
                     }
-
-                    break;
                 }
+
+                printf("\n");
+
+                break;
             }
         }
-
-        dt = 0.0f;
     }
 }
 
@@ -832,7 +820,7 @@ static void s_terraform_without_history(
     float max_reach,
     float radius,
     float speed,
-    float delta_time,
+    float dt,
     world_t *world) {
     vector3_t vs_position = ws_ray_start;
     vector3_t vs_dir = ws_ray_direction;
@@ -843,104 +831,94 @@ static void s_terraform_without_history(
 
     float max_reach_squared = max_reach * max_reach;
 
-    // If the delta time is too small, it is possible that the chunks won't get modified at all
-    // Therefore, if the delta time is very small, there needs to be a sort of accumulation of delta times
+    for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
+        ivector3_t voxel = w_convert_world_to_voxel(vs_position);
+        ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
+        chunk_t *chunk = w_access_chunk(chunk_coord, world);
 
-    static float dt = 0.0f;
+        if (chunk) {
+            ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
+            if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                chunk->flags.made_modification = 1;
+                chunk->flags.has_to_update_vertices = 1;
 
-    dt += delta_time;
-    
-    float max_change = 1.0f * dt * speed;
-    int32_t max_change_i = (int32_t)max_change;
-
-    if (max_change_i < 2) {
-        // Don't do anything
-        LOG_INFO("Terraforming does nothing =========================================================\n");
-    }
-    else {
-        for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
-            ivector3_t voxel = w_convert_world_to_voxel(vs_position);
-            ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-            chunk_t *chunk = w_access_chunk(chunk_coord, world);
-
-            if (chunk) {
-                ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
-                if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
-                    chunk->flags.made_modification = 1;
-                    chunk->flags.has_to_update_vertices = 1;
-
-                    float coeff = 0.0f;
-                    switch(type) {
+                float coeff = 0.0f;
+                switch(type) {
                         
-                    case TT_DESTROY: {
-                        coeff = -1.0f;
-                    } break;
+                case TT_DESTROY: {
+                    coeff = -1.0f;
+                } break;
                         
-                    case TT_BUILD: {
-                        coeff = +1.0f;
-                    } break;
+                case TT_BUILD: {
+                    coeff = +1.0f;
+                } break;
                         
-                    }
+                }
 
-                    float radius_squared = radius * radius;
-                    ivector3_t bottom_corner = voxel - ivector3_t((int32_t)radius);
-                    int32_t diameter = (int32_t)radius * 2 + 1;
+                float radius_squared = radius * radius;
+                ivector3_t bottom_corner = voxel - ivector3_t((int32_t)radius);
+                int32_t diameter = (int32_t)radius * 2 + 1;
 
-                    for (int32_t z = bottom_corner.z; z < bottom_corner.z + diameter; ++z) {
-                        for (int32_t y = bottom_corner.y; y < bottom_corner.y + diameter; ++y) {
-                            for (int32_t x = bottom_corner.x; x < bottom_corner.x + diameter; ++x) {
-                                vector3_t current_voxel = vector3_t((float)x, (float)y, (float)z);
-                                vector3_t diff = current_voxel - (vector3_t)voxel;
-                                float distance_squared = glm::dot(diff, diff);
+                for (int32_t z = bottom_corner.z; z < bottom_corner.z + diameter; ++z) {
+                    for (int32_t y = bottom_corner.y; y < bottom_corner.y + diameter; ++y) {
+                        for (int32_t x = bottom_corner.x; x < bottom_corner.x + diameter; ++x) {
+                            vector3_t current_voxel = vector3_t((float)x, (float)y, (float)z);
+                            vector3_t diff = current_voxel - (vector3_t)voxel;
+                            float distance_squared = glm::dot(diff, diff);
 
-                                if (distance_squared <= radius_squared) {
-                                    ivector3_t current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
+                            if (distance_squared <= radius_squared) {
+                                ivector3_t current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
                                 
-                                    if (current_local_coord.x < 0 || current_local_coord.x >= 16 ||
-                                        current_local_coord.y < 0 || current_local_coord.y >= 16 ||
-                                        current_local_coord.z < 0 || current_local_coord.z >= 16) {
-                                        // If the current voxel coord is out of bounds, switch chunks
-                                        ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
-                                        chunk_t *new_chunk = w_get_chunk(chunk_coord, world);
+                                if (current_local_coord.x < 0 || current_local_coord.x >= 16 ||
+                                    current_local_coord.y < 0 || current_local_coord.y >= 16 ||
+                                    current_local_coord.z < 0 || current_local_coord.z >= 16) {
+                                    // If the current voxel coord is out of bounds, switch chunks
+                                    ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
+                                    chunk_t *new_chunk = w_get_chunk(chunk_coord, world);
 
-                                        chunk = new_chunk;
-                                        chunk->flags.made_modification = 1;
-                                        chunk->flags.has_to_update_vertices = 1;
+                                    chunk = new_chunk;
+                                    chunk->flags.made_modification = 1;
+                                    chunk->flags.has_to_update_vertices = 1;
 
-                                        current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
-                                    }
-
-                                    uint8_t *voxel = &chunk->voxels[get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z)];
-                                    float proportion = 1.0f - (distance_squared / radius_squared);
-
-                                    int32_t current_voxel_value = (int32_t)*voxel;
-
-                                    int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
-
-                                    uint8_t voxel_value = 0;
-                                    
-                                    if (new_value > (int32_t)MAX_VOXEL_VALUE_I) {
-                                        voxel_value = (int32_t)MAX_VOXEL_VALUE_I;
-                                    }
-                                    else if (new_value < 0) {
-                                        voxel_value = 0;
-                                    }
-                                    else {
-                                        voxel_value = (uint8_t)new_value;
-                                    }
-                                    
-                                    *voxel = voxel_value;
+                                    current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
                                 }
+
+                                uint32_t voxel_index = get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
+
+                                uint8_t *voxel = &chunk->voxels[voxel_index];
+                                float proportion = 1.0f - (distance_squared / radius_squared);
+
+                                int32_t current_voxel_value = (int32_t)*voxel;
+
+                                int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
+
+                                uint8_t voxel_value = 0;
+                                    
+                                if (new_value > (int32_t)MAX_VOXEL_VALUE_I) {
+                                    voxel_value = (int32_t)MAX_VOXEL_VALUE_I;
+                                }
+                                else if (new_value < 0) {
+                                    voxel_value = 0;
+                                }
+                                else {
+                                    voxel_value = (uint8_t)new_value;
+                                }
+
+                                if (voxel_value != *voxel) {
+                                    printf("(%i %i %i):%i: %i -> %i || ", chunk->chunk_coord.x, chunk->chunk_coord.y, chunk->chunk_coord.z, voxel_index, (int32_t)*voxel, (int32_t)voxel_value);
+                                }
+
+                                *voxel = voxel_value;
                             }
                         }
                     }
-
-                    break;
                 }
+
+                printf("\n");
+
+                break;
             }
         }
-
-        dt = 0.0f;
     }
 }
 
@@ -951,7 +929,7 @@ void w_terraform(
     float max_reach,
     float radius,
     float speed,
-    float delta_time,
+    float dt,
     world_t *world) {
     if (world->track_history) {
         s_terraform_with_history(
@@ -961,7 +939,7 @@ void w_terraform(
             max_reach,
             radius,
             speed,
-            delta_time,
+            dt,
             world);
     }
     else {
@@ -972,7 +950,7 @@ void w_terraform(
             max_reach,
             radius,
             speed,
-            delta_time,
+            dt,
             world);
     }
 }

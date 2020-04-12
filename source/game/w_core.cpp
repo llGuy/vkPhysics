@@ -26,6 +26,8 @@ static void s_add_player_from_info(
     p->default_speed = init_info->default_speed;
     memset(p->player_actions, 0, sizeof(p->player_actions));
 
+    p->accumulated_dt = 0.0f;
+
     if (init_info->is_local) {
         // If this is the local player (controlled by mouse and keyboard, need to cache all player actions to send to the server)
         w_set_local_player(p->local_id, &world);

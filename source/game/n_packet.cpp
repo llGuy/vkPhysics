@@ -136,7 +136,8 @@ uint32_t n_packed_player_commands_size(
         sizeof(player_actions_t::bytes) +
         sizeof(player_actions_t::dmouse_x) +
         sizeof(player_actions_t::dmouse_y) +
-        sizeof(player_actions_t::dt);
+        sizeof(player_actions_t::dt) +
+        sizeof(player_actions_t::accumulated_dt);
 
     final_size += command_size * commands->command_count;
 
@@ -161,6 +162,8 @@ void n_serialise_player_commands(
         serialiser->serialise_float32(packet->actions[i].dmouse_x);
         serialiser->serialise_float32(packet->actions[i].dmouse_y);
         serialiser->serialise_float32(packet->actions[i].dt);
+        serialiser->serialise_float32(packet->actions[i].accumulated_dt);
+        serialiser->serialise_uint64(packet->actions[i].tick);
     }
 
     serialiser->serialise_vector3(packet->ws_final_position);
@@ -196,6 +199,8 @@ void n_deserialise_player_commands(
         packet->actions[i].dmouse_x = serialiser->deserialise_float32();
         packet->actions[i].dmouse_y = serialiser->deserialise_float32();
         packet->actions[i].dt = serialiser->deserialise_float32();
+        packet->actions[i].accumulated_dt = serialiser->deserialise_float32();
+        packet->actions[i].tick = serialiser->deserialise_uint64();
     }
 
     packet->ws_final_position = serialiser->deserialise_vector3();

@@ -88,8 +88,10 @@ void w_handle_input(
     float dt,
     world_t *world) {
     player_actions_t actions;
-    
+
     actions.bytes = 0;
+
+    actions.accumulated_dt = 0.0f;
 
     actions.dt = dt;
     actions.dmouse_x = game_input->mouse_x - game_input->previous_mouse_x;
@@ -126,6 +128,8 @@ void w_handle_input(
     if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
         actions.trigger_right = 1;
     }
+
+    actions.tick = get_current_tick();
     
     player_t *local_player = w_get_local_player(world);
     if (local_player) {
@@ -136,10 +140,25 @@ void w_handle_input(
     }
 }
 
+#define TERRAFORMING_SPEED 400.0f
+
 void w_push_player_actions(
     player_t *player,
     player_actions_t *action) {
     if (player->player_action_count < MAX_PLAYER_ACTIONS) {
+        player->accumulated_dt += action->dt;
+
+        float max_change = 1.0f * player->accumulated_dt * TERRAFORMING_SPEED;
+        int32_t max_change_i = (int32_t)max_change;
+
+        if (max_change_i < 2) {
+            action->accumulated_dt = 0.0f;
+        }
+        else {
+            action->accumulated_dt = player->accumulated_dt;
+            player->accumulated_dt = 0.0f;
+        }
+
         player->player_actions[player->player_action_count++] = *action;
     }
     else {
@@ -161,25 +180,29 @@ static void s_execute_player_triggers(
     player_actions_t *player_actions,
     world_t *world) {
     if (player_actions->trigger_left) {
+        LOG_INFOV("(Tick %llu) P: %s | D: %s | DT: %f\n", (unsigned long long)player_actions->tick, glm::to_string(player->ws_position).c_str(), glm::to_string(player->ws_view_direction).c_str(), player_actions->accumulated_dt);
+
         w_terraform(
             TT_DESTROY,
             player->ws_position,
             player->ws_view_direction,
             10.0f,
-            4.0f,
-            300.0f,
-            player_actions->dt,
+            3.0f,
+            TERRAFORMING_SPEED,
+            player_actions->accumulated_dt,
             world);
     }
     if (player_actions->trigger_right) {
+        LOG_INFOV("(Tick %llu) P: %s | D: %s | DT: %f\n", (unsigned long long)player_actions->tick, glm::to_string(player->ws_position).c_str(), glm::to_string(player->ws_view_direction).c_str(), player_actions->accumulated_dt);
+        
         w_terraform(
             TT_BUILD,
             player->ws_position,
             player->ws_view_direction,
             10.0f,
-            4.0f,
-            300.0f,
-            player_actions->dt,
+            3.0f,
+            TERRAFORMING_SPEED,
+            player_actions->accumulated_dt,
             world);
     }
 }
