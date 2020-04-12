@@ -20,6 +20,13 @@ struct chunk_modifications_t {
     int16_t x, y, z;
     uint32_t modified_voxels_count;
     voxel_modification_t *modifications;
+
+    union {
+        uint8_t flags;
+        struct {
+            uint8_t needs_to_correct: 1;
+        };
+    };
 };
 
 #define MAX_PREDICTED_CHUNK_MODIFICATIONS 20

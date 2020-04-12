@@ -565,6 +565,46 @@ static constexpr uint32_t maximum_chunks_per_packet() {
     return ((65507 - sizeof(uint32_t)) / (sizeof(int16_t) * 3 + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH));
 }
 
+static void s_serialise_chunk(
+    serialiser_t *serialiser,
+    uint32_t *chunks_in_packet,
+    voxel_chunk_values_t *values,
+    uint32_t i) {
+    voxel_chunk_values_t *current_values = &values[i];
+
+    serialiser->serialise_int16(current_values->x);
+    serialiser->serialise_int16(current_values->y);
+    serialiser->serialise_int16(current_values->z);
+
+    for (uint32_t v_index = 0; v_index < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH; ++v_index) {
+        uint8_t current_voxel = current_values->voxel_values[v_index];
+        if (current_voxel == 0) {
+            uint32_t before_head = serialiser->data_buffer_head;
+
+            uint32_t zero_count = 0;
+            for (; current_values->voxel_values[v_index] == 0 && zero_count < 5; ++v_index, ++zero_count) {
+                serialiser->serialise_uint8(0);
+            }
+            
+
+            if (zero_count == 5) {
+                for (; current_values->voxel_values[v_index] == 0; ++v_index, ++zero_count) {}
+
+                serialiser->data_buffer_head = before_head;
+                serialiser->serialise_uint8(SPECIAL_VALUE);
+                serialiser->serialise_uint32(zero_count);
+            }
+
+            v_index -= 1;
+        }
+        else {
+            serialiser->serialise_uint8(current_voxel);
+        }
+    }
+
+    *chunks_in_packet = *chunks_in_packet + 1;
+}
+
 static void s_serialise_voxel_chunks_and_send(
     client_t *client,
     voxel_chunk_values_t *values,
@@ -590,38 +630,7 @@ static void s_serialise_voxel_chunks_and_send(
     uint32_t chunk_values_start = serialiser.data_buffer_head;
     
     for (uint32_t i = 0; i < count; ++i) {
-        voxel_chunk_values_t *current_values = &values[i];
-
-        serialiser.serialise_int16(current_values->x);
-        serialiser.serialise_int16(current_values->y);
-        serialiser.serialise_int16(current_values->z);
-
-        for (uint32_t v_index = 0; v_index < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH; ++v_index) {
-            uint8_t current_voxel = current_values->voxel_values[v_index];
-            if (current_voxel == 0) {
-                uint32_t before_head = serialiser.data_buffer_head;
-
-                uint32_t zero_count = 0;
-                for (; current_values->voxel_values[v_index] == 0 && zero_count < 5; ++v_index, ++zero_count) {
-                    serialiser.serialise_uint8(0);
-                }
-
-                if (zero_count == 5) {
-                    for (; current_values->voxel_values[v_index] == 0; ++v_index, ++zero_count) {}
-
-                    serialiser.data_buffer_head = before_head;
-                    serialiser.serialise_uint8(SPECIAL_VALUE);
-                    serialiser.serialise_uint32(zero_count);
-                }
-
-                v_index -= 1;
-            }
-            else {
-                serialiser.serialise_uint8(current_voxel);
-            }
-        }
-
-        ++chunks_in_packet;
+        s_serialise_chunk(&serialiser, &chunks_in_packet, values, i);
 
         if (serialiser.data_buffer_head + 3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH > serialiser.data_buffer_size ||
             i + 1 == count) {
@@ -853,8 +862,6 @@ static void s_handle_chunk_modifications(
             s_unfill_dummy_voxels(previous_modifications);
         }
         else {
-            LOG_INFOV("Pushing new chunk modification structure: %i\n", client->predicted_chunk_mod_count);
-
             // Chunk has not been terraformed before, need to push a new modification
             chunk_modifications_t *m = &client->predicted_modifications[client->predicted_chunk_mod_count++];
             if (!m->modifications) {
@@ -953,9 +960,10 @@ static bool s_check_if_client_has_to_correct_state(
 static bool s_check_if_client_has_to_correct_terrain(
     client_t *c) {
     bool needs_to_correct = 0;
-    
+
     for (uint32_t cm_index = 0; cm_index < c->predicted_chunk_mod_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &c->predicted_modifications[cm_index];
+        cm_ptr->needs_to_correct = 0;
 
         chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
@@ -977,6 +985,7 @@ static bool s_check_if_client_has_to_correct_terrain(
             LOG_INFOV("(Tick %llu)Above mistakes were in chunk (%i %i %i)\n", (unsigned long long)c->tick, c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z);
 
             needs_to_correct = 1;
+            cm_ptr->needs_to_correct = 1;
         }
     }
 
@@ -1003,10 +1012,7 @@ static void s_dispatch_game_state_snapshot() {
             // Check if client has to correct voxel modifications
             bool has_to_correct_terrain = s_check_if_client_has_to_correct_terrain(c);
 
-            // Clear client's predicted modification array
-            c->predicted_chunk_mod_count = 0;
-
-            if (has_to_correct_state) {
+            if (has_to_correct_state || has_to_correct_terrain) {
                 if (c->waiting_on_correction) {
                     LOG_INFO("Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n");
                     snapshot->client_needs_to_correct = 0;
@@ -1050,6 +1056,9 @@ static void s_dispatch_game_state_snapshot() {
         if (c->initialised && c->received_first_commands_packet) {
             s_send_to(&serialiser, c->address);
         }
+        
+        // Clear client's predicted modification array
+        c->predicted_chunk_mod_count = 0;
     }
 }
 
