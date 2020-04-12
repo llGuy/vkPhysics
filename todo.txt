@@ -1,11 +1,9 @@
-- Client needs to record all modifications for each chunk
 - Make it so that client removes all modifications until
   tick that server says does not contain any prediction errors
-- Migrate chunk error checking directly to when terraforming happens
-  so that server can get the exact tick at which the client messed up
-- Make it so that client also sends all modifications for each tick
-- When server finds an error at a tick, it sends that to the client
-  so that client can revert all modifications until that tick (included)
+  (tick at which client sent commands)
+- When server finds an error at a tick (tick of commands sending),
+  it sends that to the client so that client can revert all modifications
+  until that tick (included)
 - Server sends all modifications that occured between game state dispatches
   so that client can interpolate between all modifications - except
   for the modifications that the client did.

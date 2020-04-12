@@ -894,7 +894,8 @@ static void s_process_client_commands(
 
         packet_player_commands_t commands = {};
         n_deserialise_player_commands(&commands, serialiser);
-        
+
+        // Tick at which client sent packet
         c->tick = tick;
 
         if (commands.did_correction) {
