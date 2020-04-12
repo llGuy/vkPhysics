@@ -794,18 +794,12 @@ static void s_terraform_with_history(
                                     *vh = *voxel;
                                     chunk->history.modification_stack[chunk->history.modification_count++] = voxel_index;
                                 }
-
-                                if (voxel_value != *voxel) {
-                                    printf("(%i %i %i):%i: %i -> %i || ", chunk->chunk_coord.x, chunk->chunk_coord.y, chunk->chunk_coord.z, voxel_index, (int32_t)*voxel, (int32_t)voxel_value);
-                                }
                                     
                                 *voxel = voxel_value;
                             }
                         }
                     }
                 }
-
-                printf("\n");
 
                 break;
             }
@@ -904,17 +898,11 @@ static void s_terraform_without_history(
                                     voxel_value = (uint8_t)new_value;
                                 }
 
-                                if (voxel_value != *voxel) {
-                                    printf("(%i %i %i):%i: %i -> %i || ", chunk->chunk_coord.x, chunk->chunk_coord.y, chunk->chunk_coord.z, voxel_index, (int32_t)*voxel, (int32_t)voxel_value);
-                                }
-
                                 *voxel = voxel_value;
                             }
                         }
                     }
                 }
-
-                printf("\n");
 
                 break;
             }

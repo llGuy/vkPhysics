@@ -186,16 +186,16 @@ static void s_send_commands_to_server() {
             chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
             packet.modified_chunk_count = modified_chunk_count;
             packet.chunk_modifications = LN_MALLOC(chunk_modifications_t, packet.modified_chunk_count);
+
+            uint32_t current = 0;
             
             for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
-                chunk_modifications_t *cm_ptr = &packet.chunk_modifications[c_index];
+                chunk_modifications_t *cm_ptr = &packet.chunk_modifications[current];
                 chunk_t *c_ptr = chunks[c_index];
                 chunk_history_t *h_ptr = &chunks[c_index]->history;
 
                 if (h_ptr->modification_count == 0) {
-                    --c_index;
-                    --modified_chunk_count;
-                    LOG_INFO("Chunk doesn't contain any changes\n");
+                    // Chunk doesn't actually have modifications, it was just flagged
                 }
                 else {
                     cm_ptr->x = c_ptr->chunk_coord.x;
@@ -207,15 +207,21 @@ static void s_send_commands_to_server() {
                         cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
                         cm_ptr->modifications[v_index].final_value = (uint16_t)c_ptr->voxels[cm_ptr->modifications[v_index].index];
                     }
+
+                    ++current;
                 }
             }
 
-            packet.modified_chunk_count = modified_chunk_count;
-            
+            packet.modified_chunk_count = current;
+
+#if 0
             if (modified_chunk_count) {
+                printf("\n");
                 LOG_INFOV("Modified %i chunks\n", modified_chunk_count);
-                reset_modification_tracker();
             }
+#endif
+            
+            reset_modification_tracker();
             
             packet_header_t header = {};
             header.current_tick = get_current_tick();
@@ -946,6 +952,8 @@ static bool s_check_if_client_has_to_correct_state(
 
 static bool s_check_if_client_has_to_correct_terrain(
     client_t *c) {
+    bool needs_to_correct = 0;
+    
     for (uint32_t cm_index = 0; cm_index < c->predicted_chunk_mod_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &c->predicted_modifications[cm_index];
 
@@ -962,20 +970,20 @@ static bool s_check_if_client_has_to_correct_terrain(
             // Just one mistake can completely mess stuff up between the client and server
             if (actual_value != predicted_value) {
                 chunk_has_mistake = 1;
-                LOG_INFOV("Made terraforming mistake at voxel %i: %i -> %i\n", vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
             }
         }
 
         if (chunk_has_mistake) {
             LOG_INFOV("(Tick %llu)Above mistakes were in chunk (%i %i %i)\n", (unsigned long long)c->tick, c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z);
-            exit(1);
+
+            needs_to_correct = 1;
         }
     }
+
+    return needs_to_correct;
 }
 
 static void s_dispatch_game_state_snapshot() {
-    LOG_INFO("Dispatching game state\n");
-
     packet_game_state_snapshot_t packet = {};
     packet.player_data_count = 0;
     packet.player_snapshots = LN_MALLOC(player_snapshot_t, clients.data_count);

@@ -180,8 +180,6 @@ static void s_execute_player_triggers(
     player_actions_t *player_actions,
     world_t *world) {
     if (player_actions->trigger_left) {
-        LOG_INFOV("(Tick %llu) P: %s | D: %s | DT: %f\n", (unsigned long long)player_actions->tick, glm::to_string(player->ws_position).c_str(), glm::to_string(player->ws_view_direction).c_str(), player_actions->accumulated_dt);
-
         w_terraform(
             TT_DESTROY,
             player->ws_position,
@@ -193,8 +191,6 @@ static void s_execute_player_triggers(
             world);
     }
     if (player_actions->trigger_right) {
-        LOG_INFOV("(Tick %llu) P: %s | D: %s | DT: %f\n", (unsigned long long)player_actions->tick, glm::to_string(player->ws_position).c_str(), glm::to_string(player->ws_view_direction).c_str(), player_actions->accumulated_dt);
-        
         w_terraform(
             TT_BUILD,
             player->ws_position,
