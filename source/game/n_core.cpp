@@ -305,6 +305,53 @@ static void s_merge_chunk_modifications(
     s_unflag_modified_chunks(dst, *dst_count);
 }
 
+static accumulated_predicted_modification_t *s_accumulate_history() {
+    uint32_t modified_chunk_count = 0;
+    chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
+    accumulated_predicted_modification_t *next_acc = s_add_acc_predicted_modification();
+            
+    s_acc_predicted_modification_init(next_acc, get_current_tick());
+
+    uint32_t current = 0;
+            
+    for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
+        chunk_modifications_t *cm_ptr = &next_acc->acc_predicted_modifications[current];
+        chunk_t *c_ptr = chunks[c_index];
+        chunk_history_t *h_ptr = &chunks[c_index]->history;
+
+        if (h_ptr->modification_count == 0) {
+            // Chunk doesn't actually have modifications, it was just flagged
+        }
+        else {
+            cm_ptr->x = c_ptr->chunk_coord.x;
+            cm_ptr->y = c_ptr->chunk_coord.y;
+            cm_ptr->z = c_ptr->chunk_coord.z;
+            cm_ptr->modified_voxels_count = h_ptr->modification_count;
+            for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
+                cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
+                cm_ptr->modifications[v_index].initial_value = (uint8_t)h_ptr->modification_pool[cm_ptr->modifications[v_index].index];
+                cm_ptr->modifications[v_index].final_value = (uint8_t)c_ptr->voxels[cm_ptr->modifications[v_index].index];
+            }
+
+            ++current;
+        }
+    }
+
+    next_acc->acc_predicted_chunk_mod_count = current;
+
+    if (next_acc->acc_predicted_chunk_mod_count == 0) {
+        // Pops item that was just pushed
+        acc_predicted_modifications.get_next_item_head();
+
+        return NULL;
+    }
+    else {
+        LOG_INFOV("(Tick %llu) SENT Modified %i chunks\n", (unsigned long long)next_acc->tick, next_acc->acc_predicted_chunk_mod_count);
+
+        return next_acc;
+    }
+}
+
 static void s_send_commands_to_server() {
     player_t *p = get_player(current_client_id);
 
@@ -335,49 +382,16 @@ static void s_send_commands_to_server() {
             packet.ws_final_view_direction = p->ws_view_direction;
             packet.ws_final_up_vector = p->ws_up_vector;
 
-            uint32_t modified_chunk_count = 0;
-            chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
-            accumulated_predicted_modification_t *next_acc = s_add_acc_predicted_modification();
-            
-            s_acc_predicted_modification_init(next_acc, get_current_tick());
-
-            uint32_t current = 0;
-            
-            for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
-                chunk_modifications_t *cm_ptr = &next_acc->acc_predicted_modifications[current];
-                chunk_t *c_ptr = chunks[c_index];
-                chunk_history_t *h_ptr = &chunks[c_index]->history;
-
-                if (h_ptr->modification_count == 0) {
-                    // Chunk doesn't actually have modifications, it was just flagged
-                }
-                else {
-                    cm_ptr->x = c_ptr->chunk_coord.x;
-                    cm_ptr->y = c_ptr->chunk_coord.y;
-                    cm_ptr->z = c_ptr->chunk_coord.z;
-                    cm_ptr->modified_voxels_count = h_ptr->modification_count;
-                    for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
-                        cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
-                        cm_ptr->modifications[v_index].final_value = (uint16_t)c_ptr->voxels[cm_ptr->modifications[v_index].index];
-                    }
-
-                    ++current;
-                }
-            }
-
-            next_acc->acc_predicted_chunk_mod_count = current;
-
-            if (next_acc->acc_predicted_chunk_mod_count == 0) {
-                // Pops item that was just pushed
-                acc_predicted_modifications.get_next_item_head();
+            accumulated_predicted_modification_t *next_acc = s_accumulate_history();
+            if (next_acc) {
+                // Packet will just take from the accumulation stuff
+                packet.modified_chunk_count = next_acc->acc_predicted_chunk_mod_count;
+                packet.chunk_modifications = next_acc->acc_predicted_modifications;
             }
             else {
-                LOG_INFOV("(Tick %llu) SENT Modified %i chunks\n", (unsigned long long)next_acc->tick, next_acc->acc_predicted_chunk_mod_count);
+                packet.modified_chunk_count = 0;
+                packet.chunk_modifications = NULL;
             }
-
-            // Packet will just take from the accumulation stuff
-            packet.modified_chunk_count = next_acc->acc_predicted_chunk_mod_count;
-            packet.chunk_modifications = next_acc->acc_predicted_modifications;
 
 #if 0
             if (modified_chunk_count) {
@@ -420,6 +434,40 @@ static void s_send_commands_to_server() {
     }
 }
 
+// Just for one accumulated_predicted_modification_t structure
+static void s_revert_history_instance(
+    accumulated_predicted_modification_t *apm_ptr) {
+    for (uint32_t i = 0; i < apm_ptr->acc_predicted_chunk_mod_count; ++i) {
+        chunk_modifications_t *cm_ptr = &apm_ptr->acc_predicted_modifications[i];
+
+        
+    }
+}
+
+static void s_revert_accumulated_modifications(
+    uint64_t tick_until) {
+    // First push all modifications that were done, so that we can revert most previous changes too
+    s_accumulate_history();
+
+    // Starts peeling off from the head
+    accumulated_predicted_modification_t *current = acc_predicted_modifications.get_next_item_head();
+
+    uint32_t total_available = acc_predicted_modifications.head_tail_difference;
+    uint32_t removed_count = 1;
+    
+    while (current) {
+        if (current->tick >= tick_until) {
+            // Revert these changes
+
+            ++removed_count;
+        }
+        else {
+            current = NULL;
+            break;
+        }
+    }
+}
+
 static void s_process_game_state_snapshot(
     serialiser_t *serialiser,
     uint64_t received_tick,
@@ -446,6 +494,9 @@ static void s_process_game_state_snapshot(
                 p->ws_up_vector = snapshot->ws_up_vector;
                 p->cached_player_action_count = 0;
 
+                // Revert voxel modifications up from tick that server processed
+                
+                
                 // Basically says that the client just did a correction - set correction flag on next packet sent to server
                 c->waiting_on_correction = 1;
             }
@@ -1119,6 +1170,11 @@ static bool s_check_if_client_has_to_correct_terrain(
     return needs_to_correct;
 }
 
+// Send the voxels that need to be corrected
+static void s_serialise_correction_voxels() {
+    
+}
+
 static void s_dispatch_game_state_snapshot() {
     packet_game_state_snapshot_t packet = {};
     packet.player_data_count = 0;
@@ -1148,6 +1204,7 @@ static void s_dispatch_game_state_snapshot() {
                     snapshot->server_waiting_for_correction = 1;
                 }
                 else {
+                    // If there is a correction of any kind to do, force client to correct everything
                     c->waiting_on_correction = 1;
 
                     LOG_INFOV("Client needs to do correction: tick %i\n", (int32_t)get_current_tick());
@@ -1195,6 +1252,10 @@ static void s_dispatch_game_state_snapshot() {
         client_t *c = &clients[i];
 
         if (c->initialised && c->received_first_commands_packet) {
+            // Prepare correction (for terrain, player state is easily done in previous loop)
+            // Terrain corrections are sent specifically to players
+            
+
             s_send_to(&serialiser, c->address);
         }
         

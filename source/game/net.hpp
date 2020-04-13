@@ -17,6 +17,8 @@ struct network_address_t {
 struct voxel_modification_t {
     uint16_t index;
     uint8_t final_value;
+    // This does not get sent over network
+    uint8_t initial_value;
 };
 
 struct chunk_modifications_t {
