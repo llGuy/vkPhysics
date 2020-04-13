@@ -87,11 +87,7 @@ static circular_buffer_array_t<accumulated_predicted_modification_t, MAX_ACCUMUL
 static void s_acc_predicted_modification_init(
     accumulated_predicted_modification_t *apm_ptr,
     uint64_t tick) {
-    static uint32_t i = 0;
-
     if (!apm_ptr->acc_predicted_modifications) {
-        LOG_INFOV("(%i) Need to allocator chunk modification structure\n", i);
-        ++i;
         apm_ptr->acc_predicted_modifications = (chunk_modifications_t *)chunk_modification_allocator.allocate_arena();
     }
 
@@ -341,7 +337,6 @@ static void s_send_commands_to_server() {
 
             uint32_t modified_chunk_count = 0;
             chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
-
             accumulated_predicted_modification_t *next_acc = s_add_acc_predicted_modification();
             
             s_acc_predicted_modification_init(next_acc, get_current_tick());
@@ -375,11 +370,9 @@ static void s_send_commands_to_server() {
             if (next_acc->acc_predicted_chunk_mod_count == 0) {
                 // Pops item that was just pushed
                 acc_predicted_modifications.get_next_item_head();
-
-                LOG_INFOV("(Tick %llu) Popped accumulation %i\n", (unsigned long long)get_current_tick(), acc_predicted_modifications.head);
             }
             else {
-                LOG_INFOV("(Tick %llu) Pushed accumulation %i\n", (unsigned long long)next_acc->tick, acc_predicted_modifications.head);
+                LOG_INFOV("(Tick %llu) SENT Modified %i chunks\n", (unsigned long long)next_acc->tick, next_acc->acc_predicted_chunk_mod_count);
             }
 
             // Packet will just take from the accumulation stuff
@@ -464,11 +457,11 @@ static void s_process_game_state_snapshot(
 
                     // Pop all modifications until last tick that server processed
                     while (current != NULL) {
-                        if (current->tick == snapshot->tick) {
-                            LOG_INFOV("Cleared %i, there are %i left\n", (int32_t)count, acc_predicted_modifications.head_tail_difference);
+                        if (current->tick == snapshot->terraform_tick) {
+                            LOG_INFOV("(To tick %llu) Cleared %i, there are %i left\n", (unsigned long long)snapshot->terraform_tick, (int32_t)count, acc_predicted_modifications.head_tail_difference);
                             break;
                         }
-                        else if (current->tick > snapshot->tick) {
+                        else if (current->tick > snapshot->terraform_tick) {
                             LOG_ERROR("ERRORRRORORORORRO\n");
                         }
 
@@ -1033,9 +1026,6 @@ static void s_process_client_commands(
             // Tick at which client sent packet (since last game state snapshot dispatch)
             if (c->should_set_tick) {
                 c->tick = tick;
-
-                LOG_INFOV("Set tick: %llu\n", (unsigned long long)c->tick);
-
                 c->should_set_tick = 0;
             }
 
@@ -1051,6 +1041,7 @@ static void s_process_client_commands(
             if (commands.modified_chunk_count) {
                 LOG_INFOV("(Tick %llu) Received %i chunk modifications\n", (unsigned long long)c->tick, commands.modified_chunk_count);
                 c->did_terrain_mod_previous_tick = 1;
+                c->tick_at_which_client_terraformed = tick;
                 s_handle_chunk_modifications(&commands, c);
             }
         }
@@ -1171,10 +1162,16 @@ static void s_dispatch_game_state_snapshot() {
             snapshot->ws_up_vector = p->ws_up_vector;
             snapshot->tick = c->tick;
             snapshot->terraformed = c->did_terrain_mod_previous_tick;
+            
+            if (snapshot->terraformed) {
+                snapshot->terraform_tick = c->tick_at_which_client_terraformed;
+            }
 
+            // Reset
             c->did_terrain_mod_previous_tick = 0;
+            c->tick_at_which_client_terraformed = 0;
 
-            LOG_INFOV("(Tick %llu) Dispatch\n", (unsigned long long)c->tick);
+            LOG_INFOV("(Tick %llu, terraform tick %llu) Dispatch\n", (unsigned long long)c->tick, (unsigned long long)snapshot->terraform_tick);
 
             ++packet.player_data_count;
         }

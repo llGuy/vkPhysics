@@ -86,6 +86,8 @@ struct player_snapshot_t {
 
     // Tick that client has to revert to if client needs to do a correction
     uint64_t tick;
+    // Tick that client has to clear chunks (not for correction, just generally)
+    uint64_t terraform_tick;
 };
 
 // To initialise player, need to fill everything (except for player_render_t *render)

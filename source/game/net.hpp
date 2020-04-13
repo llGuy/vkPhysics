@@ -64,6 +64,7 @@ struct client_t {
     chunk_modifications_t *predicted_modifications;
 
     uint64_t tick;
+    uint64_t tick_at_which_client_terraformed;
 };
 
 struct local_client_info_t {
