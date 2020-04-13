@@ -217,8 +217,6 @@ void n_deserialise_player_commands(
         c->z = serialiser->deserialise_int16();
         c->modified_voxels_count = serialiser->deserialise_uint32();
 
-        c->modifications = LN_MALLOC(voxel_modification_t, c->modified_voxels_count);
-
         for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
             voxel_modification_t *v_ptr =  &c->modifications[v];
             v_ptr->index = serialiser->deserialise_uint16();
@@ -237,7 +235,8 @@ uint32_t n_packed_game_state_snapshot_size(
         sizeof(player_snapshot_t::client_id) +
         sizeof(player_snapshot_t::ws_position) +
         sizeof(player_snapshot_t::ws_view_direction) +
-        sizeof(player_snapshot_t::ws_up_vector);
+        sizeof(player_snapshot_t::ws_up_vector) +
+        sizeof(player_snapshot_t::tick);
 
     final_size += player_snapshot_size * packet->player_data_count;
 
@@ -254,6 +253,7 @@ void n_serialise_game_state_snapshot(
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_position);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_view_direction);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_up_vector);
+        serialiser->serialise_uint64(packet->player_snapshots[i].tick);
     }
 }
 
@@ -269,6 +269,7 @@ void n_deserialise_game_state_snapshot(
         packet->player_snapshots[i].ws_position = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_view_direction = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_up_vector = serialiser->deserialise_vector3();
+        packet->player_snapshots[i].tick = serialiser->deserialise_uint64();
     }
 }
 

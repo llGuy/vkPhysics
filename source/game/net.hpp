@@ -11,6 +11,9 @@ struct network_address_t {
     uint32_t ipv4_address;
 };
 
+#define MAX_PREDICTED_CHUNK_MODIFICATIONS 20
+#define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 250
+
 struct voxel_modification_t {
     uint16_t index;
     uint8_t final_value;
@@ -19,7 +22,7 @@ struct voxel_modification_t {
 struct chunk_modifications_t {
     int16_t x, y, z;
     uint32_t modified_voxels_count;
-    voxel_modification_t *modifications;
+    voxel_modification_t modifications[MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK];
 
     union {
         uint8_t flags;
@@ -29,9 +32,6 @@ struct chunk_modifications_t {
     };
 };
 
-#define MAX_PREDICTED_CHUNK_MODIFICATIONS 20
-#define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 250
-
 struct client_t {
     union {
         struct {
@@ -39,6 +39,12 @@ struct client_t {
             uint32_t waiting_on_correction: 1;
             uint32_t received_first_commands_packet: 1;
             uint32_t chunks_to_wait_for: 15;
+            // The `tick` variable should just be set after a game state snapshot dispatching happened
+            // Because server only checks for prediction errors at game state dispatching
+            // When an error occurs, server needs to be sure that `tick` is the last moment
+            // Where client didn't make any errors
+            uint32_t should_set_tick: 1;
+            uint32_t did_terrain_mod_previous_tick: 1;
             // Will use other bits in future
         };
 
@@ -55,7 +61,7 @@ struct client_t {
 
     // Predicted chunk modifications
     uint32_t predicted_chunk_mod_count;
-    chunk_modifications_t predicted_modifications[MAX_PREDICTED_CHUNK_MODIFICATIONS];
+    chunk_modifications_t *predicted_modifications;
 
     uint64_t tick;
 };

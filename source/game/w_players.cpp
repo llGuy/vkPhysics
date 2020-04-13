@@ -298,7 +298,7 @@ static void s_interpolate_remote_player_snapshots(
             p->elapsed -= server_snapshot_interval() * (float)skip_count;
 
             for (int32_t i = 0; i < skip_count; ++i) {
-                p->remote_snapshots.get_next_item();
+                p->remote_snapshots.get_next_item_tail();
             }
 
             previous_snapshot_index = p->remote_snapshots.tail;

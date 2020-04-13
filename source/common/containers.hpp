@@ -335,12 +335,31 @@ template <
         return(new_item);
     }
 
-    T *get_next_item() {
+    T *get_next_item_tail() {
         if (head_tail_difference > 0) {
             T *item = &buffer[tail++];
 
             if (tail == buffer_size) {
                 tail = 0;
+            }
+                
+            --head_tail_difference;
+
+            return(item);
+        }
+
+        return(nullptr);
+    }
+
+    T *get_next_item_head() {
+        if (head_tail_difference > 0) {
+            T *item = &buffer[head];
+
+            if (head == 0) {
+                head = buffer_size - 1;
+            }
+            else {
+                head--;
             }
                 
             --head_tail_difference;

@@ -67,8 +67,9 @@ struct player_snapshot_t {
             // This means that the server has still not received any correction acknowledgement, so don't send another correction
             // packet, because otherwise, the client will just go into some frenzy of constantly correcting
             uint8_t server_waiting_for_correction: 1;
+            // Server sends this to client so that client can be sure to pop modification from accumulated history
+            uint8_t terraformed: 1;
             // Will use in future
-            uint8_t b2: 1;
             uint8_t b3: 1;
             uint8_t b4: 1;
             uint8_t b5: 1;
@@ -82,6 +83,9 @@ struct player_snapshot_t {
     vector3_t ws_position;
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
+
+    // Tick that client has to revert to if client needs to do a correction
+    uint64_t tick;
 };
 
 // To initialise player, need to fill everything (except for player_render_t *render)
