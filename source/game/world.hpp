@@ -63,7 +63,7 @@ struct player_snapshot_t {
     union {
         struct {
             // This means that the server has detected that the client has predicted wrong information
-            uint8_t client_needs_to_correct: 1;
+            uint8_t client_needs_to_correct_state: 1;
             // This means that the server has still not received any correction acknowledgement, so don't send another correction
             // packet, because otherwise, the client will just go into some frenzy of constantly correcting
             uint8_t server_waiting_for_correction: 1;

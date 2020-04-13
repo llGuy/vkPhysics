@@ -435,7 +435,7 @@ static void s_process_game_state_snapshot(
             player_t *p = get_player(snapshot->client_id);
 
             // TODO: Watch out for this:
-            if (snapshot->client_needs_to_correct && !snapshot->server_waiting_for_correction) {
+            if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
                 LOG_INFOV("Did correction at tick %llu!\n", (unsigned long long)snapshot->tick);
 
                 get_current_tick() = snapshot->tick;
@@ -1144,14 +1144,14 @@ static void s_dispatch_game_state_snapshot() {
             if (has_to_correct_state || has_to_correct_terrain) {
                 if (c->waiting_on_correction) {
                     LOG_INFO("Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n");
-                    snapshot->client_needs_to_correct = 0;
+                    snapshot->client_needs_to_correct_state = 0;
                     snapshot->server_waiting_for_correction = 1;
                 }
                 else {
                     c->waiting_on_correction = 1;
 
                     LOG_INFOV("Client needs to do correction: tick %i\n", (int32_t)get_current_tick());
-                    snapshot->client_needs_to_correct = has_to_correct_state;
+                    snapshot->client_needs_to_correct_state = has_to_correct_state;
                     snapshot->server_waiting_for_correction = 0;
                 }
             }
@@ -1171,7 +1171,7 @@ static void s_dispatch_game_state_snapshot() {
             c->did_terrain_mod_previous_tick = 0;
             c->tick_at_which_client_terraformed = 0;
 
-            LOG_INFOV("(Tick %llu, terraform tick %llu) Dispatch\n", (unsigned long long)c->tick, (unsigned long long)snapshot->terraform_tick);
+            //LOG_INFOV("(Tick %llu, terraform tick %llu) Dispatch\n", (unsigned long long)c->tick, (unsigned long long)snapshot->terraform_tick);
 
             ++packet.player_data_count;
         }
