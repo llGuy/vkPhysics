@@ -437,10 +437,17 @@ static void s_send_commands_to_server() {
 // Just for one accumulated_predicted_modification_t structure
 static void s_revert_history_instance(
     accumulated_predicted_modification_t *apm_ptr) {
-    for (uint32_t i = 0; i < apm_ptr->acc_predicted_chunk_mod_count; ++i) {
-        chunk_modifications_t *cm_ptr = &apm_ptr->acc_predicted_modifications[i];
+    for (uint32_t cm_index = 0; cm_index < apm_ptr->acc_predicted_chunk_mod_count; ++cm_index) {
+        chunk_modifications_t *cm_ptr = &apm_ptr->acc_predicted_modifications[cm_index];
+        chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
-        
+        for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
+            voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+            // Set all modified to initial values
+            c_ptr->voxels[vm_ptr->index] = vm_ptr->initial_value;
+        }
+
+        c_ptr->flags.has_to_update_vertices = 1;
     }
 }
 
@@ -448,24 +455,42 @@ static void s_revert_accumulated_modifications(
     uint64_t tick_until) {
     // First push all modifications that were done, so that we can revert most previous changes too
     s_accumulate_history();
+    reset_modification_tracker();
 
     // Starts peeling off from the head
     accumulated_predicted_modification_t *current = acc_predicted_modifications.get_next_item_head();
 
     uint32_t total_available = acc_predicted_modifications.head_tail_difference;
     uint32_t removed_count = 1;
+
+    uint64_t old_tick = current->tick;
+    uint64_t new_tick = 0;
     
     while (current) {
         if (current->tick >= tick_until) {
             // Revert these changes
+            s_revert_history_instance(current);
 
             ++removed_count;
+
+            if (current->tick == tick_until) {
+                // Simply break, don't revert anymore
+                new_tick = tick_until;
+                break;
+            }
+            else {
+                // Peel off next modification
+                current = acc_predicted_modifications.get_next_item_head();
+            }
         }
         else {
             current = NULL;
+            LOG_INFO("ERRROROOOROROROROOOOOOOOOOOOOOOOOOOOOOOOOOOOOORRRRRRRRRRRRRRRRRRRRRRRRR\n");
             break;
         }
     }
+
+    LOG_INFOV("Reverted from %llu to %llu\n", (unsigned long long)old_tick, (unsigned long long)new_tick);
 }
 
 static void s_process_game_state_snapshot(
@@ -495,7 +520,9 @@ static void s_process_game_state_snapshot(
                 p->cached_player_action_count = 0;
 
                 // Revert voxel modifications up from tick that server processed
-                
+                if (snapshot->terraformed) {
+                    s_revert_accumulated_modifications(snapshot->terraform_tick);
+                }
                 
                 // Basically says that the client just did a correction - set correction flag on next packet sent to server
                 c->waiting_on_correction = 1;
@@ -1208,7 +1235,7 @@ static void s_dispatch_game_state_snapshot() {
                     c->waiting_on_correction = 1;
 
                     LOG_INFOV("Client needs to do correction: tick %i\n", (int32_t)get_current_tick());
-                    snapshot->client_needs_to_correct_state = has_to_correct_state;
+                    snapshot->client_needs_to_correct_state = has_to_correct_state || has_to_correct_terrain;
                     snapshot->server_waiting_for_correction = 0;
                 }
             }

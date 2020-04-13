@@ -353,18 +353,16 @@ template <
 
     T *get_next_item_head() {
         if (head_tail_difference > 0) {
-            T *item = &buffer[head];
-
+            --head_tail_difference;
+            
             if (head == 0) {
                 head = buffer_size - 1;
+                return &buffer[buffer_size - 1];
             }
             else {
                 head--;
+                return &buffer[head];
             }
-                
-            --head_tail_difference;
-
-            return(item);
         }
 
         return(nullptr);
