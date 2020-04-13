@@ -475,6 +475,10 @@ static void s_process_game_state_snapshot(
                         current = acc_predicted_modifications.get_next_item_tail();
                         ++count;
                     }
+
+                    if (current == NULL && count > 1) {
+                        LOG_INFO("Didn't clear any\n");
+                    }
                 }
             }
         }
