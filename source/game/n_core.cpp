@@ -305,17 +305,15 @@ static void s_merge_chunk_modifications(
     s_unflag_modified_chunks(dst, *dst_count);
 }
 
-static accumulated_predicted_modification_t *s_accumulate_history() {
+static uint32_t s_fill_chunk_modification_array(
+    chunk_modifications_t *modifications) {
     uint32_t modified_chunk_count = 0;
     chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
-    accumulated_predicted_modification_t *next_acc = s_add_acc_predicted_modification();
-            
-    s_acc_predicted_modification_init(next_acc, get_current_tick());
 
     uint32_t current = 0;
             
     for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
-        chunk_modifications_t *cm_ptr = &next_acc->acc_predicted_modifications[current];
+        chunk_modifications_t *cm_ptr = &modifications[current];
         chunk_t *c_ptr = chunks[c_index];
         chunk_history_t *h_ptr = &chunks[c_index]->history;
 
@@ -337,7 +335,14 @@ static accumulated_predicted_modification_t *s_accumulate_history() {
         }
     }
 
-    next_acc->acc_predicted_chunk_mod_count = current;
+    return current;
+}
+
+static accumulated_predicted_modification_t *s_accumulate_history() {
+    accumulated_predicted_modification_t *next_acc = s_add_acc_predicted_modification();
+    s_acc_predicted_modification_init(next_acc, get_current_tick());
+    
+    next_acc->acc_predicted_chunk_mod_count = s_fill_chunk_modification_array(next_acc->acc_predicted_modifications);
 
     if (next_acc->acc_predicted_chunk_mod_count == 0) {
         // Pops item that was just pushed
@@ -485,12 +490,24 @@ static void s_revert_accumulated_modifications(
         }
         else {
             current = NULL;
-            LOG_INFO("ERRROROOOROROROROOOOOOOOOOOOOOOOOOOOOOOOOOOOOORRRRRRRRRRRRRRRRRRRRRRRRR\n");
+            LOG_INFO("BULLLLLLLLLLLLLLSHIIIIIIIIIIIIIIITTTTTTTT ERRRRRRRRROOOOOOORRRRRRRR\n");
             break;
         }
     }
 
     LOG_INFOV("Reverted from %llu to %llu\n", (unsigned long long)old_tick, (unsigned long long)new_tick);
+}
+
+static void s_correct_chunks(
+    packet_game_state_snapshot_t *snapshot) {
+    for (uint32_t cm_index = 0; cm_index < snapshot->modified_chunk_count; ++cm_index) {
+        chunk_modifications_t *cm_ptr = &snapshot->chunk_modifications[cm_index];
+        chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+        for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
+            voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+            c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+        }
+    }
 }
 
 static void s_process_game_state_snapshot(
@@ -511,8 +528,6 @@ static void s_process_game_state_snapshot(
             if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
                 LOG_INFOV("Did correction at tick %llu!\n", (unsigned long long)snapshot->tick);
 
-                get_current_tick() = snapshot->tick;
-                
                 // Do correction!
                 p->ws_position = snapshot->ws_position;
                 p->ws_view_direction = snapshot->ws_view_direction;
@@ -522,8 +537,11 @@ static void s_process_game_state_snapshot(
                 // Revert voxel modifications up from tick that server processed
                 if (snapshot->terraformed) {
                     s_revert_accumulated_modifications(snapshot->terraform_tick);
+                    s_correct_chunks(&packet);
                 }
                 
+                get_current_tick() = snapshot->tick;
+
                 // Basically says that the client just did a correction - set correction flag on next packet sent to server
                 c->waiting_on_correction = 1;
             }
@@ -761,7 +779,7 @@ static void s_start_server() {
 
     started_server = 1;
 
-    set_chunk_history_tracker_value(0);
+    set_chunk_history_tracker_value(1);
 
     acc_predicted_modifications.init();
 
@@ -1197,9 +1215,19 @@ static bool s_check_if_client_has_to_correct_terrain(
     return needs_to_correct;
 }
 
-// Send the voxels that need to be corrected
-static void s_serialise_correction_voxels() {
-    
+// Send the voxel modifications
+// It will the client's job to decide which voxels to interpolate between based on the
+// fact that it knows which voxels it modified - it will not interpolate between voxels it knows to have modified
+// in the time frame that concerns this state dispatch
+static void s_add_chunk_modifications_to_game_state_snapshot(
+    packet_game_state_snapshot_t *snapshot) {
+    // Up to 300 chunks can be modified between game dispatches
+    chunk_modifications_t *modifications = LN_MALLOC(chunk_modifications_t, MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
+
+    uint32_t modification_count = s_fill_chunk_modification_array(modifications);
+
+    snapshot->modified_chunk_count = modification_count;
+    snapshot->chunk_modifications = modifications;
 }
 
 static void s_dispatch_game_state_snapshot() {
@@ -1279,16 +1307,14 @@ static void s_dispatch_game_state_snapshot() {
         client_t *c = &clients[i];
 
         if (c->initialised && c->received_first_commands_packet) {
-            // Prepare correction (for terrain, player state is easily done in previous loop)
-            // Terrain corrections are sent specifically to players
-            
-
             s_send_to(&serialiser, c->address);
         }
         
         // Clear client's predicted modification array
         c->predicted_chunk_mod_count = 0;
     }
+
+    reset_modification_tracker();
 }
 
 void tick_server(

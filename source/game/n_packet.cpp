@@ -257,6 +257,22 @@ void n_serialise_game_state_snapshot(
         serialiser->serialise_uint64(packet->player_snapshots[i].tick);
         serialiser->serialise_uint64(packet->player_snapshots[i].terraform_tick);
     }
+
+    serialiser->serialise_uint32(packet->modified_chunk_count);
+    
+    for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
+        chunk_modifications_t *c = &packet->chunk_modifications[i];
+        serialiser->serialise_int16(c->x);
+        serialiser->serialise_int16(c->y);
+        serialiser->serialise_int16(c->z);
+        serialiser->serialise_uint32(c->modified_voxels_count);
+
+        for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+            voxel_modification_t *v_ptr =  &c->modifications[v];
+            serialiser->serialise_uint16(v_ptr->index);
+            serialiser->serialise_uint8(v_ptr->final_value);
+        }
+    }
 }
 
 void n_deserialise_game_state_snapshot(
@@ -273,6 +289,23 @@ void n_deserialise_game_state_snapshot(
         packet->player_snapshots[i].ws_up_vector = serialiser->deserialise_vector3();
         packet->player_snapshots[i].tick = serialiser->deserialise_uint64();
         packet->player_snapshots[i].terraform_tick = serialiser->deserialise_uint64();
+    }
+
+    packet->modified_chunk_count = serialiser->deserialise_uint32();
+    packet->chunk_modifications = LN_MALLOC(chunk_modifications_t, packet->modified_chunk_count);
+
+    for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
+        chunk_modifications_t *c = &packet->chunk_modifications[i];
+        c->x = serialiser->deserialise_int16();
+        c->y = serialiser->deserialise_int16();
+        c->z = serialiser->deserialise_int16();
+        c->modified_voxels_count = serialiser->deserialise_uint32();
+
+        for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+            voxel_modification_t *v_ptr =  &c->modifications[v];
+            v_ptr->index = serialiser->deserialise_uint16();
+            v_ptr->final_value = serialiser->deserialise_uint8();
+        }
     }
 }
 

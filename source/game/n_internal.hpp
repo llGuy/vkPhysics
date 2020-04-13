@@ -200,6 +200,10 @@ void n_deserialise_player_commands(
 struct packet_game_state_snapshot_t {
     uint32_t player_data_count;
     player_snapshot_t *player_snapshots;
+
+    // Total chunk modifications that occured in the entire world
+    uint32_t modified_chunk_count;
+    chunk_modifications_t *chunk_modifications;
 };
 
 uint32_t n_packed_game_state_snapshot_size(
