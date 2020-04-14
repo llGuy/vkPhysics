@@ -351,7 +351,7 @@ static accumulated_predicted_modification_t *s_accumulate_history() {
         return NULL;
     }
     else {
-        LOG_INFOV("(Tick %llu) SENT Modified %i chunks\n", (unsigned long long)next_acc->tick, next_acc->acc_predicted_chunk_mod_count);
+        //LOG_INFOV("(Tick %llu) SENT Modified %i chunks\n", (unsigned long long)next_acc->tick, next_acc->acc_predicted_chunk_mod_count);
 
         return next_acc;
     }
@@ -495,7 +495,7 @@ static void s_revert_accumulated_modifications(
         }
     }
 
-    LOG_INFOV("Reverted from %llu to %llu\n", (unsigned long long)old_tick, (unsigned long long)new_tick);
+    LOG_INFOV("(Sent to revert to %llu) Reverted from %llu to %llu\n", (unsigned long long)tick_until, (unsigned long long)old_tick, (unsigned long long)new_tick);
 }
 
 static void s_correct_chunks(
@@ -505,6 +505,7 @@ static void s_correct_chunks(
         chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+            printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
             c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
         }
     }
@@ -1200,6 +1201,8 @@ static bool s_check_if_client_has_to_correct_terrain(
 
             // Just one mistake can completely mess stuff up between the client and server
             if (actual_value != predicted_value) {
+                printf("(%i %i %i) Need to set (%i) %i -> %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
+
                 chunk_has_mistake = 1;
             }
         }
@@ -1231,10 +1234,15 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
 }
 
 static void s_dispatch_game_state_snapshot() {
+    putchar('\n');
+    LOG_INFO("--------------------- DISPATCH ---------------------\n");
+
     packet_game_state_snapshot_t packet = {};
     packet.player_data_count = 0;
     packet.player_snapshots = LN_MALLOC(player_snapshot_t, clients.data_count);
 
+    s_add_chunk_modifications_to_game_state_snapshot(&packet);
+    
     for (uint32_t i = 0; i < clients.data_count; ++i) {
         client_t *c = &clients[i];
 
@@ -1262,7 +1270,7 @@ static void s_dispatch_game_state_snapshot() {
                     // If there is a correction of any kind to do, force client to correct everything
                     c->waiting_on_correction = 1;
 
-                    LOG_INFOV("Client needs to do correction: tick %i\n", (int32_t)get_current_tick());
+                    LOG_INFOV("Client needs to revert to tick %llu\n", (unsigned long long)c->tick_at_which_client_terraformed);
                     snapshot->client_needs_to_correct_state = has_to_correct_state || has_to_correct_terrain;
                     snapshot->server_waiting_for_correction = 0;
                 }
