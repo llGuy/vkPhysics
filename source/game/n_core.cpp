@@ -67,23 +67,6 @@ static arena_allocator_t chunk_modification_allocator;
 // TODO: Need to replace this with a circular buffer
 static circular_buffer_array_t<accumulated_predicted_modification_t, MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PACK_COUNT> acc_predicted_modifications;
 
-/*static void s_move_chunks_from_modifications_to_accumulation_buffer(
-    client_t *c,
-    accumulated_predicted_modification_t *apm_ptr) {
-    if (!apm_ptr->acc_predicted_modifications) {
-        apm_ptr->acc_predicted_modifications = (chunk_modifications_t *)chunk_modification_allocator.allocate_arena();
-    }
-
-    chunk_modifications_t *previous_apm_chunks_ptr = apm_ptr->acc_predicted_modifications;
-
-    apm_ptr->acc_predicted_chunk_mod_count = c->predicted_chunk_mod_count;
-    apm_ptr->acc_predicted_modifications = c->predicted_modifications;
-
-    c->predicted_chunk_mod_count = 0;
-    c->predicted_modifications = previous_apm_chunks_ptr;
-}
-*/
-
 static void s_acc_predicted_modification_init(
     accumulated_predicted_modification_t *apm_ptr,
     uint64_t tick) {
@@ -164,9 +147,6 @@ static void s_process_connection_handshake(
             current_client_id = data->local_client_id;
         }
     }
-
-    // Don't keep track for client
-    //clients.data_count = (uint16_t)highest_client_index + 1;
 
     submit_event(ET_ENTER_SERVER, data, events);
 }
@@ -351,8 +331,6 @@ static accumulated_predicted_modification_t *s_accumulate_history() {
         return NULL;
     }
     else {
-        //LOG_INFOV("(Tick %llu) SENT Modified %i chunks\n", (unsigned long long)next_acc->tick, next_acc->acc_predicted_chunk_mod_count);
-
         return next_acc;
     }
 }
@@ -573,14 +551,9 @@ static void s_process_game_state_snapshot(
             }
         }
         else {
-            //client_t *c = &clients[snapshot->client_id];
             player_t *p = get_player(snapshot->client_id);
             
             p->remote_snapshots.push_item(snapshot);
-            
-            /*p->ws_position = snapshot->ws_position;
-            p->ws_view_direction = snapshot->ws_view_direction;
-            p->ws_up_vector = snapshot->ws_up_vector;*/
         }
     }
 }
@@ -1236,7 +1209,7 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
 static void s_dispatch_game_state_snapshot() {
     putchar('\n');
     LOG_INFO("--------------------- DISPATCH ---------------------\n");
-
+    
     packet_game_state_snapshot_t packet = {};
     packet.player_data_count = 0;
     packet.player_snapshots = LN_MALLOC(player_snapshot_t, clients.data_count);
@@ -1290,8 +1263,6 @@ static void s_dispatch_game_state_snapshot() {
             // Reset
             c->did_terrain_mod_previous_tick = 0;
             c->tick_at_which_client_terraformed = 0;
-
-            //LOG_INFOV("(Tick %llu, terraform tick %llu) Dispatch\n", (unsigned long long)c->tick, (unsigned long long)snapshot->terraform_tick);
 
             ++packet.player_data_count;
         }
