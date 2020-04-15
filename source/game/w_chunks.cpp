@@ -1,3 +1,4 @@
+#include "net.hpp"
 #include <string.h>
 #include "w_internal.hpp"
 #include <common/log.hpp>
@@ -510,6 +511,12 @@ void w_destroy_chunk_data() {
     FL_FREE(temp_mesh_vertices);
 }
 
+static chunks_to_interpolate_t chunks_to_interpolate;
+
+chunks_to_interpolate_t *get_chunks_to_interpolate() {
+    return &chunks_to_interpolate;
+}
+
 void w_chunk_world_init(
     world_t *world,
     uint32_t loaded_radius) {
@@ -526,6 +533,10 @@ void w_chunk_world_init(
     world->track_history = 1;
 
     world->wait_mesh_update = 0;
+
+    chunks_to_interpolate.max_modified = 40;
+    chunks_to_interpolate.modification_count = 0;
+    chunks_to_interpolate.modifications = FL_MALLOC(chunk_modifications_t, chunks_to_interpolate.max_modified);
 
     w_add_sphere_m(vector3_t(0.0f), 5.0f, world);
 

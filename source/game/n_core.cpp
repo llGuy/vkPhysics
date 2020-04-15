@@ -97,7 +97,6 @@ static accumulated_predicted_modification_t *s_add_acc_predicted_modification() 
 static void s_start_client() {
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
-    //s_hub_socket_init();
     s_main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
 
     clients.init(MAX_CLIENTS);
@@ -527,6 +526,7 @@ static void s_process_game_state_snapshot(
                 if (snapshot->terraformed) {
                     s_revert_accumulated_modifications(snapshot->terraform_tick);
                     s_correct_chunks(&packet);
+                    // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
                 }
                 
                 get_current_tick() = snapshot->tick;
@@ -535,6 +535,23 @@ static void s_process_game_state_snapshot(
                 c->waiting_on_correction = 1;
             }
             else {
+                // Mark all chunks / voxels that were modified from tick that server just processed, to current tick
+                // These voxels should not be interpolated, and just left alone, because client just modified them
+                // First make sure to finish interpolation of previous voxels
+                chunks_to_interpolate_t *cti_ptr = get_chunks_to_interpolate();
+                for (uint32_t cm_index = 0; cm_index < cti_ptr->modification_count; ++cm_index) {
+                    chunk_modifications_t *cm_ptr = &cti_ptr->modifications[i];
+
+                    chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+
+                    for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
+                        voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+                        c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+                    }
+                }
+
+                cti_ptr->modification_count = 0;
+
                 if (snapshot->terraformed) {
                     // Need to remove all modifications from tail to tick
                     accumulated_predicted_modification_t *current = acc_predicted_modifications.get_next_item_tail();
@@ -757,7 +774,6 @@ static bool started_server = 0;
 static void s_start_server() {
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
-    //s_hub_socket_init();
     s_main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
 
     clients.init(MAX_CLIENTS);
