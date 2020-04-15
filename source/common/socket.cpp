@@ -38,6 +38,14 @@ static socket_t s_network_socket_init(
     return s;
 }
 
+static void s_set_socket_recv_buffer_size(
+    socket_t s,
+    uint32_t size) {
+    if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (const char *)&size, sizeof(size)) == -1) {
+        LOG_ERROR("Failed to set socket buffer size\n");
+    }
+}
+
 static void s_bind_network_socket_to_port(
     socket_t s,
     network_address_t address) {

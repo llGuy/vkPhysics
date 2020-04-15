@@ -310,9 +310,82 @@ static void s_windowed_game_main(
     dispatch_events(&events);
 }
 
+#ifdef _WIN32
+#define _WINSOCKAPI_
+#include <windows.h>
+// This is for code where GLFW is not linked against
+static LARGE_INTEGER clock_frequency;
+
+static void s_time_init() {
+    uint32_t sleep_granularity_milliseconds = 1;
+    uint32_t success = (timeBeginPeriod(sleep_granularity_milliseconds) == TIMERR_NOERROR);
+
+    QueryPerformanceFrequency(&clock_frequency);
+}
+
+static LARGE_INTEGER tick_start;
+
+static void s_begin_time() {
+    QueryPerformanceCounter(&tick_start);
+}
+
+static LARGE_INTEGER tick_end;
+
+static void s_end_time() {
+    QueryPerformanceCounter(&tick_end);
+
+    float new_dt = float(tick_end.QuadPart - tick_start.QuadPart) / float(clock_frequency.QuadPart);
+
+    // If we want to limit the tick time
+#if 0
+    if (new_dt > TICK_TIME) {
+        dt = new_dt;
+        raw_input.dt = new_dt;
+        //dt = TICK_TIME;
+        //raw_input.dt = TICK_TIME;
+    }
+    else {
+        // Set game tick period by sleeping
+        while (new_dt < TICK_TIME) {
+            DWORD to_wait = DWORD((TICK_TIME - new_dt) * 1000);
+            if (to_wait > 0) {
+                Sleep(to_wait);
+            }
+            LARGE_INTEGER now;
+            QueryPerformanceCounter(&now);
+            new_dt = measure_time_difference(tick_start, now, clock_frequency);
+        }
+        dt = TICK_TIME;
+        raw_input.dt = (float32_t)dt;
+    }
+#endif
+}
+#else
+static void s_time_init() {
+}
+
+static clock_t tick_start;
+
+static void s_begin_time() {
+    tick_start = clock();
+}
+
+static clock_t tick_end;
+
+static void s_end_time() {
+    tick_end = clock();
+
+    clock_t delta = tick_end - tick_start;
+    ldelta_time = (float)delta / (double)CLOCKS_PER_SEC;
+}
+
+#endif
+
 static void s_run_not_windowed_game() {
+    s_time_init();
+
     while (running) {
-        clock_t begin = clock();
+        s_begin_time();
 
         dispatch_events(&events);
 
@@ -323,10 +396,7 @@ static void s_run_not_windowed_game() {
             VK_NULL_HANDLE,
             VK_NULL_HANDLE);
 
-        clock_t end = clock();
-
-        clock_t delta = end - begin;
-        ldelta_time = (float)(delta / (double)CLOCKS_PER_SEC);
+        s_end_time();
     }
 }
 

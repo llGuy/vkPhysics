@@ -49,7 +49,7 @@ if(BUILD_GRAPHICAL_APPLICATION)
   add_library(renderer STATIC "${RENDERER_SOURCES}")
   target_include_directories(renderer PUBLIC "${CMAKE_SOURCE_DIR}/source" "${CMAKE_SOURCE_DIR}/dependencies/stb" "${CMAKE_SOURCE_DIR}/imgui/include")
   set_target_properties(renderer PROPERTIES PREFIX "")
-  target_link_libraries(renderer "${Vulkan_LIBRARY}" "common")
+  target_link_libraries(renderer PUBLIC "${Vulkan_LIBRARY}" "common")
   target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
 
   if(WIN32)
@@ -77,6 +77,10 @@ endif()
 add_executable(vkPhysics_server "${GAME_SOURCES}")
 target_include_directories(vkPhysics_server PUBLIC "${CMAKE_SOURCE_DIR}/source")
 target_link_libraries(vkPhysics_server PUBLIC "common")
+
+if(WIN32)
+target_link_libraries(vkPhysics_server PUBLIC "winmm.lib")
+endif()
 
 # Create server hub application
 file(GLOB_RECURSE HUB_SOURCES "source/hub/*.cpp" "source/hub/*.hpp")
