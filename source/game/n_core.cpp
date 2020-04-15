@@ -97,6 +97,7 @@ static accumulated_predicted_modification_t *s_add_acc_predicted_modification() 
 static void s_start_client() {
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
+    //s_hub_socket_init();
     s_main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
 
     clients.init(MAX_CLIENTS);
@@ -756,6 +757,7 @@ static bool started_server = 0;
 static void s_start_server() {
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
+    //s_hub_socket_init();
     s_main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
 
     clients.init(MAX_CLIENTS);
@@ -1426,7 +1428,6 @@ void net_init(
     subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
 
     socket_api_init();
-    s_hub_socket_init();
 
     message_buffer = FL_MALLOC(char, MAX_MESSAGE_SIZE);
 }

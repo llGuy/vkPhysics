@@ -58,7 +58,7 @@ if(BUILD_GRAPHICAL_APPLICATION)
     target_link_libraries(renderer PUBLIC "user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib" "glfw3.lib" "msvcrtd.lib" "libcmtd.lib" "ucrtd.lib")
     target_include_directories(renderer PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/glfw/include")
   else (WIN32)
-    target_link_libraries(renderer "glfw")
+    target_link_libraries(renderer PUBLIC "glfw")
   endif()
 endif()
 

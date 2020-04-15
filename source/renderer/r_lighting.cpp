@@ -178,7 +178,7 @@ void r_update_lighting(
     view_rotation[3][1] = 0.0f;
     view_rotation[3][2] = 0.0f;
     
-    lighting_data.ws_directional_light = -lighting->ws_directional_light;
+    lighting_data.ws_directional_light = -glm::normalize(lighting->ws_directional_light);
     lighting_data.vs_directional_light = view_rotation * lighting_data.ws_directional_light;
 
     vector4_t light_position = vector4_t(light_direction * 1000000.0f, 0.0f);

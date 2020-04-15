@@ -64,12 +64,18 @@ const float PI = 3.14159265359f;
 float distribution_ggx(
     float ndoth,
     float roughness) {
+#if 0
     float a = roughness * roughness;
     float a2 = a * a;
     float denom = ndoth * ndoth * (a2 - 1.0f) + 1.0f;
     denom = PI * denom * denom;
 
     return a2 / max(denom, 0.000001f);
+#else
+    float a2 = roughness * roughness;
+    float f = (ndoth * a2 - ndoth) * ndoth + 1.0f;
+    return a2 / (PI * f * f);
+#endif
 }
 
 float smith_ggx(
@@ -300,6 +306,7 @@ void main() {
             roughness,
             metalness);
 
+#if 0
         for (int i = 0; i < u_lighting.point_light_count; ++i) {
             l += point_luminance(
                 i,
@@ -312,6 +319,7 @@ void main() {
                 roughness,
                 metalness);
         }
+#endif
 
         vec3 fresnel = fresnel_roughness(max(dot(vs_view, vs_normal), 0.000001f), base_reflectivity, roughness);
         vec3 kd = (vec3(1.0f) - fresnel) * (1.0f - metalness);
