@@ -14,30 +14,39 @@ static float server_snapshot_output_interval = 1.0f / 20.0f;
 
 #define MAX_MESSAGE_SIZE 65507
 
+// Socket that connects to hub
+static socket_t hub_socket;
+
 static char *message_buffer;
 static socket_t main_udp_socket;
 static uint64_t current_packet;
-
-#define GAME_OUTPUT_PORT_CLIENT 6001
-#define GAME_OUTPUT_PORT_SERVER 6000
 
 static void s_main_udp_socket_init(
     uint16_t output_port) {
     current_packet = 0;
 
-    main_udp_socket = n_network_socket_init(SP_UDP);
+    main_udp_socket = network_socket_init(SP_UDP);
     network_address_t address = {};
-    address.port = n_host_to_network_byte_order(output_port);
-    n_bind_network_socket_to_port(main_udp_socket, address);
-    n_set_socket_to_non_blocking_mode(main_udp_socket);
-    n_set_socket_recv_buffer_size(main_udp_socket, 1024 * 1024);
+    address.port = host_to_network_byte_order(output_port);
+    bind_network_socket_to_port(main_udp_socket, address);
+    set_socket_to_non_blocking_mode(main_udp_socket);
+    set_socket_recv_buffer_size(main_udp_socket, 1024 * 1024);
+}
+
+static void s_hub_socket_init() {
+    hub_socket = network_socket_init(SP_TCP);
+    network_address_t address = {};
+    address.port = host_to_network_byte_order(SERVER_HUB_OUTPUT_PORT);
+    // This will be hardcoded for now
+    address.ipv4_address = str_to_ipv4_int32("127.0.0.1");
+    connect_to_address(hub_socket, address);
 }
 
 static bool s_send_to(
     serialiser_t *serialiser,
     network_address_t address) {
     ++current_packet;
-    return n_send_to(main_udp_socket, address, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
+    return send_to(main_udp_socket, address, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
 }
 
 static bool started_client = 0;
@@ -623,7 +632,7 @@ void tick_client(
         }
 
         network_address_t received_address = {};
-        int32_t received = n_receive_from(
+        int32_t received = receive_from(
             main_udp_socket,
             message_buffer,
             sizeof(char) * MAX_MESSAGE_SIZE,
@@ -682,7 +691,7 @@ void tick_client(
             }
 
             if (i < MAX_RECEIVED_PER_TICK) {
-                received = n_receive_from(
+                received = receive_from(
                     main_udp_socket,
                     message_buffer,
                     sizeof(char) * MAX_MESSAGE_SIZE,
@@ -700,8 +709,8 @@ void tick_client(
 static void s_send_connect_request_to_server(
     const char *ip_address,
     local_client_info_t *info) {
-    bound_server_address.port = n_host_to_network_byte_order(GAME_OUTPUT_PORT_SERVER);
-    bound_server_address.ipv4_address = n_str_to_ipv4_int32(ip_address);
+    bound_server_address.port = host_to_network_byte_order(GAME_OUTPUT_PORT_SERVER);
+    bound_server_address.ipv4_address = str_to_ipv4_int32(ip_address);
 
     serialiser_t serialiser = {};
     serialiser.init(100);
@@ -1310,7 +1319,7 @@ void tick_server(
 
     for (uint32_t i = 0; i < clients.data_count + 1; ++i) {
         network_address_t received_address = {};
-        int32_t received = n_receive_from(
+        int32_t received = receive_from(
             main_udp_socket,
             message_buffer,
             sizeof(char) * MAX_MESSAGE_SIZE,
@@ -1416,7 +1425,8 @@ void net_init(
     subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, net_listener_id, events);
     subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
 
-    n_socket_api_init();
+    socket_api_init();
+    s_hub_socket_init();
 
     message_buffer = FL_MALLOC(char, MAX_MESSAGE_SIZE);
 }

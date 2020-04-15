@@ -73,7 +73,13 @@ if(BUILD_GRAPHICAL_APPLICATION)
   target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
 endif()
 
-# Create server application (without graphical interface)
+# Create game server application (without graphical interface)
 add_executable(vkPhysics_server "${GAME_SOURCES}")
 target_include_directories(vkPhysics_server PUBLIC "${CMAKE_SOURCE_DIR}/source")
 target_link_libraries(vkPhysics_server PUBLIC "common")
+
+# Create server hub application
+file(GLOB_RECURSE HUB_SOURCES "source/hub/*.cpp" "source/hub/*.hpp")
+add_executable(vkPhysics_hub "${HUB_SOURCES}")
+target_include_directories(vkPhysics_hub PUBLIC "${CMAKE_SOURCE_DIR}/source")
+target_link_libraries(vkPhysics_hub PUBLIC "common")

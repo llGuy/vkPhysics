@@ -2,14 +2,10 @@
 
 #include <common/tools.hpp>
 #include <common/event.hpp>
+#include <common/socket.hpp>
 
 void net_init(
     event_submissions_t *events);
-
-struct network_address_t {
-    uint16_t port;
-    uint32_t ipv4_address;
-};
 
 #define MAX_PREDICTED_CHUNK_MODIFICATIONS 20
 #define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 250
