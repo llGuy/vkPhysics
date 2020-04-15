@@ -21,6 +21,12 @@ void w_chunk_init(
     chunk->chunk_coord = chunk_coord;
     chunk->chunk_stack_index = chunk_stack_index;
 
+    chunk->flags.made_modification = 0;
+    chunk->flags.has_to_update_vertices = 0;
+    chunk->flags.active_vertices = 0;
+    chunk->flags.modified_marker = 0;
+    chunk->flags.index_of_modification_struct = 0;
+
     memset(chunk->voxels, 0, sizeof(uint8_t) * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
 
     chunk->history.modification_count = 0;
