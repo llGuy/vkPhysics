@@ -68,7 +68,9 @@ bool send_to_bound_address(
     uint32_t buffer_size);
 
 uint32_t str_to_ipv4_int32(
-    const char *address);
+    const char *address,
+    uint32_t port,
+    int32_t protocol);
 
 uint16_t host_to_network_byte_order(
     uint16_t bytes);

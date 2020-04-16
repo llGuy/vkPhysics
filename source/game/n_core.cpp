@@ -38,7 +38,7 @@ static void s_hub_socket_init() {
     network_address_t address = {};
     address.port = host_to_network_byte_order(SERVER_HUB_OUTPUT_PORT);
     // This will be hardcoded for now
-    address.ipv4_address = str_to_ipv4_int32("127.0.0.1");
+    address.ipv4_address = str_to_ipv4_int32("127.0.0.1", SERVER_HUB_OUTPUT_PORT, SP_TCP);
     connect_to_address(hub_socket, address);
 }
 
@@ -811,7 +811,7 @@ static void s_send_connect_request_to_server(
     const char *ip_address,
     local_client_info_t *info) {
     bound_server_address.port = host_to_network_byte_order(GAME_OUTPUT_PORT_SERVER);
-    bound_server_address.ipv4_address = str_to_ipv4_int32(ip_address);
+    bound_server_address.ipv4_address = str_to_ipv4_int32(ip_address, GAME_OUTPUT_PORT_SERVER, SP_UDP);
 
     serialiser_t serialiser = {};
     serialiser.init(100);

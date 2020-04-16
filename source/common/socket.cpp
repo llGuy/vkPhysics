@@ -216,6 +216,7 @@ static int32_t s_receive_from_bound_address(
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <netdb.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -388,6 +389,58 @@ static void s_connect_to_address(
     }
 }
 
+static uint32_t s_str_to_ipv4_int32(
+    const char *name,
+    uint32_t port,
+    int32_t protocol) {
+    addrinfo hints = {}, *addresses;
+
+    hints.ai_family = AF_INET;
+
+    switch (protocol) {
+    case SP_UDP: {
+        hints.ai_socktype = SOCK_DGRAM;
+        hints.ai_protocol = IPPROTO_UDP;
+        break;
+    }
+        
+    case SP_TCP: {
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+        break;
+    }
+    }
+
+    char port_str[16] = {};
+    sprintf(port_str, "%d", port);
+
+    int32_t err = getaddrinfo(name, port_str, &hints, &addresses);
+
+    if (err != 0) {
+        fprintf(stderr, "%s: %s\n", name, gai_strerror(err));
+        abort();
+    }
+
+    // (This is a really bad way)
+    // Find way to get correct address
+    if (addresses) {
+        for (addrinfo *addr = addresses; addr != NULL; addr = addr->ai_next) {
+            if (addr->ai_family == AF_INET) {
+                sockaddr_in *addr_in = (sockaddr_in *)addr->ai_addr;
+                return addr_in->sin_addr.s_addr;
+            }
+        }
+
+        freeaddrinfo(addresses);
+
+        LOG_INFOV("Couldn't find address %s\n", name);
+        return 0;
+    }
+    else {
+        return 0;
+    }
+}
+
 #endif
 
 void socket_api_init() {
@@ -454,9 +507,11 @@ bool send_to(
 }
 
 uint32_t str_to_ipv4_int32(
-    const char *address) {
-    // Use inet_pton maybe?
-    return inet_addr(address);
+    const char *address,
+    uint32_t port,
+    int32_t protocol) {
+    return s_str_to_ipv4_int32(address, port, protocol);
+    //return inet_addr(address);
 }
 
 uint16_t host_to_network_byte_order(
