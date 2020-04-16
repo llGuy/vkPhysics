@@ -384,4 +384,14 @@ template <
             return (index - 1);
         }
     }
+
+    uint32_t increment_index(
+        uint32_t index) {
+        if (index == buffer_size - 1) {
+            return 0;
+        }
+        else {
+            return index + 1;
+        }
+    }
 };

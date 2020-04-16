@@ -140,7 +140,7 @@ void w_handle_input(
     }
 }
 
-#define TERRAFORMING_SPEED 400.0f
+#define TERRAFORMING_SPEED 250.0f
 
 void w_push_player_actions(
     player_t *player,

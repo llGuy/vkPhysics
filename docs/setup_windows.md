@@ -17,8 +17,8 @@ Make sure to install the following, if they have not been already:
 
 ![photo](/docs/assets/cmake0.png)
 
-- Press the `Configure button`
-- When asked to create the new directory, press ok
+- Press the `Configure` button
+- When asked to create the new directory, press `Yes`
 - A window should pop up with the following options:
 
 ![photo](/docs/assets/cmake1.png)

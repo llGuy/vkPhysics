@@ -168,6 +168,15 @@ void n_deserialise_game_state_snapshot(
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser);
 
+void n_serialise_chunk_modifications(
+    chunk_modifications_t *modifications,
+    uint32_t modification_count,
+    serialiser_t *serialiser);
+
+chunk_modifications_t *n_deserialise_chunk_modifications(
+    uint32_t *modification_count,
+    serialiser_t *serialiser);
+
 // packet_chunk_voxels_t defined in net.hpp
 uint32_t n_packed_chunk_voxels_size(
     packet_chunk_voxels_t *packet);

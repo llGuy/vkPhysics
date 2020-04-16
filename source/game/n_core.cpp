@@ -75,6 +75,8 @@ static arena_allocator_t chunk_modification_allocator;
 // BIGGG array
 // TODO: Need to replace this with a circular buffer
 static circular_buffer_array_t<accumulated_predicted_modification_t, MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PACK_COUNT> acc_predicted_modifications;
+// These will contain ALL recent modifications (merged), above does not merge them
+static accumulated_predicted_modification_t merged_recent_modifications;
 
 static void s_acc_predicted_modification_init(
     accumulated_predicted_modification_t *apm_ptr,
@@ -111,7 +113,12 @@ static void s_start_client() {
 
     chunk_modification_allocator.pool_init(
         sizeof_chunk_mod_pack,
-        sizeof_chunk_mod_pack * MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4);
+        sizeof_chunk_mod_pack * (MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4));
+
+    //s_acc_predicted_modification_init(&merged_recent_modifications, 0);
+    merged_recent_modifications.tick = 0;
+    merged_recent_modifications.acc_predicted_chunk_mod_count = 0;
+    merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(chunk_modifications_t, MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 }
 
 static network_address_t bound_server_address = {};
@@ -504,6 +511,7 @@ static void s_process_game_state_snapshot(
     event_submissions_t *events) {
     packet_game_state_snapshot_t packet = {};
     n_deserialise_game_state_snapshot(&packet, serialiser);
+    packet.chunk_modifications = n_deserialise_chunk_modifications(&packet.modified_chunk_count, serialiser);
 
     for (uint32_t i = 0; i < packet.player_data_count; ++i) {
         player_snapshot_t *snapshot = &packet.player_snapshots[i];
@@ -535,6 +543,11 @@ static void s_process_game_state_snapshot(
                 c->waiting_on_correction = 1;
             }
             else {
+#if 0
+                if (snapshot->terraformed) {
+                    LOG_INFO("Need to check shit\n");
+                }
+
                 // Mark all chunks / voxels that were modified from tick that server just processed, to current tick
                 // These voxels should not be interpolated, and just left alone, because client just modified them
                 // First make sure to finish interpolation of previous voxels
@@ -550,7 +563,77 @@ static void s_process_game_state_snapshot(
                     }
                 }
 
-                cti_ptr->modification_count = 0;
+                // Fill merged recent modifications
+                s_acc_predicted_modification_init(&merged_recent_modifications, 0);
+
+                uint32_t apm_index = acc_predicted_modifications.tail;
+                for (uint32_t apm = 0; apm < acc_predicted_modifications.head_tail_difference; ++apm) {
+                    accumulated_predicted_modification_t *apm_ptr = &acc_predicted_modifications.buffer[apm_index];
+                    // For all modifications that were after the snapshot tick that server is sending us
+                    if (apm_ptr->tick >= snapshot->terraform_tick) {
+                        // Merge modifications
+                        s_merge_chunk_modifications(
+                            merged_recent_modifications.acc_predicted_modifications,
+                            &merged_recent_modifications.acc_predicted_chunk_mod_count,
+                            apm_ptr->acc_predicted_modifications,
+                            apm_ptr->acc_predicted_chunk_mod_count);
+                    }
+
+                    apm_index = acc_predicted_modifications.increment_index(apm_index);
+                }
+
+                s_flag_modified_chunks(
+                    merged_recent_modifications.acc_predicted_modifications,
+                    merged_recent_modifications.acc_predicted_chunk_mod_count);
+
+                for (uint32_t recv_cm_index = 0; recv_cm_index < packet.modified_chunk_count; ++recv_cm_index) {
+                    chunk_modifications_t *recv_cm_ptr = &packet.chunk_modifications[recv_cm_index];
+                    chunk_t *c_ptr = get_chunk(ivector3_t(recv_cm_ptr->x, recv_cm_ptr->y, recv_cm_ptr->z));
+
+                    if (c_ptr->flags.modified_marker) {
+                        chunk_modifications_t *dst_cm_ptr = &cti_ptr->modifications[cti_ptr->modification_count++];
+
+                        uint32_t local_cm_index = c_ptr->flags.index_of_modification_struct;
+                        chunk_modifications_t *local_cm_ptr = &merged_recent_modifications.acc_predicted_modifications[local_cm_index];
+                        // Chunk was flagged as modified, need to check voxel per voxel if we need to push this to chunks to interpolate
+                        s_fill_dummy_voxels(local_cm_ptr);
+
+                        for (uint32_t recv_vm_index = 0; recv_vm_index < recv_cm_ptr->modified_voxels_count; ++recv_vm_index) {
+                            voxel_modification_t *recv_vm_ptr = &recv_cm_ptr->modifications[recv_vm_index];
+                            if (dummy_voxels[recv_vm_ptr->index] == SPECIAL_VALUE) {
+                                // Was not modified, can push this
+                                dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].index = recv_vm_ptr->index;
+                                // Initial value is current value of voxel
+                                dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].initial_value = c_ptr->voxels[recv_vm_ptr->index];
+                                dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count++].final_value = recv_vm_ptr->final_value;
+                            }
+                            else {
+                                // Was modified, should not push
+                                // TODO: Think about how to resolve these sort of conflicts
+                            }
+                        }
+
+                        s_unfill_dummy_voxels(local_cm_ptr);
+                    }
+                    else {
+                        // Simple push this to chunks to interpolate
+                        chunk_modifications_t *dst_cm_ptr = &cti_ptr->modifications[cti_ptr->modification_count++];
+
+                        dst_cm_ptr->x = recv_cm_ptr->x;
+                        dst_cm_ptr->y = recv_cm_ptr->y;
+                        dst_cm_ptr->z = recv_cm_ptr->z;
+                        dst_cm_ptr->modified_voxels_count = recv_cm_ptr->modified_voxels_count;
+
+                        memcpy(dst_cm_ptr->modifications, recv_cm_ptr->modifications, sizeof(voxel_modification_t) * dst_cm_ptr->modified_voxels_count);
+                    }
+                }
+
+                s_unflag_modified_chunks(
+                    merged_recent_modifications.acc_predicted_modifications,
+                    merged_recent_modifications.acc_predicted_chunk_mod_count);
+
+#endif
+                //cti_ptr->modification_count = 0;
 
                 if (snapshot->terraformed) {
                     // Need to remove all modifications from tail to tick
@@ -1234,8 +1317,10 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
 }
 
 static void s_dispatch_game_state_snapshot() {
+#if 0
     putchar('\n');
     LOG_INFO("--------------------- DISPATCH ---------------------\n");
+#endif
     
     packet_game_state_snapshot_t packet = {};
     packet.player_data_count = 0;
@@ -1307,7 +1392,10 @@ static void s_dispatch_game_state_snapshot() {
     serialiser.init(header.flags.total_packet_size);
 
     n_serialise_packet_header(&header, &serialiser);
+
+    // This is the packet for players that need correction
     n_serialise_game_state_snapshot(&packet, &serialiser);
+    n_serialise_chunk_modifications(packet.chunk_modifications, packet.modified_chunk_count, &serialiser);
 
     for (uint32_t i = 0; i < clients.data_count; ++i) {
         client_t *c = &clients[i];
