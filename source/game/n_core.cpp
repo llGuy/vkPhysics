@@ -494,7 +494,7 @@ static void s_revert_accumulated_modifications(
         }
     }
 
-    LOG_INFOV("(Sent to revert to %llu) Reverted from %llu to %llu\n", (unsigned long long)tick_until, (unsigned long long)old_tick, (unsigned long long)new_tick);
+    //LOG_INFOV("(Sent to revert to %llu) Reverted from %llu to %llu\n", (unsigned long long)tick_until, (unsigned long long)old_tick, (unsigned long long)new_tick);
 }
 
 static void s_correct_chunks(
@@ -502,6 +502,8 @@ static void s_correct_chunks(
     for (uint32_t cm_index = 0; cm_index < snapshot->modified_chunk_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &snapshot->chunk_modifications[cm_index];
         chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+
+        LOG_INFOV("Correcting chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
             //printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
@@ -514,6 +516,8 @@ static void s_process_game_state_snapshot(
     serialiser_t *serialiser,
     uint64_t received_tick,
     event_submissions_t *events) {
+    LOG_INFO("\n\n RECEIVED GAME STATE PACKET\n");
+
     packet_game_state_snapshot_t packet = {};
     n_deserialise_game_state_snapshot(&packet, serialiser);
     packet.chunk_modifications = n_deserialise_chunk_modifications(&packet.modified_chunk_count, serialiser);
@@ -527,7 +531,7 @@ static void s_process_game_state_snapshot(
 
             // TODO: Watch out for this:
             if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
-                LOG_INFOV("Did correction at tick %llu!\n", (unsigned long long)snapshot->tick);
+                //LOG_INFOV("Did correction at tick %llu!\n", (unsigned long long)snapshot->tick);
 
                 // Do correction!
                 p->ws_position = snapshot->ws_position;
@@ -537,6 +541,7 @@ static void s_process_game_state_snapshot(
 
                 // Revert voxel modifications up from tick that server processed
                 if (snapshot->terraformed) {
+                    LOG_INFOV("Reverted to %llu\n", (unsigned long long)snapshot->tick);
                     s_revert_accumulated_modifications(snapshot->tick);
                     s_correct_chunks(&packet);
                     // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
@@ -548,9 +553,9 @@ static void s_process_game_state_snapshot(
                 c->waiting_on_correction = 1;
             }
             else {
-#if 1
+#if 0
                 if (snapshot->terraformed) {
-                    LOG_INFOV("Syncing with tick: %llu\n", (unsigned long long)snapshot->terraform_tick);
+                    //LOG_INFOV("Syncing with tick: %llu\n", (unsigned long long)snapshot->terraform_tick);
                 }
 
                 // Mark all chunks / voxels that were modified from tick that server just processed, to current tick
@@ -583,7 +588,7 @@ static void s_process_game_state_snapshot(
                     // For all modifications that were after the snapshot tick that server is sending us
                     if (apm_ptr->tick >= snapshot->tick) {
                         // Merge modifications
-                        LOG_INFOV("Merging with tick %llu\n", apm_ptr->tick);
+                        //LOG_INFOV("Merging with tick %llu\n", apm_ptr->tick);
                         s_merge_chunk_modifications(
                             merged_recent_modifications.acc_predicted_modifications,
                             &merged_recent_modifications.acc_predicted_chunk_mod_count,
@@ -661,7 +666,7 @@ static void s_process_game_state_snapshot(
                 }
 
                 if (cti_ptr->modification_count) {
-                    LOG_INFO("Need to interpolate-----------------------------------------\n");
+                    //LOG_INFO("Need to interpolate-----------------------------------------\n");
                 }
 
                 s_unflag_modified_chunks(
@@ -680,15 +685,15 @@ static void s_process_game_state_snapshot(
                     while (current != NULL) {
                         if (current->acc_predicted_chunk_mod_count) {
                             printf("\n");
-                            LOG_INFOV("Cleared %i chunks\n", current->acc_predicted_chunk_mod_count);
+                            //LOG_INFOV("Cleared %i chunks\n", current->acc_predicted_chunk_mod_count);
                         }
                         
                         if (current->tick == snapshot->terraform_tick) {
-                            LOG_INFOV("(To tick %llu) Cleared %i, there are %i left\n", (unsigned long long)snapshot->terraform_tick, (int32_t)count, acc_predicted_modifications.head_tail_difference);
+                            //LOG_INFOV("(To tick %llu) Cleared %i, there are %i left\n", (unsigned long long)snapshot->terraform_tick, (int32_t)count, acc_predicted_modifications.head_tail_difference);
                             break;
                         }
                         else if (current->tick > snapshot->terraform_tick) {
-                            LOG_ERROR("ERRORRRORORORORRO\n");
+                            //LOG_ERROR("ERRORRRORORORORRO\n");
                         }
 
                         current = acc_predicted_modifications.get_next_item_tail();
@@ -696,7 +701,7 @@ static void s_process_game_state_snapshot(
                     }
 
                     if (current == NULL && count > 1) {
-                        LOG_INFO("Didn't clear any\n");
+                        //LOG_INFO("Didn't clear any\n");
                     }
                 }
             }
@@ -1285,21 +1290,21 @@ static bool s_check_if_client_has_to_correct_state(
     if (dposition.x >= precision || dposition.y >= precision || dposition.z >= precision) {
         incorrect_position = 1;
 
-        LOG_INFOV("Position is wrong: %s => %s\n", glm::to_string(c->ws_predicted_position).c_str(), glm::to_string(p->ws_position).c_str());
+        //LOG_INFOV("Position is wrong: %s => %s\n", glm::to_string(c->ws_predicted_position).c_str(), glm::to_string(p->ws_position).c_str());
     }
 
     bool incorrect_direction = 0;
     if (ddirection.x >= precision || ddirection.y >= precision || ddirection.z >= precision) {
         incorrect_direction = 1;
 
-        LOG_INFOV("Direction is wrong: %s => %s\n", glm::to_string(c->ws_predicted_view_direction).c_str(), glm::to_string(p->ws_view_direction).c_str());
+        //LOG_INFOV("Direction is wrong: %s => %s\n", glm::to_string(c->ws_predicted_view_direction).c_str(), glm::to_string(p->ws_view_direction).c_str());
     }
 
     bool incorrect_up = 0;
     if (dup.x >= precision || dup.y >= precision || dup.z >= precision) {
         incorrect_up = 1;
 
-        LOG_INFOV("Up is wrong: %s => %s\n", glm::to_string(c->ws_predicted_up_vector).c_str(), glm::to_string(p->ws_up_vector).c_str());
+        //LOG_INFOV("Up is wrong: %s => %s\n", glm::to_string(c->ws_predicted_up_vector).c_str(), glm::to_string(p->ws_up_vector).c_str());
     }
 
     return incorrect_position || incorrect_direction || incorrect_up;
@@ -1358,9 +1363,9 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
 }
 
 static void s_dispatch_game_state_snapshot() {
-#if 0
+#if 1
     putchar('\n');
-    LOG_INFO("--------------------- DISPATCH ---------------------\n");
+    LOG_INFO("\n--------------------- DISPATCH ---------------------\n");
 #endif
     
     packet_game_state_snapshot_t packet = {};
@@ -1396,7 +1401,7 @@ static void s_dispatch_game_state_snapshot() {
                     // If there is a correction of any kind to do, force client to correct everything
                     c->waiting_on_correction = 1;
 
-                    LOG_INFOV("Client needs to revert to tick %llu\n", (unsigned long long)c->tick_at_which_client_terraformed);
+                    LOG_INFOV("Client needs to revert to tick %llu\n", (unsigned long long)c->tick);
                     snapshot->client_needs_to_correct_state = has_to_correct_state || has_to_correct_terrain;
                     snapshot->server_waiting_for_correction = 0;
                 }
