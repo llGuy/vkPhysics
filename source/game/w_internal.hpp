@@ -129,6 +129,9 @@ void w_chunk_world_init(
     world_t *world,
     uint32_t loaded_radius);
 
+void w_tick_chunks(
+    float dt);
+
 void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,

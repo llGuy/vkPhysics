@@ -176,6 +176,7 @@ void handle_world_input() {
 void tick_world(
     event_submissions_t *events) {
     (void)events;
+    w_tick_chunks(logic_delta_time());
     w_tick_players(&world);
 }
 

@@ -393,9 +393,14 @@ static void s_send_commands_to_server() {
             }
 
 #if 0
-            if (modified_chunk_count) {
+            if (packet.modified_chunk_count) {
                 printf("\n");
-                LOG_INFOV("Modified %i chunks\n", modified_chunk_count);
+                LOG_INFOV("Modified %i chunks\n", packet.modified_chunk_count);
+                for (uint32_t i = 0; i < packet.modified_chunk_count; ++i) {
+                    for (uint32_t v = 0; v < packet.chunk_modifications[i].modified_voxels_count; ++v) {
+                        LOG_INFOV("- index %i | final value %i\n", (int32_t)packet.chunk_modifications[i].modifications[v].index, (int32_t)packet.chunk_modifications[i].modifications[v].final_value);
+                    }
+                }
             }
 #endif
             
@@ -499,7 +504,7 @@ static void s_correct_chunks(
         chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-            printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
+            //printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
             c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
         }
     }
@@ -543,9 +548,9 @@ static void s_process_game_state_snapshot(
                 c->waiting_on_correction = 1;
             }
             else {
-#if 0
+#if 1
                 if (snapshot->terraformed) {
-                    LOG_INFO("Need to check shit\n");
+                    LOG_INFOV("Syncing with tick: %llu\n", (unsigned long long)snapshot->terraform_tick);
                 }
 
                 // Mark all chunks / voxels that were modified from tick that server just processed, to current tick
@@ -561,7 +566,13 @@ static void s_process_game_state_snapshot(
                         voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
                         c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
                     }
+
+                    cm_ptr->modified_voxels_count = 0;
                 }
+
+                cti_ptr->modification_count = 0;
+
+                cti_ptr->elapsed = 0.0f;
 
                 // Fill merged recent modifications
                 s_acc_predicted_modification_init(&merged_recent_modifications, 0);
@@ -570,8 +581,9 @@ static void s_process_game_state_snapshot(
                 for (uint32_t apm = 0; apm < acc_predicted_modifications.head_tail_difference; ++apm) {
                     accumulated_predicted_modification_t *apm_ptr = &acc_predicted_modifications.buffer[apm_index];
                     // For all modifications that were after the snapshot tick that server is sending us
-                    if (apm_ptr->tick >= snapshot->terraform_tick) {
+                    if (apm_ptr->tick >= snapshot->tick) {
                         // Merge modifications
+                        LOG_INFOV("Merging with tick %llu\n", apm_ptr->tick);
                         s_merge_chunk_modifications(
                             merged_recent_modifications.acc_predicted_modifications,
                             &merged_recent_modifications.acc_predicted_chunk_mod_count,
@@ -591,21 +603,25 @@ static void s_process_game_state_snapshot(
                     chunk_t *c_ptr = get_chunk(ivector3_t(recv_cm_ptr->x, recv_cm_ptr->y, recv_cm_ptr->z));
 
                     if (c_ptr->flags.modified_marker) {
-                        chunk_modifications_t *dst_cm_ptr = &cti_ptr->modifications[cti_ptr->modification_count++];
+                        chunk_modifications_t *dst_cm_ptr = &cti_ptr->modifications[cti_ptr->modification_count];
 
                         uint32_t local_cm_index = c_ptr->flags.index_of_modification_struct;
                         chunk_modifications_t *local_cm_ptr = &merged_recent_modifications.acc_predicted_modifications[local_cm_index];
                         // Chunk was flagged as modified, need to check voxel per voxel if we need to push this to chunks to interpolate
                         s_fill_dummy_voxels(local_cm_ptr);
 
+                        uint32_t count = 0;
                         for (uint32_t recv_vm_index = 0; recv_vm_index < recv_cm_ptr->modified_voxels_count; ++recv_vm_index) {
                             voxel_modification_t *recv_vm_ptr = &recv_cm_ptr->modifications[recv_vm_index];
                             if (dummy_voxels[recv_vm_ptr->index] == SPECIAL_VALUE) {
-                                // Was not modified, can push this
-                                dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].index = recv_vm_ptr->index;
-                                // Initial value is current value of voxel
-                                dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].initial_value = c_ptr->voxels[recv_vm_ptr->index];
-                                dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count++].final_value = recv_vm_ptr->final_value;
+                                if (recv_vm_ptr->final_value != c_ptr->voxels[recv_vm_ptr->index]) {
+                                    // Was not modified, can push this
+                                    dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].index = recv_vm_ptr->index;
+                                    // Initial value is current value of voxel
+                                    dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].initial_value = c_ptr->voxels[recv_vm_ptr->index];
+                                    dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count++].final_value = recv_vm_ptr->final_value;
+                                    ++count;
+                                }
                             }
                             else {
                                 // Was modified, should not push
@@ -613,19 +629,39 @@ static void s_process_game_state_snapshot(
                             }
                         }
 
+                        if (count) {
+                            ++cti_ptr->modification_count;
+                        }
+
                         s_unfill_dummy_voxels(local_cm_ptr);
                     }
                     else {
                         // Simple push this to chunks to interpolate
-                        chunk_modifications_t *dst_cm_ptr = &cti_ptr->modifications[cti_ptr->modification_count++];
+                        chunk_modifications_t *dst_cm_ptr = &cti_ptr->modifications[cti_ptr->modification_count];
 
-                        dst_cm_ptr->x = recv_cm_ptr->x;
-                        dst_cm_ptr->y = recv_cm_ptr->y;
-                        dst_cm_ptr->z = recv_cm_ptr->z;
-                        dst_cm_ptr->modified_voxels_count = recv_cm_ptr->modified_voxels_count;
+                        if (recv_cm_ptr->modified_voxels_count) {
+                            ++cti_ptr->modification_count;
 
-                        memcpy(dst_cm_ptr->modifications, recv_cm_ptr->modifications, sizeof(voxel_modification_t) * dst_cm_ptr->modified_voxels_count);
+                            dst_cm_ptr->x = recv_cm_ptr->x;
+                            dst_cm_ptr->y = recv_cm_ptr->y;
+                            dst_cm_ptr->z = recv_cm_ptr->z;
+                            dst_cm_ptr->modified_voxels_count = recv_cm_ptr->modified_voxels_count;
+
+                            //memcpy(dst_cm_ptr->modifications, recv_cm_ptr->modifications, sizeof(voxel_modification_t) * dst_cm_ptr->modified_voxels_count);
+                            // Need to change initial value to current voxel values
+                            for (uint32_t vm_index = 0; vm_index < dst_cm_ptr->modified_voxels_count; ++vm_index) {
+                                voxel_modification_t *dst_vm_ptr = &dst_cm_ptr->modifications[vm_index];
+                                voxel_modification_t *recv_vm_ptr = &recv_cm_ptr->modifications[vm_index];
+                                dst_vm_ptr->index = recv_vm_ptr->index;
+                                dst_vm_ptr->initial_value = c_ptr->voxels[recv_vm_ptr->index];
+                                dst_vm_ptr->final_value = recv_vm_ptr->final_value;
+                            }
+                        }
                     }
+                }
+
+                if (cti_ptr->modification_count) {
+                    LOG_INFO("Need to interpolate-----------------------------------------\n");
                 }
 
                 s_unflag_modified_chunks(
@@ -642,6 +678,11 @@ static void s_process_game_state_snapshot(
 
                     // Pop all modifications until last tick that server processed
                     while (current != NULL) {
+                        if (current->acc_predicted_chunk_mod_count) {
+                            printf("\n");
+                            LOG_INFOV("Cleared %i chunks\n", current->acc_predicted_chunk_mod_count);
+                        }
+                        
                         if (current->tick == snapshot->terraform_tick) {
                             LOG_INFOV("(To tick %llu) Cleared %i, there are %i left\n", (unsigned long long)snapshot->terraform_tick, (int32_t)count, acc_predicted_modifications.head_tail_difference);
                             break;
@@ -1284,7 +1325,7 @@ static bool s_check_if_client_has_to_correct_terrain(
 
             // Just one mistake can completely mess stuff up between the client and server
             if (actual_value != predicted_value) {
-                printf("(%i %i %i) Need to set (%i) %i -> %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
+                //printf("(%i %i %i) Need to set (%i) %i -> %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
 
                 chunk_has_mistake = 1;
             }

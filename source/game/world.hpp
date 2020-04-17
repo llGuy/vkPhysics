@@ -208,6 +208,7 @@ void set_chunk_history_tracker_value(
     bool value);
 
 struct chunks_to_interpolate_t {
+    float elapsed;
     uint32_t max_modified;
     uint32_t modification_count;
     struct chunk_modifications_t *modifications;

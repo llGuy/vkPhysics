@@ -175,6 +175,8 @@ void push_player_actions(
         actions);
 }
 
+#define TERRAFORMING_RADIUS 3.0f
+
 static void s_execute_player_triggers(
     player_t *player,
     player_actions_t *player_actions,
@@ -185,7 +187,7 @@ static void s_execute_player_triggers(
             player->ws_position,
             player->ws_view_direction,
             10.0f,
-            3.0f,
+            TERRAFORMING_RADIUS,
             TERRAFORMING_SPEED,
             player_actions->accumulated_dt,
             world);
@@ -196,7 +198,7 @@ static void s_execute_player_triggers(
             player->ws_position,
             player->ws_view_direction,
             10.0f,
-            3.0f,
+            TERRAFORMING_RADIUS,
             TERRAFORMING_SPEED,
             player_actions->accumulated_dt,
             world);
