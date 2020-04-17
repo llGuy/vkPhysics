@@ -474,6 +474,7 @@ static void s_revert_accumulated_modifications(
         if (current->tick >= tick_until) {
             // Revert these changes
             s_revert_history_instance(current);
+            LOG_INFOV("- Reverted to tick %llu\n", (unsigned long long)current->tick);
 
             ++removed_count;
 
@@ -491,6 +492,22 @@ static void s_revert_accumulated_modifications(
             current = NULL;
             LOG_INFO("BULLLLLLLLLLLLLLSHIIIIIIIIIIIIIIITTTTTTTT ERRRRRRRRROOOOOOORRRRRRRR\n");
             break;
+        }
+    }
+
+    current = acc_predicted_modifications.get_next_item_head();
+    if (current) {
+        for (uint32_t cm_index = 0; cm_index < current->acc_predicted_chunk_mod_count; ++cm_index) {
+            chunk_modifications_t *cm_ptr = &current->acc_predicted_modifications[cm_index];
+            chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+
+            for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
+                voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+                // Set all modified to initial values
+                c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+            }
+
+            c_ptr->flags.has_to_update_vertices = 1;
         }
     }
 
@@ -541,7 +558,7 @@ static void s_process_game_state_snapshot(
 
                 // Revert voxel modifications up from tick that server processed
                 if (snapshot->terraformed) {
-                    LOG_INFOV("Reverted to %llu\n", (unsigned long long)snapshot->tick);
+                    LOG_INFOV("Reverting to %llu...\n", (unsigned long long)snapshot->tick);
                     s_revert_accumulated_modifications(snapshot->tick);
                     s_correct_chunks(&packet);
                     // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
@@ -1265,7 +1282,7 @@ static void s_process_client_commands(
 
             // Process terraforming stuff
             if (commands.modified_chunk_count) {
-                LOG_INFOV("(Tick %llu) Received %i chunk modifications\n", (unsigned long long)c->tick, commands.modified_chunk_count);
+                LOG_INFOV("(Tick %llu) Received %i chunk modifications\n", (unsigned long long)tick, commands.modified_chunk_count);
                 c->did_terrain_mod_previous_tick = 1;
                 c->tick_at_which_client_terraformed = tick;
                 s_handle_chunk_modifications(&commands, c);
