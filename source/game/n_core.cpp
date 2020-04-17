@@ -537,7 +537,7 @@ static void s_process_game_state_snapshot(
 
                 // Revert voxel modifications up from tick that server processed
                 if (snapshot->terraformed) {
-                    s_revert_accumulated_modifications(snapshot->terraform_tick);
+                    s_revert_accumulated_modifications(snapshot->tick);
                     s_correct_chunks(&packet);
                     // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
                 }
