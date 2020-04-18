@@ -1316,18 +1316,21 @@ static void s_process_client_commands(
                 c->tick_at_which_client_terraformed = tick;
 
                 if (commands.modified_chunk_count) {
-#if NET_DEBUG_VOXEL_INTERPOLATION
-                    printf("\n");
-                    LOG_INFOV("Predicted %i chunk modifications at tick %llu\n", commands.modified_chunk_count, (unsigned long long)tick);
+#if 1
+                    //printf("\n");
+                    //LOG_INFOV("Predicted %i chunk modifications at tick %llu\n", commands.modified_chunk_count, (unsigned long long)tick);
                     for (uint32_t i = 0; i < commands.modified_chunk_count; ++i) {
-                        LOG_INFOV("In chunk (%i %i %i): \n", commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z);
+                        //LOG_INFOV("In chunk (%i %i %i): \n", commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z);
                         chunk_t *c_ptr = get_chunk(ivector3_t(commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z));
                         for (uint32_t v = 0; v < commands.chunk_modifications[i].modified_voxels_count; ++v) {
                             uint8_t initial_value = c_ptr->voxels[commands.chunk_modifications[i].modifications[v].index];
                             if (c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index] != SPECIAL_VALUE) {
                                 initial_value = c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index];
                             }
-                            LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
+                            if (initial_value != commands.chunk_modifications[i].modifications[v].initial_value) {
+                                LOG_INFOV("INITIAL_VALUES ARE NOT THE SAME: %i != %i\n", (int32_t)initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].initial_value);
+                            }
+                            //LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
                         }
                     }
 #endif

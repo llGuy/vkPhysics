@@ -182,6 +182,7 @@ void n_serialise_player_commands(
         for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
             voxel_modification_t *v_ptr =  &c->modifications[v];
             serialiser->serialise_uint16(v_ptr->index);
+            serialiser->serialise_uint8(v_ptr->initial_value);
             serialiser->serialise_uint8(v_ptr->final_value);
         }
     }
@@ -220,6 +221,7 @@ void n_deserialise_player_commands(
         for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
             voxel_modification_t *v_ptr =  &c->modifications[v];
             v_ptr->index = serialiser->deserialise_uint16();
+            v_ptr->initial_value = serialiser->deserialise_uint8();
             v_ptr->final_value = serialiser->deserialise_uint8();
         }
     }
