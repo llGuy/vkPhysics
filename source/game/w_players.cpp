@@ -182,6 +182,8 @@ static void s_execute_player_triggers(
     player_actions_t *player_actions,
     world_t *world) {
     if (player_actions->trigger_left) {
+        LOG_INFOV("(Tick %llu) Terraforming (adt %f) p: %s d:%s\n", (unsigned long long)player_actions->tick, player_actions->accumulated_dt, glm::to_string(player->ws_position).c_str(), glm::to_string(player->ws_view_direction).c_str());
+
         w_terraform(
             TT_DESTROY,
             player->ws_position,
