@@ -4,7 +4,7 @@
 #include <common/event.hpp>
 #include <common/socket.hpp>
 
-#define NET_DEBUG 0
+#define NET_DEBUG 1
 
 void net_init(
     event_submissions_t *events);
