@@ -1296,7 +1296,11 @@ static void s_process_client_commands(
                         LOG_INFOV("In chunk (%i %i %i): \n", commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z);
                         chunk_t *c_ptr = get_chunk(ivector3_t(commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z));
                         for (uint32_t v = 0; v < commands.chunk_modifications[i].modified_voxels_count; ++v) {
-                            LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, c_ptr->voxels[commands.chunk_modifications[i].modifications[v].index], (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
+                            uint8_t initial_value = c_ptr->voxels[commands.chunk_modifications[i].modifications[v].index];
+                            if (c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index] != SPECIAL_VALUE) {
+                                initial_value = c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index];
+                            }
+                            LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
                         }
                     }
                 }
