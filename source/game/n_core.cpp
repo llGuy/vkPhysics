@@ -406,7 +406,7 @@ static void s_send_commands_to_server() {
 #if 1
             if (packet.modified_chunk_count) {
                 printf("\n");
-                LOG_INFOV("Modified %i chunks\n", packet.modified_chunk_count);
+                LOG_INFOV("(Tick %llu) Modified %i chunks\n", (unsigned long long)get_current_tick(), packet.modified_chunk_count);
                 for (uint32_t i = 0; i < packet.modified_chunk_count; ++i) {
                     LOG_INFOV("In chunk (%i %i %i): \n", packet.chunk_modifications[i].x, packet.chunk_modifications[i].y, packet.chunk_modifications[i].z);
                     for (uint32_t v = 0; v < packet.chunk_modifications[i].modified_voxels_count; ++v) {
@@ -1314,7 +1314,7 @@ static void s_process_client_commands(
                 c->tick_at_which_client_terraformed = tick;
 
                 if (commands.modified_chunk_count) {
-#if 0
+#if 1
                     printf("\n");
                     LOG_INFOV("Predicted %i chunk modifications at tick %llu\n", commands.modified_chunk_count, (unsigned long long)tick);
                     for (uint32_t i = 0; i < commands.modified_chunk_count; ++i) {

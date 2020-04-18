@@ -32,6 +32,11 @@ static void s_start_loop() {
     }
 }
 
+static void foo(
+    int32_t something) {
+     
+}
+
 int32_t main(
     int32_t argc,
     char *argv[]) {

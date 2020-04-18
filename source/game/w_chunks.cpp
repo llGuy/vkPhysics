@@ -402,7 +402,7 @@ void w_tick_chunks(
     chunks_to_interpolate.elapsed += dt;
     float progression = chunks_to_interpolate.elapsed / server_snapshot_interval();
 
-    if (progression <= 1.0f) {
+    if (progression >= 1.0f) {
         progression = 1.0f;
     }
     
