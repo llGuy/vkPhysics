@@ -403,7 +403,7 @@ static void s_send_commands_to_server() {
 #endif
             }
             
-#if 1
+#if NET_DEBUG_VOXEL_INTERPOLATION
             if (packet.modified_chunk_count) {
                 printf("\n");
                 LOG_INFOV("(Tick %llu) Modified %i chunks\n", (unsigned long long)get_current_tick(), packet.modified_chunk_count);
@@ -607,13 +607,13 @@ static void s_process_game_state_snapshot(
                     chunk_modifications_t *cm_ptr = &cti_ptr->modifications[i];
 
                     chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
-                    printf("\nSetting interpolated chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
+                    //printf("\nSetting interpolated chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
 
                     for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
                         voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
                         c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
 
-                        printf("Setting interpolated voxel (%i) to %i\n", vm_ptr->index, (int32_t)vm_ptr->final_value);
+                        //printf("Setting interpolated voxel (%i) to %i\n", vm_ptr->index, (int32_t)vm_ptr->final_value);
                     }
 
                     cm_ptr->modified_voxels_count = 0;
@@ -804,12 +804,14 @@ static void s_process_chunk_voxels(
 void tick_client(
     event_submissions_t *events) {
     raw_input_t *input = get_raw_input();
+#if NET_DEBUG_LAG
     if (input->buttons[BT_F].instant) {
         simulate_lag = !simulate_lag;
 
         if (simulate_lag) {LOG_INFO("Simulating lag\n");}
         else {LOG_INFO("Not simulating lag\n");}
     }
+#endif
     
     if (client_check_incoming_packets) {
         static float elapsed = 0.0f;

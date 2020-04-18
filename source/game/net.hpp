@@ -5,6 +5,7 @@
 #include <common/socket.hpp>
 
 #define NET_DEBUG 0
+#define NET_DEBUG_LAG 0
 #define NET_DEBUG_VOXEL_INTERPOLATION 0
 
 void net_init(
