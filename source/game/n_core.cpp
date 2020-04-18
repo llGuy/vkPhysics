@@ -489,7 +489,7 @@ static void s_revert_accumulated_modifications(
         if (current->tick >= tick_until) {
             // Revert these changes
             s_revert_history_instance(current);
-            LOG_INFOV("- Reverted to tick %llu\n", (unsigned long long)current->tick);
+            //LOG_INFOV("- Reverted to tick %llu\n", (unsigned long long)current->tick);
 
             ++removed_count;
 
@@ -535,7 +535,7 @@ static void s_correct_chunks(
         chunk_modifications_t *cm_ptr = &snapshot->chunk_modifications[cm_index];
         chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
-        LOG_INFOV("Correcting chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
+        //LOG_INFOV("Correcting chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
 #if 0
@@ -588,7 +588,7 @@ static void s_process_game_state_snapshot(
                 }
                 
                 get_current_tick() = snapshot->tick;
-                LOG_INFOV("Set tick to %llu\n", get_current_tick());
+                //LOG_INFOV("Set tick to %llu\n", get_current_tick());
 
                 // Basically says that the client just did a correction - set correction flag on next packet sent to server
                 c->waiting_on_correction = 1;
@@ -609,13 +609,13 @@ static void s_process_game_state_snapshot(
                     chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
                     //printf("\nSetting interpolated chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
 
-                    printf("\n SETTING INTERPOLATED CHUNK VALUES (%i %i %i): \n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
+                    //printf("\n SETTING INTERPOLATED CHUNK VALUES (%i %i %i): \n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
 
                     for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
                         voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
                         c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
 
-                        printf("Voxel %i: %i | ", vm_ptr->index, (int32_t)vm_ptr->final_value);
+                        //printf("Voxel %i: %i | ", vm_ptr->index, (int32_t)vm_ptr->final_value);
 
                         //printf("Setting interpolated voxel (%i) to %i\n", vm_ptr->index, (int32_t)vm_ptr->final_value);
                     }
@@ -803,7 +803,7 @@ static void s_process_chunk_voxels(
         }
     }
 
-    LOG_INFOV("Received %i chunks\n", loaded_chunk_count);
+    //LOG_INFOV("Received %i chunks\n", loaded_chunk_count);
 }
 
 void tick_client(
