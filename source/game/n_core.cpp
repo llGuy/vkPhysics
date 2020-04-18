@@ -1391,7 +1391,9 @@ static bool s_check_if_client_has_to_correct_terrain(
 
             // Just one mistake can completely mess stuff up between the client and server
             if (actual_value != predicted_value) {
+#if NET_DEBUG
                 printf("(%i %i %i) Need to set (%i) %i -> %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
+#endif
 
                 chunk_has_mistake = 1;
             }
@@ -1424,7 +1426,7 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
 }
 
 static void s_dispatch_game_state_snapshot() {
-#if 1
+#if NET_DEBUG
     printf("\n\n GAME STATE DISPATCH\n");
 #endif
     
