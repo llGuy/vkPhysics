@@ -403,7 +403,7 @@ static void s_send_commands_to_server() {
 #endif
             }
             
-#if 0
+#if 1
             if (packet.modified_chunk_count) {
                 printf("\n");
                 LOG_INFOV("Modified %i chunks\n", packet.modified_chunk_count);
@@ -460,7 +460,7 @@ static void s_revert_history_instance(
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
             // Set all modified to initial values
-#if NET_DEBUG
+#if 0
             LOG_INFOV("(%i %i %i) Set voxel at index %i to %i\n", cm_ptr->x, cm_ptr->y, cm_ptr->z, vm_ptr->index, (int32_t)vm_ptr->initial_value);
 #endif
             c_ptr->voxels[vm_ptr->index] = vm_ptr->initial_value;
@@ -538,7 +538,7 @@ static void s_correct_chunks(
         LOG_INFOV("Correcting chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-#if NET_DEBUG
+#if 0
             printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
 #endif
             c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
@@ -607,10 +607,13 @@ static void s_process_game_state_snapshot(
                     chunk_modifications_t *cm_ptr = &cti_ptr->modifications[i];
 
                     chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+                    printf("\nSetting interpolated chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
 
                     for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
                         voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
                         c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+
+                        printf("Setting interpolated voxel (%i) to %i\n", vm_ptr->index, (int32_t)vm_ptr->final_value);
                     }
 
                     cm_ptr->modified_voxels_count = 0;
@@ -1311,7 +1314,7 @@ static void s_process_client_commands(
                 c->tick_at_which_client_terraformed = tick;
 
                 if (commands.modified_chunk_count) {
-#if NET_DEBUG
+#if 0
                     printf("\n");
                     LOG_INFOV("Predicted %i chunk modifications at tick %llu\n", commands.modified_chunk_count, (unsigned long long)tick);
                     for (uint32_t i = 0; i < commands.modified_chunk_count; ++i) {
@@ -1390,7 +1393,7 @@ static bool s_check_if_client_has_to_correct_terrain(
 
             // Just one mistake can completely mess stuff up between the client and server
             if (actual_value != predicted_value) {
-#if NET_DEBUG
+#if 0
                 printf("(%i %i %i) Need to set (%i) %i -> %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
 #endif
 
@@ -1425,7 +1428,7 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
 }
 
 static void s_dispatch_game_state_snapshot() {
-#if NET_DEBUG
+#if NET_DEBUG || NET_DEBUG_VOXEL_INTERPOLATION
     printf("\n\n GAME STATE DISPATCH\n");
 #endif
     
@@ -1462,7 +1465,7 @@ static void s_dispatch_game_state_snapshot() {
                     // If there is a correction of any kind to do, force client to correct everything
                     c->waiting_on_correction = 1;
 
-                    LOG_INFOV("Client needs to revert to tick %llu\n", (unsigned long long)c->tick);
+                    LOG_INFOV("Client needs to revert to tick %llu\n\n", (unsigned long long)c->tick);
                     snapshot->client_needs_to_correct_state = has_to_correct_state || has_to_correct_terrain;
                     snapshot->server_waiting_for_correction = 0;
                     p->cached_player_action_count = 0;
@@ -1488,6 +1491,16 @@ static void s_dispatch_game_state_snapshot() {
             ++packet.player_data_count;
         }
     }
+
+#if 0
+    LOG_INFOV("Modified %i chunks\n", packet.modified_chunk_count);
+    for (uint32_t i = 0; i < packet.modified_chunk_count; ++i) {
+        LOG_INFOV("In chunk (%i %i %i): \n", packet.chunk_modifications[i].x, packet.chunk_modifications[i].y, packet.chunk_modifications[i].z);
+        for (uint32_t v = 0; v < packet.chunk_modifications[i].modified_voxels_count; ++v) {
+            LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)packet.chunk_modifications[i].modifications[v].index, (int32_t)packet.chunk_modifications[i].modifications[v].initial_value, (int32_t)packet.chunk_modifications[i].modifications[v].final_value);
+        }
+    }
+#endif
 
     packet_header_t header = {};
     header.current_tick = get_current_tick();
