@@ -183,7 +183,7 @@ void push_player_actions(
         override_adt);
 }
 
-#define TERRAFORMING_RADIUS 3.0f
+#define TERRAFORMING_RADIUS 2.0f
 
 static void s_execute_player_triggers(
     player_t *player,

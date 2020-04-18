@@ -609,9 +609,13 @@ static void s_process_game_state_snapshot(
                     chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
                     //printf("\nSetting interpolated chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
 
+                    printf("\n SETTING INTERPOLATED CHUNK VALUES (%i %i %i): \n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
+
                     for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
                         voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
                         c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+
+                        printf("Voxel %i: %i | ", vm_ptr->index, (int32_t)vm_ptr->final_value);
 
                         //printf("Setting interpolated voxel (%i) to %i\n", vm_ptr->index, (int32_t)vm_ptr->final_value);
                     }
@@ -673,6 +677,7 @@ static void s_process_game_state_snapshot(
                                 }
                             }
                             else {
+                                //LOG_INFO("There is an error\n");
                                 // Was modified, should not push
                                 // TODO: Think about how to resolve these sort of conflicts
                             }
@@ -1298,6 +1303,8 @@ static void s_process_client_commands(
             if (c->should_set_tick) {
                 c->tick = tick;
                 c->should_set_tick = 0;
+
+                LOG_INFOV("Received Tick %llu\n", (unsigned long long)c->tick);
             }
 
             for (uint32_t i = 0; i < commands.command_count; ++i) {
@@ -1328,7 +1335,7 @@ static void s_process_client_commands(
                                 //initial_value = c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index];
                             }
                             if (initial_value != commands.chunk_modifications[i].modifications[v].initial_value) {
-                                LOG_INFOV("INITIAL_VALUES ARE NOT THE SAME: %i != %i\n", (int32_t)initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].initial_value);
+                                LOG_INFOV("(Voxel %i) INITIAL VALUES ARE NOT THE SAME: %i != %i\n", commands.chunk_modifications[i].modifications[v].index, (int32_t)initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].initial_value);
                             }
                             //LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
                         }
