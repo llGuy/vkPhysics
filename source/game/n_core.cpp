@@ -1519,7 +1519,7 @@ static void s_dispatch_game_state_snapshot() {
 
     reset_modification_tracker();
 
-    putchar('\n');
+    //putchar('\n');
 }
 
 void tick_server(
