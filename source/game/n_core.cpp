@@ -1304,7 +1304,7 @@ static void s_process_client_commands(
                 c->tick = tick;
                 c->should_set_tick = 0;
 
-                LOG_INFOV("Received Tick %llu\n", (unsigned long long)c->tick);
+                //LOG_INFOV("Received Tick %llu\n", (unsigned long long)c->tick);
             }
 
             for (uint32_t i = 0; i < commands.command_count; ++i) {
