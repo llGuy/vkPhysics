@@ -375,6 +375,7 @@ static void s_send_commands_to_server() {
                 packet.actions[i].dt = p->cached_player_actions[i].dt;
                 packet.actions[i].accumulated_dt = p->cached_player_actions[i].accumulated_dt;
                 packet.actions[i].tick = p->cached_player_actions[i].tick;
+                LOG_INFOV("Accumulated dt: %f\n", packet.actions[i].accumulated_dt);
             }
 
             packet.ws_final_position = p->ws_position;
@@ -1276,6 +1277,7 @@ static void s_process_client_commands(
             }
 
             for (uint32_t i = 0; i < commands.command_count; ++i) {
+                LOG_INFOV("Accumulated dt: %f\n", commands.actions[i].accumulated_dt);
                 push_player_actions(p, &commands.actions[i]);
             }
 
