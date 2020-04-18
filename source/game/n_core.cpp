@@ -538,7 +538,9 @@ static void s_correct_chunks(
         LOG_INFOV("Correcting chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+#if NET_DEBUG
             printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
+#endif
             c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
         }
     }
@@ -548,7 +550,9 @@ static void s_process_game_state_snapshot(
     serialiser_t *serialiser,
     uint64_t received_tick,
     event_submissions_t *events) {
+#if NET_DEBUG
     LOG_INFO("\n\n RECEIVED GAME STATE PACKET\n");
+#endif
 
     packet_game_state_snapshot_t packet = {};
     n_deserialise_game_state_snapshot(&packet, serialiser);
@@ -575,7 +579,9 @@ static void s_process_game_state_snapshot(
 
                 // Revert voxel modifications up from tick that server processed
                 if (snapshot->terraformed) {
+#if NET_DEBUG
                     LOG_INFOV("Reverting to %llu...\n", (unsigned long long)snapshot->tick);
+#endif
                     s_revert_accumulated_modifications(snapshot->tick);
                     s_correct_chunks(&packet);
                     // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
@@ -1306,6 +1312,7 @@ static void s_process_client_commands(
                 c->tick_at_which_client_terraformed = tick;
 
                 if (commands.modified_chunk_count) {
+#if NET_DEBUG
                     printf("\n");
                     LOG_INFOV("Predicted %i chunk modifications at tick %llu\n", commands.modified_chunk_count, (unsigned long long)tick);
                     for (uint32_t i = 0; i < commands.modified_chunk_count; ++i) {
@@ -1319,6 +1326,7 @@ static void s_process_client_commands(
                             LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
                         }
                     }
+#endif
                 }
                 
                 s_handle_chunk_modifications(&commands, c);
