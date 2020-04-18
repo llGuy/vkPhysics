@@ -11,7 +11,8 @@
 
 void w_push_player_actions(
     player_t *player,
-    player_actions_t *action);
+    player_actions_t *action,
+    bool override_adt);
 
 void w_players_data_init();
 

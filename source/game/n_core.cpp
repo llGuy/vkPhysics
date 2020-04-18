@@ -1298,7 +1298,7 @@ static void s_process_client_commands(
 
             for (uint32_t i = 0; i < commands.command_count; ++i) {
                 //LOG_INFOV("Accumulated dt: %f\n", commands.actions[i].accumulated_dt);
-                push_player_actions(p, &commands.actions[i]);
+                push_player_actions(p, &commands.actions[i], 1);
             }
 
             c->ws_predicted_position = commands.ws_final_position;

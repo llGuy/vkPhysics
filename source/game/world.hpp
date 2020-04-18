@@ -136,7 +136,8 @@ player_t *get_player(
 // Just calls w_push_player_actions()
 void push_player_actions(
     player_t *player,
-    player_actions_t *actions);
+    player_actions_t *actions,
+    bool override_adt);
 
 // Push constant
 // chunk_render_data_t may become a different structure in the future.

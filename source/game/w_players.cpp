@@ -133,33 +133,39 @@ void w_handle_input(
     
     player_t *local_player = w_get_local_player(world);
     if (local_player) {
-        w_push_player_actions(local_player, &actions);
+        w_push_player_actions(local_player, &actions, 0);
     }
     else {
-        w_push_player_actions(world->spectator, &actions);
+        w_push_player_actions(world->spectator, &actions, 0);
     }
 }
 
-#define TERRAFORMING_SPEED 600.0f
+#define TERRAFORMING_SPEED 300.0f
 
 void w_push_player_actions(
     player_t *player,
-    player_actions_t *action) {
+    player_actions_t *action,
+    bool override_adt) {
     if (player->player_action_count < MAX_PLAYER_ACTIONS) {
-        player->accumulated_dt += action->dt;
-
-        float max_change = 1.0f * player->accumulated_dt * TERRAFORMING_SPEED;
-        int32_t max_change_i = (int32_t)max_change;
-
-        if (max_change_i < 2) {
-            action->accumulated_dt = 0.0f;
+        if (override_adt) {
+            player->player_actions[player->player_action_count++] = *action;
         }
         else {
-            action->accumulated_dt = player->accumulated_dt;
-            player->accumulated_dt = 0.0f;
-        }
+            player->accumulated_dt += action->dt;
 
-        player->player_actions[player->player_action_count++] = *action;
+            float max_change = 1.0f * player->accumulated_dt * TERRAFORMING_SPEED;
+            int32_t max_change_i = (int32_t)max_change;
+
+            if (max_change_i < 2) {
+                action->accumulated_dt = 0.0f;
+            }
+            else {
+                action->accumulated_dt = player->accumulated_dt;
+                player->accumulated_dt = 0.0f;
+            }
+
+            player->player_actions[player->player_action_count++] = *action;
+        }
     }
     else {
         // ...
@@ -169,13 +175,15 @@ void w_push_player_actions(
 
 void push_player_actions(
     player_t *player,
-    player_actions_t *actions) {
+    player_actions_t *actions,
+    bool override_adt) {
     w_push_player_actions(
         player,
-        actions);
+        actions,
+        override_adt);
 }
 
-#define TERRAFORMING_RADIUS 1.0f
+#define TERRAFORMING_RADIUS 3.0f
 
 static void s_execute_player_triggers(
     player_t *player,
