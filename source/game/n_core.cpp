@@ -1316,7 +1316,7 @@ static void s_process_client_commands(
                 c->tick_at_which_client_terraformed = tick;
 
                 if (commands.modified_chunk_count) {
-#if 1
+#if NET_DEBUG_VOXEL_INTERPOLATION
                     printf("\n");
                     LOG_INFOV("Predicted %i chunk modifications at tick %llu\n", commands.modified_chunk_count, (unsigned long long)tick);
                     for (uint32_t i = 0; i < commands.modified_chunk_count; ++i) {
