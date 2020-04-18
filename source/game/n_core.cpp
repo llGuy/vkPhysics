@@ -1443,6 +1443,8 @@ static void s_dispatch_game_state_snapshot() {
                     LOG_INFOV("Client needs to revert to tick %llu\n", (unsigned long long)c->tick);
                     snapshot->client_needs_to_correct_state = has_to_correct_state || has_to_correct_terrain;
                     snapshot->server_waiting_for_correction = 0;
+                    p->cached_player_action_count = 0;
+                    p->player_action_count = 0;
                 }
             }
 
