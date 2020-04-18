@@ -594,7 +594,7 @@ static void s_process_game_state_snapshot(
                 c->waiting_on_correction = 1;
             }
             else {
-#if 0
+#if 1
                 if (snapshot->terraformed) {
                     //LOG_INFOV("Syncing with tick: %llu\n", (unsigned long long)snapshot->terraform_tick);
                 }
@@ -725,7 +725,6 @@ static void s_process_game_state_snapshot(
                     // Pop all modifications until last tick that server processed
                     while (current != NULL) {
                         if (current->acc_predicted_chunk_mod_count) {
-                            printf("\n");
                             //LOG_INFOV("Cleared %i chunks\n", current->acc_predicted_chunk_mod_count);
                         }
                         
