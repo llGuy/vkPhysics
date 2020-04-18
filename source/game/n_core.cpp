@@ -393,7 +393,17 @@ static void s_send_commands_to_server() {
                 packet.chunk_modifications = NULL;
             }
 
-#if 1
+            if (packet.modified_chunk_count) {
+#if NET_DEBUG
+                printf("\n SENDING COMMANDS: ");
+                for (uint32_t i = 0; i < packet.command_count; ++i) {
+                    printf("(Tick %llu | adt %f) ", packet.actions[i].tick, packet.actions[i].accumulated_dt);
+                }
+                printf("\n");
+#endif
+            }
+            
+#if 0
             if (packet.modified_chunk_count) {
                 printf("\n");
                 LOG_INFOV("Modified %i chunks\n", packet.modified_chunk_count);
@@ -450,7 +460,9 @@ static void s_revert_history_instance(
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
             // Set all modified to initial values
+#if NET_DEBUG
             LOG_INFOV("(%i %i %i) Set voxel at index %i to %i\n", cm_ptr->x, cm_ptr->y, cm_ptr->z, vm_ptr->index, (int32_t)vm_ptr->initial_value);
+#endif
             c_ptr->voxels[vm_ptr->index] = vm_ptr->initial_value;
         }
 
@@ -558,6 +570,7 @@ static void s_process_game_state_snapshot(
                 p->ws_view_direction = snapshot->ws_view_direction;
                 p->ws_up_vector = snapshot->ws_up_vector;
                 p->cached_player_action_count = 0;
+                p->player_action_count = 0;
                 p->accumulated_dt = 0.0f;
 
                 // Revert voxel modifications up from tick that server processed
@@ -569,6 +582,7 @@ static void s_process_game_state_snapshot(
                 }
                 
                 get_current_tick() = snapshot->tick;
+                LOG_INFOV("Set tick to %llu\n", get_current_tick());
 
                 // Basically says that the client just did a correction - set correction flag on next packet sent to server
                 c->waiting_on_correction = 1;
@@ -1403,8 +1417,7 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
 
 static void s_dispatch_game_state_snapshot() {
 #if 1
-    putchar('\n');
-    LOG_INFO("\n--------------------- DISPATCH ---------------------\n");
+    printf("\n\n GAME STATE DISPATCH\n");
 #endif
     
     packet_game_state_snapshot_t packet = {};
