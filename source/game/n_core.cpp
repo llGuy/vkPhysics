@@ -1325,7 +1325,7 @@ static void s_process_client_commands(
                         for (uint32_t v = 0; v < commands.chunk_modifications[i].modified_voxels_count; ++v) {
                             uint8_t initial_value = c_ptr->voxels[commands.chunk_modifications[i].modifications[v].index];
                             if (c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index] != SPECIAL_VALUE) {
-                                initial_value = c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index];
+                                //initial_value = c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index];
                             }
                             if (initial_value != commands.chunk_modifications[i].modifications[v].initial_value) {
                                 LOG_INFOV("INITIAL_VALUES ARE NOT THE SAME: %i != %i\n", (int32_t)initial_value, (int32_t)commands.chunk_modifications[i].modifications[v].initial_value);
