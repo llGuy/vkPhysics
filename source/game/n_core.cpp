@@ -399,7 +399,7 @@ static void s_send_commands_to_server() {
                 for (uint32_t i = 0; i < packet.modified_chunk_count; ++i) {
                     LOG_INFOV("In chunk (%i %i %i): \n", packet.chunk_modifications[i].x, packet.chunk_modifications[i].y, packet.chunk_modifications[i].z);
                     for (uint32_t v = 0; v < packet.chunk_modifications[i].modified_voxels_count; ++v) {
-                        LOG_INFOV("- index %i | final value %i\n", (int32_t)packet.chunk_modifications[i].modifications[v].index, (int32_t)packet.chunk_modifications[i].modifications[v].final_value);
+                        LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)packet.chunk_modifications[i].modifications[v].index, (int32_t)packet.chunk_modifications[i].modifications[v].initial_value, (int32_t)packet.chunk_modifications[i].modifications[v].final_value);
                     }
                 }
             }
@@ -557,6 +557,7 @@ static void s_process_game_state_snapshot(
                 p->ws_view_direction = snapshot->ws_view_direction;
                 p->ws_up_vector = snapshot->ws_up_vector;
                 p->cached_player_action_count = 0;
+                p->accumulated_dt = 0.0f;
 
                 // Revert voxel modifications up from tick that server processed
                 if (snapshot->terraformed) {
@@ -1293,8 +1294,9 @@ static void s_process_client_commands(
                     LOG_INFOV("Predicted %i chunk modifications at tick %llu\n", commands.modified_chunk_count, (unsigned long long)tick);
                     for (uint32_t i = 0; i < commands.modified_chunk_count; ++i) {
                         LOG_INFOV("In chunk (%i %i %i): \n", commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z);
+                        chunk_t *c_ptr = get_chunk(ivector3_t(commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z));
                         for (uint32_t v = 0; v < commands.chunk_modifications[i].modified_voxels_count; ++v) {
-                            LOG_INFOV("- index %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
+                            LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, c_ptr->voxels[commands.chunk_modifications[i].modifications[v].index], (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
                         }
                     }
                 }
