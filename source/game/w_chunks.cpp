@@ -577,7 +577,7 @@ void w_chunk_world_init(
     //w_add_sphere_m(vector3_t(24.0f), 2.0f, world);
 
     //w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
-    w_add_sphere_m(vector3_t(80.0f), 17.0f, world);
+    w_add_sphere_m(vector3_t(0.0f), 20.0f, world);
 
     //w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
     //w_add_sphere_m(vector3_t(-70.0f), 30.0f, world);
