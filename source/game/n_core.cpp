@@ -392,11 +392,12 @@ static void s_send_commands_to_server() {
                 packet.chunk_modifications = NULL;
             }
 
-#if 0
+#if 1
             if (packet.modified_chunk_count) {
                 printf("\n");
                 LOG_INFOV("Modified %i chunks\n", packet.modified_chunk_count);
                 for (uint32_t i = 0; i < packet.modified_chunk_count; ++i) {
+                    LOG_INFOV("In chunk (%i %i %i): \n", packet.chunk_modifications[i].x, packet.chunk_modifications[i].y, packet.chunk_modifications[i].z);
                     for (uint32_t v = 0; v < packet.chunk_modifications[i].modified_voxels_count; ++v) {
                         LOG_INFOV("- index %i | final value %i\n", (int32_t)packet.chunk_modifications[i].modifications[v].index, (int32_t)packet.chunk_modifications[i].modifications[v].final_value);
                     }
@@ -448,6 +449,7 @@ static void s_revert_history_instance(
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
             // Set all modified to initial values
+            LOG_INFOV("(%i %i %i) Set voxel at index %i to %i\n", cm_ptr->x, cm_ptr->y, cm_ptr->z, vm_ptr->index, (int32_t)vm_ptr->initial_value);
             c_ptr->voxels[vm_ptr->index] = vm_ptr->initial_value;
         }
 
@@ -495,7 +497,7 @@ static void s_revert_accumulated_modifications(
         }
     }
 
-    current = acc_predicted_modifications.get_next_item_head();
+    /*current = acc_predicted_modifications.get_next_item_head();
     if (current) {
         for (uint32_t cm_index = 0; cm_index < current->acc_predicted_chunk_mod_count; ++cm_index) {
             chunk_modifications_t *cm_ptr = &current->acc_predicted_modifications[cm_index];
@@ -509,7 +511,7 @@ static void s_revert_accumulated_modifications(
 
             c_ptr->flags.has_to_update_vertices = 1;
         }
-    }
+        }*/
 
     //LOG_INFOV("(Sent to revert to %llu) Reverted from %llu to %llu\n", (unsigned long long)tick_until, (unsigned long long)old_tick, (unsigned long long)new_tick);
 }
@@ -523,7 +525,7 @@ static void s_correct_chunks(
         LOG_INFOV("Correcting chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-            //printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
+            printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
             c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
         }
     }
@@ -1282,9 +1284,21 @@ static void s_process_client_commands(
 
             // Process terraforming stuff
             if (commands.modified_chunk_count) {
-                LOG_INFOV("(Tick %llu) Received %i chunk modifications\n", (unsigned long long)tick, commands.modified_chunk_count);
+                //LOG_INFOV("(Tick %llu) Received %i chunk modifications\n", (unsigned long long)tick, commands.modified_chunk_count);
                 c->did_terrain_mod_previous_tick = 1;
                 c->tick_at_which_client_terraformed = tick;
+
+                if (commands.modified_chunk_count) {
+                    printf("\n");
+                    LOG_INFOV("Predicted %i chunk modifications at tick %llu\n", commands.modified_chunk_count, (unsigned long long)tick);
+                    for (uint32_t i = 0; i < commands.modified_chunk_count; ++i) {
+                        LOG_INFOV("In chunk (%i %i %i): \n", commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z);
+                        for (uint32_t v = 0; v < commands.chunk_modifications[i].modified_voxels_count; ++v) {
+                            LOG_INFOV("- index %i | final value %i\n", (int32_t)commands.chunk_modifications[i].modifications[v].index, (int32_t)commands.chunk_modifications[i].modifications[v].final_value);
+                        }
+                    }
+                }
+                
                 s_handle_chunk_modifications(&commands, c);
             }
         }
@@ -1347,7 +1361,7 @@ static bool s_check_if_client_has_to_correct_terrain(
 
             // Just one mistake can completely mess stuff up between the client and server
             if (actual_value != predicted_value) {
-                //printf("(%i %i %i) Need to set (%i) %i -> %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
+                printf("(%i %i %i) Need to set (%i) %i -> %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
 
                 chunk_has_mistake = 1;
             }
@@ -1472,6 +1486,8 @@ static void s_dispatch_game_state_snapshot() {
     }
 
     reset_modification_tracker();
+
+    putchar('\n');
 }
 
 void tick_server(
