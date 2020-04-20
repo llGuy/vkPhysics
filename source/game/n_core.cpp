@@ -34,6 +34,8 @@ static void s_main_udp_socket_init(
 }
 
 static void s_hub_socket_init() {
+
+
     hub_socket = network_socket_init(SP_TCP);
     network_address_t address = {};
     address.port = host_to_network_byte_order(SERVER_HUB_OUTPUT_PORT);

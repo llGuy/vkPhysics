@@ -45,6 +45,7 @@ void serialise_hub_server_info(
     hub_server_info_t *info,
     serialiser_t *serialiser) {
     serialiser->serialise_string(info->server_name);
+    serialiser->serialise_uint32(info->ipv4_address);
     serialiser->serialise_uint32(info->max_clients);
     serialiser->serialise_uint32(info->client_count);
 }
@@ -53,6 +54,7 @@ void deserialise_hub_server_info(
     hub_server_info_t *info,
     serialiser_t *serialiser) {
     info->server_name = serialiser->deserialise_string();
+    info->ipv4_address = serialiser->deserialise_uint32();
     info->max_clients = serialiser->deserialise_uint32();
     info->client_count = serialiser->deserialise_uint32();
 }

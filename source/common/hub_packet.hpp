@@ -36,7 +36,7 @@ void serialise_hub_query_server_register(
     hub_query_server_register_t *query,
     serialiser_t *serialiser);
 
-void serialise_hub_query_server_register(
+void deserialise_hub_query_server_register(
     hub_query_server_register_t *query,
     serialiser_t *serialiser);
 
@@ -48,7 +48,7 @@ void serialise_hub_query_client_register(
     hub_query_client_register_t *query,
     serialiser_t *serialiser);
 
-void serialise_hub_query_client_register(
+void deserialise_hub_query_client_register(
     hub_query_client_register_t *query,
     serialiser_t *serialiser);
 
@@ -58,6 +58,7 @@ struct hub_query_available_servers_t {
 
 struct hub_server_info_t {
     const char *server_name;
+    uint32_t ipv4_address;
     uint32_t max_clients;
     uint32_t client_count;
 };
@@ -66,7 +67,7 @@ void serialise_hub_server_info(
     hub_server_info_t *info,
     serialiser_t *serialiser);
 
-void serialise_hub_server_info(
+void deserialise_hub_server_info(
     hub_server_info_t *info,
     serialiser_t *serialiser);
 
@@ -79,6 +80,6 @@ void serialise_hub_response_available_servers(
     hub_response_available_servers_t *response,
     serialiser_t *serialiser);
 
-void serialise_hub_response_available_servers(
+void deserialise_hub_response_available_servers(
     hub_response_available_servers_t *response,
     serialiser_t *serialiser);
