@@ -125,30 +125,35 @@ static void s_check_pending_sockets() {
                 deserialise_hub_packet_header(&header, &serialiser);
 
                 if (header.type == HPT_QUERY_SERVER_REGISTER) {
-                    // Register socket as server
-                    pending_sockets.remove(i);
                     uint32_t index = server_sockets.add();
                     server_sockets[index].connection = *pending;
+                    
+                    // Register socket as server
+                    pending_sockets.remove(i);
 
                     hub_query_server_register_t query;
                     deserialise_hub_query_server_register(&query, &serialiser);
                     server_sockets[index].server_name = create_fl_string(query.server_name);
                     server_sockets[index].max_clients = query.max_clients;
                     server_sockets[index].client_count = query.client_count;
+                    server_sockets[index].connection.flags.initialised = 1;
 
-                    LOG_INFO("New server is pending\n");
+                    LOG_INFOV("New server active: %s\n", server_sockets[index].server_name);
                 }
                 else if (header.type == HPT_QUERY_CLIENT_REGISTER) {
                     // Register socket as client
-                    pending_sockets.remove(i);
                     uint32_t index = client_sockets.add();
                     client_sockets[index].connection = *pending;
+                    
+                    pending_sockets.remove(i);
 
                     hub_query_client_register_t query;
-                    deserialise_hub_query_client_register(&query, &serialiser);
+                    //deserialise_hub_query_client_register(&query, &serialiser);
+                    query.client_name = serialiser.deserialise_string();
                     client_sockets[index].client_name = create_fl_string(query.client_name);
+                    client_sockets[index].connection.flags.initialised = 1;
 
-                    LOG_INFO("New client is pending\n");
+                    LOG_INFOV("New client active: %s\n", client_sockets[index].client_name);
                 }
                 else {
                     // There was an error, was not supposed to receive this packet before any other from this socket
@@ -225,7 +230,7 @@ static void s_check_queries() {
         if (gc_ptr->connection.flags.initialised) {
             int32_t bytes_received = receive_from_bound_address(gc_ptr->connection.sock, (char *)message_buffer, MAX_MESSAGE_SIZE);
 
-            if (bytes_received >= 0) {
+            if (bytes_received > 0) {
                 // Process packet
                 serialiser_t serialiser;
                 serialiser.data_buffer = message_buffer;
@@ -242,7 +247,7 @@ static void s_check_queries() {
         if (gs_ptr->connection.flags.initialised) {
             int32_t bytes_received = receive_from_bound_address(gs_ptr->connection.sock, (char *)message_buffer, MAX_MESSAGE_SIZE);
 
-            if (bytes_received >= 0) {
+            if (bytes_received > 0) {
                 serialiser_t serialiser;
                 serialiser.data_buffer = message_buffer;
                 serialiser.data_buffer_size = bytes_received;
@@ -257,6 +262,8 @@ static void s_check_queries() {
 static void s_check_new_queries() {
     s_check_pending_sockets();
     s_check_queries();
+
+    // Make sure to check every so often if servers / clients are still active
 }
 
 static void s_start_loop() {
@@ -269,9 +276,24 @@ static void s_start_loop() {
     }
 }
 
+#include <signal.h>
+
+void sig_handler(int32_t s) {
+    // Close socket
+    destroy_socket(hub_socket);
+    exit(0);
+}
+
 int32_t main(
     int32_t argc,
     char *argv[]) {
+    struct sigaction handler;
+    handler.sa_handler = sig_handler;
+    sigemptyset(&handler.sa_mask);
+    handler.sa_flags = 0;
+
+    sigaction(SIGINT, &handler, NULL);
+    
     message_buffer = FL_MALLOC(uint8_t, MAX_MESSAGE_SIZE);
 
     global_linear_allocator_init((uint32_t)megabytes(10));

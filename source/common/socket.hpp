@@ -18,6 +18,9 @@ void socket_api_init();
 socket_t network_socket_init(
     socket_protocol_t protocol);
 
+void destroy_socket(
+    socket_t s);
+
 void set_socket_recv_buffer_size(
     socket_t s,
     uint32_t size);
@@ -43,7 +46,9 @@ accepted_connection_t accept_connection(
 
 void connect_to_address(
     socket_t s,
-    network_address_t address);
+    const char *address_name,
+    uint16_t port,
+    int32_t protocol);
 
 int32_t receive_from(
     socket_t s,
@@ -82,7 +87,7 @@ float network_to_host_byte_order_f32(
     float bytes);
 
 // Port that hub uses to commmunicate with servers / clients
-#define SERVER_HUB_OUTPUT_PORT 5998
+#define SERVER_HUB_OUTPUT_PORT 6499
 // Port that clients / servers uses to communicate with hub
 #define GAME_OUTPUT_HUB_PORT 5999
 #define GAME_OUTPUT_PORT_CLIENT 6001

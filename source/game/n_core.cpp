@@ -51,15 +51,12 @@ static void s_main_udp_socket_init(
     set_socket_recv_buffer_size(main_udp_socket, 1024 * 1024);
 }
 
-#define HUB_SERVER_DOMAIN "www.llguy.fun"
+#define HUB_SERVER_DOMAIN "127.0.0.1"
 
 static void s_hub_socket_init() {
     hub_socket = network_socket_init(SP_TCP);
+    connect_to_address(hub_socket, HUB_SERVER_DOMAIN, SERVER_HUB_OUTPUT_PORT, SP_TCP);
     set_socket_to_non_blocking_mode(hub_socket);
-    network_address_t address = {};
-    address.port = host_to_network_byte_order(SERVER_HUB_OUTPUT_PORT);
-    address.ipv4_address = str_to_ipv4_int32(HUB_SERVER_DOMAIN, SERVER_HUB_OUTPUT_PORT, SP_TCP);
-    connect_to_address(hub_socket, address);
 }
 
 static bool s_send_to(
@@ -163,8 +160,9 @@ static void s_start_client(
     serialiser.data_buffer_head = 0;
     
     // Need to ask server how many available servers there are
-    header.type = HPT_QUERY_AVAILABLE_SERVERS;
-    serialise_hub_packet_header(&header, &serialiser);
+    hub_packet_header_t available_servers_header = {};
+    available_servers_header.type = HPT_QUERY_AVAILABLE_SERVERS;
+    serialise_hub_packet_header(&available_servers_header, &serialiser);
 
     // Expect a packet to arrive
     send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
@@ -954,6 +952,8 @@ static void s_process_available_servers_response(
     hub_response_available_servers_t response = {};
     deserialise_hub_response_available_servers(&response, serialiser);
 
+    LOG_INFOV("There are %i available servers\n", response.server_count);
+
     available_servers.server_count = response.server_count;
     for (uint32_t i = 0; i < response.server_count; ++i) {
         hub_server_info_t *src = &response.servers[i];
@@ -1085,7 +1085,7 @@ static void s_start_server(
     header.type = HPT_QUERY_SERVER_REGISTER;
 
     hub_query_server_register_t register_packet = {};
-    
+    local_server_info.server_name = data->server_name;
     register_packet.server_name = local_server_info.server_name;
 
     serialiser_t serialiser = {};
@@ -1800,6 +1800,8 @@ void net_init(
     subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
 
     socket_api_init();
+
+    s_hub_socket_init();
 
     message_buffer = FL_MALLOC(char, MAX_MESSAGE_SIZE);
 }

@@ -13,6 +13,9 @@ struct game_init_data_t {
     uint32_t fl_pool_size;
     uint32_t ln_pool_size;
     int32_t flags;
+
+    uint32_t argc;
+    char **argv;
 };
 
 void game_main(

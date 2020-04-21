@@ -10,6 +10,9 @@ int32_t main(
     game_init_data.flags = GIF_NOT_WINDOWED | GIF_SERVER;
 #endif
 
+    game_init_data.argc = argc;
+    game_init_data.argv = argv;
+
     game_main(&game_init_data);
     
     return 0;

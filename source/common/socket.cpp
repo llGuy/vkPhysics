@@ -38,6 +38,11 @@ static socket_t s_network_socket_init(
     return s;
 }
 
+static void s_destroy_socket(socket_t s) {
+    SOCKET *api_s = get_network_socket(s);
+    closesocket(*api_s);
+}
+
 static void s_set_socket_recv_buffer_size(
     socket_t s,
     uint32_t size) {
@@ -103,20 +108,68 @@ static accepted_connection_t s_accept_connection(
 
     return connection;
 }
+
 static void s_connect_to_address(
     socket_t s,
-    network_address_t address) {
+    const char *address_name,
+    uint16_t port,
+    int32_t protocol) {
     SOCKET *sock = get_network_socket(s);
-    
-    SOCKADDR_IN saddr = {};
-    saddr.sin_family = AF_INET;
-    saddr.sin_port = address.port;
-    saddr.sin_addr.s_addr = address.ipv4_address;
-    int32_t addr_length = sizeof(saddr);
 
-    if (connect(s, (SOCKADDR *)&saddr, addr_length) < 0) {
-        LOG_ERROR("Failed to connect to address with connect()\n");
+    addrinfo hints = {}, *addresses;
+
+    hints.ai_family = AF_INET;
+
+    switch (protocol) {
+    case SP_UDP: {
+        hints.ai_socktype = SOCK_DGRAM;
+        hints.ai_protocol = IPPROTO_UDP;
+        break;
     }
+        
+    case SP_TCP: {
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+        break;
+    }
+    }
+
+    char port_str[16] = {};
+    sprintf(port_str, "%d", port);
+
+    int32_t err = getaddrinfo(address_name, port_str, &hints, &addresses);
+
+    if (err != 0) {
+        fprintf(stderr, "%s: %s\n", address_name, gai_strerror(err));
+        abort();
+    }
+
+    // (This is a really bad way)
+    // Find way to get correct address
+    if (addresses) {
+        for (addrinfo *addr = addresses; addr != NULL; addr = addr->ai_next) {
+            if (addr->ai_family == AF_INET) {
+                err = connect(*sock, addr->ai_addr, addr->ai_addrlen);
+    
+                if (err < 0) {
+                    //fprintf(stderr, "%s\n", gai_strerror(err));
+                    LOG_ERROR("Failed to connect to address with connect()\n");
+                }
+            }
+        }
+
+        LOG_INFOV("Couldn't find address %s\n", address_name);
+    }
+    
+    // SOCKADDR_IN saddr = {};
+    // saddr.sin_family = AF_INET;
+    // saddr.sin_port = address.port;
+    // saddr.sin_addr.s_addr = address.ipv4_address;
+    // int32_t addr_length = sizeof(saddr);
+
+    // if (connect(s, (SOCKADDR *)&saddr, addr_length) < 0) {
+    //     LOG_ERROR("Failed to connect to address with connect()\n");
+    // }
 }
 
 static int32_t s_receive_from(
@@ -240,7 +293,7 @@ static uint32_t s_str_to_ipv4_int32(
     int32_t err = getaddrinfo(name, port_str, &hints, &addresses);
 
     if (err != 0) {
-        fprintf(stderr, "%s: %s\n", name, gai_strerror(err));
+        //fprintf(stderr, "%s: %s\n", name, gai_strerror(err));
         abort();
     }
 
@@ -281,6 +334,10 @@ static socket_t s_network_socket_init(
     int32_t type,
     int32_t protocol) {
     return socket(family, type, protocol);
+}
+
+static void s_destroy_socket(socket_t s) {
+    shutdown(s, SHUT_RDWR);
 }
 
 static void s_set_socket_recv_buffer_size(
@@ -429,15 +486,56 @@ static bool s_send_to_bound_address(
 
 static void s_connect_to_address(
     socket_t s,
-    network_address_t address) {
-    sockaddr_in saddr = {};
-    saddr.sin_family = AF_INET;
-    saddr.sin_port = address.port;
-    saddr.sin_addr.s_addr = address.ipv4_address;
-    socklen_t addr_length = sizeof(saddr);
+    const char *address_name,
+    uint16_t port,
+    int32_t protocol) {
+    addrinfo hints = {}, *addresses;
 
-    if (connect(s, (sockaddr *)&saddr, addr_length) < 0) {
-        LOG_ERROR("Failed to connect to address with connect()\n");
+    hints.ai_family = AF_INET;
+
+    switch (protocol) {
+    case SP_UDP: {
+        hints.ai_socktype = SOCK_DGRAM;
+        hints.ai_protocol = IPPROTO_UDP;
+        break;
+    }
+        
+    case SP_TCP: {
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+        break;
+    }
+    }
+
+    char port_str[16] = {};
+    sprintf(port_str, "%d", port);
+
+    int32_t err = getaddrinfo(address_name, port_str, &hints, &addresses);
+
+    if (err != 0) {
+        fprintf(stderr, "%s: %s\n", address_name, gai_strerror(err));
+        abort();
+    }
+
+    // (This is a really bad way)
+    // Find way to get correct address
+    if (addresses) {
+        for (addrinfo *addr = addresses; addr != NULL; addr = addr->ai_next) {
+            if (addr->ai_family == AF_INET) {
+                err = connect(s, addr->ai_addr, addr->ai_addrlen);
+
+                freeaddrinfo(addresses);
+                if (err < 0) {
+                    fprintf(stderr, "%s\n", gai_strerror(err));
+                    LOG_ERROR("Failed to connect to address with connect()\n");
+                }
+                else {
+                    return;
+                }
+            }
+        }
+
+        LOG_INFOV("Couldn't find address %s\n", address_name);
     }
 }
 
@@ -479,11 +577,12 @@ static uint32_t s_str_to_ipv4_int32(
         for (addrinfo *addr = addresses; addr != NULL; addr = addr->ai_next) {
             if (addr->ai_family == AF_INET) {
                 sockaddr_in *addr_in = (sockaddr_in *)addr->ai_addr;
-                return addr_in->sin_addr.s_addr;
+                uint32_t address = addr_in->sin_addr.s_addr;
+                freeaddrinfo(addresses);
+                return address;
             }
         }
 
-        freeaddrinfo(addresses);
 
         LOG_INFOV("Couldn't find address %s\n", name);
         return 0;
@@ -584,8 +683,10 @@ accepted_connection_t accept_connection(
 
 void connect_to_address(
     socket_t s,
-    network_address_t address) {
-    s_connect_to_address(s, address);
+    const char *address_name,
+    uint16_t port,
+    int32_t protocol) {
+    s_connect_to_address(s, address_name, port, protocol);
 }
 
 int32_t receive_from_bound_address(
@@ -607,3 +708,9 @@ bool send_to_bound_address(
         buffer,
         buffer_size);
 }
+
+void destroy_socket(
+    socket_t s) {
+    s_destroy_socket(s);
+}
+

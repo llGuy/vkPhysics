@@ -251,7 +251,6 @@ static void s_world_ui_proc() {
 
     static char address_buffer[50] = {};
     ImGui::InputText("Connect to", address_buffer, sizeof(address_buffer));
-
     
     bool request_connection = ImGui::Button("Request connection");
     if (request_connection) {
@@ -407,15 +406,32 @@ static void s_run_not_windowed_game() {
 
 static void s_not_windowed_game_main(
     game_init_data_t *game_init_data) {
-    (void)game_init_data;
     world_init(&events);
     net_init(&events);
 
-    submit_event(ET_START_SERVER, NULL, &events);
+    if (game_init_data->argc >= 2) {
+        event_start_server_t *data = FL_MALLOC(event_start_server_t, 1);
+        uint32_t server_name_length = strlen(game_init_data->argv[1]);
+        char *server_name = FL_MALLOC(char, server_name_length + 1);
+        server_name[server_name_length] = 0;
+        strcpy(server_name, game_init_data->argv[1]);
+        for (uint32_t c = 0; c < server_name_length; ++c) {
+            if (server_name[c] == '_') {
+                server_name[c] = ' ';
+            }
+        }
 
-    s_run_not_windowed_game();
+        data->server_name = server_name;
 
-    dispatch_events(&events);
+        submit_event(ET_START_SERVER, data, &events);
+
+        s_run_not_windowed_game();
+
+        dispatch_events(&events);
+    }
+    else {
+        LOG_ERROR("Incorrect command line arguments, correct usage is (underscores will be replaced by spaces): ./vkPhysics_server My_awesome_server_name\n");
+    }
 }
 
 void game_main(
