@@ -135,6 +135,8 @@ static void s_check_pending_sockets() {
                     server_sockets[index].server_name = create_fl_string(query.server_name);
                     server_sockets[index].max_clients = query.max_clients;
                     server_sockets[index].client_count = query.client_count;
+
+                    LOG_INFO("New server is pending\n");
                 }
                 else if (header.type == HPT_QUERY_CLIENT_REGISTER) {
                     // Register socket as client
@@ -145,6 +147,8 @@ static void s_check_pending_sockets() {
                     hub_query_client_register_t query;
                     deserialise_hub_query_client_register(&query, &serialiser);
                     client_sockets[index].client_name = create_fl_string(query.client_name);
+
+                    LOG_INFO("New client is pending\n");
                 }
                 else {
                     // There was an error, was not supposed to receive this packet before any other from this socket
@@ -190,6 +194,7 @@ static void s_process_client_packet(
 
     switch (header.type) {
     case HPT_QUERY_AVAILABLE_SERVERS: {
+        LOG_INFO("Client requested available servers\n");
         s_handle_query_available_servers(in_serialiser, out_serialiser, client);
         break;
     }
@@ -197,7 +202,6 @@ static void s_process_client_packet(
     }
     }
 }
-
 
 static void s_process_server_packet(
     serialiser_t *in_serialiser,

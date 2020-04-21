@@ -34,6 +34,11 @@ struct event_start_client_t {
     const char *client_name;
 };
 
+struct event_start_server_t {
+    // Clients will see these names with looking at servers list
+    const char *server_name;
+};
+
 struct event_data_request_to_join_server_t {
     const char *ip_address;
 };

@@ -14,7 +14,14 @@ struct client_info_t {
     const char *client_name;
 };
 
-static client_info_t local_info;
+static client_info_t local_client_info;
+
+// Local server information
+struct server_info_t {
+    const char *server_name;
+};
+
+static server_info_t local_server_info;
 
 #define MAX_AVAILABLE_SERVER_COUNT 1000
 
@@ -139,8 +146,8 @@ static void s_start_client(
     header.type = HPT_QUERY_CLIENT_REGISTER;
 
     hub_query_client_register_t register_packet = {};
-    local_info.client_name = data->client_name;
-    register_packet.client_name = local_info.client_name;
+    local_client_info.client_name = data->client_name;
+    register_packet.client_name = local_client_info.client_name;
 
     serialiser_t serialiser = {};
     serialiser.init(100);
@@ -1054,7 +1061,8 @@ static void s_send_disconnect_to_server() {
 
 static bool started_server = 0;
 
-static void s_start_server() {
+static void s_start_server(
+    event_start_server_t *data) {
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
     s_main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
@@ -1072,6 +1080,21 @@ static void s_start_server() {
     chunk_modification_allocator.pool_init(
         sizeof_chunk_mod_pack,
         sizeof_chunk_mod_pack * MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4);
+
+    hub_packet_header_t header = {};
+    header.type = HPT_QUERY_SERVER_REGISTER;
+
+    hub_query_server_register_t register_packet = {};
+    
+    register_packet.server_name = local_server_info.server_name;
+
+    serialiser_t serialiser = {};
+    serialiser.init(100);
+
+    serialise_hub_packet_header(&header, &serialiser);
+    serialise_hub_query_server_register(&register_packet, &serialiser);
+
+    send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
 }
 
 static bool s_send_handshake(
@@ -1728,16 +1751,20 @@ static void s_net_event_listener(
     case ET_START_CLIENT: {
         event_start_client_t *data = (event_start_client_t *)event->data;
         s_start_client(data);
+        FL_FREE(data);
     } break;
 
     case ET_START_SERVER: {
-        s_start_server();
+        event_start_server_t *data = (event_start_server_t *)event->data;
+        s_start_server(data);
+
+        FL_FREE(data);
     } break;
 
     case ET_REQUEST_TO_JOIN_SERVER: {
         event_data_request_to_join_server_t *data = (event_data_request_to_join_server_t *)event->data;
         local_client_info_t client_info;
-        client_info.name = local_info.client_name;
+        client_info.name = local_client_info.client_name;
         s_send_connect_request_to_server(data->ip_address, &client_info);
 
         FL_FREE(data);

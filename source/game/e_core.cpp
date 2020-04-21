@@ -244,7 +244,9 @@ static void s_world_ui_proc() {
 
     bool started_server = ImGui::Button("Start server");
     if (started_server) {
-        submit_event(ET_START_SERVER, NULL, &events);
+        event_start_server_t *start_server_data = FL_MALLOC(event_start_server_t, 1);
+        start_server_data->server_name = name_buffer;
+        submit_event(ET_START_SERVER, start_server_data, &events);
     }
 
     static char address_buffer[50] = {};
