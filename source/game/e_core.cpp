@@ -231,9 +231,15 @@ static void s_world_ui_proc() {
 
     ImGui::Separator();
     ImGui::Text("-- Net --");
+
+    static char name_buffer[50] = {};
+    ImGui::InputText("Client name", name_buffer, sizeof(name_buffer));
+    
     bool started_client = ImGui::Button("Start client");
     if (started_client) {
-        submit_event(ET_START_CLIENT, NULL, &events);
+        event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
+        start_client_data->client_name = name_buffer;
+        submit_event(ET_START_CLIENT, start_client_data, &events);
     }
 
     bool started_server = ImGui::Button("Start server");
@@ -244,15 +250,12 @@ static void s_world_ui_proc() {
     static char address_buffer[50] = {};
     ImGui::InputText("Connect to", address_buffer, sizeof(address_buffer));
 
-    static char name_buffer[50] = {};
-    ImGui::InputText("Client name", name_buffer, sizeof(name_buffer));
     
     bool request_connection = ImGui::Button("Request connection");
     if (request_connection) {
         event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
         memset(data, 0, sizeof(event_data_request_to_join_server_t));
         data->ip_address = address_buffer;
-        data->client_name = name_buffer;
         submit_event(ET_REQUEST_TO_JOIN_SERVER, data, &events);
     }
 

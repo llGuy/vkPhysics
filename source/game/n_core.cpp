@@ -5,9 +5,20 @@
 #include <common/log.hpp>
 #include <common/event.hpp>
 #include <common/string.hpp>
+#include <common/hub_packet.hpp>
 #include <common/containers.hpp>
 #include <common/allocators.hpp>
 #include <glm/gtx/string_cast.hpp>
+
+struct client_info_t {
+    const char *client_name;
+};
+
+static client_info_t local_info;
+
+#define MAX_AVAILABLE_SERVER_COUNT 1000
+
+static available_servers_t available_servers;
 
 static float client_command_output_interval = 1.0f / 25.0f;
 static float server_snapshot_output_interval = 1.0f / 20.0f;
@@ -33,14 +44,14 @@ static void s_main_udp_socket_init(
     set_socket_recv_buffer_size(main_udp_socket, 1024 * 1024);
 }
 
+#define HUB_SERVER_DOMAIN "www.llguy.fun"
+
 static void s_hub_socket_init() {
-
-
     hub_socket = network_socket_init(SP_TCP);
+    set_socket_to_non_blocking_mode(hub_socket);
     network_address_t address = {};
     address.port = host_to_network_byte_order(SERVER_HUB_OUTPUT_PORT);
-    // This will be hardcoded for now
-    address.ipv4_address = str_to_ipv4_int32("127.0.0.1", SERVER_HUB_OUTPUT_PORT, SP_TCP);
+    address.ipv4_address = str_to_ipv4_int32(HUB_SERVER_DOMAIN, SERVER_HUB_OUTPUT_PORT, SP_TCP);
     connect_to_address(hub_socket, address);
 }
 
@@ -98,7 +109,8 @@ static accumulated_predicted_modification_t *s_add_acc_predicted_modification() 
     return apm_ptr;
 }
 
-static void s_start_client() {
+static void s_start_client(
+    event_start_client_t *data) {
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
     s_main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
@@ -121,6 +133,34 @@ static void s_start_client() {
     merged_recent_modifications.tick = 0;
     merged_recent_modifications.acc_predicted_chunk_mod_count = 0;
     merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(chunk_modifications_t, MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
+
+    // Send to hub server information about client
+    hub_packet_header_t header = {};
+    header.type = HPT_QUERY_CLIENT_REGISTER;
+
+    hub_query_client_register_t register_packet = {};
+    local_info.client_name = data->client_name;
+    register_packet.client_name = local_info.client_name;
+
+    serialiser_t serialiser = {};
+    serialiser.init(100);
+
+    serialise_hub_packet_header(&header, &serialiser);
+    serialise_hub_query_client_register(&register_packet, &serialiser);
+
+    send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
+
+    available_servers.server_count = 0;
+    available_servers.servers = FL_MALLOC(game_server_t, MAX_AVAILABLE_SERVER_COUNT);
+
+    serialiser.data_buffer_head = 0;
+    
+    // Need to ask server how many available servers there are
+    header.type = HPT_QUERY_AVAILABLE_SERVERS;
+    serialise_hub_packet_header(&header, &serialiser);
+
+    // Expect a packet to arrive
+    send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
 }
 
 static network_address_t bound_server_address = {};
@@ -808,9 +848,8 @@ static void s_process_chunk_voxels(
     //LOG_INFOV("Received %i chunks\n", loaded_chunk_count);
 }
 
-void tick_client(
+static void s_check_incoming_game_server_packets(
     event_submissions_t *events) {
-    raw_input_t *input = get_raw_input();
 #if NET_DEBUG_LAG
     if (input->buttons[BT_F].instant) {
         simulate_lag = !simulate_lag;
@@ -819,7 +858,8 @@ void tick_client(
         else {LOG_INFO("Not simulating lag\n");}
     }
 #endif
-    
+
+    // Check packets from game server that we are connected to
     if (client_check_incoming_packets) {
         static float elapsed = 0.0f;
         elapsed += logic_delta_time();
@@ -871,11 +911,7 @@ void tick_client(
             } break;
 
             case PT_GAME_STATE_SNAPSHOT: {
-                s_process_game_state_snapshot(
-                    &in_serialiser,
-                    header.current_tick,
-                    events);
-            } break;
+                s_process_game_state_snapshot(&in_serialiser, header.current_tick, events);} break;
 
             case PT_CHUNK_VOXELS: {
                 s_process_chunk_voxels(
@@ -903,6 +939,72 @@ void tick_client(
             ++i;
         }
     }
+}
+
+static void s_process_available_servers_response(
+    serialiser_t *serialiser,
+    event_submissions_t *submission) {
+    hub_response_available_servers_t response = {};
+    deserialise_hub_response_available_servers(&response, serialiser);
+
+    available_servers.server_count = response.server_count;
+    for (uint32_t i = 0; i < response.server_count; ++i) {
+        hub_server_info_t *src = &response.servers[i];
+        game_server_t *dst = &available_servers.servers[i];
+
+        dst->ipv4_address = src->ipv4_address;
+        dst->server_name = create_fl_string(src->server_name);
+    }
+}
+
+static void s_check_incoming_hub_server_packets(
+    event_submissions_t *events) {
+    int32_t received = receive_from_bound_address(
+        hub_socket,
+        message_buffer,
+        sizeof(char) * MAX_MESSAGE_SIZE);
+
+    // In future, separate thread will be capturing all these packets
+    static const uint32_t MAX_RECEIVED_PER_TICK = 4;
+    uint32_t i = 0;
+
+    while (received) {
+        serialiser_t in_serialiser = {};
+        in_serialiser.data_buffer = (uint8_t *)message_buffer;
+        in_serialiser.data_buffer_size = received;
+
+        hub_packet_header_t header = {};
+        deserialise_hub_packet_header(&header, &in_serialiser);
+
+        switch (header.type) {
+        case HPT_RESPONSE_AVAILABLE_SERVERS: {
+            s_process_available_servers_response(&in_serialiser, events);
+            break;
+        }
+        default: {
+            break;
+        }
+        }
+
+        if (i < MAX_RECEIVED_PER_TICK) {
+            received = receive_from_bound_address(
+                hub_socket,
+                message_buffer,
+                sizeof(char) * MAX_MESSAGE_SIZE);
+        }
+        else {
+            received = false;
+        } 
+
+        ++i;
+    }
+}
+
+void tick_client(
+    event_submissions_t *events) {
+    raw_input_t *input = get_raw_input();
+    s_check_incoming_game_server_packets(events);
+    s_check_incoming_hub_server_packets(events);
 }
 
 static void s_send_connect_request_to_server(
@@ -1624,7 +1726,8 @@ static void s_net_event_listener(
     switch (event->type) {
 
     case ET_START_CLIENT: {
-        s_start_client();
+        event_start_client_t *data = (event_start_client_t *)event->data;
+        s_start_client(data);
     } break;
 
     case ET_START_SERVER: {
@@ -1634,7 +1737,7 @@ static void s_net_event_listener(
     case ET_REQUEST_TO_JOIN_SERVER: {
         event_data_request_to_join_server_t *data = (event_data_request_to_join_server_t *)event->data;
         local_client_info_t client_info;
-        client_info.name = data->client_name;
+        client_info.name = local_info.client_name;
         s_send_connect_request_to_server(data->ip_address, &client_info);
 
         FL_FREE(data);

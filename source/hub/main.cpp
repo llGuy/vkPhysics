@@ -236,7 +236,7 @@ static void s_check_queries() {
     for (uint32_t i = 0; i < server_sockets.data_count; ++i) {
         game_server_t *gs_ptr = &server_sockets[i];
         if (gs_ptr->connection.flags.initialised) {
-            int32_t bytes_received = receive_from_bound_address(gs_ptr->connection.sock, (char *)message_buffer, MAX_MESSAGE_BUFFER);
+            int32_t bytes_received = receive_from_bound_address(gs_ptr->connection.sock, (char *)message_buffer, MAX_MESSAGE_SIZE);
 
             if (bytes_received >= 0) {
                 serialiser_t serialiser;
@@ -244,7 +244,7 @@ static void s_check_queries() {
                 serialiser.data_buffer_size = bytes_received;
                 s_process_server_packet(&serialiser, &out_serialiser, gs_ptr);
 
-                out_serialiser.data_buffer_head;
+                out_serialiser.data_buffer_head = 0;
             }
         }
     }

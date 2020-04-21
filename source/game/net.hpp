@@ -90,3 +90,16 @@ struct packet_chunk_voxels_t {
     uint32_t chunk_in_packet_count;
     voxel_chunk_values_t *values;
 };
+
+// BECAUSE THERE ISN'T A UI SYSTEM IN PLACE YET
+struct game_server_t {
+    const char *server_name;
+    uint32_t ipv4_address;
+};
+
+struct available_servers_t {
+    uint32_t server_count;
+    game_server_t *servers;
+};
+
+available_servers_t *get_available_servers();

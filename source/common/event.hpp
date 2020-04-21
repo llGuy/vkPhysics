@@ -30,10 +30,12 @@ struct event_surface_resize_t {
     uint32_t height;
 };
 
+struct event_start_client_t {
+    const char *client_name;
+};
+
 struct event_data_request_to_join_server_t {
     const char *ip_address;
-    // TODO: Later, need to put this in some sort of file
-    const char *client_name;
 };
 
 struct player_init_info_t {
