@@ -13,7 +13,7 @@ static socket_t hub_socket;
 #define MAX_ACTIVE_SERVERS 500
 #define MAX_PENDING_SOCKETS 100
 
-#define RESPONSE_TIME 20.0f /* 20 Seconds */
+#define RESPONSE_TIME 10.0f /* 20 Seconds */
 
 #include <errno.h>
 #include <netdb.h>
