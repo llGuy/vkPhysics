@@ -69,8 +69,8 @@ struct player_snapshot_t {
             uint8_t server_waiting_for_correction: 1;
             // Server sends this to client so that client can be sure to pop modification from accumulated history
             uint8_t terraformed: 1;
+            uint8_t packet_contains_terrain_correction: 1;
             // Will use in future
-            uint8_t b3: 1;
             uint8_t b4: 1;
             uint8_t b5: 1;
             uint8_t b6: 1;

@@ -642,6 +642,19 @@ static void s_process_game_state_snapshot(
                     s_revert_accumulated_modifications(snapshot->tick);
                     s_correct_chunks(&packet);
                     // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
+
+                    // Now deserialise extra voxel corrections
+                    uint32_t modification_count = 0;
+                    chunk_modifications_t *modifications = n_deserialise_chunk_modifications(&modification_count, serialiser);
+
+                    for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {
+                        chunk_modifications_t *cm_ptr = &modifications[cm_index];
+                        chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+                        for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
+                            voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+                            c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+                        }
+                    }
                 }
                 
                 get_current_tick() = snapshot->tick;
@@ -865,7 +878,9 @@ static void s_process_chunk_voxels(
 
 static void s_check_incoming_game_server_packets(
     event_submissions_t *events) {
-#if NET_DEBUG_LAG
+    raw_input_t *input = get_raw_input();
+
+#if 1
     if (input->buttons[BT_F].instant) {
         simulate_lag = !simulate_lag;
 
@@ -926,7 +941,11 @@ static void s_check_incoming_game_server_packets(
             } break;
 
             case PT_GAME_STATE_SNAPSHOT: {
-                s_process_game_state_snapshot(&in_serialiser, header.current_tick, events);} break;
+                s_process_game_state_snapshot(
+                    &in_serialiser,
+                    header.current_tick,
+                    events);
+            } break;
 
             case PT_CHUNK_VOXELS: {
                 s_process_chunk_voxels(
@@ -1568,6 +1587,9 @@ static bool s_check_if_client_has_to_correct_terrain(
                 printf("(%i %i %i) Need to set (%i) %i -> %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)predicted_value, (int32_t)actual_value);
 #endif
 
+                // Change the predicted value and send this back to the client, and send this back to the client to correct
+                vm_ptr->final_value = actual_value;
+
                 chunk_has_mistake = 1;
             }
         }
@@ -1636,6 +1658,11 @@ static void s_dispatch_game_state_snapshot() {
                     // If there is a correction of any kind to do, force client to correct everything
                     c->waiting_on_correction = 1;
 
+                    if (has_to_correct_terrain) {
+                        snapshot->packet_contains_terrain_correction = 1;
+                        c->send_corrected_predicted_voxels = 1;
+                    }
+
                     LOG_INFOV("Client needs to revert to tick %llu\n\n", (unsigned long long)c->tick);
                     snapshot->client_needs_to_correct_state = has_to_correct_state || has_to_correct_terrain;
                     snapshot->server_waiting_for_correction = 0;
@@ -1689,16 +1716,26 @@ static void s_dispatch_game_state_snapshot() {
     // This is the packet for players that need correction
     n_serialise_game_state_snapshot(&packet, &serialiser);
     n_serialise_chunk_modifications(packet.chunk_modifications, packet.modified_chunk_count, &serialiser);
-
+    
+    uint32_t data_head_before = serialiser.data_buffer_head;
+    
     for (uint32_t i = 0; i < clients.data_count; ++i) {
         client_t *c = &clients[i];
 
+        if (c->send_corrected_predicted_voxels) {
+            // Serialise
+            n_serialise_chunk_modifications(c->predicted_modifications, c->predicted_chunk_mod_count, &serialiser);
+        }
+        
         if (c->initialised && c->received_first_commands_packet) {
             s_send_to(&serialiser, c->address);
         }
+
+        serialiser.data_buffer_head = data_head_before;
         
         // Clear client's predicted modification array
         c->predicted_chunk_mod_count = 0;
+        c->send_corrected_predicted_voxels = 0;
     }
 
     reset_modification_tracker();

@@ -98,6 +98,8 @@ struct game_client_t {
 
 static stack_container_t<game_client_t> client_sockets;
 
+static hash_table_t<uint32_t, 100, 5, 5> client_name_to_socket;
+
 struct game_server_t {
     connection_t connection;
     // Server information
@@ -142,7 +144,6 @@ static void s_check_new_connections() {
         pending_sockets[index].flags.initialised = 1;// = {1, new_connection.s, new_connection.address};
         pending_sockets[index].sock = new_connection.s;
         pending_sockets[index].address = new_connection.address;
-        pending_sockets[index].time_stamp;
 
         // Set socket to be in non blocking mode
         set_socket_to_non_blocking_mode(pending_sockets[index].sock);
@@ -194,16 +195,16 @@ static void s_check_pending_sockets() {
                     need_to_send_available_servers = 1;
                 }
                 else if (header.type == HPT_QUERY_CLIENT_REGISTER) {
+                    hub_query_client_register_t query;
+                    //deserialise_hub_query_client_register(&query, &serialiser);
+                    query.client_name = serialiser.deserialise_string();
+                    
                     // Register socket as client
                     uint32_t index = client_sockets.add();
                     client_sockets[index].connection = *pending;
                     client_sockets[index].connection.flags.responded = 1;
                     
                     pending_sockets.remove(i);
-
-                    hub_query_client_register_t query;
-                    //deserialise_hub_query_client_register(&query, &serialiser);
-                    query.client_name = serialiser.deserialise_string();
                     client_sockets[index].client_name = create_fl_string(query.client_name);
                     client_sockets[index].connection.flags.initialised = 1;
 
@@ -415,6 +416,8 @@ void sig_handler(int32_t s) {
 int32_t main(
     int32_t argc,
     char *argv[]) {
+    client_name_to_socket.init();
+
     struct sigaction handler;
     handler.sa_handler = sig_handler;
     sigemptyset(&handler.sa_mask);

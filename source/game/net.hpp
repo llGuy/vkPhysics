@@ -48,6 +48,7 @@ struct client_t {
             // Where client didn't make any errors
             uint32_t should_set_tick: 1;
             uint32_t did_terrain_mod_previous_tick: 1;
+            uint32_t send_corrected_predicted_voxels: 1;
             // Will use other bits in future
         };
 
