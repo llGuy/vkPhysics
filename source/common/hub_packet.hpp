@@ -11,6 +11,9 @@ enum hub_packet_type_t : uint32_t {
     HPT_RESPONSE_AVAILABLE_SERVERS,
 
     HPT_INFORM_CLIENT_COUNT,
+
+    HPT_QUERY_RESPONSIVENESS,
+    HPT_RESPONSE_RESPONSIVENESS    
 };
 
 struct hub_packet_header_t {

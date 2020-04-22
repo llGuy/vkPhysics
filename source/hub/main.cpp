@@ -13,12 +13,46 @@ static socket_t hub_socket;
 #define MAX_ACTIVE_SERVERS 500
 #define MAX_PENDING_SOCKETS 100
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+#define RESPONSE_TIME 20.0f /* 20 Seconds */
+
+#include <errno.h>
 #include <netdb.h>
 #include <fcntl.h>
-#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+static void s_time_init() {
+}
+
+static clock_t tick_start;
+
+static clock_t s_get_time() {
+    return clock();
+}
+
+static float s_diff(
+    clock_t end,
+    clock_t start) {
+    clock_t delta = end - start;
+    return (float)delta / (double)CLOCKS_PER_SEC;
+}
+
+static void s_begin_time() {
+    tick_start = clock();
+}
+
+static clock_t tick_end;
+
+static float delta_time;
+
+static void s_end_time() {
+    tick_end = clock();
+
+    clock_t delta = tick_end - tick_start;
+    delta_time = (float)delta / (double)CLOCKS_PER_SEC;
+}
 
 static void s_hub_socket_init() {
     hub_socket = network_socket_init(SP_TCP);
@@ -38,6 +72,7 @@ struct connection_t {
     union {
         struct {
             uint32_t initialised: 1;
+            uint32_t responded: 1;
         } flags;
 
         uint32_t bytes;
@@ -45,6 +80,8 @@ struct connection_t {
     
     socket_t sock;
     network_address_t address;
+
+    float time_stamp;
 };
 
 // Sockets for which we don't know if they are clients or servers
@@ -105,6 +142,7 @@ static void s_check_new_connections() {
         pending_sockets[index].flags.initialised = 1;// = {1, new_connection.s, new_connection.address};
         pending_sockets[index].sock = new_connection.s;
         pending_sockets[index].address = new_connection.address;
+        pending_sockets[index].time_stamp;
 
         // Set socket to be in non blocking mode
         set_socket_to_non_blocking_mode(pending_sockets[index].sock);
@@ -139,6 +177,7 @@ static void s_check_pending_sockets() {
                 if (header.type == HPT_QUERY_SERVER_REGISTER) {
                     uint32_t index = server_sockets.add();
                     server_sockets[index].connection = *pending;
+                    server_sockets[index].connection.flags.responded = 1;
                     
                     // Register socket as server
                     pending_sockets.remove(i);
@@ -158,6 +197,7 @@ static void s_check_pending_sockets() {
                     // Register socket as client
                     uint32_t index = client_sockets.add();
                     client_sockets[index].connection = *pending;
+                    client_sockets[index].connection.flags.responded = 1;
                     
                     pending_sockets.remove(i);
 
@@ -218,6 +258,10 @@ static void s_process_client_packet(
         s_handle_query_available_servers(in_serialiser, out_serialiser, client);
         break;
     }
+    case HPT_RESPONSE_RESPONSIVENESS: {
+        client->connection.flags.responded = 1;
+        break;
+    }
     default: {
     }
     }
@@ -232,6 +276,10 @@ static void s_process_server_packet(
     deserialise_hub_packet_header(&header, in_serialiser);
 
     switch (header.type) {
+    case HPT_RESPONSE_RESPONSIVENESS: {
+        server->connection.flags.responded = 1;
+        break;
+    }
     default: {
     }
     }
@@ -263,8 +311,8 @@ static void s_check_queries() {
         }
     }
 
-   need_to_send_available_servers = 0;
-
+    need_to_send_available_servers = 0;
+    
     for (uint32_t i = 0; i < server_sockets.data_count; ++i) {
         game_server_t *gs_ptr = &server_sockets[i];
         if (gs_ptr->connection.flags.initialised) {
@@ -282,20 +330,79 @@ static void s_check_queries() {
     }
 }
 
+static clock_t last_responsiveness_query;
+
 static void s_check_new_queries() {
     s_check_pending_sockets();
     s_check_queries();
 
     // Make sure to check every so often if servers / clients are still active
+    clock_t current = s_get_time();
+    if (s_diff(current, last_responsiveness_query) > RESPONSE_TIME) {
+        serialiser_t serialiser = {};
+        serialiser.init(20);
+
+        hub_packet_header_t header = {};
+        header.type = HPT_QUERY_RESPONSIVENESS;
+
+        serialise_hub_packet_header(&header, &serialiser);
+
+        for (uint32_t i = 0; i < client_sockets.data_count; ++i) {
+            game_client_t *gc_ptr = &client_sockets[i];
+            
+            if (gc_ptr->connection.flags.initialised) {
+                if (!gc_ptr->connection.flags.responded) {
+                    // Disconnect client
+                    LOG_INFOV("Client %s is not responding anymore, removing\n", gc_ptr->client_name);
+                    client_sockets.remove(i);
+                }
+                else {
+                    gc_ptr->connection.time_stamp = current;
+                    gc_ptr->connection.flags.responded = 0;
+
+                    // Send to packet to client asking for response
+                    send_to_bound_address(gc_ptr->connection.sock, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
+                }
+            }
+        }
+
+        for (uint32_t i = 0; i < server_sockets.data_count; ++i) {
+            game_server_t *gs_ptr = &server_sockets[i];
+            gs_ptr->connection.time_stamp = current;
+            gs_ptr->connection.flags.responded = 0;
+
+            if (gs_ptr->connection.flags.initialised) {
+                if (!gs_ptr->connection.flags.responded) {
+                    // Disconnect client
+                    LOG_INFOV("Server %s is not responding anymore, removing\n", gs_ptr->server_name);
+                    server_sockets.remove(i);
+
+                    need_to_send_available_servers = 1;
+                }
+                else {
+                    gs_ptr->connection.time_stamp = current;
+                    gs_ptr->connection.flags.responded = 0;
+
+                    // Send to packet to client asking for response
+                    send_to_bound_address(gs_ptr->connection.sock, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
+                }
+            }
+        }
+
+        last_responsiveness_query = current;
+    }
 }
 
 static void s_start_loop() {
     bool running = 1;
+    last_responsiveness_query = s_get_time();
 
     while(running) {
+        s_begin_time();
         s_check_new_connections();
         s_check_new_queries();
         LN_CLEAR();
+        s_end_time();
     }
 }
 
