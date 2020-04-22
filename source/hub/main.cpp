@@ -108,6 +108,8 @@ static void s_check_new_connections() {
 
 static uint8_t *message_buffer;
 
+static bool need_to_send_available_servers;
+
 static void s_check_pending_sockets() {
     // First check pending sockets
     for (uint32_t i = 0; i < pending_sockets.data_count; ++i) {
@@ -139,6 +141,8 @@ static void s_check_pending_sockets() {
                     server_sockets[index].connection.flags.initialised = 1;
 
                     LOG_INFOV("New server active: %s\n", server_sockets[index].server_name);
+
+                    need_to_send_available_servers = 1;
                 }
                 else if (header.type == HPT_QUERY_CLIENT_REGISTER) {
                     // Register socket as client
@@ -168,6 +172,7 @@ static void s_handle_query_available_servers(
     serialiser_t *in_serialiser,
     serialiser_t *out_serialiser,
     game_client_t *client) {
+    (void)in_serialiser;
     hub_packet_header_t header = {};
     header.type = HPT_RESPONSE_AVAILABLE_SERVERS;
     serialise_hub_packet_header(&header, out_serialiser);
@@ -227,7 +232,13 @@ static void s_check_queries() {
     out_serialiser.init(10000);
     for (uint32_t i = 0; i < client_sockets.data_count; ++i) {
         game_client_t *gc_ptr = &client_sockets[i];
+        
         if (gc_ptr->connection.flags.initialised) {
+            if (need_to_send_available_servers) {
+                s_handle_query_available_servers(NULL, &out_serialiser, gc_ptr);
+                out_serialiser.data_buffer_head = 0;
+            }
+            
             int32_t bytes_received = receive_from_bound_address(gc_ptr->connection.sock, (char *)message_buffer, MAX_MESSAGE_SIZE);
 
             if (bytes_received > 0) {
@@ -241,6 +252,8 @@ static void s_check_queries() {
             }
         }
     }
+
+   need_to_send_available_servers = 0;
 
     for (uint32_t i = 0; i < server_sockets.data_count; ++i) {
         game_server_t *gs_ptr = &server_sockets[i];
