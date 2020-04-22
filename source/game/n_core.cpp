@@ -1006,6 +1006,18 @@ static void s_check_incoming_hub_server_packets(
             s_process_available_servers_response(&in_serialiser, events);
             break;
         }
+        case HPT_QUERY_RESPONSIVENESS: {
+            hub_packet_header_t header = {};
+            header.type = HPT_RESPONSE_RESPONSIVENESS;
+
+            serialiser_t serialiser = {};
+            serialiser.init(20);
+
+            serialise_hub_packet_header(&header, &serialiser);
+
+            send_to_bound_address(hub_socket, message_buffer, serialiser.data_buffer_head);
+            break;
+        }
         default: {
             break;
         }
@@ -1749,6 +1761,8 @@ void tick_server(
             }
         }
     }
+
+    s_check_incoming_hub_server_packets(events);
 }
 
 void tick_net(
