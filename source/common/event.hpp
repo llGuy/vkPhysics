@@ -40,6 +40,9 @@ struct event_start_server_t {
 };
 
 struct event_data_request_to_join_server_t {
+    // Program can either provide server name or raw ip address: both can work
+    // Value copy of game server information
+    const char *server_name;
     const char *ip_address;
 };
 

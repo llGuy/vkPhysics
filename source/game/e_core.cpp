@@ -7,6 +7,7 @@
 #include "e_internal.hpp"
 #include <common/log.hpp>
 #include <common/event.hpp>
+#include <common/string.hpp>
 #include <renderer/input.hpp>
 #include <common/allocators.hpp>
 #include <renderer/renderer.hpp>
@@ -249,16 +250,38 @@ static void s_world_ui_proc() {
         submit_event(ET_START_SERVER, start_server_data, &events);
     }
 
-    static char address_buffer[50] = {};
-    ImGui::InputText("Connect to", address_buffer, sizeof(address_buffer));
-    
-    bool request_connection = ImGui::Button("Request connection");
-    if (request_connection) {
-        event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
-        memset(data, 0, sizeof(event_data_request_to_join_server_t));
-        data->ip_address = address_buffer;
-        submit_event(ET_REQUEST_TO_JOIN_SERVER, data, &events);
+    available_servers_t *servers = get_available_servers();
+    if (servers) {
+        if (servers->server_count > 0) {
+            ImGui::Separator();
+            ImGui::Text("-- Online servers: click to join:");
+            for (uint32_t i = 0; i < servers->server_count; ++i) {
+                game_server_t *gs_ptr = &servers->servers[i];
+                bool join = ImGui::Button(gs_ptr->server_name);
+                if (join) {
+                    // Submit event to join server
+                    printf("Requested to join: %s\n", gs_ptr->server_name);
+
+                    char *server_name = create_fl_string(gs_ptr->server_name);
+                    event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
+                    data->server_name = server_name;
+
+                    submit_event(ET_REQUEST_TO_JOIN_SERVER, data, &events);
+                }
+            }
+        }
     }
+
+    // static char address_buffer[50] = {};
+    // ImGui::InputText("Connect to", address_buffer, sizeof(address_buffer));
+    
+    // bool request_connection = ImGui::Button("Request connection");
+    // if (request_connection) {
+    //     event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
+    //     memset(data, 0, sizeof(event_data_request_to_join_server_t));
+    //     data->ip_address = address_buffer;
+    //     submit_event(ET_REQUEST_TO_JOIN_SERVER, data, &events);
+    // }
 
     bool leave_server = ImGui::Button("Disconnect");
     if (leave_server) {

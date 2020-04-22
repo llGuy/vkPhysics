@@ -3,6 +3,7 @@
 #include <common/tools.hpp>
 #include <common/event.hpp>
 #include <common/socket.hpp>
+#include <common/containers.hpp>
 
 #define NET_DEBUG 0
 #define NET_DEBUG_LAG 0
@@ -100,6 +101,8 @@ struct game_server_t {
 struct available_servers_t {
     uint32_t server_count;
     game_server_t *servers;
+
+    hash_table_t<uint32_t, 50, 5, 5> name_to_server;
 };
 
 available_servers_t *get_available_servers();
