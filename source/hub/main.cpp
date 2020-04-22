@@ -259,7 +259,6 @@ static void s_process_client_packet(
         break;
     }
     case HPT_RESPONSE_RESPONSIVENESS: {
-        LOG_INFO("Server responded\n");
         client->connection.flags.responded = 1;
         break;
     }
@@ -278,7 +277,6 @@ static void s_process_server_packet(
 
     switch (header.type) {
     case HPT_RESPONSE_RESPONSIVENESS: {
-        LOG_INFO("Server responded\n");
         server->connection.flags.responded = 1;
         break;
     }
