@@ -160,6 +160,7 @@ static void s_start_client(
 
     available_servers.server_count = 0;
     available_servers.servers = FL_MALLOC(game_server_t, MAX_AVAILABLE_SERVER_COUNT);
+    memset(available_servers.servers, 0, sizeof(game_server_t) * MAX_AVAILABLE_SERVER_COUNT);
     available_servers.name_to_server.init();
 
     serialiser.data_buffer_head = 0;

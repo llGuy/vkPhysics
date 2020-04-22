@@ -272,16 +272,16 @@ static void s_world_ui_proc() {
         }
     }
 
-    // static char address_buffer[50] = {};
-    // ImGui::InputText("Connect to", address_buffer, sizeof(address_buffer));
+    static char address_buffer[50] = {};
+    ImGui::InputText("Or connect to", address_buffer, sizeof(address_buffer));
     
-    // bool request_connection = ImGui::Button("Request connection");
-    // if (request_connection) {
-    //     event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
-    //     memset(data, 0, sizeof(event_data_request_to_join_server_t));
-    //     data->ip_address = address_buffer;
-    //     submit_event(ET_REQUEST_TO_JOIN_SERVER, data, &events);
-    // }
+    bool request_connection = ImGui::Button("Request connection");
+    if (request_connection) {
+        event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
+        memset(data, 0, sizeof(event_data_request_to_join_server_t));
+        data->ip_address = address_buffer;
+        submit_event(ET_REQUEST_TO_JOIN_SERVER, data, &events);
+    }
 
     bool leave_server = ImGui::Button("Disconnect");
     if (leave_server) {

@@ -13,9 +13,19 @@ static socket_t hub_socket;
 #define MAX_ACTIVE_SERVERS 500
 #define MAX_PENDING_SOCKETS 100
 
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <errno.h>
+
 static void s_hub_socket_init() {
     hub_socket = network_socket_init(SP_TCP);
     set_socket_to_non_blocking_mode(hub_socket);
+
+    int32_t value = 1;
+    setsockopt(hub_socket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(int32_t));
 
     network_address_t address = {};
     address.port = host_to_network_byte_order(SERVER_HUB_OUTPUT_PORT);
