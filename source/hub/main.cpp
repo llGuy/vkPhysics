@@ -1,4 +1,5 @@
 #include <common/log.hpp>
+#include <common/time.hpp>
 #include <common/tools.hpp>
 #include <common/string.hpp>
 #include <common/socket.hpp>
@@ -23,35 +24,24 @@ static socket_t hub_socket;
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#include <chrono>
+
 static void s_time_init() {
 }
 
-static clock_t tick_start;
-
-static clock_t s_get_time() {
-    return clock();
-}
-
-static float s_diff(
-    clock_t end,
-    clock_t start) {
-    clock_t delta = end - start;
-    return (float)delta / (double)CLOCKS_PER_SEC;
-}
+static time_stamp_t tick_start;
 
 static void s_begin_time() {
-    tick_start = clock();
+    tick_start = current_time();
 }
 
-static clock_t tick_end;
+static time_stamp_t tick_end;
 
 static float delta_time;
 
 static void s_end_time() {
-    tick_end = clock();
-
-    clock_t delta = tick_end - tick_start;
-    delta_time = (float)delta / (double)CLOCKS_PER_SEC;
+    tick_end = current_time();
+    delta_time = time_difference(tick_end, tick_start);
 }
 
 static void s_hub_socket_init() {
@@ -81,7 +71,7 @@ struct connection_t {
     socket_t sock;
     network_address_t address;
 
-    float time_stamp;
+    time_stamp_t time_stamp;
 };
 
 // Sockets for which we don't know if they are clients or servers
@@ -331,15 +321,17 @@ static void s_check_queries() {
     }
 }
 
-static clock_t last_responsiveness_query;
+static time_stamp_t last_responsiveness_query;
 
 static void s_check_new_queries() {
     s_check_pending_sockets();
     s_check_queries();
 
     // Make sure to check every so often if servers / clients are still active
-    clock_t current = s_get_time();
-    if (s_diff(current, last_responsiveness_query) > RESPONSE_TIME) {
+    time_stamp_t current = current_time();
+    float dt = time_difference(current, last_responsiveness_query); 
+
+    if (dt > RESPONSE_TIME) {
         serialiser_t serialiser = {};
         serialiser.init(20);
 
@@ -394,13 +386,15 @@ static void s_check_new_queries() {
 
 static void s_start_loop() {
     bool running = 1;
-    last_responsiveness_query = s_get_time();
-
+    last_responsiveness_query = current_time();
     while(running) {
         s_begin_time();
         s_check_new_connections();
         s_check_new_queries();
         LN_CLEAR();
+
+        sleep_seconds(0.015f);
+        
         s_end_time();
     }
 }
