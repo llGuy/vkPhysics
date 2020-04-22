@@ -117,6 +117,20 @@ static accumulated_predicted_modification_t *s_add_acc_predicted_modification() 
     return apm_ptr;
 }
 
+static void s_request_available_servers() {
+    serialiser_t serialiser = {};
+    serialiser.init(20);
+    
+    hub_packet_header_t available_servers_header = {};
+    available_servers_header.type = HPT_QUERY_AVAILABLE_SERVERS;
+    serialise_hub_packet_header(&available_servers_header, &serialiser);
+
+    // Expect a packet to arrive
+    send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
+
+    LOG_INFO("Sent available servers request to hub\n");
+}
+
 static void s_start_client(
     event_start_client_t *data) {
     s_hub_socket_init();
@@ -167,15 +181,7 @@ static void s_start_client(
 
     serialiser.data_buffer_head = 0;
     
-    // Need to ask server how many available servers there are
-    hub_packet_header_t available_servers_header = {};
-    available_servers_header.type = HPT_QUERY_AVAILABLE_SERVERS;
-    serialise_hub_packet_header(&available_servers_header, &serialiser);
-
-    // Expect a packet to arrive
-    send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
-
-    LOG_INFO("Sent available servers request to hub\n");
+    s_request_available_servers();
 }
 
 static network_address_t bound_server_address = {};
@@ -1832,6 +1838,10 @@ static void s_net_event_listener(
         FL_FREE(data);
     } break;
 
+    case ET_REQUEST_REFRESH_SERVER_PAGE: {
+        s_request_available_servers();
+    } break;
+
     case ET_REQUEST_TO_JOIN_SERVER: {
         event_data_request_to_join_server_t *data = (event_data_request_to_join_server_t *)event->data;
         local_client_info_t client_info;
@@ -1891,6 +1901,7 @@ void net_init(
     subscribe_to_event(ET_START_SERVER, net_listener_id, events);
     subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, net_listener_id, events);
     subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
+    subscribe_to_event(ET_REQUEST_REFRESH_SERVER_PAGE, net_listener_id, events);
 
     socket_api_init();
 

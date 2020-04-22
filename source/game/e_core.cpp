@@ -251,6 +251,11 @@ static void s_world_ui_proc() {
         submit_event(ET_START_SERVER, start_server_data, &events);
     }
 
+    bool refresh_servers_list = ImGui::Button("Refresh servers list\n");
+    if (refresh_servers_list) {
+        submit_event(ET_REQUEST_REFRESH_SERVER_PAGE, NULL, &events);
+    }
+
     available_servers_t *servers = get_available_servers();
     if (servers) {
         if (servers->server_count > 0) {
