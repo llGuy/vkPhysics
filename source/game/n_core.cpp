@@ -1007,6 +1007,8 @@ static void s_check_incoming_hub_server_packets(
             break;
         }
         case HPT_QUERY_RESPONSIVENESS: {
+            LOG_INFO("Received request to respond\n");
+            
             hub_packet_header_t new_header = {};
             new_header.type = HPT_RESPONSE_RESPONSIVENESS;
 
@@ -1015,7 +1017,7 @@ static void s_check_incoming_hub_server_packets(
 
             serialise_hub_packet_header(&new_header, &serialiser);
 
-            send_to_bound_address(hub_socket, message_buffer, serialiser.data_buffer_head);
+            send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
             break;
         }
         default: {
