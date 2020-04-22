@@ -1007,13 +1007,13 @@ static void s_check_incoming_hub_server_packets(
             break;
         }
         case HPT_QUERY_RESPONSIVENESS: {
-            hub_packet_header_t header = {};
-            header.type = HPT_RESPONSE_RESPONSIVENESS;
+            hub_packet_header_t new_header = {};
+            new_header.type = HPT_RESPONSE_RESPONSIVENESS;
 
             serialiser_t serialiser = {};
             serialiser.init(20);
 
-            serialise_hub_packet_header(&header, &serialiser);
+            serialise_hub_packet_header(&new_header, &serialiser);
 
             send_to_bound_address(hub_socket, message_buffer, serialiser.data_buffer_head);
             break;

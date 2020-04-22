@@ -259,6 +259,7 @@ static void s_process_client_packet(
         break;
     }
     case HPT_RESPONSE_RESPONSIVENESS: {
+        LOG_INFO("Server responded\n");
         client->connection.flags.responded = 1;
         break;
     }
@@ -277,6 +278,7 @@ static void s_process_server_packet(
 
     switch (header.type) {
     case HPT_RESPONSE_RESPONSIVENESS: {
+        LOG_INFO("Server responded\n");
         server->connection.flags.responded = 1;
         break;
     }
@@ -368,8 +370,6 @@ static void s_check_new_queries() {
 
         for (uint32_t i = 0; i < server_sockets.data_count; ++i) {
             game_server_t *gs_ptr = &server_sockets[i];
-            gs_ptr->connection.time_stamp = current;
-            gs_ptr->connection.flags.responded = 0;
 
             if (gs_ptr->connection.flags.initialised) {
                 if (!gs_ptr->connection.flags.responded) {
