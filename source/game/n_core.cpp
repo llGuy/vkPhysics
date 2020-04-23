@@ -832,8 +832,10 @@ static void s_process_game_state_snapshot(
         }
         else {
             player_t *p = get_player(snapshot->client_id);
-            
-            p->remote_snapshots.push_item(snapshot);
+
+            if (p) {
+                p->remote_snapshots.push_item(snapshot);
+            }
         }
     }
 }

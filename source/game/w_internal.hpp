@@ -113,6 +113,7 @@ struct world_t {
     struct {
         uint8_t wait_mesh_update: 1;
         uint8_t track_history: 1;
+        uint8_t in_server: 1;
     };
 };
 
