@@ -2,11 +2,14 @@
 
 For now, an engine which will hopefully become a real-time multiplayer game!
 
-## Setting up
+## Documentation
 
-[Windows](https://github.com/llGuy/vkPhysics/blob/master/docs/setup_windows.md)
+### Setting up
+- [Windows](https://github.com/llGuy/vkPhysics/blob/master/docs/setup_windows.md)
+- [Linux](https://github.com/llGuy/vkPhysics/blob/master/docs/setup_linux.md)
 
-[Linux](https://github.com/llGuy/vkPhysics/blob/master/docs/setup_linux.md)
+### Project
+- [Structure](https://github.com/llGuy/vkPhysics/blob/master/docs/project_structure.md)
 
 ## Screenshots
 
