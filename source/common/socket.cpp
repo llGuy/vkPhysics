@@ -471,7 +471,7 @@ static bool s_send_to_bound_address(
     socket_t s,
     char *buffer,
     uint32_t buffer_size) {
-    int32_t send_ret = send(s, buffer, buffer_size, 0);
+    int32_t send_ret = send(s, buffer, buffer_size, MSG_NOSIGNAL);
 
     if (send_ret < 0) {
         // Error

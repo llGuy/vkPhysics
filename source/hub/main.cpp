@@ -354,7 +354,11 @@ static void s_check_new_queries() {
                     gc_ptr->connection.flags.responded = 0;
 
                     // Send to packet to client asking for response
-                    send_to_bound_address(gc_ptr->connection.sock, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
+                    if (!send_to_bound_address(gc_ptr->connection.sock, (char *)serialiser.data_buffer, serialiser.data_buffer_head)) {
+                        // Pipe broke, need to remove client
+                        LOG_INFOV("Client %s is not responding anymore, removing\n", gc_ptr->client_name);
+                        client_sockets.remove(i);
+                    }
                 }
             }
         }
@@ -375,7 +379,13 @@ static void s_check_new_queries() {
                     gs_ptr->connection.flags.responded = 0;
 
                     // Send to packet to client asking for response
-                    send_to_bound_address(gs_ptr->connection.sock, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
+                    if (!send_to_bound_address(gs_ptr->connection.sock, (char *)serialiser.data_buffer, serialiser.data_buffer_head)) {
+                        // Pipe broke, need to remove client
+                        LOG_INFOV("Server %s is not responding anymore, removing\n", gs_ptr->server_name);
+                        server_sockets.remove(i);
+                        
+                        need_to_send_available_servers = 1;
+                    }
                 }
             }
         }
