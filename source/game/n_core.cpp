@@ -1066,7 +1066,6 @@ void tick_client(
     event_submissions_t *events) {
     raw_input_t *input = get_raw_input();
     s_check_incoming_game_server_packets(events);
-    s_check_incoming_hub_server_packets(events);
 }
 
 static void s_send_connect_request_to_server(
@@ -1802,12 +1801,12 @@ void tick_server(
             }
         }
     }
-
-    s_check_incoming_hub_server_packets(events);
 }
 
 void tick_net(
     event_submissions_t *events) {
+    s_check_incoming_hub_server_packets(events);
+
     if (started_client) {
         tick_client(events);
     }
