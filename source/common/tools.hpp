@@ -2,12 +2,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdlib.h>
 #include "t_types.hpp"
 
 inline void *malloc_debug(
     uint32_t size) {
     //printf("DEBUG: Allocated %s\n", size);
-    return malloc(size);
+    return calloc(size, 1);
 }
 
 inline void free_debug(

@@ -140,7 +140,7 @@ void w_handle_input(
     }
 }
 
-#define TERRAFORMING_SPEED 500.0f
+#define TERRAFORMING_SPEED 800.0f
 
 void w_push_player_actions(
     player_t *player,
@@ -183,7 +183,7 @@ void push_player_actions(
         override_adt);
 }
 
-#define TERRAFORMING_RADIUS 3.0f
+#define TERRAFORMING_RADIUS 1.0f
 
 static void s_execute_player_triggers(
     player_t *player,
