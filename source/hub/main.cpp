@@ -87,7 +87,6 @@ struct game_client_t {
 };
 
 static stack_container_t<game_client_t> client_sockets;
-
 static hash_table_t<uint32_t, 100, 5, 5> client_name_to_socket;
 
 struct game_server_t {
@@ -190,16 +189,46 @@ static void s_check_pending_sockets() {
                     //deserialise_hub_query_client_register(&query, &serialiser);
                     query.client_name = serialiser.deserialise_string();
                     
-                    // Register socket as client
-                    uint32_t index = client_sockets.add();
-                    client_sockets[index].connection = *pending;
-                    client_sockets[index].connection.flags.responded = 1;
+                    uint32_t *existing = client_name_to_socket.get(simple_string_hash(query.client_name));
+                    
+                    if (existing) {
+                        // Client already exists
+                        LOG_INFOV("Client %s already exists, not creating new client\n", query.client_name);
+
+                        // Check if the IP address is the same
+                        game_client_t *existing_client = &client_sockets[*existing];
+                        if (existing_client->connection.address.ipv4_address == pending->address.ipv4_address) {
+                            LOG_INFOV("Client %s has same address as existing client, not creating new client\n", query.client_name);
+                        }
+                        // TODO: Resolve naming conflicts
+                        /*else {
+                            uint32_t index = client_sockets.add();
+                            client_sockets[index].connection = *pending;
+                            client_sockets[index].connection.flags.responded = 1;
+                    
+                            client_sockets[index].client_name = create_fl_string(query.client_name);
+                            client_sockets[index].connection.flags.initialised = 1;
+
+                            LOG_INFOV("New client active: %s\n", client_sockets[index].client_name);
+                        
+                            client_name_to_socket.insert(simple_string_hash(query.client_name), index);
+                            }*/
+                    }
+                    else {
+                        // Register socket as client
+                        uint32_t index = client_sockets.add();
+                        client_sockets[index].connection = *pending;
+                        client_sockets[index].connection.flags.responded = 1;
+                    
+                        client_sockets[index].client_name = create_fl_string(query.client_name);
+                        client_sockets[index].connection.flags.initialised = 1;
+
+                        LOG_INFOV("New client active: %s\n", client_sockets[index].client_name);
+                        
+                        client_name_to_socket.insert(simple_string_hash(query.client_name), index);
+                    }
                     
                     pending_sockets.remove(i);
-                    client_sockets[index].client_name = create_fl_string(query.client_name);
-                    client_sockets[index].connection.flags.initialised = 1;
-
-                    LOG_INFOV("New client active: %s\n", client_sockets[index].client_name);
                 }
                 else if (header.type == HPT_RESPONSE_RESPONSIVENESS) {
                     pending->flags.responded = 1;
@@ -374,6 +403,7 @@ static void s_check_new_queries() {
                 if (!gc_ptr->connection.flags.responded) {
                     // Disconnect client
                     LOG_INFOV("Client %s is not responding anymore, removing\n", gc_ptr->client_name);
+                    client_name_to_socket.remove(simple_string_hash(gc_ptr->client_name));
                     client_sockets.remove(i);
                 }
                 else {
@@ -384,6 +414,7 @@ static void s_check_new_queries() {
                     if (!send_to_bound_address(gc_ptr->connection.sock, (char *)serialiser.data_buffer, serialiser.data_buffer_head)) {
                         // Pipe broke, need to remove client
                         LOG_INFOV("Client %s is not responding anymore, removing\n", gc_ptr->client_name);
+                        client_name_to_socket.remove(simple_string_hash(gc_ptr->client_name));
                         client_sockets.remove(i);
                     }
                 }
