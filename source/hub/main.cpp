@@ -200,6 +200,9 @@ static void s_check_pending_sockets() {
 
                     LOG_INFOV("New client active: %s\n", client_sockets[index].client_name);
                 }
+                else if (header.type == HPT_RESPONSE_RESPONSIVENESS) {
+                    pending->flags.responded = 1;
+                }
                 else {
                     // There was an error, was not supposed to receive this packet before any other from this socket
                     LOG_ERROR("There was an error: received non register packet as first packet\n");
@@ -340,6 +343,29 @@ static void s_check_new_queries() {
 
         serialise_hub_packet_header(&header, &serialiser);
 
+        for (uint32_t i = 0; i < pending_sockets.data_count; ++i) {
+            connection_t *ps_ptr = &pending_sockets[i];
+            
+            if (ps_ptr->flags.initialised) {
+                if (!ps_ptr->flags.responded) {
+                    // Disconnect client
+                    LOG_INFO("Pending socket is not responding anymore, removing\n");
+                    pending_sockets.remove(i);
+                }
+                else {
+                    ps_ptr->time_stamp = current;
+                    ps_ptr->flags.responded = 0;
+
+                    // Send to packet to client asking for response
+                    if (!send_to_bound_address(ps_ptr->sock, (char *)serialiser.data_buffer, serialiser.data_buffer_head)) {
+                        // Pipe broke, need to remove client
+                        LOG_INFO("Pending socket is not responding anymore, removing\n");
+                        pending_sockets.remove(i);
+                    }
+                }
+            }
+        }
+        
         for (uint32_t i = 0; i < client_sockets.data_count; ++i) {
             game_client_t *gc_ptr = &client_sockets[i];
             

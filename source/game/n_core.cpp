@@ -133,8 +133,6 @@ static void s_request_available_servers() {
 
 static void s_start_client(
     event_start_client_t *data) {
-    s_hub_socket_init();
-
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
     s_main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
@@ -1120,8 +1118,6 @@ static bool started_server = 0;
 
 static void s_start_server(
     event_start_server_t *data) {
-    s_hub_socket_init();
-
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
     s_main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
@@ -1908,6 +1904,8 @@ void net_init(
     socket_api_init();
 
     message_buffer = FL_MALLOC(char, MAX_MESSAGE_SIZE);
+
+    s_hub_socket_init();
 }
 
 bool connected_to_server() {
