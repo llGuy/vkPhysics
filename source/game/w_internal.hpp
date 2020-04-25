@@ -182,3 +182,45 @@ void w_terraform(
 void w_toggle_mesh_update_wait(
     bool value,
     world_t *world);
+
+uint8_t get_surface_level();
+
+enum collision_primitive_type_t { CPT_FACE, CPT_EDGE, CPT_VERTEX };
+
+struct terrain_collision_t {
+    union {
+        struct {
+            uint32_t detected: 1;
+            uint32_t under_terrain: 1;
+            uint32_t is_currently_in_air: 1;
+        };
+        uint32_t flags;
+    };
+
+    // Velocity after sliding on terrain
+    vector3_t es_new_velocity;
+
+    // Point of contact between bounding sphere and terrain
+    vector3_t es_contact_point;
+
+    // Center position of sphere when collision happened
+    vector3_t es_collision_point;
+
+    // Normal of terrain at contact point
+    vector3_t es_surface_normal;
+
+    // Distance between contact point and center
+    float es_distance_to_center;
+
+    float es_distance_from_triangle;
+
+    collision_primitive_type_t primitive_type;
+};
+
+terrain_collision_t collide_and_slide(
+    const vector3_t &es_center,
+    const vector3_t &es_velocity,
+    const vector3_t &ws_size,
+    uint32_t recurse_depth,
+    terrain_collision_t previous_collision,
+    terrain_collision_t *first_collision);

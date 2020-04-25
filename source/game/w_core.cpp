@@ -246,6 +246,11 @@ chunk_t *get_chunk(
     return w_get_chunk(coord, &world);
 }
 
+chunk_t *access_chunk(
+    ivector3_t coord) {
+    return w_access_chunk(coord, &world);
+}
+
 chunk_t **get_active_chunks(
     uint32_t *count) {
     *count = world.chunks.data_count;

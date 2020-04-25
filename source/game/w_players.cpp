@@ -5,6 +5,8 @@
 #include "w_internal.hpp"
 #include <common/math.hpp>
 
+static vector3_t player_scale;
+
 void w_player_world_init(
     world_t *world) {
     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
@@ -44,6 +46,8 @@ void w_players_data_init() {
         shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE);
+
+    player_scale = vector3_t(0.4f);
 }
 
 void w_player_render_init(
@@ -222,10 +226,10 @@ static void s_execute_player_direction_change(
     player_actions_t *player_actions) {
     vector2_t delta = vector2_t(player_actions->dmouse_x, player_actions->dmouse_y);
 
-    static constexpr float SENSITIVITY = 30.0f;
-    
+    static constexpr float SENSITIVITY = 15.0f;
+
     vector3_t res = player->ws_view_direction;
-	    
+
     float x_angle = glm::radians(-delta.x) * SENSITIVITY * player_actions->dt;// *elapsed;
     float y_angle = glm::radians(-delta.y) * SENSITIVITY * player_actions->dt;// *elapsed;
                 
@@ -243,25 +247,56 @@ static void s_execute_player_movement(
     player_actions_t *actions) {
     vector3_t right = glm::normalize(glm::cross(player->ws_view_direction, player->ws_up_vector));
     vector3_t forward = glm::normalize(glm::cross(player->ws_up_vector, right));
+
+    vector3_t final_velocity = vector3_t(0.0f);
+
+    bool made_movement = 0;
     
     if (actions->move_forward) {
-        player->ws_position += forward * actions->dt * player->default_speed;
+        final_velocity += forward * actions->dt * player->default_speed;
+        made_movement = 1;
     }
     if (actions->move_left) {
-        player->ws_position -= right * actions->dt * player->default_speed;
+        final_velocity -= right * actions->dt * player->default_speed;
+        made_movement = 1;
     }
     if (actions->move_back) {
-        player->ws_position -= forward * actions->dt * player->default_speed;
+        final_velocity -= forward * actions->dt * player->default_speed;
+        made_movement = 1;
     }
     if (actions->move_right) {
-        player->ws_position += right * actions->dt * player->default_speed;
+        final_velocity += right * actions->dt * player->default_speed;
+        made_movement = 1;
     }
     if (actions->jump) {
-        player->ws_position += player->ws_up_vector * actions->dt * player->default_speed;
+        final_velocity += player->ws_up_vector * actions->dt * player->default_speed;
+        made_movement = 1;
     }
     if (actions->crouch) {
-        player->ws_position -= player->ws_up_vector * actions->dt * player->default_speed;
+        final_velocity -= player->ws_up_vector * actions->dt * player->default_speed;
+        made_movement = 1;
     }
+
+    if (made_movement) {
+        final_velocity = glm::normalize(final_velocity);
+        final_velocity *= actions->dt * player->default_speed;
+    }
+
+    // Just for now, check for collision
+    terrain_collision_t first_collision;
+    terrain_collision_t final_collision = collide_and_slide(
+        player->ws_position / player_scale,
+        final_velocity / player_scale,
+        player_scale,
+        0,
+        {},
+        &first_collision);
+
+    if (final_collision.detected) {
+        LOG_INFO("Detected terrain collision\n");
+    }
+
+    player->ws_position += final_velocity;
 }
 
 static void w_execute_player_actions(
@@ -369,7 +404,7 @@ void w_players_gpu_sync_and_render(
                 w_player_render_init(p);
             }
 
-            p->render->render_data.model = glm::translate(p->ws_position);
+            p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
             p->render->render_data.color = vector4_t(1.0f);
             p->render->render_data.pbr_info.x = 0.1f;
             p->render->render_data.pbr_info.y = 0.1f;

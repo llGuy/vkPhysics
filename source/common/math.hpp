@@ -23,3 +23,13 @@ inline float lerp(
     float x) {
     return((x - a) / (b - a));
 }
+
+inline float distance_squared(
+    const vector3_t &a) {
+    return glm::dot(a, a);
+}
+
+inline float squared(
+    float a) {
+    return a * a;
+}

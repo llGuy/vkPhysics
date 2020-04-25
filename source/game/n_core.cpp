@@ -634,6 +634,7 @@ static void s_handle_incorrect_state(
 
         // Now deserialise extra voxel corrections
         uint32_t modification_count = 0;
+        // BUG:
         chunk_modifications_t *modifications = n_deserialise_chunk_modifications(&modification_count, serialiser);
 
         for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {

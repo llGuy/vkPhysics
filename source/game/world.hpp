@@ -189,6 +189,9 @@ struct chunk_t {
 chunk_t *get_chunk(
     ivector3_t coord);
 
+chunk_t *access_chunk(
+    ivector3_t coord);
+
 chunk_t **get_active_chunks(
     uint32_t *count);
 

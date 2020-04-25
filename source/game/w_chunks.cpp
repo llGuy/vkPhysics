@@ -8,7 +8,6 @@
 #include <renderer/renderer.hpp>
 
 uint32_t get_voxel_index(
-
     uint32_t x,
     uint32_t y,
     uint32_t z) {
@@ -432,6 +431,10 @@ void w_tick_chunks(
 }
 
 static uint8_t surface_level = 70;
+
+uint8_t get_surface_level() {
+    return surface_level;
+}
 
 void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
