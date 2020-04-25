@@ -134,6 +134,7 @@ static void s_check_new_connections() {
         pending_sockets[index].flags.initialised = 1;// = {1, new_connection.s, new_connection.address};
         pending_sockets[index].sock = new_connection.s;
         pending_sockets[index].address = new_connection.address;
+        pending_sockets[index].flags.responded = 1;
 
         // Set socket to be in non blocking mode
         set_socket_to_non_blocking_mode(pending_sockets[index].sock);
