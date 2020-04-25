@@ -199,7 +199,9 @@ static void s_check_pending_sockets() {
                         game_client_t *existing_client = &client_sockets[*existing];
                         if (existing_client->connection.address.ipv4_address == pending->address.ipv4_address) {
                             LOG_INFOV("Client %s has same address as existing client, not creating new client\n", query.client_name);
+                            existing_client->connection = *pending;
                             existing_client->connection.flags.responded = 1;
+                            existing_client->connection.flags.initialised = 1;
                         }
                         // TODO: Resolve naming conflicts
                         /*else {
