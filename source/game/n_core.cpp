@@ -842,7 +842,7 @@ static void s_handle_local_player_snapshot(
     serialiser_t *serialiser) {
     // TODO: Watch out for this:
     if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
-        s_handle_correct_state(
+        s_handle_incorrect_state(
             c,
             p,
             snapshot,
@@ -850,7 +850,7 @@ static void s_handle_local_player_snapshot(
             serialiser);
     }
     else {
-        s_handle_incorrect_state(
+        s_handle_correct_state(
             c,
             p,
             snapshot,
