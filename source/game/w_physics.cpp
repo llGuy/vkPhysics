@@ -212,6 +212,8 @@ static vector3_t *s_get_collision_triangles(
     }
 
     *triangle_vertex_count = collision_vertex_count;
+
+    return triangle_vertices;
 }
 
 static bool s_is_point_in_triangle(const vector3_t &point, const vector3_t &tri_point_a, const vector3_t &tri_point_b, const vector3_t &tri_point_c) {
@@ -527,16 +529,9 @@ terrain_collision_t collide_and_slide(
     terrain_collision_t closest_collision = {};
     // Set this to high value so that any *first* vertex will override this
     closest_collision.es_distance_to_center = 1000.0f;
-
-    if (collision_vertex_count) {
-        vector3_t *triangle_vertices = s_get_collision_triangles(
-            es_center,
-            ws_size,
-            &collision_vertex_count);
-    }
     
     for (uint32_t triangle = 0; triangle < collision_vertex_count / 3; ++triangle) {
-        vector3_t *triangle_ptr = &triangle_vertices[triangle * 3];
+        vector3_t *triangle_ptr = &(triangle_vertices[triangle * 3]);
 
         // Convert from xs to es (ellipsoid space) - triangle vertices are already in world space
         for (uint32_t i = 0; i < 3; ++i) {

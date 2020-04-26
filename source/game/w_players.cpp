@@ -22,7 +22,7 @@ void w_player_world_init(
 
     world->spectator = FL_MALLOC(player_t, 1);
     memset(world->spectator, 0, sizeof(player_t));
-    world->spectator->default_speed = 20.0f;
+    world->spectator->default_speed = 5.0f;
     world->spectator->ws_position = vector3_t(-50.0f, 0.0f, -50.0f);
     world->spectator->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
     world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
@@ -296,7 +296,7 @@ static void s_execute_player_movement(
         LOG_INFO("Detected terrain collision\n");
     }
 
-    player->ws_position += final_velocity;
+    player->ws_position += final_collision.es_new_velocity * player_scale;
 }
 
 static void w_execute_player_actions(
