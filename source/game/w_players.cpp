@@ -283,20 +283,20 @@ static void s_execute_player_movement(
     }
 
     // Just for now, check for collision
-    terrain_collision_t first_collision;
-    terrain_collision_t final_collision = collide_and_slide(
-        player->ws_position / player_scale,
-        final_velocity / player_scale,
-        player_scale,
-        0,
-        {},
-        &first_collision);
+    // terrain_collision_t first_collision;
+    // terrain_collision_t final_collision = collide_and_slide(
+    //     player->ws_position / player_scale,
+    //     final_velocity / player_scale,
+    //     player_scale,
+    //     0,
+    //     {},
+    //     &first_collision);
 
-    if (final_collision.detected) {
-        LOG_INFO("Detected terrain collision\n");
-    }
+    // if (final_collision.detected) {
+    //     LOG_INFO("Detected terrain collision\n");
+    // }
 
-    player->ws_position += final_collision.es_new_velocity * player_scale;
+    player->ws_position += final_velocity * player_scale;
 }
 
 static void w_execute_player_actions(
