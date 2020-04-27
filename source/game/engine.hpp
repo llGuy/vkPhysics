@@ -16,6 +16,9 @@ struct game_init_data_t {
 
     uint32_t argc;
     char **argv;
+
+    // Optional data (could be for example android_app)
+    void *main_data;
 };
 
 void game_main(

@@ -224,3 +224,50 @@ uint8_t get_surface_level();
 //     uint32_t recurse_depth,
 //     terrain_collision_t previous_collision,
 //     terrain_collision_t *first_collision);
+
+// TODO: Make sure to revise collision detection implementation!
+
+enum collision_primitive_type_t { CPT_FACE, CPT_EDGE, CPT_VERTEX };
+
+struct terrain_collision_t {
+    // Flags
+    union {
+        struct {
+            uint32_t detected: 1;
+            uint32_t recurse: 4;
+        };
+        uint32_t flags;
+    };
+
+    // Data passed between recursive calls
+    // All these have to be filled in when calling collide_and_slide
+    vector3_t es_position;
+    vector3_t es_velocity;
+
+    vector3_t ws_size;
+    vector3_t ws_position;
+    vector3_t ws_velocity;
+    // -------------------------------------------------------------
+    
+    vector3_t es_normalised_velocity;
+
+    float es_nearest_distance;
+    vector3_t es_contact_point;
+};
+
+struct collision_triangle_t {
+    union {
+        struct {
+            vector3_t a;
+            vector3_t b;
+            vector3_t c;
+        } v;
+        vector3_t vertices[3];
+    };
+};
+
+vector3_t collide_and_slide(
+    const vector3_t &ws_size,
+    const vector3_t &ws_position,
+    const vector3_t &ws_velocity,
+    terrain_collision_t *previous);

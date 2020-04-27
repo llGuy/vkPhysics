@@ -1,5 +1,25 @@
 #include "engine.hpp"
 
+#ifdef __ANDROID__
+// Android mobile
+
+extern "C" {
+    void android_main(
+        struct android_app *app) {
+        game_init_data_t game_init_data = {};
+        // Can only be this
+        game_init_data.flags = GIF_WINDOWED | GIF_CLIENT;
+
+        // Need to pass android_app pointer
+        game_init_data.main_data = (void *)app;
+
+        game_main(&game_init_data);
+    }
+}
+
+#else
+// Laptop / Desktop
+
 int32_t main(
     int32_t argc,
     char *argv[]) {
@@ -17,3 +37,5 @@ int32_t main(
     
     return 0;
 }
+
+#endif

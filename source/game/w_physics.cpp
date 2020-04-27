@@ -1,21 +1,7 @@
+#include <common/log.hpp>
 #include "w_internal.hpp"
 #include <common/math.hpp>
 #include <common/allocators.hpp>
-
-struct terrain_collision_t {
-    // Data about collision
-};
-
-struct collision_triangle_t {
-    union {
-        struct {
-            vector3_t a;
-            vector3_t b;
-            vector3_t c;
-        } v;
-        vector3_t vertices[3];
-    };
-};
 
 static uint8_t s_chunk_edge_voxel_value(
     int32_t x,
@@ -171,7 +157,7 @@ static collision_triangle_t *s_get_collision_triangles(
         is_between_chunks = 1;
     }
 
-    uint32_t collision_vertex_count;
+    uint32_t collision_vertex_count = 0;
     // Estimation
     uint32_t max_vertices = 5 * (uint32_t)glm::dot(vector3_t(bounding_cube_range), vector3_t(bounding_cube_range)) / 2;
     collision_triangle_t *triangles = LN_MALLOC(collision_triangle_t, max_vertices);
@@ -224,21 +210,221 @@ static collision_triangle_t *s_get_collision_triangles(
             }
         }
     }
+
+    *triangle_count = collision_vertex_count;
+
+    return triangles;
 }
 
-terrain_collision_t collide_and_slide(
-    const vector3_t &ws_size,
-    const vector3_t &ws_position,
-    vector3_t *ws_velocity,
-    uint32_t recurse_depth = 0) {
-    if (recurse_depth > 5) {
-        return terrain_collision_t{};
+// This function solves the quadratic eqation "At^2 + Bt + C = 0" and is found in Kasper Fauerby's paper on collision detection and response
+static bool s_get_smallest_root(
+    float a,
+    float b,
+    float c,
+    float max_r,
+    float *root) {
+    // Check if a solution exists
+    float determinant = b * b - 4.0f * a * c;
+    // If determinant is negative it means no solutions.
+    if (determinant < 0.0f) return false;
+    // calculate the two roots: (if determinant == 0 then
+    // x1==x2 but lets disregard that slight optimization)
+    float sqrt_d = sqrt(determinant);
+    float r1 = (-b - sqrt_d) / (2 * a);
+    float r2 = (-b + sqrt_d) / (2 * a);
+    // Sort so x1 <= x2
+    if (r1 > r2) {
+        float temp = r2;
+        r2 = r1;
+        r1 = temp;
     }
+    // Get lowest root:
+    if (r1 > 0 && r1 < max_r) {
+        *root = r1;
+        return true;
+    }
+    // It is possible that we want x2 - this can happen
+    // if x1 < 0
+    if (r2 > 0 && r2 < max_r) {
+        *root = r2;
+        return true;
+    }
+
+    // No (valid) solutions
+    return false;
+}
+
+
+static float s_get_plane_constant(
+    const vector3_t &plane_point,
+    const vector3_t &plane_normal) {
+    return -glm::dot(plane_point, plane_normal);
+}
+
+static bool s_facing_triangle(
+    const vector3_t &es_normalised_velocity,
+    const vector3_t &es_normal) {
+    return (glm::dot(es_normalised_velocity, es_normal) <= 0.0f);
+}
+
+static bool s_inside_triangle(
+    const vector3_t &plane_contact_point,
+    collision_triangle_t *triangle) {
+    vector3_t cross0 = glm::cross(triangle->v.c - triangle->v.b, plane_contact_point - triangle->v.b);
+    vector3_t cross1 = glm::cross(triangle->v.c - triangle->v.b, triangle->v.a - triangle->v.b);
+
+    if (glm::dot(cross0, cross1) >= 0.0f) {
+        cross0 = glm::cross(triangle->v.c - triangle->v.a, plane_contact_point - triangle->v.a);
+        cross1 = glm::cross(triangle->v.c - triangle->v.a, triangle->v.b - triangle->v.a);
+
+        if (glm::dot(cross0, cross1) >= 0.0f) {
+            cross0 = glm::cross(triangle->v.b - triangle->v.a, plane_contact_point - triangle->v.a);
+            cross1 = glm::cross(triangle->v.b - triangle->v.a, triangle->v.c - triangle->v.a);
+
+            if (glm::dot(cross0, cross1) >= 0.0f) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+static bool s_touched_vertex(
+    float a,
+    float *cinstance0,
+    const vector3_t &vertex,
+    terrain_collision_t *collision) {
+    float b = 2.0f * glm::dot(collision->es_velocity, collision->es_position - vertex);
+    float c = glm::dot(vertex - collision->es_position, vertex - collision->es_position) - 1.0f;
+
+    float new_cinstance;
     
+    if (s_get_smallest_root(a, b, c, *cinstance0, &new_cinstance)) {
+        *cinstance0 = new_cinstance;
+        return true;
+    }
+
+    return false;
+}
+
+static bool s_collided_with_triangle(
+    terrain_collision_t *collision,
+    collision_triangle_t *es_triangle) {
+    vector3_t es_a = es_triangle->v.a;
+    vector3_t es_b = es_triangle->v.b;
+    vector3_t es_c = es_triangle->v.c;
+
+    vector3_t es_plane_normal = glm::normalize(glm::cross(es_b - es_a, es_c - es_a));
+
+    if (s_facing_triangle(collision->es_normalised_velocity, es_plane_normal)) {
+        // get plane constant
+        float plane_constant = s_get_plane_constant(es_a, es_plane_normal);
+        float es_distance_to_plane = glm::dot(collision->es_position, es_plane_normal) + plane_constant;
+        float plane_normal_dot_velocity = glm::dot(es_plane_normal, collision->es_velocity);
+
+        bool sphere_inside_plane = 0;
+
+        float cinstance0 = 0.0f, cinstance1 = 0.0f;
+        
+        if (plane_normal_dot_velocity == 0.0f) {
+            // sphere velocity is parallel to plane surface (& facing plane, as we calculated before)
+            if (glm::abs(es_distance_to_plane) >= 1.0f) {
+                // sphere is not in plane and distance is more than sphere radius, cannot possibly collide
+                return false;
+            }
+            else {
+                sphere_inside_plane = 1;
+            }
+        }
+        else {
+            // sphere velocity is not parallel to plane surface (& facing towards plane)
+            // need to check collision with triangle surface, edges and vertices
+            // collision instance 0 (first time sphere touches plane)
+            cinstance0 = (1.0f - es_distance_to_plane) / plane_normal_dot_velocity;
+            cinstance1 = (-1.0f - es_distance_to_plane) / plane_normal_dot_velocity;
+
+            // always make sure that 0 corresponds to closer collision and 1 responds to further
+            if (cinstance0 > cinstance1) {
+                float t = cinstance0;
+                cinstance0 = cinstance1;
+                cinstance1 = t;
+            }
+
+            if (cinstance0 > 1.0f || cinstance1 < 0.0f) {
+                // either triangle plane is behind, or too far (0.0f to 1.0f represents 0.0f to dt, if we cinstance0 > 1.0f, we are trying to go further than we can in this timeframe)
+                return false;
+            }
+
+            if (cinstance0 < 0.0f) cinstance0 = 0.0f;
+            if (cinstance1 > 1.0f) cinstance1 = 1.0f;
+        }
+
+        // point where sphere intersects with plane, not triangle
+        vector3_t plane_contact_point = (collision->es_position + cinstance0 * collision->es_velocity - es_plane_normal);
+
+        bool detected_collision = 0;
+        float cinstance = 0.0f;
+        vector3_t triangle_contact_point;
+
+        if (!sphere_inside_plane) {
+            if (s_inside_triangle(plane_contact_point, es_triangle)) {
+                // sphere collided with triangle
+                detected_collision = 1;
+                cinstance = cinstance0;
+                triangle_contact_point = plane_contact_point;
+            }
+        }
+
+        // check triangle edges / vertices
+        if (!detected_collision) {
+            float a, b, c;
+
+            a = glm::dot(collision->es_velocity, collision->es_velocity);
+
+            if (s_touched_vertex(a, &cinstance0, es_triangle->v.a, collision)) {
+                detected_collision = true;
+                triangle_contact_point = es_triangle->v.a;
+            }
+
+            if (s_touched_vertex(a, &cinstance0, es_triangle->v.b, collision)) {
+                detected_collision = true;
+                triangle_contact_point = es_triangle->v.b;
+            }
+
+            if (s_touched_vertex(a, &cinstance0, es_triangle->v.b, collision)) {
+                detected_collision = true;
+                triangle_contact_point = es_triangle->v.b;
+            }
+        }
+    }
+}
+
+vector3_t collide_and_slide(
+    terrain_collision_t *collision) {
     // Get intersecting triangles
     uint32_t triangle_count = 0;
     collision_triangle_t *triangles = s_get_collision_triangles(
         &triangle_count,
-        ws_position,
-        ws_size);
+        collision->ws_position,
+        collision->ws_size);
+
+    // Avoid division by zero
+    if (glm::dot(collision->es_velocity, collision->es_velocity) == 0.0f) {
+        collision->es_normalised_velocity = vector3_t(0.0f);
+    }
+    else {
+        collision->es_normalised_velocity = glm::normalize(collision->es_velocity);
+    }
+    
+    for (uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
+        collision_triangle_t *triangle = &triangles[triangle_index];
+
+        for (uint32_t i = 0; i < 3; ++i) {
+            triangle->vertices[i] /= collision->ws_size;
+        }
+
+        // Check collision with this triangle (now is ellipsoid space)
+        
+    }
 }

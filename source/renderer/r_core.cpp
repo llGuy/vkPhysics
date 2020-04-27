@@ -71,8 +71,10 @@ static void s_instance_init(const char *application_name) {
 
     uint32_t extension_count = 4;
     const char *extensions[] = {
-#ifdef _WIN32
+#if defined(_WIN32)
         "VK_KHR_win32_surface",
+#elif defined(__ANDROID__)
+        "VK_KHR_android_surface"
 #else
         "VK_KHR_xcb_surface",
 #endif
@@ -2256,10 +2258,4 @@ shader_t create_3d_shader_shadow(
         shader_flags,
         r_shadow_stage(),
         VK_CULL_MODE_FRONT_BIT);
-}
-
-
-void foo() {
-    VkImageCopy region;
-    vkCmdCopyImage((VkCommandBuffer)0, (VkImage)0, (VkImageLayout)0, (VkImage)0, (VkImageLayout)0, 0, &region);
 }
