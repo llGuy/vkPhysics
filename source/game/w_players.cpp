@@ -277,7 +277,7 @@ static void s_execute_player_movement(
         made_movement = 1;
     }
 
-    if (made_movement) {
+    if (made_movement && glm::dot(final_velocity, final_velocity) != 0.0f) {
         final_velocity = glm::normalize(final_velocity);
         final_velocity *= actions->dt * player->default_speed;
     }

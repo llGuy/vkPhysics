@@ -308,6 +308,39 @@ static bool s_touched_vertex(
     return false;
 }
 
+static bool s_touched_edge(
+    float *cinstance0,
+    vector3_t *new_position,
+    const vector3_t &vertex0,
+    const vector3_t &vertex1,
+    terrain_collision_t *collision) {
+    vector3_t edge_vector = vertex1 - vertex0;
+    vector3_t position_to_vertex0 = vertex0 - collision->es_position;
+    float velocity_length2 = glm::dot(collision->es_velocity, collision->es_velocity);
+    float edge_length2 = glm::dot(edge_vector, edge_vector);
+    float edge_dot_velocity = glm::dot(edge_vector, collision->es_velocity);
+    float edge_dot_position_to_vertex0 = glm::dot(edge_vector, position_to_vertex0);
+    float position_to_vertex0_length2 = glm::dot(position_to_vertex0, position_to_vertex0);
+
+    float a = edge_length2 * (-velocity_length2) + (edge_dot_velocity * edge_dot_velocity);
+    float b = edge_length2 * (2.0f * glm::dot(collision->es_velocity, position_to_vertex0)) - (2.0f * edge_dot_velocity * edge_dot_position_to_vertex0);
+    float c = edge_length2 * (1.0f - position_to_vertex0_length2) + (edge_dot_position_to_vertex0 * edge_dot_position_to_vertex0);
+
+    float new_cinstance;
+    
+    if (s_get_smallest_root(a, b, c, *cinstance0, &new_cinstance)) {
+        // Where on the line did the collision happen (did it even happen on the edge, or just on the infinite line of the edge)
+        float proportion = (edge_dot_velocity * new_cinstance - edge_dot_position_to_vertex0) / edge_length2;
+        if (proportion >= 0.0f && proportion <= 1.0f) {
+            *cinstance0 = new_cinstance;
+            *new_position = vertex0 + proportion * edge_vector;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static bool s_collided_with_triangle(
     terrain_collision_t *collision,
     collision_triangle_t *es_triangle) {
@@ -378,7 +411,7 @@ static bool s_collided_with_triangle(
 
         // check triangle edges / vertices
         if (!detected_collision) {
-            float a, b, c;
+            float a; /*, b, c*/
 
             a = glm::dot(collision->es_velocity, collision->es_velocity);
 
@@ -396,8 +429,40 @@ static bool s_collided_with_triangle(
                 detected_collision = true;
                 triangle_contact_point = es_triangle->v.b;
             }
+
+            vector3_t new_position_on_edge;
+
+            if (s_touched_edge(&cinstance0, &new_position_on_edge, es_a, es_b, collision)) {
+                detected_collision = true;
+                triangle_contact_point = new_position_on_edge;
+            }
+
+            if (s_touched_edge(&cinstance0, &new_position_on_edge, es_b, es_c, collision)) {
+                detected_collision = true;
+                triangle_contact_point = new_position_on_edge;
+            }
+
+            if (s_touched_edge(&cinstance0, &new_position_on_edge, es_c, es_a, collision)) {
+                detected_collision = true;
+                triangle_contact_point = new_position_on_edge;
+            }
+        }
+
+        if (detected_collision) {
+            float distance_to_collision = cinstance0 * glm::length(collision->es_velocity);
+
+            if (!collision->detected || distance_to_collision < collision->es_nearest_distance) {
+                collision->es_nearest_distance = distance_to_collision;
+                collision->es_contact_point = triangle_contact_point;
+                collision->es_surface_normal = es_plane_normal;
+                collision->detected = 1;
+
+                return true;
+            }
         }
     }
+
+    return false;
 }
 
 vector3_t collide_and_slide(
@@ -425,6 +490,21 @@ vector3_t collide_and_slide(
         }
 
         // Check collision with this triangle (now is ellipsoid space)
+        s_collided_with_triangle(collision, triangle);
+    }
+
+    if (collision->detected) {
+        // No more collisions, just return position + velocity
+        return collision->es_position + collision->es_velocity;
+    }
+
+    // Point where sphere would travel to if there was no collisions
+    vector3_t noc_destination = collision->es_position + collision->es_velocity;
+    vector3_t actual_position = collision->es_position;
+
+    float close_distance = 0.005f;
+
+    if (collision->es_nearest_distance >= close_distance) {
         
     }
 }

@@ -250,6 +250,7 @@ struct terrain_collision_t {
     // -------------------------------------------------------------
     
     vector3_t es_normalised_velocity;
+    vector3_t es_surface_normal;
 
     float es_nearest_distance;
     vector3_t es_contact_point;
