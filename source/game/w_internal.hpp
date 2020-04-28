@@ -234,6 +234,7 @@ struct terrain_collision_t {
     union {
         struct {
             uint32_t detected: 1;
+            uint32_t has_detected_previously: 1;
             uint32_t recurse: 4;
         };
         uint32_t flags;
@@ -268,7 +269,8 @@ struct collision_triangle_t {
 };
 
 vector3_t collide_and_slide(
-    const vector3_t &ws_size,
-    const vector3_t &ws_position,
-    const vector3_t &ws_velocity,
-    terrain_collision_t *previous);
+    terrain_collision_t *collision);
+
+vector3_t test_collision(
+    terrain_collision_t *collision,
+    collision_triangle_t *triangle);

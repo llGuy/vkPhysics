@@ -22,7 +22,7 @@ void w_player_world_init(
 
     world->spectator = FL_MALLOC(player_t, 1);
     memset(world->spectator, 0, sizeof(player_t));
-    world->spectator->default_speed = 15.0f;
+    world->spectator->default_speed = 5.0f;
     world->spectator->ws_position = vector3_t(-50.0f, 0.0f, -50.0f);
     world->spectator->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
     world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
@@ -282,34 +282,14 @@ static void s_execute_player_movement(
         final_velocity *= actions->dt * player->default_speed;
     }
 
-    // terrain_collision_t collision = collide_and_slide(
-    //     player_scale,
-    //     player->ws_position,
-    //     final_velocity);
+    terrain_collision_t collision = {};
+    collision.ws_size = player_scale;
+    collision.ws_position = player->ws_position;
+    collision.ws_velocity = final_velocity;
+    collision.es_position = collision.ws_position / collision.ws_size;
+    collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
-    // if (collision.detected) {
-    //     //LOG_INFO("Detected collision\n");
-    // }
-    
-    // // Just for now, check for collision
-    // // terrain_collision_t first_collision;
-    // // terrain_collision_t final_collision = collide_and_slide(
-    // //     player->ws_position / player_scale,
-    // //     final_velocity / player_scale,
-    // //     player_scale,
-    // //     0,
-    // //     {},
-    // //     &first_collision);
-
-    // // if (final_collision.detected) {
-    // //     LOG_INFO("Detected terrain collision\n");
-    // // }
-
-    // if (collision.detected) {
-    //     final_velocity = collision.es_velocity * player_scale;
-    // }
-
-    player->ws_position += final_velocity;
+    player->ws_position = collide_and_slide(&collision) * player_scale;
 }
 
 static void w_execute_player_actions(

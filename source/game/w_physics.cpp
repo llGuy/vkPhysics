@@ -144,7 +144,7 @@ static collision_triangle_t *s_get_collision_triangles(
     const vector3_t &ws_size) {
     // Get range of triangles (v3 min - v3 max)
     ivector3_t bounding_cube_max = ivector3_t(glm::ceil(ws_center + ws_size));
-    ivector3_t bounding_cube_min = ivector3_t(glm::ceil(ws_center - ws_size));
+    ivector3_t bounding_cube_min = ivector3_t(glm::floor(ws_center - ws_size));
     ivector3_t bounding_cube_range = bounding_cube_max - bounding_cube_min;
 
     bool is_between_chunks = 0;
@@ -397,7 +397,7 @@ static bool s_collided_with_triangle(
         vector3_t plane_contact_point = (collision->es_position + cinstance0 * collision->es_velocity - es_plane_normal);
 
         bool detected_collision = 0;
-        float cinstance = 0.0f;
+        float cinstance = 1.0f;
         vector3_t triangle_contact_point;
 
         if (!sphere_inside_plane) {
@@ -415,47 +415,49 @@ static bool s_collided_with_triangle(
 
             a = glm::dot(collision->es_velocity, collision->es_velocity);
 
-            if (s_touched_vertex(a, &cinstance0, es_triangle->v.a, collision)) {
+            if (s_touched_vertex(a, &cinstance, es_triangle->v.a, collision)) {
                 detected_collision = true;
                 triangle_contact_point = es_triangle->v.a;
             }
 
-            if (s_touched_vertex(a, &cinstance0, es_triangle->v.b, collision)) {
+            if (s_touched_vertex(a, &cinstance, es_triangle->v.b, collision)) {
                 detected_collision = true;
                 triangle_contact_point = es_triangle->v.b;
             }
 
-            if (s_touched_vertex(a, &cinstance0, es_triangle->v.b, collision)) {
+            if (s_touched_vertex(a, &cinstance, es_triangle->v.c, collision)) {
                 detected_collision = true;
-                triangle_contact_point = es_triangle->v.b;
+                triangle_contact_point = es_triangle->v.c;
             }
 
             vector3_t new_position_on_edge;
 
-            if (s_touched_edge(&cinstance0, &new_position_on_edge, es_a, es_b, collision)) {
+            if (s_touched_edge(&cinstance, &new_position_on_edge, es_a, es_b, collision)) {
                 detected_collision = true;
                 triangle_contact_point = new_position_on_edge;
             }
 
-            if (s_touched_edge(&cinstance0, &new_position_on_edge, es_b, es_c, collision)) {
+            if (s_touched_edge(&cinstance, &new_position_on_edge, es_b, es_c, collision)) {
                 detected_collision = true;
                 triangle_contact_point = new_position_on_edge;
             }
 
-            if (s_touched_edge(&cinstance0, &new_position_on_edge, es_c, es_a, collision)) {
+            if (s_touched_edge(&cinstance, &new_position_on_edge, es_c, es_a, collision)) {
                 detected_collision = true;
                 triangle_contact_point = new_position_on_edge;
             }
         }
 
         if (detected_collision) {
-            float distance_to_collision = cinstance0 * glm::length(collision->es_velocity);
+            float distance_to_collision = cinstance * glm::length(collision->es_velocity);
 
             if (!collision->detected || distance_to_collision < collision->es_nearest_distance) {
                 collision->es_nearest_distance = distance_to_collision;
                 collision->es_contact_point = triangle_contact_point;
                 collision->es_surface_normal = es_plane_normal;
                 collision->detected = 1;
+
+                collision->has_detected_previously = 1;
 
                 return true;
             }
@@ -474,6 +476,10 @@ vector3_t collide_and_slide(
         collision->ws_position,
         collision->ws_size);
 
+    if (collision->recurse > 5) {
+        return collision->es_position;
+    }
+    
     // Avoid division by zero
     if (glm::dot(collision->es_velocity, collision->es_velocity) == 0.0f) {
         collision->es_normalised_velocity = vector3_t(0.0f);
@@ -481,7 +487,9 @@ vector3_t collide_and_slide(
     else {
         collision->es_normalised_velocity = glm::normalize(collision->es_velocity);
     }
-    
+
+    collision->has_detected_previously = 0;
+
     for (uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
         collision_triangle_t *triangle = &triangles[triangle_index];
 
@@ -493,18 +501,109 @@ vector3_t collide_and_slide(
         s_collided_with_triangle(collision, triangle);
     }
 
-    if (collision->detected) {
+    if (!collision->has_detected_previously) {
         // No more collisions, just return position + velocity
         return collision->es_position + collision->es_velocity;
     }
 
     // Point where sphere would travel to if there was no collisions
+    // No-collision-destination
     vector3_t noc_destination = collision->es_position + collision->es_velocity;
     vector3_t actual_position = collision->es_position;
 
     float close_distance = 0.005f;
 
     if (collision->es_nearest_distance >= close_distance) {
-        
+        // Make sure that sphere never touches the terrain
+        vector3_t normalized_velocity = glm::normalize(collision->es_velocity);
+        vector3_t velocity = normalized_velocity * (collision->es_nearest_distance - close_distance);
+
+        actual_position = collision->es_position + velocity;
+
+        collision->es_contact_point -= close_distance * normalized_velocity;
     }
+
+    vector3_t plane_origin = collision->es_contact_point;
+    vector3_t plane_normal = glm::normalize(actual_position - collision->es_contact_point);
+
+    float plane_constant = s_get_plane_constant(plane_origin, plane_normal);
+    float distance_noc_dest_to_plane = glm::dot(noc_destination, plane_normal) + plane_constant;
+
+    vector3_t plane_destination_point = noc_destination - distance_noc_dest_to_plane * plane_normal;
+    vector3_t actual_velocity = plane_destination_point - collision->es_contact_point;
+
+    ++(collision->recurse);
+    collision->es_position = actual_position;
+    collision->es_velocity = actual_velocity;
+    // TODO: Make sure to check that it's plane_normal and not triangle surface normal
+    collision->es_surface_normal = plane_normal;
+    
+    if (glm::dot(actual_velocity, actual_velocity) < close_distance * close_distance) {
+        return actual_position;
+    }
+
+    return collide_and_slide(collision);
+}
+
+
+vector3_t test_collision(
+    terrain_collision_t *collision,
+    collision_triangle_t *triangle) {
+    if (collision->recurse > 5) {
+        return collision->es_position;
+    }
+
+    if (glm::dot(collision->es_velocity, collision->es_velocity) == 0.0f) {
+        collision->es_normalised_velocity = vector3_t(0.0f);
+    }
+    else {
+        collision->es_normalised_velocity = glm::normalize(collision->es_velocity);
+    }
+
+    collision->has_detected_previously = 0;
+    
+    s_collided_with_triangle(collision, triangle);
+
+    if (!collision->has_detected_previously) {
+        // No more collisions, just return position + velocity
+        return collision->es_position + collision->es_velocity;
+    }
+
+    // Point where sphere would travel to if there was no collisions
+    // No-collision-destination
+    vector3_t noc_destination = collision->es_position + collision->es_velocity;
+    vector3_t actual_position = collision->es_position;
+
+    float close_distance = 0.005f;
+
+    if (collision->es_nearest_distance >= close_distance) {
+        // Make sure that sphere never touches the terrain
+        vector3_t normalized_velocity = glm::normalize(collision->es_velocity);
+        vector3_t velocity = normalized_velocity * (collision->es_nearest_distance - close_distance);
+
+        actual_position = collision->es_position + velocity;
+
+        collision->es_contact_point -= close_distance * normalized_velocity;
+    }
+
+    vector3_t plane_origin = collision->es_contact_point;
+    vector3_t plane_normal = glm::normalize(actual_position - collision->es_contact_point);
+
+    float plane_constant = s_get_plane_constant(plane_origin, plane_normal);
+    float distance_noc_dest_to_plane = glm::dot(noc_destination, plane_normal) + plane_constant;
+
+    vector3_t plane_destination_point = noc_destination - distance_noc_dest_to_plane * plane_normal;
+    vector3_t actual_velocity = plane_destination_point - collision->es_contact_point;
+
+    ++(collision->recurse);
+    collision->es_position = actual_position;
+    collision->es_velocity = actual_velocity;
+    // TODO: Make sure to check that it's plane_normal and not triangle surface normal
+    collision->es_surface_normal = plane_normal;
+    
+    if (glm::dot(actual_velocity, actual_velocity) < close_distance * close_distance) {
+        return actual_position;
+    }
+
+    return test_collision(collision, triangle);
 }
