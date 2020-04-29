@@ -74,6 +74,7 @@ struct full_player_info_t {
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
     float default_speed;
+    uint32_t flags;
     bool is_local;
 };
 

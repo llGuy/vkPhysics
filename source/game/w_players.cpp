@@ -33,7 +33,7 @@ static shader_t player_shader;
 
 void w_players_data_init() {
     shader_binding_info_t mesh_info = {};
-    load_mesh_internal(IM_CUBE, &player_mesh, &mesh_info);
+    load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
 
     const char *shader_paths[] = {
         "shaders/SPV/untextured_mesh.vert.spv",
@@ -47,7 +47,7 @@ void w_players_data_init() {
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE);
 
-    player_scale = vector3_t(0.4f);
+    player_scale = vector3_t(1.0f);
 }
 
 void w_player_render_init(

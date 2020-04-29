@@ -18,7 +18,7 @@ static void s_add_player_from_info(
         // Now the network module can use w_get_player_from_client_id to get access to player directly
         w_link_client_id_to_local_id(p->client_id, p->local_id, &world);
     }
-        
+
     p->ws_position = init_info->ws_position;
     p->ws_view_direction = init_info->ws_view_direction;
     p->ws_up_vector = init_info->ws_up_vector;
@@ -72,8 +72,6 @@ static void s_world_event_listener(
         FL_FREE(data->infos);
         FL_FREE(event->data);
     } break;
-
-        
 
     case ET_LEAVE_SERVER: {
         world.in_server = 0;
@@ -146,18 +144,18 @@ static listener_t world_listener;
 
 void world_init(
     event_submissions_t *events) {
-    terrain_collision_t collision_test = {};
-    collision_test.ws_size = vector3_t(1.0f);
-    collision_test.ws_position = vector3_t(0.0f, 1.0f, 0.0f);
-    collision_test.ws_velocity = vector3_t(1.0f, -1.0f, 1.0f) * 2.0f;
-    collision_test.es_position = collision_test.ws_position / collision_test.ws_size;
-    collision_test.es_velocity = collision_test.ws_velocity / collision_test.ws_size;
+    // terrain_collision_t collision_test = {};
+    // collision_test.ws_size = vector3_t(1.0f);
+    // collision_test.ws_position = vector3_t(0.0f, 1.0f, 0.0f);
+    // collision_test.ws_velocity = vector3_t(1.0f, -1.0f, 1.0f) * 2.0f;
+    // collision_test.es_position = collision_test.ws_position / collision_test.ws_size;
+    // collision_test.es_velocity = collision_test.ws_velocity / collision_test.ws_size;
 
-    collision_triangle_t triangle = {};
-    triangle.vertices[0] = vector3_t(12.0f, 0.0f, 10.0f);
-    triangle.vertices[2] = vector3_t(1.0f, 0.0f, 10.0f);
-    triangle.vertices[1] = vector3_t(1.0f, 0.0f, -10.0f);
-    test_collision(&collision_test, &triangle);
+    // collision_triangle_t triangle = {};
+    // triangle.vertices[0] = vector3_t(12.0f, 0.0f, 10.0f);
+    // triangle.vertices[2] = vector3_t(1.0f, 0.0f, 10.0f);
+    // triangle.vertices[1] = vector3_t(1.0f, 0.0f, -10.0f);
+    // test_collision(&collision_test, &triangle);
 
     world_listener = set_listener_callback(s_world_event_listener, NULL, events);
     subscribe_to_event(ET_ENTER_SERVER, world_listener, events);

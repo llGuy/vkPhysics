@@ -91,11 +91,16 @@ struct player_snapshot_t {
 };
 
 // To initialise player, need to fill everything (except for player_render_t *render)
+enum player_alive_state_t {
+    DEAD, ALIVE
+};
+
 struct player_t {
     union {
         struct {
             uint32_t is_remote: 1;
             uint32_t is_local: 1;
+            uint32_t alive_state: 2;
         };
 
         uint32_t flags;

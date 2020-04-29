@@ -19,7 +19,7 @@ vec3 get_normal(int i1, int i2, int i3) {
 }
 
 void main() {
-    vec3 normal = -vec3(vec4(get_normal(0, 1, 2), 0.0));
+    vec3 normal = vec3(vec4(get_normal(0, 1, 2), 0.0));
 
     for (int i = 0; i < 3; ++i) {
 	out_gs.vs_normal = normal;

@@ -146,15 +146,17 @@ static void s_load_sphere(
     shader_binding_info_t *binding_info) {
     const float PI = 3.14159265359f;
 
-    int32_t sector_count = 64;
-    int32_t stack_count = 64;
+    int32_t sector_count = 16;
+    int32_t stack_count = 16;
     
     uint32_t vertex_count = (sector_count + 1) * (stack_count + 1);
     uint32_t index_count = sector_count * stack_count * 6;
     
     vector3_t *positions = FL_MALLOC(vector3_t, vertex_count);
-    vector3_t *normals = FL_MALLOC(vector3_t, vertex_count);
-    vector2_t *uvs = FL_MALLOC(vector2_t, vertex_count);
+
+    // vector3_t *normals = FL_MALLOC(vector3_t, vertex_count);
+    // vector2_t *uvs = FL_MALLOC(vector2_t, vertex_count);
+    
     uint32_t *indices = FL_MALLOC(uint32_t, index_count);
     
     float sector_step = 2.0f * PI / sector_count;
@@ -175,8 +177,8 @@ static void s_load_sphere(
             float x = xy * cos(sector_angle);
             float y = xy * sin(sector_angle);
 
-            positions[counter] = vector3_t(x, z, y);
-            uvs[counter++] = vector2_t((float)j / (float)sector_count, (float)i / (float)stack_count);
+            positions[counter++] = vector3_t(x, z, y);
+            // uvs[counter++] = vector2_t((float)j / (float)sector_count, (float)i / (float)stack_count);
         }
     }
 
@@ -217,12 +219,12 @@ static void s_load_sphere(
         positions,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
-    push_buffer_to_mesh(BT_UVS, mesh);
-    mesh_buffer_t *uvs_gpu_buffer = get_mesh_buffer(BT_UVS, mesh);
-    uvs_gpu_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(vector2_t) * vertex_count,
-        uvs,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    // push_buffer_to_mesh(BT_UVS, mesh);
+    // mesh_buffer_t *uvs_gpu_buffer = get_mesh_buffer(BT_UVS, mesh);
+    // uvs_gpu_buffer->gpu_buffer = create_gpu_buffer(
+    //     sizeof(vector2_t) * vertex_count,
+    //     uvs,
+    //     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     if (binding_info) {
         *binding_info = create_mesh_binding_info(mesh);
@@ -238,8 +240,10 @@ static void s_load_sphere(
     create_mesh_vbo_final_list(mesh);
 
     FL_FREE(positions);
-    FL_FREE(normals);
-    FL_FREE(uvs);
+    
+    // FL_FREE(normals);
+    // FL_FREE(uvs);
+    
     FL_FREE(indices);
 }
 
