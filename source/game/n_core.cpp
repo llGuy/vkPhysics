@@ -72,6 +72,11 @@ static bool s_send_to(
 
 static bool started_client = 0;
 static uint16_t current_client_id;
+
+uint16_t get_local_client_index() {
+    return current_client_id;
+}
+
 static bool client_check_incoming_packets = 0;
 
 #define MAX_CLIENTS 50

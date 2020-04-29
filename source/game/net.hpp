@@ -106,4 +106,6 @@ struct available_servers_t {
     hash_table_t<uint32_t, 50, 5, 5> name_to_server;
 };
 
+uint16_t get_local_client_index();
+
 available_servers_t *get_available_servers();

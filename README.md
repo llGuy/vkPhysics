@@ -1,5 +1,9 @@
 # vkPhysics
 
+## Epic logo
+
+![photo](/assets/screenshots/epic_logo.png)
+
 For now, an engine which will hopefully become a real-time multiplayer game!
 
 ## Documentation

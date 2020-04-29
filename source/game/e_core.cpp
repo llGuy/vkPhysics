@@ -185,34 +185,45 @@ static void s_run_windowed_game() {
 static void s_world_ui_proc() {
     ImGui::Separator();
     ImGui::Text("-- World --");
-    static vector3_t position = { 0.0f, 0.0f, 0.0f };
-    ImGui::SliderFloat3("Position", &position[0], -100.0f, +100.0f);
 
-    static vector3_t direction = { 1.0f, 0.0f, 0.0f};
-    ImGui::SliderFloat3("Direction", &direction[0], -1.0f, +1.0f);
+    bool request_to_spawn = ImGui::Button("Spawn");
+    if (request_to_spawn) {
+        event_spawn_t *spawn_event = FL_MALLOC(event_spawn_t, 1);
 
-    static vector3_t up = { 0.0f, 1.0f, 0.0f};
-    ImGui::SliderFloat3("Up", &up[0], -1.0f, +1.0f);
+        player_t *local_player = get_player(get_local_client_index());
 
-    static float default_speed = 10.0f;
-    ImGui::SliderFloat("Speed", &default_speed, -1.0f, +1.0f);
+        spawn_event->player_id = local_player->local_id;
 
-    static bool is_local = 0;
-    ImGui::Checkbox("Local", &is_local);
-
-    bool add_player = ImGui::Button("Add player");
-    
-    if (add_player) {
-        event_new_player_t *data = FL_MALLOC(event_new_player_t, 1);
-        memset(data, 0, sizeof(event_new_player_t));
-        data->info.ws_position = position;
-        data->info.ws_view_direction = direction;
-        data->info.ws_up_vector = up;
-        data->info.default_speed = default_speed;
-        data->info.client_data = NULL;
-        data->info.is_local = is_local;
-        submit_event(ET_NEW_PLAYER, data, &events);
+        submit_event(ET_SPAWN, spawn_event, &events);
     }
+    // static vector3_t position = { 0.0f, 0.0f, 0.0f };
+    // ImGui::SliderFloat3("Position", &position[0], -100.0f, +100.0f);
+
+    // static vector3_t direction = { 1.0f, 0.0f, 0.0f};
+    // ImGui::SliderFloat3("Direction", &direction[0], -1.0f, +1.0f);
+
+    // static vector3_t up = { 0.0f, 1.0f, 0.0f};
+    // ImGui::SliderFloat3("Up", &up[0], -1.0f, +1.0f);
+
+    // static float default_speed = 10.0f;
+    // ImGui::SliderFloat("Speed", &default_speed, -1.0f, +1.0f);
+
+    // static bool is_local = 0;
+    // ImGui::Checkbox("Local", &is_local);
+
+    // bool add_player = ImGui::Button("Add player");
+    
+    // if (add_player) {
+    //     event_new_player_t *data = FL_MALLOC(event_new_player_t, 1);
+    //     memset(data, 0, sizeof(event_new_player_t));
+    //     data->info.ws_position = position;
+    //     data->info.ws_view_direction = direction;
+    //     data->info.ws_up_vector = up;
+    //     data->info.default_speed = default_speed;
+    //     data->info.client_data = NULL;
+    //     data->info.is_local = is_local;
+    //     submit_event(ET_NEW_PLAYER, data, &events);
+    // }
 
     auto &ps = DEBUG_get_players();
 
@@ -229,7 +240,6 @@ static void s_world_ui_proc() {
             }
         }
     }
-
 
     ImGui::Separator();
     ImGui::Text("-- Net --");
@@ -252,6 +262,7 @@ static void s_world_ui_proc() {
     }
 
     bool refresh_servers_list = ImGui::Button("Refresh servers list\n");
+
     if (refresh_servers_list) {
         submit_event(ET_REQUEST_REFRESH_SERVER_PAGE, NULL, &events);
     }

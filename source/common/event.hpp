@@ -13,6 +13,7 @@ enum event_type_t {
     ET_CLOSED_WINDOW,
     ET_REQUEST_TO_JOIN_SERVER,
     ET_ENTER_SERVER,
+    ET_SPAWN,
     ET_NEW_PLAYER,
     ET_START_CLIENT,
     ET_START_SERVER,
@@ -66,6 +67,10 @@ struct event_enter_server_t {
     player_init_info_t *infos;
 
     // Will need to have other stuff
+};
+
+struct event_spawn_t {
+    int32_t player_id;
 };
 
 struct event_new_player_t {
