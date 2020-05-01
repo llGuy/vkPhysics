@@ -96,6 +96,9 @@ static void s_world_event_listener(
         player_t *p = get_player(id);
         p->ws_position = p->next_random_spawn_position;
         p->ws_view_direction = glm::normalize(-p->ws_position);
+        // Calculate up vector
+        vector3_t right = glm::cross(p->ws_view_direction, vector3_t(0.0f, 1.0f, 0.0f));
+        p->ws_up_vector = glm::cross(right, p->ws_view_direction);
         p->alive_state = PAS_ALIVE;
 
         if (p->is_local) {

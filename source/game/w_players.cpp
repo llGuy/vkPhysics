@@ -239,8 +239,8 @@ static void s_execute_player_direction_change(
     float x_angle = glm::radians(-delta.x) * SENSITIVITY * player_actions->dt;// *elapsed;
     float y_angle = glm::radians(-delta.y) * SENSITIVITY * player_actions->dt;// *elapsed;
                 
-    res = matrix3_t(glm::rotate(x_angle, vector3_t(0.0f, 1.0f, 0.0f))) * res;
-    vector3_t rotate_y = glm::cross(res, vector3_t(0.0f, 1.0f, 0.0f));
+    res = matrix3_t(glm::rotate(x_angle, player->ws_up_vector)) * res;
+    vector3_t rotate_y = glm::cross(res, player->ws_up_vector);
     res = matrix3_t(glm::rotate(y_angle, rotate_y)) * res;
 
     res = glm::normalize(res);
