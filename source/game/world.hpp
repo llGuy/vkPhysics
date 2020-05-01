@@ -70,8 +70,8 @@ struct player_snapshot_t {
             // Server sends this to client so that client can be sure to pop modification from accumulated history
             uint8_t terraformed: 1;
             uint8_t packet_contains_terrain_correction: 1;
+            uint8_t alive_state: 2;
             // Will use in future
-            uint8_t b4: 1;
             uint8_t b5: 1;
             uint8_t b6: 1;
             uint8_t b7: 1;
@@ -100,6 +100,7 @@ struct player_t {
         struct {
             uint32_t is_remote: 1;
             uint32_t is_local: 1;
+            uint32_t just_spawned: 1;
             uint32_t alive_state: 2;
         };
 
@@ -135,6 +136,7 @@ struct player_t {
     float accumulated_dt;
 
     // Server will send this to the clients so that when clients spawn there is no delay
+    // Everytime a player gets added, a random position will be generated
     vector3_t next_random_spawn_position;
 };
 

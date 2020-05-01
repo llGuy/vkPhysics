@@ -509,7 +509,7 @@ uint32_t w_hash_chunk_coord(
     struct {
         union {
             struct {
-                uint32_t sign: 2;
+                uint32_t padding: 2;
                 uint32_t x: 10;
                 uint32_t y: 10;
                 uint32_t z: 10;

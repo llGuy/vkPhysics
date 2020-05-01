@@ -24,6 +24,7 @@ static void s_add_player_from_info(
     p->ws_up_vector = init_info->ws_up_vector;
     p->player_action_count = 0;
     p->default_speed = init_info->default_speed;
+    p->next_random_spawn_position = init_info->next_random_spawn_position;
     memset(p->player_actions, 0, sizeof(p->player_actions));
 
     p->accumulated_dt = 0.0f;
@@ -33,9 +34,13 @@ static void s_add_player_from_info(
     if (init_info->is_local) {
         // If this is the local player (controlled by mouse and keyboard, need to cache all player actions to send to the server)
         // Only bind camera if player is alive
-        // if (init_info->alive_state == PAS_ALIVE) {
+        if (init_info->alive_state == PAS_ALIVE) {
+            // This binds the camera
             w_set_local_player(p->local_id, &world);
-            // }
+        }
+        else {
+            w_set_local_player(-1, &world);
+        }
         
         p->cached_player_action_count = 0;
         p->cached_player_actions = FL_MALLOC(player_actions_t, MAX_PLAYER_ACTIONS * 2);
@@ -85,6 +90,19 @@ static void s_world_event_listener(
         w_clear_chunk_world(&world);
     } break;
 
+    case ET_SPAWN: {
+        event_spawn_t *data = (event_spawn_t *)event->data;
+        uint32_t id = data->client_id;
+        player_t *p = get_player(id);
+        p->ws_position = p->next_random_spawn_position;
+        p->ws_view_direction = glm::normalize(-p->ws_position);
+        p->alive_state = PAS_ALIVE;
+
+        if (p->is_local) {
+            w_set_local_player(p->local_id, &world);
+        }
+    } break;
+        
     case ET_NEW_PLAYER: {
         event_new_player_t *data = (event_new_player_t *)event->data;
 

@@ -61,11 +61,14 @@ struct player_init_info_t {
         struct {
             uint32_t is_remote: 1;
             uint32_t is_local: 1;
+            uint32_t just_spawned: 1;
             uint32_t alive_state: 2;
         };
 
         uint32_t flags;
     };
+
+    vector3_t next_random_spawn_position;
 };
 
 struct event_enter_server_t {
@@ -78,7 +81,7 @@ struct event_enter_server_t {
 };
 
 struct event_spawn_t {
-    int32_t player_id;
+    uint32_t client_id;
 };
 
 struct event_new_player_t {

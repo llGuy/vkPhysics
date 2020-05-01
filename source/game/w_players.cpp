@@ -141,6 +141,7 @@ void w_handle_input(
     actions.tick = get_current_tick();
     
     player_t *local_player = w_get_local_player(world);
+
     if (local_player) {
         w_push_player_actions(local_player, &actions, 0);
     }
@@ -362,6 +363,8 @@ static void s_interpolate_remote_player_snapshots(
         p->ws_position = interpolate(previous_snapshot->ws_position, next_snapshot->ws_position, progression);
         p->ws_view_direction = interpolate(previous_snapshot->ws_view_direction, next_snapshot->ws_view_direction, progression);
         p->ws_up_vector = interpolate(previous_snapshot->ws_up_vector, next_snapshot->ws_up_vector, progression);
+
+        p->alive_state = previous_snapshot->alive_state;
     }
 }
 

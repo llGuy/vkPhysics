@@ -66,6 +66,7 @@ void n_serialise_connection_handshake(
         serialiser->serialise_vector3(full_game_state->player_infos[i].ws_position);
         serialiser->serialise_vector3(full_game_state->player_infos[i].ws_view_direction);
         serialiser->serialise_vector3(full_game_state->player_infos[i].ws_up_vector);
+        serialiser->serialise_vector3(full_game_state->player_infos[i].ws_next_random_position);
         serialiser->serialise_float32(full_game_state->player_infos[i].default_speed);
         serialiser->serialise_uint32(full_game_state->player_infos[i].flags);
     }
@@ -84,6 +85,7 @@ void n_deserialise_connection_handshake(
         full_game_state->player_infos[i].ws_position = serialiser->deserialise_vector3();
         full_game_state->player_infos[i].ws_view_direction = serialiser->deserialise_vector3();
         full_game_state->player_infos[i].ws_up_vector = serialiser->deserialise_vector3();
+        full_game_state->player_infos[i].ws_next_random_position = serialiser->deserialise_vector3();
         full_game_state->player_infos[i].default_speed = serialiser->deserialise_float32();
         full_game_state->player_infos[i].flags = serialiser->deserialise_uint32();
     }

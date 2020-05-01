@@ -73,12 +73,15 @@ struct full_player_info_t {
     vector3_t ws_position;
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
+    vector3_t ws_next_random_position;
+
     float default_speed;
 
     union {
         struct {
             uint32_t is_remote: 1;
             uint32_t is_local: 1;
+            uint32_t just_spawned: 1;
             uint32_t alive_state: 2;
         };
 
@@ -128,6 +131,8 @@ struct packet_player_commands_t {
     union {
         struct {
             uint8_t did_correction: 1;
+            // This will spawn on the client computer, the server will then also spawn immediately
+            uint8_t requested_spawn: 1;
         };
 
         uint8_t flags;

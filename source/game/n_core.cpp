@@ -226,6 +226,8 @@ static void s_process_connection_handshake(
         if (data->infos[i].is_local) {
             clients.data[client_id].chunks_to_wait_for = handshake.loaded_chunk_count;
 
+            data->infos[i].next_random_spawn_position = handshake.player_infos[i].ws_next_random_position;
+
             data->local_client_id = clients.data[i].client_id;
             current_client_id = data->local_client_id;
         }
@@ -421,6 +423,9 @@ static accumulated_predicted_modification_t *s_accumulate_history() {
 static void s_send_commands_to_server() {
     player_t *p = get_player(current_client_id);
 
+    // DEAD by default
+    static player_alive_state_t previous_alive_state = PAS_DEAD;
+
     // Means that world hasn't been initialised yet (could be timing issues when submitting ENTER_SERVER
     // event and send commands interval, so just to make sure, check that player is not NULL)
     if (p) {
@@ -432,6 +437,18 @@ static void s_send_commands_to_server() {
 
             packet_player_commands_t packet = {};
             packet.did_correction = c->waiting_on_correction;
+
+            if (previous_alive_state == PAS_DEAD && p->alive_state == PAS_ALIVE) {
+                // Means player just spawned
+                LOG_INFO("Requesting to spawn\n");
+                packet.requested_spawn = 1;
+            }
+            else {
+                packet.requested_spawn = 0;
+            }
+
+            previous_alive_state = (player_alive_state_t)p->alive_state;
+
             packet.command_count = (uint8_t)p->cached_player_action_count;
             packet.actions = LN_MALLOC(player_actions_t, packet.command_count);
 
@@ -576,24 +593,6 @@ static void s_revert_accumulated_modifications(
             break;
         }
     }
-
-    /*current = acc_predicted_modifications.get_next_item_head();
-    if (current) {
-        for (uint32_t cm_index = 0; cm_index < current->acc_predicted_chunk_mod_count; ++cm_index) {
-            chunk_modifications_t *cm_ptr = &current->acc_predicted_modifications[cm_index];
-            chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
-
-            for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
-                voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-                // Set all modified to initial values
-                c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
-            }
-
-            c_ptr->flags.has_to_update_vertices = 1;
-        }
-        }*/
-
-    //LOG_INFOV("(Sent to revert to %llu) Reverted from %llu to %llu\n", (unsigned long long)tick_until, (unsigned long long)old_tick, (unsigned long long)new_tick);
 }
 
 static void s_correct_chunks(
@@ -619,8 +618,6 @@ static void s_handle_incorrect_state(
     player_snapshot_t *snapshot,
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser) {
-    //LOG_INFOV("Did correction at tick %llu!\n", (unsigned long long)snapshot->tick);
-
     // Do correction!
     p->ws_position = snapshot->ws_position;
     p->ws_view_direction = snapshot->ws_view_direction;
@@ -656,7 +653,6 @@ static void s_handle_incorrect_state(
     }
                 
     get_current_tick() = snapshot->tick;
-    //LOG_INFOV("Set tick to %llu\n", get_current_tick());
 
     // Basically says that the client just did a correction - set correction flag on next packet sent to server
     c->waiting_on_correction = 1;
@@ -668,17 +664,10 @@ static void s_set_voxels_to_final_interpolated_values() {
         chunk_modifications_t *cm_ptr = &cti_ptr->modifications[cm_index];
 
         chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
-        //printf("\nSetting interpolated chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
-
-        //printf("\n SETTING INTERPOLATED CHUNK VALUES (%i %i %i): \n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
 
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
             c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
-
-            //printf("Voxel %i: %i | ", vm_ptr->index, (int32_t)vm_ptr->final_value);
-
-            //printf("Setting interpolated voxel (%i) to %i\n", vm_ptr->index, (int32_t)vm_ptr->final_value);
         }
 
         cm_ptr->modified_voxels_count = 0;
@@ -1235,6 +1224,7 @@ static bool s_send_handshake(
                 info->ws_position = player_info->info.ws_position;
                 info->ws_view_direction = player_info->info.ws_view_direction;
                 info->ws_up_vector = player_info->info.ws_up_vector;
+                info->ws_next_random_position = player_info->info.next_random_spawn_position;
                 info->default_speed = player_info->info.default_speed;
                 info->flags = player_info->info.flags;
                 info->is_local = 1;
@@ -1246,6 +1236,7 @@ static bool s_send_handshake(
                 info->ws_position = p->ws_position;
                 info->ws_view_direction = p->ws_view_direction;
                 info->ws_up_vector = p->ws_up_vector;
+                info->ws_next_random_position = player_info->info.next_random_spawn_position;
                 info->default_speed = p->default_speed;
                 info->flags = player_info->info.flags;
                 info->is_local = 0;
@@ -1475,6 +1466,12 @@ static void s_process_connection_request(
     // Player starts of as dead
     // There are different ways of spawning the player: meteorite (basically uncontrollably flying into the world)
     event_data->info.alive_state = 0;
+
+    // Generate new position
+    float x_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+    float y_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+    float z_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+    event_data->info.next_random_spawn_position = vector3_t(x_rand, y_rand, z_rand);
     
     submit_event(ET_NEW_PLAYER, event_data, events);
 
@@ -1544,6 +1541,12 @@ static void s_process_client_commands(
         packet_player_commands_t commands = {};
         n_deserialise_player_commands(&commands, serialiser);
 
+        if (commands.requested_spawn) {
+            event_spawn_t *spawn = FL_MALLOC(event_spawn_t, 1);
+            spawn->client_id = client_id;
+            submit_event(ET_SPAWN, spawn, events);
+        }
+        
         if (commands.did_correction) {
             LOG_INFOV("Did correction: %s\n", glm::to_string(p->ws_position).c_str());
             c->waiting_on_correction = 0;
@@ -1717,6 +1720,8 @@ static void s_dispatch_game_state_snapshot() {
             snapshot->flags = 0;
 
             player_t *p = get_player(c->client_id);
+            snapshot->alive_state = p->alive_state;
+
             // Check if 
             bool has_to_correct_state = s_check_if_client_has_to_correct_state(p, c);
             // Check if client has to correct voxel modifications

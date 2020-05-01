@@ -1,4 +1,5 @@
 // Engine core
+#include <time.h>
 #include "net.hpp"
 #include <stdio.h>
 #include <imgui.h>
@@ -219,9 +220,7 @@ static void s_world_ui_proc() {
     if (request_to_spawn) {
         event_spawn_t *spawn_event = FL_MALLOC(event_spawn_t, 1);
 
-        player_t *local_player = get_player(get_local_client_index());
-
-        spawn_event->player_id = local_player->local_id;
+        spawn_event->client_id = get_local_client_index();
 
         submit_event(ET_SPAWN, spawn_event, &events);
     }
@@ -431,6 +430,8 @@ void game_main(
     game_init_data_t *game_init_data) {
     global_linear_allocator_init((uint32_t)megabytes(30));
 
+    srand(time(NULL));
+    
     game_core_listener = set_listener_callback(
         &s_game_event_listener,
         NULL,
