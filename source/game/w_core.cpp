@@ -118,8 +118,10 @@ static void s_world_event_listener(
             event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
             player_t *p = w_get_player_from_client_id(data->client_id, &world);
-
-            w_destroy_player(p->local_id, &world);
+            
+            if (p) {
+                w_destroy_player(p->local_id, &world);
+            }
 
             FL_FREE(event->data);
         }

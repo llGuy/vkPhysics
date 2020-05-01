@@ -639,16 +639,18 @@ static void s_handle_incorrect_state(
         // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
 
         // Now deserialise extra voxel corrections
-        uint32_t modification_count = 0;
-        // BUG:
-        chunk_modifications_t *modifications = n_deserialise_chunk_modifications(&modification_count, serialiser);
+        if (snapshot->packet_contains_terrain_correction) {
+            uint32_t modification_count = 0;
+            // BUG:
+            chunk_modifications_t *modifications = n_deserialise_chunk_modifications(&modification_count, serialiser);
 
-        for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {
-            chunk_modifications_t *cm_ptr = &modifications[cm_index];
-            chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
-            for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
-                voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-                c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+            for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {
+                chunk_modifications_t *cm_ptr = &modifications[cm_index];
+                chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+                for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
+                    voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+                    c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+                }
             }
         }
     }
@@ -1795,6 +1797,7 @@ static void s_dispatch_game_state_snapshot() {
 
         if (c->send_corrected_predicted_voxels) {
             // Serialise
+            LOG_INFOV("Need to correct %i chunks\n", c->predicted_chunk_mod_count);
             n_serialise_chunk_modifications(c->predicted_modifications, c->predicted_chunk_mod_count, &serialiser);
         }
         
