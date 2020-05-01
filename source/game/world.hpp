@@ -133,6 +133,9 @@ struct player_t {
     float elapsed;
 
     float accumulated_dt;
+
+    // Server will send this to the clients so that when clients spawn there is no delay
+    vector3_t next_random_spawn_position;
 };
 
 player_t *get_player(

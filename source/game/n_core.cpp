@@ -1473,6 +1473,7 @@ static void s_process_connection_request(
     event_data->info.is_local = 0;
     event_data->info.flags = 0;
     // Player starts of as dead
+    // There are different ways of spawning the player: meteorite (basically uncontrollably flying into the world)
     event_data->info.alive_state = 0;
     
     submit_event(ET_NEW_PLAYER, event_data, events);

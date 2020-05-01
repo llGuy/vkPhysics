@@ -35,16 +35,21 @@ void w_players_data_init() {
     shader_binding_info_t mesh_info = {};
     load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
 
+    // const char *shader_paths[] = {
+    //     "shaders/SPV/untextured_mesh.vert.spv",
+    //     "shaders/SPV/untextured_mesh.geom.spv",
+    //     "shaders/SPV/untextured_mesh.frag.spv"
+    // };
+
     const char *shader_paths[] = {
-        "shaders/SPV/untextured_mesh.vert.spv",
-        "shaders/SPV/untextured_mesh.geom.spv",
-        "shaders/SPV/untextured_mesh.frag.spv"
+        "shaders/SPV/mesh.vert.spv",
+        "shaders/SPV/mesh.frag.spv"
     };
 
     player_shader = create_mesh_shader_color(
         &mesh_info,
         shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_SHADER_STAGE_VERTEX_BIT | /*VK_SHADER_STAGE_GEOMETRY_BIT | */VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE);
 
     player_scale = vector3_t(1.0f);
@@ -393,22 +398,24 @@ void w_players_gpu_sync_and_render(
     for (uint32_t i = 0; i < world->players.data_count; ++i) {
         player_t *p = world->players[i];
         if (p) {
-            if (!p->render) {
-                w_player_render_init(p);
-            }
+            /*if (p->alive_state == PAS_ALIVE)*/ {
+                if (!p->render) {
+                    w_player_render_init(p);
+                }
 
-            p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
-            p->render->render_data.color = vector4_t(1.0f);
-            p->render->render_data.pbr_info.x = 0.1f;
-            p->render->render_data.pbr_info.y = 0.1f;
+                p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
+                p->render->render_data.color = vector4_t(1.0f);
+                p->render->render_data.pbr_info.x = 0.1f;
+                p->render->render_data.pbr_info.y = 0.1f;
 
-            if ((int32_t)i != (int32_t)world->local_player) {
-                // Handle difference between rendering animations (and first / third person)
-                submit_mesh(
-                    render_command_buffer,
-                    &player_mesh,
-                    &player_shader,
-                    &p->render->render_data);
+                if ((int32_t)i != (int32_t)world->local_player) {
+                    // Handle difference between rendering animations (and first / third person)
+                    submit_mesh(
+                        render_command_buffer,
+                        &player_mesh,
+                        &player_shader,
+                        &p->render->render_data);
+                }
             }
         }
     }

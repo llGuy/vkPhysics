@@ -146,15 +146,15 @@ static void s_load_sphere(
     shader_binding_info_t *binding_info) {
     const float PI = 3.14159265359f;
 
-    int32_t sector_count = 16;
-    int32_t stack_count = 16;
+    int32_t sector_count = 32;
+    int32_t stack_count = 32;
     
     uint32_t vertex_count = (sector_count + 1) * (stack_count + 1);
     uint32_t index_count = sector_count * stack_count * 6;
     
     vector3_t *positions = FL_MALLOC(vector3_t, vertex_count);
 
-    // vector3_t *normals = FL_MALLOC(vector3_t, vertex_count);
+    //vector3_t *normals = FL_MALLOC(vector3_t, vertex_count);
     // vector2_t *uvs = FL_MALLOC(vector2_t, vertex_count);
     
     uint32_t *indices = FL_MALLOC(uint32_t, index_count);

@@ -33,9 +33,9 @@ static void s_add_player_from_info(
     if (init_info->is_local) {
         // If this is the local player (controlled by mouse and keyboard, need to cache all player actions to send to the server)
         // Only bind camera if player is alive
-        //if (init_info->alive_state == PAS_ALIVE) {
+        if (init_info->alive_state == PAS_ALIVE) {
             w_set_local_player(p->local_id, &world);
-            //}
+        }
         
         p->cached_player_action_count = 0;
         p->cached_player_actions = FL_MALLOC(player_actions_t, MAX_PLAYER_ACTIONS * 2);
@@ -256,7 +256,7 @@ lighting_info_t create_lighting_info() {
     return info;
 }
 
-struct player_t *get_player(
+player_t *get_player(
     uint16_t client_id) {
     return w_get_player_from_client_id(client_id, &world);
 }
