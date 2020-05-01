@@ -221,6 +221,7 @@ static void s_process_connection_handshake(
         data->infos[i].ws_up_vector = handshake.player_infos[i].ws_up_vector;
         data->infos[i].default_speed = handshake.player_infos[i].default_speed;
         data->infos[i].is_local = handshake.player_infos[i].is_local;
+        data->infos[i].flags = handshake.player_infos[i].flags;
 
         if (data->infos[i].is_local) {
             clients.data[client_id].chunks_to_wait_for = handshake.loaded_chunk_count;
@@ -1233,6 +1234,7 @@ static bool s_send_handshake(
                 info->ws_view_direction = player_info->info.ws_view_direction;
                 info->ws_up_vector = player_info->info.ws_up_vector;
                 info->default_speed = player_info->info.default_speed;
+                info->flags = player_info->info.flags;
                 info->is_local = 1;
             }
             else {
@@ -1243,6 +1245,7 @@ static bool s_send_handshake(
                 info->ws_view_direction = p->ws_view_direction;
                 info->ws_up_vector = p->ws_up_vector;
                 info->default_speed = p->default_speed;
+                info->flags = player_info->info.flags;
                 info->is_local = 0;
             }
             
@@ -1466,6 +1469,9 @@ static void s_process_connection_request(
     event_data->info.ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
     event_data->info.default_speed = 10.0f;
     event_data->info.is_local = 0;
+    event_data->info.flags = 0;
+    // Player starts of as dead
+    event_data->info.alive_state = 0;
     
     submit_event(ET_NEW_PLAYER, event_data, events);
 

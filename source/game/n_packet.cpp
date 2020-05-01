@@ -68,7 +68,6 @@ void n_serialise_connection_handshake(
         serialiser->serialise_vector3(full_game_state->player_infos[i].ws_up_vector);
         serialiser->serialise_float32(full_game_state->player_infos[i].default_speed);
         serialiser->serialise_uint32(full_game_state->player_infos[i].flags);
-        serialiser->serialise_uint8(full_game_state->player_infos[i].is_local);
     }
 }
 
@@ -87,7 +86,6 @@ void n_deserialise_connection_handshake(
         full_game_state->player_infos[i].ws_up_vector = serialiser->deserialise_vector3();
         full_game_state->player_infos[i].default_speed = serialiser->deserialise_float32();
         full_game_state->player_infos[i].flags = serialiser->deserialise_uint32();
-        full_game_state->player_infos[i].is_local = serialiser->deserialise_uint8();
     }
 }
 
@@ -100,7 +98,7 @@ uint32_t n_packed_player_joined_size(
     total_size += sizeof(full_player_info_t::ws_view_direction);
     total_size += sizeof(full_player_info_t::ws_up_vector);
     total_size += sizeof(full_player_info_t::default_speed);
-    total_size += sizeof(full_player_info_t::is_local);
+    total_size += sizeof(full_player_info_t::flags);
 
     return total_size;
 }
@@ -114,7 +112,7 @@ void n_serialise_player_joined(
     serialiser->serialise_vector3(packet->player_info.ws_view_direction);
     serialiser->serialise_vector3(packet->player_info.ws_up_vector);
     serialiser->serialise_float32(packet->player_info.default_speed);
-    serialiser->serialise_uint8(packet->player_info.is_local);
+    serialiser->serialise_uint8(packet->player_info.flags);
 }
 
 void n_deserialise_player_joined(
@@ -126,7 +124,7 @@ void n_deserialise_player_joined(
     packet->player_info.ws_view_direction = serialiser->deserialise_vector3();
     packet->player_info.ws_up_vector = serialiser->deserialise_vector3();
     packet->player_info.default_speed = serialiser->deserialise_float32();
-    packet->player_info.is_local = serialiser->deserialise_uint8();
+    packet->player_info.flags = serialiser->deserialise_uint32();
 }
 
 uint32_t n_packed_player_commands_size(

@@ -92,7 +92,7 @@ struct player_snapshot_t {
 
 // To initialise player, need to fill everything (except for player_render_t *render)
 enum player_alive_state_t {
-    DEAD, ALIVE
+    PAS_DEAD, PAS_ALIVE
 };
 
 struct player_t {

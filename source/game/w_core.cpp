@@ -28,9 +28,15 @@ static void s_add_player_from_info(
 
     p->accumulated_dt = 0.0f;
 
+    p->flags = init_info->flags;
+    
     if (init_info->is_local) {
         // If this is the local player (controlled by mouse and keyboard, need to cache all player actions to send to the server)
-        w_set_local_player(p->local_id, &world);
+        // Only bind camera if player is alive
+        //if (init_info->alive_state == PAS_ALIVE) {
+            w_set_local_player(p->local_id, &world);
+            //}
+        
         p->cached_player_action_count = 0;
         p->cached_player_actions = FL_MALLOC(player_actions_t, MAX_PLAYER_ACTIONS * 2);
 
@@ -168,6 +174,7 @@ void world_init(
     subscribe_to_event(ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
     subscribe_to_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
     subscribe_to_event(ET_SET_CHUNK_HISTORY_TRACKER, world_listener, events);
+    subscribe_to_event(ET_SPAWN, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 

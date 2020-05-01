@@ -196,34 +196,6 @@ static void s_world_ui_proc() {
 
         submit_event(ET_SPAWN, spawn_event, &events);
     }
-    // static vector3_t position = { 0.0f, 0.0f, 0.0f };
-    // ImGui::SliderFloat3("Position", &position[0], -100.0f, +100.0f);
-
-    // static vector3_t direction = { 1.0f, 0.0f, 0.0f};
-    // ImGui::SliderFloat3("Direction", &direction[0], -1.0f, +1.0f);
-
-    // static vector3_t up = { 0.0f, 1.0f, 0.0f};
-    // ImGui::SliderFloat3("Up", &up[0], -1.0f, +1.0f);
-
-    // static float default_speed = 10.0f;
-    // ImGui::SliderFloat("Speed", &default_speed, -1.0f, +1.0f);
-
-    // static bool is_local = 0;
-    // ImGui::Checkbox("Local", &is_local);
-
-    // bool add_player = ImGui::Button("Add player");
-    
-    // if (add_player) {
-    //     event_new_player_t *data = FL_MALLOC(event_new_player_t, 1);
-    //     memset(data, 0, sizeof(event_new_player_t));
-    //     data->info.ws_position = position;
-    //     data->info.ws_view_direction = direction;
-    //     data->info.ws_up_vector = up;
-    //     data->info.default_speed = default_speed;
-    //     data->info.client_data = NULL;
-    //     data->info.is_local = is_local;
-    //     submit_event(ET_NEW_PLAYER, data, &events);
-    // }
 
     auto &ps = DEBUG_get_players();
 

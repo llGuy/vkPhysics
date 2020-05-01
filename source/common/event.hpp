@@ -56,8 +56,16 @@ struct player_init_info_t {
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
     float default_speed;
-    uint32_t flags;
-    bool is_local;
+
+    union {
+        struct {
+            uint32_t is_remote: 1;
+            uint32_t is_local: 1;
+            uint32_t alive_state: 2;
+        };
+
+        uint32_t flags;
+    };
 };
 
 struct event_enter_server_t {
