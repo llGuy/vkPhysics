@@ -83,6 +83,7 @@ struct player_snapshot_t {
     vector3_t ws_position;
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
+    vector3_t ws_next_random_spawn;
 
     // Tick that client has to revert to if client needs to do a correction
     uint64_t tick;

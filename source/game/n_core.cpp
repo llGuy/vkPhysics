@@ -625,6 +625,7 @@ static void s_handle_incorrect_state(
     p->cached_player_action_count = 0;
     p->player_action_count = 0;
     p->accumulated_dt = 0.0f;
+    p->next_random_spawn_position = snapshot->ws_next_random_spawn;
 
     // Revert voxel modifications up from tick that server processed
     if (snapshot->terraformed) {
@@ -804,6 +805,10 @@ static void s_handle_correct_state(
     serialiser_t *serialiser) {
     if (snapshot->terraformed) {
         //LOG_INFOV("Syncing with tick: %llu\n", (unsigned long long)snapshot->terraform_tick);
+    }
+
+    if (p) {
+        p->next_random_spawn_position = snapshot->ws_next_random_spawn;
     }
 
     // Mark all chunks / voxels that were modified from tick that server just processed, to current tick
@@ -1545,6 +1550,12 @@ static void s_process_client_commands(
             event_spawn_t *spawn = FL_MALLOC(event_spawn_t, 1);
             spawn->client_id = client_id;
             submit_event(ET_SPAWN, spawn, events);
+
+            // Generate a new random position next time player needs to spawn
+            float x_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+            float y_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+            float z_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+            p->next_random_spawn_position = vector3_t(x_rand, y_rand, z_rand);
         }
         
         if (commands.did_correction) {
@@ -1753,6 +1764,7 @@ static void s_dispatch_game_state_snapshot() {
             snapshot->client_id = c->client_id;
             snapshot->ws_position = p->ws_position;
             snapshot->ws_view_direction = p->ws_view_direction;
+            snapshot->ws_next_random_spawn = p->next_random_spawn_position;
             snapshot->ws_up_vector = p->ws_up_vector;
             snapshot->tick = c->tick;
             snapshot->terraformed = c->did_terrain_mod_previous_tick;
