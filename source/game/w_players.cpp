@@ -22,7 +22,7 @@ void w_player_world_init(
 
     world->spectator = FL_MALLOC(player_t, 1);
     memset(world->spectator, 0, sizeof(player_t));
-    world->spectator->default_speed = 5.0f;
+    world->spectator->default_speed = 20.0f;
     world->spectator->ws_position = vector3_t(-50.0f, 0.0f, -50.0f);
     world->spectator->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
     world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
@@ -398,7 +398,7 @@ void w_players_gpu_sync_and_render(
     for (uint32_t i = 0; i < world->players.data_count; ++i) {
         player_t *p = world->players[i];
         if (p) {
-            /*if (p->alive_state == PAS_ALIVE)*/ {
+            if (p->alive_state == PAS_ALIVE) {
                 if (!p->render) {
                     w_player_render_init(p);
                 }

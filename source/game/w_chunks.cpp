@@ -503,9 +503,28 @@ chunk_t *w_destroy_chunk(
 
 uint32_t w_hash_chunk_coord(
     const ivector3_t &coord) {
-    static std::hash<glm::ivec3> hasher;
+    // static std::hash<glm::ivec3> hasher;
 
-    return (uint32_t)hasher(coord);
+    // TODO: Investigate if this is portable to different systems (endianness??)
+    struct {
+        union {
+            struct {
+                uint32_t sign: 2;
+                uint32_t x: 10;
+                uint32_t y: 10;
+                uint32_t z: 10;
+            };
+            uint32_t value;
+        };
+    } hasher;
+
+    hasher.value = 0;
+
+    hasher.x = *(uint32_t *)(&coord.x);
+    hasher.y = *(uint32_t *)(&coord.y);
+    hasher.z = *(uint32_t *)(&coord.z);
+
+    return (uint32_t)hasher.value;
 }
 
 void w_chunks_data_init() {
@@ -580,11 +599,11 @@ void w_chunk_world_init(
 
     //w_add_sphere_m(vector3_t(24.0f), 2.0f, world);
 
-    //w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
+    w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
     w_add_sphere_m(vector3_t(0.0f), 20.0f, world);
 
     //w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
-    //w_add_sphere_m(vector3_t(-70.0f), 30.0f, world);
+    w_add_sphere_m(vector3_t(-70.0f), 30.0f, world);
 
     //w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
 }
