@@ -77,16 +77,7 @@ struct full_player_info_t {
 
     float default_speed;
 
-    union {
-        struct {
-            uint32_t is_remote: 1;
-            uint32_t is_local: 1;
-            uint32_t just_spawned: 1;
-            uint32_t alive_state: 2;
-        };
-
-        uint32_t flags;
-    };
+    player_flags_t flags;
 };
 
 // Will use this when new player joins
@@ -142,9 +133,13 @@ struct packet_player_commands_t {
     player_actions_t *actions;
 
     // Stuff that the server will use to compare server-calculated data
+    uint32_t player_flags;
+
     vector3_t ws_final_position;
     vector3_t ws_final_view_direction;
     vector3_t ws_final_up_vector;
+
+    float meteorite_speed;
     
     uint32_t modified_chunk_count;
     chunk_modifications_t *chunk_modifications;

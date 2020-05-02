@@ -212,7 +212,13 @@ static void s_world_ui_proc() {
         data->info.ws_up_vector = up;
         data->info.default_speed = default_speed;
         data->info.client_data = NULL;
-        data->info.is_local = is_local;
+
+        player_flags_t flags;
+        flags.u32 = 0;
+        flags.is_local = is_local;
+
+        data->info.flags = flags.u32;
+        
         submit_event(ET_NEW_PLAYER, data, &events);
     }
     
@@ -230,7 +236,7 @@ static void s_world_ui_proc() {
     for (uint32_t i = 0; i < ps.data_count; ++i) {
         player_t *p = ps.data[i];
         if (p) {
-            if (p->is_local) {
+            if (p->flags.is_local) {
                 ImGui::Text("- Position: %s", glm::to_string(p->ws_position).c_str());
                 ImGui::Text("- Direction: %s", glm::to_string(p->ws_view_direction).c_str());
                 vector3_t cc = glm::floor(p->ws_position);

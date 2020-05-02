@@ -220,10 +220,9 @@ static void s_process_connection_handshake(
         data->infos[i].ws_view_direction = handshake.player_infos[i].ws_view_direction;
         data->infos[i].ws_up_vector = handshake.player_infos[i].ws_up_vector;
         data->infos[i].default_speed = handshake.player_infos[i].default_speed;
-        data->infos[i].is_local = handshake.player_infos[i].is_local;
-        data->infos[i].flags = handshake.player_infos[i].flags;
+        data->infos[i].flags = handshake.player_infos[i].flags.u32;
 
-        if (data->infos[i].is_local) {
+        if (handshake.player_infos[i].flags.is_local) {
             clients.data[client_id].chunks_to_wait_for = handshake.loaded_chunk_count;
 
             data->infos[i].next_random_spawn_position = handshake.player_infos[i].ws_next_random_position;
@@ -254,7 +253,11 @@ static void s_process_player_joined(
     new_player->info.ws_view_direction = packet.player_info.ws_view_direction;
     new_player->info.ws_up_vector = packet.player_info.ws_up_vector;
     new_player->info.default_speed = packet.player_info.default_speed;
-    new_player->info.is_local = 0;
+
+    player_flags_t flags = {};
+    flags.is_local = 0;
+
+    new_player->info.flags = flags.u32;
 
     submit_event(ET_NEW_PLAYER, new_player, events);
 }
@@ -438,7 +441,7 @@ static void s_send_commands_to_server() {
             packet_player_commands_t packet = {};
             packet.did_correction = c->waiting_on_correction;
 
-            if (previous_alive_state == PAS_DEAD && p->alive_state == PAS_ALIVE) {
+            if (previous_alive_state == PAS_DEAD && p->flags.alive_state == PAS_ALIVE) {
                 // Means player just spawned
                 LOG_INFO("Requesting to spawn\n");
                 packet.requested_spawn = 1;
@@ -447,7 +450,7 @@ static void s_send_commands_to_server() {
                 packet.requested_spawn = 0;
             }
 
-            previous_alive_state = (player_alive_state_t)p->alive_state;
+            previous_alive_state = (player_alive_state_t)p->flags.alive_state;
 
             packet.command_count = (uint8_t)p->cached_player_action_count;
             packet.actions = LN_MALLOC(player_actions_t, packet.command_count);
@@ -465,6 +468,9 @@ static void s_send_commands_to_server() {
             packet.ws_final_position = p->ws_position;
             packet.ws_final_view_direction = p->ws_view_direction;
             packet.ws_final_up_vector = p->ws_up_vector;
+            packet.meteorite_speed = p->meteorite_speed;
+
+            packet.player_flags = p->flags.u32;
 
             accumulated_predicted_modification_t *next_acc = s_accumulate_history();
             if (next_acc) {
@@ -626,6 +632,8 @@ static void s_handle_incorrect_state(
     p->player_action_count = 0;
     p->accumulated_dt = 0.0f;
     p->next_random_spawn_position = snapshot->ws_next_random_spawn;
+    p->meteorite_speed = snapshot->meteorite_speed;
+    p->flags.interaction_mode = snapshot->interaction_mode;
 
     // Revert voxel modifications up from tick that server processed
     if (snapshot->terraformed) {
@@ -1231,8 +1239,12 @@ static bool s_send_handshake(
                 info->ws_up_vector = player_info->info.ws_up_vector;
                 info->ws_next_random_position = player_info->info.next_random_spawn_position;
                 info->default_speed = player_info->info.default_speed;
-                info->flags = player_info->info.flags;
-                info->is_local = 1;
+
+                player_flags_t flags = {};
+                flags.u32 = player_info->info.flags;
+                flags.is_local = 1;
+
+                info->flags = flags;
             }
             else {
                 player_t *p = get_player(i);
@@ -1243,8 +1255,12 @@ static bool s_send_handshake(
                 info->ws_up_vector = p->ws_up_vector;
                 info->ws_next_random_position = player_info->info.next_random_spawn_position;
                 info->default_speed = p->default_speed;
-                info->flags = player_info->info.flags;
-                info->is_local = 0;
+
+                player_flags_t flags = {};
+                flags.u32 = player_info->info.flags;
+                flags.is_local = 0;
+                
+                info->flags = flags;
             }
             
             ++connection_handshake.player_count;
@@ -1415,7 +1431,7 @@ static void s_inform_all_players_on_newcomer(
     packet.player_info.ws_view_direction = info->info.ws_view_direction;
     packet.player_info.ws_up_vector = info->info.ws_up_vector;
     packet.player_info.default_speed = info->info.default_speed;
-    packet.player_info.is_local = 0;
+    packet.player_info.flags.is_local = 0;
 
     packet_header_t header = {};
     header.current_tick = get_current_tick();
@@ -1466,11 +1482,11 @@ static void s_process_connection_request(
     event_data->info.ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
     event_data->info.ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
     event_data->info.default_speed = 10.0f;
-    event_data->info.is_local = 0;
+
     event_data->info.flags = 0;
     // Player starts of as dead
     // There are different ways of spawning the player: meteorite (basically uncontrollably flying into the world)
-    event_data->info.alive_state = 0;
+    // event_data->info.alive_state = 0;
 
     // Generate new position
     float x_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
@@ -1534,8 +1550,6 @@ static void s_process_client_commands(
     uint16_t client_id,
     uint64_t tick,
     event_submissions_t *events) {
-    (void)events;
-
     player_t *p = get_player(client_id);
 
     if (p) {
@@ -1581,7 +1595,9 @@ static void s_process_client_commands(
             c->ws_predicted_position = commands.ws_final_position;
             c->ws_predicted_view_direction = commands.ws_final_view_direction;
             c->ws_predicted_up_vector = commands.ws_final_up_vector;
-
+            c->predicted_meteorite_speed = commands.meteorite_speed;
+            c->predicted_player_flags.u32 = commands.player_flags;
+            
             // Process terraforming stuff
             if (commands.modified_chunk_count) {
                 //LOG_INFOV("(Tick %llu) Received %i chunk modifications\n", (unsigned long long)tick, commands.modified_chunk_count);
@@ -1625,30 +1641,37 @@ static bool s_check_if_client_has_to_correct_state(
     vector3_t dposition = glm::abs(p->ws_position - c->ws_predicted_position);
     vector3_t ddirection = glm::abs(p->ws_view_direction - c->ws_predicted_view_direction);
     vector3_t dup = glm::abs(p->ws_up_vector - c->ws_predicted_up_vector);
+    float dmspeed = glm::abs(p->meteorite_speed - c->predicted_meteorite_speed);
 
     float precision = 0.000001f;
     bool incorrect_position = 0;
     if (dposition.x >= precision || dposition.y >= precision || dposition.z >= precision) {
         incorrect_position = 1;
-
-        //LOG_INFOV("Position is wrong: %s => %s\n", glm::to_string(c->ws_predicted_position).c_str(), glm::to_string(p->ws_position).c_str());
     }
 
     bool incorrect_direction = 0;
     if (ddirection.x >= precision || ddirection.y >= precision || ddirection.z >= precision) {
         incorrect_direction = 1;
-
-        //LOG_INFOV("Direction is wrong: %s => %s\n", glm::to_string(c->ws_predicted_view_direction).c_str(), glm::to_string(p->ws_view_direction).c_str());
     }
 
     bool incorrect_up = 0;
     if (dup.x >= precision || dup.y >= precision || dup.z >= precision) {
         incorrect_up = 1;
-
-        //LOG_INFOV("Up is wrong: %s => %s\n", glm::to_string(c->ws_predicted_up_vector).c_str(), glm::to_string(p->ws_up_vector).c_str());
     }
 
-    return incorrect_position || incorrect_direction || incorrect_up;
+    bool incorrect_mspeed = 0;
+    if (p->flags.interaction_mode == PIM_METEORITE && dmspeed >= precision) {
+        incorrect_mspeed = 1;
+        LOG_INFO("Need to correct meteorite speed\n");
+    }
+
+    bool incorrect_interaction_mode = 0;
+    if (p->flags.interaction_mode != c->predicted_player_flags.interaction_mode) {
+        LOG_INFO("Need to correct interaction mode\n");
+        incorrect_interaction_mode = 1;
+    }
+
+    return incorrect_position || incorrect_direction || incorrect_up || incorrect_mspeed || incorrect_interaction_mode;
 }
 
 static bool s_check_if_client_has_to_correct_terrain(
@@ -1731,7 +1754,6 @@ static void s_dispatch_game_state_snapshot() {
             snapshot->flags = 0;
 
             player_t *p = get_player(c->client_id);
-            snapshot->alive_state = p->alive_state;
 
             // Check if 
             bool has_to_correct_state = s_check_if_client_has_to_correct_state(p, c);
@@ -1765,9 +1787,12 @@ static void s_dispatch_game_state_snapshot() {
             snapshot->ws_position = p->ws_position;
             snapshot->ws_view_direction = p->ws_view_direction;
             snapshot->ws_next_random_spawn = p->next_random_spawn_position;
+            snapshot->meteorite_speed = p->meteorite_speed;
             snapshot->ws_up_vector = p->ws_up_vector;
             snapshot->tick = c->tick;
             snapshot->terraformed = c->did_terrain_mod_previous_tick;
+            snapshot->interaction_mode = p->flags.interaction_mode;
+            snapshot->alive_state = p->flags.alive_state;
             
             if (snapshot->terraformed) {
                 snapshot->terraform_tick = c->tick_at_which_client_terraformed;

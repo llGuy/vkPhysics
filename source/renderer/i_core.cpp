@@ -203,7 +203,6 @@ input_interface_data_t input_interface_init() {
         LOG_ERROR("Failed to initialize GLFW\n");
         exit(1);
     }
-
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     const char *application_name = "vkPhysics";

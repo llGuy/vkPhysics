@@ -57,16 +57,7 @@ struct player_init_info_t {
     vector3_t ws_up_vector;
     float default_speed;
 
-    union {
-        struct {
-            uint32_t is_remote: 1;
-            uint32_t is_local: 1;
-            uint32_t just_spawned: 1;
-            uint32_t alive_state: 2;
-        };
-
-        uint32_t flags;
-    };
+    uint32_t flags;
 
     vector3_t next_random_spawn_position;
 };

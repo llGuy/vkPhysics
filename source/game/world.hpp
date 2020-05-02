@@ -71,12 +71,9 @@ struct player_snapshot_t {
             uint8_t terraformed: 1;
             uint8_t packet_contains_terrain_correction: 1;
             uint8_t alive_state: 2;
-            // Will use in future
-            uint8_t b5: 1;
-            uint8_t b6: 1;
-            uint8_t b7: 1;
+            uint8_t interaction_mode: 3;
         };
-        uint8_t flags;
+        uint16_t flags;
     };
     
     uint16_t client_id;
@@ -84,6 +81,7 @@ struct player_snapshot_t {
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
     vector3_t ws_next_random_spawn;
+    float meteorite_speed;
 
     // Tick that client has to revert to if client needs to do a correction
     uint64_t tick;
@@ -96,17 +94,38 @@ enum player_alive_state_t {
     PAS_DEAD, PAS_ALIVE
 };
 
-struct player_t {
-    union {
-        struct {
-            uint32_t is_remote: 1;
-            uint32_t is_local: 1;
-            uint32_t just_spawned: 1;
-            uint32_t alive_state: 2;
-        };
+// Basically dictates how input affects player
+// In PIM_METEORITE, the player just moves the mouse, and accelerates in a direction
+// In PIM_STANDING, the player is a walking humanoid who can use weapons and terraform (gravity doesn't change)
+// In PIM_BALL, the player is a ball rolling around and the gravity changes as the player rolls on surfaces with different normals - cannot use any weapons / terraform
+enum player_interaction_mode_t {
+    PIM_NONE,
+    PIM_METEORITE,
+    PIM_STANDING,
+    // For spectator
+    PIM_FLYING,
+    PIM_BALL
+};
 
-        uint32_t flags;
+enum camera_type_t {
+    FIRST_PERSON = 0, THIRD_PERSON = 1
+};
+
+union player_flags_t {
+    struct {
+        uint32_t is_remote: 1;
+        uint32_t is_local: 1;
+        uint32_t just_spawned: 1;
+        uint32_t alive_state: 2;
+        uint32_t interaction_mode: 3;
+        uint32_t camera_type: 1;
     };
+
+    uint32_t u32;
+};
+
+struct player_t {
+    player_flags_t flags;
 
     // Character name of player
     const char *name;
@@ -119,6 +138,8 @@ struct player_t {
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
     float default_speed;
+    // Constantly accelerates
+    float meteorite_speed;
 
     player_render_t *render;
 
@@ -139,6 +160,9 @@ struct player_t {
     // Server will send this to the clients so that when clients spawn there is no delay
     // Everytime a player gets added, a random position will be generated
     vector3_t next_random_spawn_position;
+
+    // When in third person, distance of the camera to the player
+    float camera_distance;
 };
 
 player_t *get_player(

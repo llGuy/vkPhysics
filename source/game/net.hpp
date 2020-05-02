@@ -1,5 +1,6 @@
 #pragma once
 
+#include "world.hpp"
 #include <common/tools.hpp>
 #include <common/event.hpp>
 #include <common/socket.hpp>
@@ -62,6 +63,10 @@ struct client_t {
     vector3_t ws_predicted_position;
     vector3_t ws_predicted_view_direction;
     vector3_t ws_predicted_up_vector;
+
+    float predicted_meteorite_speed;
+
+    player_flags_t predicted_player_flags;
 
     // Predicted chunk modifications
     uint32_t predicted_chunk_mod_count;

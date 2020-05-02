@@ -25,16 +25,19 @@ static void s_add_player_from_info(
     p->player_action_count = 0;
     p->default_speed = init_info->default_speed;
     p->next_random_spawn_position = init_info->next_random_spawn_position;
+    p->meteorite_speed = 0.0f;
     memset(p->player_actions, 0, sizeof(p->player_actions));
 
     p->accumulated_dt = 0.0f;
 
-    p->flags = init_info->flags;
+    p->flags.u32 = init_info->flags;
     
-    if (init_info->is_local) {
+    if (p->flags.is_local) {
+        LOG_INFOV("%s is local\n", p->name);
+
         // If this is the local player (controlled by mouse and keyboard, need to cache all player actions to send to the server)
         // Only bind camera if player is alive
-        if (init_info->alive_state == PAS_ALIVE) {
+        if (p->flags.alive_state == PAS_ALIVE) {
             // This binds the camera
             w_set_local_player(p->local_id, &world);
         }
@@ -45,12 +48,12 @@ static void s_add_player_from_info(
         p->cached_player_action_count = 0;
         p->cached_player_actions = FL_MALLOC(player_actions_t, MAX_PLAYER_ACTIONS * 2);
 
-        p->is_remote = 0;
-        p->is_local = 1;
+        p->flags.is_remote = 0;
+        p->flags.is_local = 1;
     }
     else {
-        p->is_remote = 1;
-        p->is_local = 0;
+        p->flags.is_remote = 1;
+        p->flags.is_local = 0;
 
         // Initialise remote snapshots
         p->remote_snapshots.init();
@@ -99,9 +102,11 @@ static void s_world_event_listener(
         // Calculate up vector
         vector3_t right = glm::cross(p->ws_view_direction, vector3_t(0.0f, 1.0f, 0.0f));
         p->ws_up_vector = glm::cross(right, p->ws_view_direction);
-        p->alive_state = PAS_ALIVE;
+        p->flags.alive_state = PAS_ALIVE;
+        // Meteorite when player spawns
+        p->flags.interaction_mode = PIM_METEORITE;
 
-        if (p->is_local) {
+        if (p->flags.is_local) {
             w_set_local_player(p->local_id, &world);
         }
     } break;

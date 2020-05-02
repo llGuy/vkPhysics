@@ -26,6 +26,7 @@ void w_player_world_init(
     world->spectator->ws_position = vector3_t(-50.0f, 0.0f, -50.0f);
     world->spectator->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
     world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+    world->spectator->flags.interaction_mode = PIM_FLYING;
 }
 
 static mesh_t player_mesh;
@@ -41,6 +42,7 @@ void w_players_data_init() {
     //     "shaders/SPV/untextured_mesh.frag.spv"
     // };
 
+    // For now, just use smooth shaded sphere
     const char *shader_paths[] = {
         "shaders/SPV/mesh.vert.spv",
         "shaders/SPV/mesh.frag.spv"
@@ -298,14 +300,71 @@ static void s_execute_player_movement(
     player->ws_position = collide_and_slide(&collision) * player_scale;
 }
 
-static void w_execute_player_actions(
+static void s_accelerate_meteorite_player(
+    player_t *player,
+    player_actions_t *actions) {
+    static const float METEORITE_ACCELERATION = 2.0f;
+    static const float MAX_METEORITE_SPEED = 25.0f;
+
+    vector3_t final_velocity = player->ws_view_direction * player->meteorite_speed * actions->dt;
+
+    terrain_collision_t collision = {};
+    collision.ws_size = player_scale;
+    collision.ws_position = player->ws_position;
+    collision.ws_velocity = final_velocity;
+    collision.es_position = collision.ws_position / collision.ws_size;
+    collision.es_velocity = collision.ws_velocity / collision.ws_size;
+
+    player->ws_position = collide_and_slide(&collision) * player_scale;
+
+    if (collision.detected) {
+        // Change interaction mode to ball
+        player->flags.interaction_mode = PIM_BALL;
+    }
+
+    if (player->meteorite_speed < MAX_METEORITE_SPEED) {
+        player->meteorite_speed += METEORITE_ACCELERATION * actions->dt;
+    }
+}
+
+static void s_execute_player_actions(
     player_t *player,
     world_t *world) {
+
     for (uint32_t i = 0; i < player->player_action_count; ++i) {
         player_actions_t *actions = &player->player_actions[i];
-        s_execute_player_direction_change(player, actions);
-        s_execute_player_movement(player, actions);
-        s_execute_player_triggers(player, actions, world);
+
+        switch (player->flags.interaction_mode) {
+            
+        case PIM_METEORITE: {
+            s_execute_player_direction_change(player, actions);
+            s_accelerate_meteorite_player(player, actions);
+        } break;
+
+
+            // FOR NOW STANDING AND BALL ARE EQUIVALENT ///////////////////////
+        case PIM_STANDING: {
+            s_execute_player_direction_change(player, actions);
+            s_execute_player_movement(player, actions);
+            s_execute_player_triggers(player, actions, world);
+        } break;
+
+        case PIM_BALL: {
+            s_execute_player_direction_change(player, actions);
+            s_execute_player_movement(player, actions);
+            s_execute_player_triggers(player, actions, world);
+        } break;
+
+        case PIM_FLYING: {
+            s_execute_player_direction_change(player, actions);
+            s_execute_player_movement(player, actions);
+            s_execute_player_triggers(player, actions, world);
+        } break;
+
+        default: {
+        } break;
+
+        }
 
         // If this is local player, need to cache these commands to later send to server
         if ((int32_t)player->local_id == world->local_player && connected_to_server()) {
@@ -364,7 +423,7 @@ static void s_interpolate_remote_player_snapshots(
         p->ws_view_direction = interpolate(previous_snapshot->ws_view_direction, next_snapshot->ws_view_direction, progression);
         p->ws_up_vector = interpolate(previous_snapshot->ws_up_vector, next_snapshot->ws_up_vector, progression);
 
-        p->alive_state = previous_snapshot->alive_state;
+        p->flags.alive_state = previous_snapshot->alive_state;
     }
 }
 
@@ -375,15 +434,15 @@ void w_tick_players(
         player_t *p = world->players[i];
         if (p) {
             // Will be 0 for remote players
-            w_execute_player_actions(p, world);
+            s_execute_player_actions(p, world);
 
-            if (p->is_remote) {
+            if (p->flags.is_remote) {
                 s_interpolate_remote_player_snapshots(p);
             }
         }
     }
 
-    w_execute_player_actions(world->spectator, world);
+    s_execute_player_actions(world->spectator, world);
 }
 
 void w_set_local_player(
@@ -401,7 +460,7 @@ void w_players_gpu_sync_and_render(
     for (uint32_t i = 0; i < world->players.data_count; ++i) {
         player_t *p = world->players[i];
         if (p) {
-            if (p->alive_state == PAS_ALIVE) {
+            if (p->flags.alive_state == PAS_ALIVE) {
                 if (!p->render) {
                     w_player_render_init(p);
                 }
