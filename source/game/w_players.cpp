@@ -60,7 +60,7 @@ void w_players_data_init() {
         VK_SHADER_STAGE_VERTEX_BIT | /*VK_SHADER_STAGE_GEOMETRY_BIT | */VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE);
 
-    player_scale = vector3_t(0.7f);
+    player_scale = vector3_t(0.9f);
 }
 
 void w_player_render_init(
