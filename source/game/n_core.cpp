@@ -468,7 +468,7 @@ static void s_send_commands_to_server() {
             packet.ws_final_position = p->ws_position;
             packet.ws_final_view_direction = p->ws_view_direction;
             packet.ws_final_up_vector = p->ws_up_vector;
-            packet.meteorite_speed = p->meteorite_speed;
+            packet.ws_final_velocity = p->ws_velocity;
 
             packet.player_flags = p->flags.u32;
 
@@ -632,7 +632,7 @@ static void s_handle_incorrect_state(
     p->player_action_count = 0;
     p->accumulated_dt = 0.0f;
     p->next_random_spawn_position = snapshot->ws_next_random_spawn;
-    p->meteorite_speed = snapshot->meteorite_speed;
+    p->ws_velocity = snapshot->ws_velocity;
     p->flags.interaction_mode = snapshot->interaction_mode;
 
     // Revert voxel modifications up from tick that server processed
@@ -1595,7 +1595,7 @@ static void s_process_client_commands(
             c->ws_predicted_position = commands.ws_final_position;
             c->ws_predicted_view_direction = commands.ws_final_view_direction;
             c->ws_predicted_up_vector = commands.ws_final_up_vector;
-            c->predicted_meteorite_speed = commands.meteorite_speed;
+            c->ws_predicted_velocity = commands.ws_final_velocity;
             c->predicted_player_flags.u32 = commands.player_flags;
             
             // Process terraforming stuff
@@ -1641,7 +1641,7 @@ static bool s_check_if_client_has_to_correct_state(
     vector3_t dposition = glm::abs(p->ws_position - c->ws_predicted_position);
     vector3_t ddirection = glm::abs(p->ws_view_direction - c->ws_predicted_view_direction);
     vector3_t dup = glm::abs(p->ws_up_vector - c->ws_predicted_up_vector);
-    float dmspeed = glm::abs(p->meteorite_speed - c->predicted_meteorite_speed);
+    vector3_t dvelocity = glm::abs(p->ws_velocity - c->ws_predicted_velocity);
 
     float precision = 0.000001f;
     bool incorrect_position = 0;
@@ -1659,9 +1659,9 @@ static bool s_check_if_client_has_to_correct_state(
         incorrect_up = 1;
     }
 
-    bool incorrect_mspeed = 0;
-    if (p->flags.interaction_mode == PIM_METEORITE && dmspeed >= precision) {
-        incorrect_mspeed = 1;
+    bool incorrect_velocity = 0;
+    if (dvelocity.x >= precision || dvelocity.y >= precision || dvelocity.z >= precision) {
+        incorrect_velocity = 1;
         LOG_INFO("Need to correct meteorite speed\n");
     }
 
@@ -1671,7 +1671,7 @@ static bool s_check_if_client_has_to_correct_state(
         incorrect_interaction_mode = 1;
     }
 
-    return incorrect_position || incorrect_direction || incorrect_up || incorrect_mspeed || incorrect_interaction_mode;
+    return incorrect_position || incorrect_direction || incorrect_up || incorrect_velocity || incorrect_interaction_mode;
 }
 
 static bool s_check_if_client_has_to_correct_terrain(
@@ -1788,7 +1788,7 @@ static void s_dispatch_game_state_snapshot() {
             snapshot->ws_position = p->ws_position;
             snapshot->ws_view_direction = p->ws_view_direction;
             snapshot->ws_next_random_spawn = p->next_random_spawn_position;
-            snapshot->meteorite_speed = p->meteorite_speed;
+            snapshot->ws_velocity = p->ws_velocity;
             snapshot->ws_up_vector = p->ws_up_vector;
             snapshot->tick = c->tick;
             snapshot->terraformed = c->did_terrain_mod_previous_tick;

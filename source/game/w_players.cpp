@@ -60,7 +60,7 @@ void w_players_data_init() {
         VK_SHADER_STAGE_VERTEX_BIT | /*VK_SHADER_STAGE_GEOMETRY_BIT | */VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE);
 
-    player_scale = vector3_t(0.5f);
+    player_scale = vector3_t(0.7f);
 }
 
 void w_player_render_init(
@@ -323,9 +323,6 @@ static void s_accelerate_meteorite_player(
 
     static const float METEORITE_ACCELERATION = 100.0f;
     static const float MAX_METEORITE_SPEED = 25.0f;
-
-    //player->ws_velocity += player->ws_view_direction * METEORITE_ACCELERATION * actions->dt;
-    //player->ws_velocity +=
 
     // Apply air resistance
     player->ws_velocity -= (player->ws_velocity * 0.5f) * actions->dt;

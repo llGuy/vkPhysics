@@ -139,7 +139,7 @@ struct packet_player_commands_t {
     vector3_t ws_final_view_direction;
     vector3_t ws_final_up_vector;
 
-    float meteorite_speed;
+    vector3_t ws_final_velocity;
     
     uint32_t modified_chunk_count;
     chunk_modifications_t *chunk_modifications;

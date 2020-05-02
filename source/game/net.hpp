@@ -64,7 +64,7 @@ struct client_t {
     vector3_t ws_predicted_view_direction;
     vector3_t ws_predicted_up_vector;
 
-    float predicted_meteorite_speed;
+    vector3_t ws_predicted_velocity;
 
     player_flags_t predicted_player_flags;
 

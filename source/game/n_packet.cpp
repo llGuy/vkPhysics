@@ -147,7 +147,7 @@ uint32_t n_packed_player_commands_size(
     final_size += sizeof(packet_player_commands_t::ws_final_position);
     final_size += sizeof(packet_player_commands_t::ws_final_view_direction);
     final_size += sizeof(packet_player_commands_t::ws_final_up_vector);
-    final_size += sizeof(packet_player_commands_t::meteorite_speed);
+    final_size += sizeof(packet_player_commands_t::ws_final_velocity);
 
     final_size += sizeof(packet_player_commands_t::modified_chunk_count);
     for (uint32_t c = 0; c < commands->modified_chunk_count; ++c) {
@@ -180,7 +180,7 @@ void n_serialise_player_commands(
     serialiser->serialise_vector3(packet->ws_final_view_direction);
     serialiser->serialise_vector3(packet->ws_final_up_vector);
 
-    serialiser->serialise_float32(packet->meteorite_speed);
+    serialiser->serialise_vector3(packet->ws_final_velocity);
 
     serialiser->serialise_uint32(packet->modified_chunk_count);
 
@@ -222,7 +222,7 @@ void n_deserialise_player_commands(
     packet->ws_final_view_direction = serialiser->deserialise_vector3();
     packet->ws_final_up_vector = serialiser->deserialise_vector3();
 
-    packet->meteorite_speed = serialiser->deserialise_float32();
+    packet->ws_final_velocity = serialiser->deserialise_vector3();
 
     packet->modified_chunk_count = serialiser->deserialise_uint32();
     packet->chunk_modifications = LN_MALLOC(chunk_modifications_t, packet->modified_chunk_count);
@@ -255,7 +255,7 @@ uint32_t n_packed_game_state_snapshot_size(
         sizeof(player_snapshot_t::ws_view_direction) +
         sizeof(player_snapshot_t::ws_up_vector) +
         sizeof(player_snapshot_t::ws_next_random_spawn) +
-        sizeof(player_snapshot_t::meteorite_speed) +
+        sizeof(player_snapshot_t::ws_velocity) +
         sizeof(player_snapshot_t::tick) +
         sizeof(player_snapshot_t::terraform_tick);
 
@@ -275,7 +275,7 @@ void n_serialise_game_state_snapshot(
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_view_direction);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_up_vector);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_next_random_spawn);
-        serialiser->serialise_float32(packet->player_snapshots[i].meteorite_speed);
+        serialiser->serialise_vector3(packet->player_snapshots[i].ws_velocity);
         serialiser->serialise_uint64(packet->player_snapshots[i].tick);
         serialiser->serialise_uint64(packet->player_snapshots[i].terraform_tick);
     }
@@ -294,7 +294,7 @@ void n_deserialise_game_state_snapshot(
         packet->player_snapshots[i].ws_view_direction = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_up_vector = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_next_random_spawn = serialiser->deserialise_vector3();
-        packet->player_snapshots[i].meteorite_speed = serialiser->deserialise_float32();
+        packet->player_snapshots[i].ws_velocity = serialiser->deserialise_vector3();
         packet->player_snapshots[i].tick = serialiser->deserialise_uint64();
         packet->player_snapshots[i].terraform_tick = serialiser->deserialise_uint64();
     }

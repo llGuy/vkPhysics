@@ -82,7 +82,7 @@ struct player_snapshot_t {
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
     vector3_t ws_next_random_spawn;
-    float meteorite_speed;
+    vector3_t ws_velocity;
 
     // Tick that client has to revert to if client needs to do a correction
     uint64_t tick;
@@ -140,8 +140,6 @@ struct player_t {
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
     float default_speed;
-    // Constantly accelerates
-    float meteorite_speed;
 
     vector3_t ws_velocity;
 

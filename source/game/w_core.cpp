@@ -25,7 +25,6 @@ static void s_add_player_from_info(
     p->player_action_count = 0;
     p->default_speed = init_info->default_speed;
     p->next_random_spawn_position = init_info->next_random_spawn_position;
-    p->meteorite_speed = 0.0f;
     p->ball_speed = 0.0f;
     p->ws_velocity = vector3_t(0.0f);
     memset(p->player_actions, 0, sizeof(p->player_actions));
