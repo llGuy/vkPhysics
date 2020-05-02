@@ -143,6 +143,10 @@ struct player_t {
     // Constantly accelerates
     float meteorite_speed;
 
+    vector3_t ws_velocity;
+
+    float ball_speed;
+
     player_render_t *render;
 
     // Maximum player actions

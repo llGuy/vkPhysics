@@ -60,7 +60,7 @@ void w_players_data_init() {
         VK_SHADER_STAGE_VERTEX_BIT | /*VK_SHADER_STAGE_GEOMETRY_BIT | */VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE);
 
-    player_scale = vector3_t(1.0f);
+    player_scale = vector3_t(0.5f);
 }
 
 void w_player_render_init(
@@ -321,10 +321,16 @@ static void s_accelerate_meteorite_player(
 
     player->next_camera_up = player->ws_up_vector;
 
-    static const float METEORITE_ACCELERATION = 2.0f;
+    static const float METEORITE_ACCELERATION = 100.0f;
     static const float MAX_METEORITE_SPEED = 25.0f;
 
-    vector3_t final_velocity = player->ws_view_direction * player->meteorite_speed * actions->dt;
+    //player->ws_velocity += player->ws_view_direction * METEORITE_ACCELERATION * actions->dt;
+    //player->ws_velocity +=
+
+    // Apply air resistance
+    player->ws_velocity -= (player->ws_velocity * 0.5f) * actions->dt;
+
+    vector3_t final_velocity = player->ws_velocity * actions->dt;
 
     terrain_collision_t collision = {};
     collision.ws_size = player_scale;
@@ -347,8 +353,9 @@ static void s_accelerate_meteorite_player(
         player->ws_up_vector = normal;
     }
 
-    if (player->meteorite_speed < MAX_METEORITE_SPEED) {
-        player->meteorite_speed += METEORITE_ACCELERATION * actions->dt;
+    if (glm::dot(player->ws_velocity, player->ws_velocity) < MAX_METEORITE_SPEED * MAX_METEORITE_SPEED) {
+        //player->meteorite_speed += METEORITE_ACCELERATION * actions->dt;
+        player->ws_velocity += player->ws_view_direction * METEORITE_ACCELERATION * actions->dt;
     }
 }
 
