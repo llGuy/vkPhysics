@@ -274,3 +274,5 @@ vector3_t collide_and_slide(
 vector3_t test_collision(
     terrain_collision_t *collision,
     collision_triangle_t *triangle);
+
+vector3_t w_get_player_scale();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/math.hpp>
 #include <common/event.hpp>
 #include <renderer/renderer.hpp>
 #include <common/containers.hpp>
@@ -108,7 +109,7 @@ enum player_interaction_mode_t {
 };
 
 enum camera_type_t {
-    FIRST_PERSON = 0, THIRD_PERSON = 1
+    CT_FIRST_PERSON = 0, CT_THIRD_PERSON = 1
 };
 
 union player_flags_t {
@@ -124,6 +125,7 @@ union player_flags_t {
     uint32_t u32;
 };
 
+// TODO: Make sure to only allocate camera stuff for local player
 struct player_t {
     player_flags_t flags;
 
@@ -162,7 +164,11 @@ struct player_t {
     vector3_t next_random_spawn_position;
 
     // When in third person, distance of the camera to the player
-    float camera_distance;
+    smooth_exponential_interpolation_t camera_distance;
+    smooth_exponential_interpolation_t camera_fov;
+    // This will be constantly interpolating depending on the surface the ball is on
+    vector3_t current_camera_up;
+    vector3_t next_camera_up;
 };
 
 player_t *get_player(

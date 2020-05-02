@@ -108,6 +108,11 @@ static void s_world_event_listener(
 
         if (p->flags.is_local) {
             w_set_local_player(p->local_id, &world);
+            p->flags.camera_type = CT_THIRD_PERSON;
+
+            p->camera_distance.set(1, 12.0f, 10.0f);
+            p->camera_fov.set(1, 90.0f, 60.0f);
+            p->current_camera_up = p->ws_up_vector;
         }
     } break;
         
@@ -257,12 +262,19 @@ eye_3d_info_t create_eye_info() {
     if (!player) {
         player = w_get_spectator(&world);
     }
-    
-    info.position = player->ws_position;
-    info.direction = player->ws_view_direction;
-    info.up = player->ws_up_vector;
 
-    info.fov = 60.0f;
+    if (player->flags.camera_type == CT_FIRST_PERSON) {
+        info.position = player->ws_position;
+    }
+    else {
+        info.position = player->ws_position - player->ws_view_direction * player->camera_distance.current;
+        info.position += player->current_camera_up * w_get_player_scale();
+    }
+    
+    info.direction = player->ws_view_direction;
+    info.up = player->current_camera_up;
+
+    info.fov = player->camera_fov.current;
     info.near = 0.01f;
     info.far = 10000.0f;
     info.dt = surface_delta_time();

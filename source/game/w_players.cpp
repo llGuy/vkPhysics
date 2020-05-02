@@ -7,6 +7,10 @@
 
 static vector3_t player_scale;
 
+vector3_t w_get_player_scale() {
+    return player_scale;
+}
+
 void w_player_world_init(
     world_t *world) {
     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
@@ -27,6 +31,8 @@ void w_player_world_init(
     world->spectator->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
     world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
     world->spectator->flags.interaction_mode = PIM_FLYING;
+    world->spectator->camera_fov.current = 60.0f;
+    world->spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
 }
 
 static mesh_t player_mesh;
@@ -298,14 +304,22 @@ static void s_execute_player_movement(
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
     player->ws_position = collide_and_slide(&collision) * player_scale;
+
+    if (collision.detected) {
+        vector3_t normal = glm::normalize(collision.es_surface_normal * player_scale);
+        player->next_camera_up = normal;
+        player->ws_up_vector = normal;
+    }
 }
 
 static void s_accelerate_meteorite_player(
     player_t *player,
     player_actions_t *actions) {
     // Need to set player's up vector depending on direction it is flying
-    vector3_t right = glm::cross(player->ws_view_direction, player->ws_up_vector);
-    player->ws_up_vector = glm::cross(right, player->ws_view_direction);
+    vector3_t right = glm::normalize(glm::cross(player->ws_view_direction, player->ws_up_vector));
+    player->ws_up_vector = glm::normalize(glm::cross(right, player->ws_view_direction));
+
+    player->next_camera_up = player->ws_up_vector;
 
     static const float METEORITE_ACCELERATION = 2.0f;
     static const float MAX_METEORITE_SPEED = 25.0f;
@@ -324,6 +338,13 @@ static void s_accelerate_meteorite_player(
     if (collision.detected) {
         // Change interaction mode to ball
         player->flags.interaction_mode = PIM_BALL;
+        player->camera_distance.set(1, 10.0f, player->camera_distance.current);
+        player->camera_fov.set(1, 60.0f, player->camera_fov.current);
+
+        vector3_t normal = glm::normalize(collision.es_surface_normal * player_scale);
+        
+        player->next_camera_up = normal;
+        player->ws_up_vector = normal;
     }
 
     if (player->meteorite_speed < MAX_METEORITE_SPEED) {
@@ -372,11 +393,21 @@ static void s_execute_player_actions(
 
         // If this is local player, need to cache these commands to later send to server
         if ((int32_t)player->local_id == world->local_player && connected_to_server()) {
-            if (player->cached_player_action_count < MAX_PLAYER_ACTIONS * 2) {
-                player->cached_player_actions[player->cached_player_action_count++] = *actions;
+            player->camera_distance.animate(actions->dt);
+            player->camera_fov.animate(actions->dt);
+
+            vector3_t up_diff = player->next_camera_up - player->current_camera_up;
+            if (glm::dot(up_diff, up_diff) > 0.00001f) {
+                player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * actions->dt * 2.0f);
             }
-            else {
-                LOG_WARNING("Too many cached player actions\n");
+
+            if (connected_to_server()) {
+                if (player->cached_player_action_count < MAX_PLAYER_ACTIONS * 2) {
+                    player->cached_player_actions[player->cached_player_action_count++] = *actions;
+                }
+                else {
+                    LOG_WARNING("Too many cached player actions\n");
+                }
             }
         }
     }
@@ -474,8 +505,16 @@ void w_players_gpu_sync_and_render(
                 p->render->render_data.pbr_info.x = 0.1f;
                 p->render->render_data.pbr_info.y = 0.1f;
 
-                if ((int32_t)i != (int32_t)world->local_player) {
-                    // Handle difference between rendering animations (and first / third person)
+                if ((int32_t)i == (int32_t)world->local_player) {
+                    if (p->flags.camera_type == CT_THIRD_PERSON) {
+                        submit_mesh(
+                            render_command_buffer,
+                            &player_mesh,
+                            &player_shader,
+                            &p->render->render_data);
+                    }
+                }
+                else {
                     submit_mesh(
                         render_command_buffer,
                         &player_mesh,

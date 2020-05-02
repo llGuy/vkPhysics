@@ -35,7 +35,8 @@ inline float squared(
 }
 
 // Linear interpolation (constant speed)
-template <typename T> struct smooth_linear_interpolation_t {
+template <
+    typename T> struct smooth_linear_interpolation_t {
     bool in_animation;
 
     T current;
@@ -43,6 +44,18 @@ template <typename T> struct smooth_linear_interpolation_t {
     T next;
     float current_time;
     float max_time;
+
+    void set(
+        bool iin_animation,
+        T iprev,
+        T inext,
+        float imax_time) {
+        in_animation = iin_animation;
+        prev = iprev;
+        next = inext;
+        current_time = prev;
+        max_time = imax_time;
+    }
 
     void animate(
         float dt) {
@@ -62,31 +75,33 @@ template <typename T> struct smooth_linear_interpolation_t {
 };
 
 
-typedef bool (*smooth_exponential_interpolation_compare_float_t)(float current, float destination);
-inline bool smooth_exponential_interpolation_compare_float(float current, float destination) {
-    return(abs(destination - current) < 0.001f);
-}
-
-
 // Starts fast, then slows down - this name is utter BS - I don't know the mathy name for it, it just looks like an exponential function
-template <typename T, typename Compare> struct smooth_exponential_interpolation_t {
+struct smooth_exponential_interpolation_t {
     bool in_animation;
     
-    T destination;
-    T current;
+    float destination;
+    float current;
     float speed = 1.0f;
 
-    Compare compare;
+    void set(
+        bool iin_animation,
+        float idest,
+        float icurrent,
+        float ispeed = 1.0f) {
+        in_animation = iin_animation;
+        destination = idest;
+        current = icurrent;
+        speed = ispeed;
+    }
 
     void animate(
         float dt) {
         if (in_animation) {
             current += (destination - current) * dt * speed;
-            if (compare(current, destination)) {
+            if (glm::abs(current - destination) < 0.001f) {
                 in_animation = 0;
                 current = destination;
             }
         }
     }
 };
-

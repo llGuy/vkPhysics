@@ -55,10 +55,10 @@ void main() {
     previous.xyz /= previous.w;
     previous.xy = previous.xy * 0.5f + 0.5f;
 
-    float desired_fps = 60.0f;
+    float desired_fps = 100.0f;
     float current_fps = 1.0f / u_camera_transforms.dt;
     float scale = current_fps / desired_fps;
-    vec2 blur = (previous.xy - in_fs.uvs) * scale;
+    vec2 blur = (previous.xy - in_fs.uvs);// * scale;
 
     int num_samples = 8;
     for (int i = 1; i < num_samples; ++i) {
