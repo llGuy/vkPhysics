@@ -22,4 +22,6 @@ void main() {
     }
 
     out_final_ao = result * div_total;
+
+    //out_final_ao = texture(u_ao, in_fs.uvs).r;
 }

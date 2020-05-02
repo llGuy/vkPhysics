@@ -32,7 +32,7 @@ layout(binding = 0, set = 3) uniform kernel_t {
     float resolution_coefficient;
 } u_kernels;
 
-const float div_magic = 1.0f / (4.0f);
+const float div_magic = 1.0f / (4.0f * 0.00000001f);
 const float div_total = 1.0f / 40.0f;
 const float div_fade_distance_cap = 1.0f / 100.0f;
 
@@ -54,7 +54,7 @@ void main() {
         // Depends on pixel distance to camera
         float pixel_distance = abs(vs_position.z);
         float kernel_size = mix(0.5f, 3.0f, pixel_distance * div_fade_distance_cap);
-        float bias = mix(0.05f, 0.15f, pixel_distance * div_fade_distance_cap);
+        float bias = mix(0.02f, 0.2f, pixel_distance * div_fade_distance_cap);
         
         for (int i = 0; i < 40; ++i) {
             vec3 sample_kernel = tangent_space * vec3(u_kernels.kernels[i]);
@@ -68,7 +68,7 @@ void main() {
 
             float sample_depth = texture(u_gbuffer_position, offset.xy).z;
             
-            float range = smoothstep(0.0f, 1.0f, 0.08f / abs(vs_position.z - sample_depth));
+            float range = smoothstep(0.25f, 1.0f, 0.5f / abs(vs_position.z - sample_depth));
             occlusion += (sample_depth >= sample_kernel.z + bias ? 1.0f : 0.0f) * range;
         }
 
