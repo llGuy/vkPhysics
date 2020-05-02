@@ -303,6 +303,10 @@ static void s_execute_player_movement(
 static void s_accelerate_meteorite_player(
     player_t *player,
     player_actions_t *actions) {
+    // Need to set player's up vector depending on direction it is flying
+    vector3_t right = glm::cross(player->ws_view_direction, player->ws_up_vector);
+    player->ws_up_vector = glm::cross(right, player->ws_view_direction);
+
     static const float METEORITE_ACCELERATION = 2.0f;
     static const float MAX_METEORITE_SPEED = 25.0f;
 

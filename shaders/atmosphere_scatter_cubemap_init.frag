@@ -169,7 +169,7 @@ void main() {
     vec3 color = vec3(mie * accumulated_mie + rayleigh * accumulated_rayleigh);
 
     float a = 0.0f;
-    if (dot(-light_dir, eye_direction) > 0.99) {
+    if (dot(-light_dir, eye_direction) > 0.985) {
         a = 1.0f;
     }
     

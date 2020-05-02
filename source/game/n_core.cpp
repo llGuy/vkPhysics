@@ -1762,6 +1762,7 @@ static void s_dispatch_game_state_snapshot() {
 
             if (has_to_correct_state || has_to_correct_terrain) {
                 if (c->waiting_on_correction) {
+                    // TODO: Make sure to relook at this, so that in case of packet loss, the server doesn't just stall at this forever
                     LOG_INFO("Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n");
                     snapshot->client_needs_to_correct_state = 0;
                     snapshot->server_waiting_for_correction = 1;
