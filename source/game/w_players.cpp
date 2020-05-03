@@ -60,7 +60,7 @@ void w_players_data_init() {
         VK_SHADER_STAGE_VERTEX_BIT | /*VK_SHADER_STAGE_GEOMETRY_BIT | */VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE);
 
-    player_scale = vector3_t(0.9f);
+    player_scale = vector3_t(0.5f);
 }
 
 void w_player_render_init(
@@ -259,57 +259,78 @@ static void s_execute_player_direction_change(
 static void s_execute_player_movement(
     player_t *player,
     player_actions_t *actions) {
-    vector3_t right = glm::normalize(glm::cross(player->ws_view_direction, player->ws_up_vector));
-    vector3_t forward = glm::normalize(glm::cross(player->ws_up_vector, right));
+    movement_axes_t axes = compute_movement_axes(player->ws_view_direction, player->ws_up_vector);
 
-    vector3_t final_velocity = vector3_t(0.0f);
+    vector3_t acceleration = vector3_t(0.0f);
 
     bool made_movement = 0;
     
     if (actions->move_forward) {
-        final_velocity += forward * actions->dt * player->default_speed;
+        acceleration += axes.forward * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->move_left) {
-        final_velocity -= right * actions->dt * player->default_speed;
+        acceleration -= axes.right * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->move_back) {
-        final_velocity -= forward * actions->dt * player->default_speed;
+        acceleration -= axes.forward * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->move_right) {
-        final_velocity += right * actions->dt * player->default_speed;
+        acceleration += axes.right * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->jump) {
-        final_velocity += player->ws_up_vector * actions->dt * player->default_speed;
+        acceleration += player->ws_up_vector * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->crouch) {
-        final_velocity -= player->ws_up_vector * actions->dt * player->default_speed;
+        acceleration -= player->ws_up_vector * actions->dt * player->default_speed;
         made_movement = 1;
     }
 
-    if (made_movement && glm::dot(final_velocity, final_velocity) != 0.0f) {
-        final_velocity = glm::normalize(final_velocity);
-        final_velocity *= actions->dt * player->default_speed;
+    static const float ACCELERATION = 20.0f;
+    static const float GRAVITY = 10.0f;
+    
+    if (made_movement && glm::dot(acceleration, acceleration) != 0.0f) {
+        acceleration = glm::normalize(acceleration);
+    }
+
+    player->ws_velocity += acceleration * actions->dt * ACCELERATION;
+
+    if (player->flags.contact == PCS_ON_GROUND) {
+        // Only if there is contact between player and ground, apply friction
+        //player->ws_velocity -= 0.1f * GRAVITY * glm::normalize(player->ws_velocity) * actions->dt;
+        player->ws_velocity -= 0.1f * player->ws_velocity * actions->dt;
+    }
+    else {
+        player->ws_velocity -= player->ws_up_vector * GRAVITY * actions->dt;
     }
 
     terrain_collision_t collision = {};
     collision.ws_size = player_scale;
     collision.ws_position = player->ws_position;
-    collision.ws_velocity = final_velocity;
+    collision.ws_velocity = player->ws_velocity * actions->dt;
     collision.es_position = collision.ws_position / collision.ws_size;
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
     player->ws_position = collide_and_slide(&collision) * player_scale;
+    player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {
         vector3_t normal = glm::normalize(collision.es_surface_normal * player_scale);
         player->next_camera_up = normal;
         player->ws_up_vector = normal;
+        player->flags.contact = PCS_ON_GROUND;
     }
+    else {
+        player->flags.contact = PCS_IN_AIR;
+
+        LOG_INFO("In air\n");
+    }
+
+    player->ws_velocity -= player->ws_up_vector * GRAVITY * actions->dt;
 }
 
 static void s_accelerate_meteorite_player(
@@ -321,11 +342,11 @@ static void s_accelerate_meteorite_player(
 
     player->next_camera_up = player->ws_up_vector;
 
-    static const float METEORITE_ACCELERATION = 100.0f;
+    static const float METEORITE_ACCELERATION = 25.0f;
     static const float MAX_METEORITE_SPEED = 25.0f;
 
     // Apply air resistance
-    player->ws_velocity -= (player->ws_velocity * 0.5f) * actions->dt;
+    player->ws_velocity -= (player->ws_velocity * 0.1f) * actions->dt;
 
     vector3_t final_velocity = player->ws_velocity * actions->dt;
 
@@ -337,6 +358,7 @@ static void s_accelerate_meteorite_player(
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
     player->ws_position = collide_and_slide(&collision) * player_scale;
+    player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {
         // Change interaction mode to ball
@@ -348,11 +370,19 @@ static void s_accelerate_meteorite_player(
         
         player->next_camera_up = normal;
         player->ws_up_vector = normal;
-    }
 
-    if (glm::dot(player->ws_velocity, player->ws_velocity) < MAX_METEORITE_SPEED * MAX_METEORITE_SPEED) {
-        //player->meteorite_speed += METEORITE_ACCELERATION * actions->dt;
-        player->ws_velocity += player->ws_view_direction * METEORITE_ACCELERATION * actions->dt;
+        player->flags.contact = PCS_ON_GROUND;
+    }
+    else {
+        player->flags.contact = PCS_IN_AIR;
+
+        if (glm::dot(player->ws_velocity, player->ws_velocity) < MAX_METEORITE_SPEED * MAX_METEORITE_SPEED) {
+            //player->meteorite_speed += METEORITE_ACCELERATION * actions->dt;
+            player->ws_velocity += player->ws_view_direction * METEORITE_ACCELERATION * actions->dt;
+        }
+        else {
+            player->ws_velocity = glm::normalize(player->ws_velocity) * MAX_METEORITE_SPEED;
+        }
     }
 }
 

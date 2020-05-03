@@ -108,6 +108,10 @@ enum player_interaction_mode_t {
     PIM_BALL
 };
 
+enum player_contact_state_t {
+    PCS_IN_AIR, PCS_ON_GROUND
+};
+
 enum camera_type_t {
     CT_FIRST_PERSON = 0, CT_THIRD_PERSON = 1
 };
@@ -120,6 +124,7 @@ union player_flags_t {
         uint32_t alive_state: 2;
         uint32_t interaction_mode: 3;
         uint32_t camera_type: 1;
+        uint32_t contact: 1;
     };
 
     uint32_t u32;
