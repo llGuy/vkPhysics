@@ -281,16 +281,16 @@ static void s_execute_player_movement(
         acceleration += axes.right * actions->dt * player->default_speed;
         made_movement = 1;
     }
-    if (actions->jump) {
-        acceleration += player->ws_up_vector * actions->dt * player->default_speed;
-        made_movement = 1;
-    }
-    if (actions->crouch) {
-        acceleration -= player->ws_up_vector * actions->dt * player->default_speed;
-        made_movement = 1;
-    }
+    // if (actions->jump) {
+    //     acceleration += player->ws_up_vector * actions->dt * player->default_speed;
+    //     made_movement = 1;
+    // }
+    // if (actions->crouch) {
+    //     acceleration -= player->ws_up_vector * actions->dt * player->default_speed;
+    //     made_movement = 1;
+    // }
 
-    static const float ACCELERATION = 20.0f;
+    static const float ACCELERATION = 10.0f;
     static const float GRAVITY = 10.0f;
     
     if (made_movement && glm::dot(acceleration, acceleration) != 0.0f) {
@@ -304,9 +304,8 @@ static void s_execute_player_movement(
         //player->ws_velocity -= 0.1f * GRAVITY * glm::normalize(player->ws_velocity) * actions->dt;
         player->ws_velocity -= 0.1f * player->ws_velocity * actions->dt;
     }
-    else {
-        player->ws_velocity -= player->ws_up_vector * GRAVITY * actions->dt;
-    }
+
+    player->ws_velocity -= player->ws_up_vector * GRAVITY * actions->dt;
 
     terrain_collision_t collision = {};
     collision.ws_size = player_scale;
@@ -315,7 +314,22 @@ static void s_execute_player_movement(
     collision.es_position = collision.ws_position / collision.ws_size;
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
-    player->ws_position = collide_and_slide(&collision) * player_scale;
+    vector3_t previous_position = player->ws_position;
+
+    vector3_t ws_new_position = collide_and_slide(&collision) * player_scale;
+
+    if (!collision.detected) {
+        terrain_collision_t new_collision = {};
+        new_collision.ws_size = player_scale;
+        new_collision.ws_position = player->ws_position;
+        new_collision.ws_velocity = player->ws_velocity * actions->dt;
+        new_collision.es_position = new_collision.ws_position / new_collision.ws_size;
+        new_collision.es_velocity = new_collision.ws_velocity / new_collision.ws_size;
+
+        collide_and_slide(&new_collision);
+    }
+
+    player->ws_position = ws_new_position;
     player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {
@@ -323,14 +337,18 @@ static void s_execute_player_movement(
         player->next_camera_up = normal;
         player->ws_up_vector = normal;
         player->flags.contact = PCS_ON_GROUND;
+
+        float vdotv = glm::dot(player->ws_velocity, player->ws_velocity);
+        if (vdotv < 0.00001f && vdotv > 0.0f) {
+            player->ws_velocity = vector3_t(0.0f);
+        }
     }
     else {
         player->flags.contact = PCS_IN_AIR;
 
-        LOG_INFO("In air\n");
+        // LOG_INFO("In air\n");
     }
 
-    player->ws_velocity -= player->ws_up_vector * GRAVITY * actions->dt;
 }
 
 static void s_accelerate_meteorite_player(

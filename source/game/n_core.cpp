@@ -223,6 +223,8 @@ static void s_process_connection_handshake(
         data->infos[i].flags = handshake.player_infos[i].flags.u32;
 
         if (handshake.player_infos[i].flags.is_local) {
+            LOG_INFOV("Current client ID is %i\n", clients.data[i].client_id);
+
             clients.data[client_id].chunks_to_wait_for = handshake.loaded_chunk_count;
 
             data->infos[i].next_random_spawn_position = handshake.player_infos[i].ws_next_random_position;
@@ -1463,6 +1465,9 @@ static void s_process_connection_request(
     n_deserialise_connection_request(&request, serialiser);
 
     uint32_t client_id = clients.add();
+
+    LOG_INFOV("New client with ID %i\n", client_id);
+
     client_t *client = clients.get(client_id);
     
     client->initialised = 1;
@@ -1563,6 +1568,7 @@ static void s_process_client_commands(
         if (commands.requested_spawn) {
             event_spawn_t *spawn = FL_MALLOC(event_spawn_t, 1);
             spawn->client_id = client_id;
+            //LOG_INFOV("Client %i spawned\n", client_id);
             submit_event(ET_SPAWN, spawn, events);
 
             // Generate a new random position next time player needs to spawn

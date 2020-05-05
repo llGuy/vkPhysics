@@ -97,6 +97,9 @@ static void s_world_event_listener(
     case ET_SPAWN: {
         event_spawn_t *data = (event_spawn_t *)event->data;
         uint32_t id = data->client_id;
+
+        LOG_INFOV("Client %i spawned\n", data->client_id);
+
         player_t *p = get_player(id);
         p->ws_position = p->next_random_spawn_position;
         p->ws_view_direction = glm::normalize(-p->ws_position);

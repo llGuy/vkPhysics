@@ -127,6 +127,9 @@ template <
         max_size = max;
         data = FL_MALLOC(T, max_size);
         removed = FL_MALLOC(uint32_t, max_size);
+
+        removed_count = 0;
+        data_count = 0;
     }
 
     void clear() {

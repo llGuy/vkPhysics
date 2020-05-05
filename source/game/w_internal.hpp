@@ -235,6 +235,7 @@ struct terrain_collision_t {
         struct {
             uint32_t detected: 1;
             uint32_t has_detected_previously: 1;
+            uint32_t under_terrain: 1;
             uint32_t recurse: 4;
         };
         uint32_t flags;

@@ -350,10 +350,12 @@ static bool s_collided_with_triangle(
 
     vector3_t es_plane_normal = glm::normalize(glm::cross(es_b - es_a, es_c - es_a));
 
+    float es_distance_to_plane = 0.0f;
+    
     if (s_facing_triangle(collision->es_normalised_velocity, es_plane_normal)) {
         // get plane constant
         float plane_constant = s_get_plane_constant(es_a, es_plane_normal);
-        float es_distance_to_plane = glm::dot(collision->es_position, es_plane_normal) + plane_constant;
+        es_distance_to_plane = glm::dot(collision->es_position, es_plane_normal) + plane_constant;
         float plane_normal_dot_velocity = glm::dot(es_plane_normal, collision->es_velocity);
 
         bool sphere_inside_plane = 0;
@@ -402,6 +404,19 @@ static bool s_collided_with_triangle(
 
         if (!sphere_inside_plane) {
             if (s_inside_triangle(plane_contact_point, es_triangle)) {
+                // Check if the sphere is underneath the terrain
+                // float sphere_point_plane_distance = glm::dot(collision->es_position - es_plane_normal, es_plane_normal) + plane_constant;
+                // if (sphere_point_plane_distance < 0.0f) {
+                //     if (sphere_point_plane_distance > -0.00001f) {
+                //         sphere_point_plane_distance = -0.01f;
+                //     }
+                //     vector3_t es_new_sphere_position = collision->es_position - es_plane_normal * sphere_point_plane_distance;
+                //     collision->es_nearest_distance = sphere_point_plane_distance;
+                //     collision->es_surface_normal = es_plane_normal;
+                //     collision->under_terrain = 1;
+                //     return false;
+                // }
+
                 // sphere collided with triangle
                 detected_collision = 1;
                 cinstance = cinstance0;
@@ -456,6 +471,7 @@ static bool s_collided_with_triangle(
                 collision->es_contact_point = triangle_contact_point;
                 collision->es_surface_normal = es_plane_normal;
                 collision->detected = 1;
+                collision->under_terrain = 0;
 
                 collision->has_detected_previously = 1;
 
@@ -501,6 +517,12 @@ vector3_t collide_and_slide(
         s_collided_with_triangle(collision, triangle);
     }
 
+    if (collision->under_terrain) {
+        LOG_INFO("Under terrain\n");
+        collision->detected = 1;
+        return collision->es_position;
+    }
+
     if (!collision->has_detected_previously) {
         // No more collisions, just return position + velocity
         return collision->es_position + collision->es_velocity;
@@ -511,7 +533,7 @@ vector3_t collide_and_slide(
     vector3_t noc_destination = collision->es_position + collision->es_velocity;
     vector3_t actual_position = collision->es_position;
 
-    float close_distance = 0.005f;
+    float close_distance = 0.0005f;
 
     if (collision->es_nearest_distance >= close_distance) {
         // Make sure that sphere never touches the terrain
