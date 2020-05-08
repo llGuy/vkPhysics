@@ -4,6 +4,7 @@
 #include <common/log.hpp>
 #include "w_internal.hpp"
 #include <common/math.hpp>
+#include <glm/gtx/projection.hpp>
 
 static vector3_t player_scale;
 
@@ -30,7 +31,7 @@ void w_player_world_init(
     world->spectator->ws_position = vector3_t(-50.0f, 0.0f, -50.0f);
     world->spectator->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
     world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
-    world->spectator->flags.interaction_mode = PIM_FLYING;
+    world->spectator->flags.interaction_mode = PIM_FLOATING;
     world->spectator->camera_fov.current = 60.0f;
     world->spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
 }
@@ -256,9 +257,43 @@ static void s_execute_player_direction_change(
     player->ws_view_direction = res;
 }
 
+// For spectator
+static void s_execute_player_floating_movement(
+    player_t *player,
+    player_actions_t *actions) {
+    vector3_t right = glm::normalize(glm::cross(player->ws_view_direction, player->ws_up_vector));
+    vector3_t forward = glm::normalize(glm::cross(player->ws_up_vector, right));
+
+    if (actions->move_forward) {
+        player->ws_position += forward * actions->dt * player->default_speed;
+            
+    }
+    if (actions->move_left) {
+        player->ws_position -= right * actions->dt * player->default_speed;
+            
+    }
+    if (actions->move_back) {
+        player->ws_position -= forward * actions->dt * player->default_speed;
+            
+    }
+    if (actions->move_right) {
+        player->ws_position += right * actions->dt * player->default_speed;
+            
+    }
+    if (actions->jump) {
+        player->ws_position += player->ws_up_vector * actions->dt * player->default_speed;
+            
+    }
+    if (actions->crouch) {
+        player->ws_position -= player->ws_up_vector * actions->dt * player->default_speed;
+    }
+}
+
 static void s_execute_player_movement(
     player_t *player,
     player_actions_t *actions) {
+    static const float GRAVITY = 10.0f;
+    
     movement_axes_t axes = compute_movement_axes(player->ws_view_direction, player->ws_up_vector);
 
     vector3_t acceleration = vector3_t(0.0f);
@@ -281,31 +316,31 @@ static void s_execute_player_movement(
         acceleration += axes.right * actions->dt * player->default_speed;
         made_movement = 1;
     }
-    // if (actions->jump) {
-    //     acceleration += player->ws_up_vector * actions->dt * player->default_speed;
-    //     made_movement = 1;
-    // }
-    // if (actions->crouch) {
-    //     acceleration -= player->ws_up_vector * actions->dt * player->default_speed;
-    //     made_movement = 1;
-    // }
-
+    if (actions->jump) {
+        acceleration += axes.up * actions->dt * player->default_speed;
+        made_movement = 1;
+    }
+    if (actions->crouch) {
+        acceleration -= axes.up * actions->dt * player->default_speed;
+        made_movement = 1;
+    }
+        
     static const float ACCELERATION = 10.0f;
-    static const float GRAVITY = 10.0f;
+    
+    //player->ws_velocity = axes.forward;
     
     if (made_movement && glm::dot(acceleration, acceleration) != 0.0f) {
         acceleration = glm::normalize(acceleration);
     }
 
     player->ws_velocity += acceleration * actions->dt * ACCELERATION;
+    player->ws_velocity += -player->ws_up_vector * GRAVITY * actions->dt;
 
     if (player->flags.contact == PCS_ON_GROUND) {
-        // Only if there is contact between player and ground, apply friction
-        //player->ws_velocity -= 0.1f * GRAVITY * glm::normalize(player->ws_velocity) * actions->dt;
-        player->ws_velocity -= 0.1f * player->ws_velocity * actions->dt;
+        player->ws_velocity += -player->ws_velocity * actions->dt;
     }
-
-    player->ws_velocity -= player->ws_up_vector * GRAVITY * actions->dt;
+    else {
+    }
 
     terrain_collision_t collision = {};
     collision.ws_size = player_scale;
@@ -325,30 +360,46 @@ static void s_execute_player_movement(
         new_collision.ws_velocity = player->ws_velocity * actions->dt;
         new_collision.es_position = new_collision.ws_position / new_collision.ws_size;
         new_collision.es_velocity = new_collision.ws_velocity / new_collision.ws_size;
-
         collide_and_slide(&new_collision);
     }
 
     player->ws_position = ws_new_position;
-    player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
+    //player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {
+        LOG_INFO("Collision detected\n");
         vector3_t normal = glm::normalize(collision.es_surface_normal * player_scale);
+
+        if (player->flags.contact == PCS_IN_AIR) {
+            if (glm::abs(glm::dot(player->ws_velocity, player->ws_velocity)) == 0.0f) {
+                float previous_velocity_length = glm::length(player->ws_velocity);
+                movement_axes_t new_axes = compute_movement_axes(player->ws_view_direction, player->ws_up_vector);
+                player->ws_velocity = glm::normalize(glm::proj(player->ws_velocity, new_axes.forward)) * previous_velocity_length * 0.2f;
+            }
+        }
+        else {
+            //player->ws_velocity = (player->ws_position - previous_position) / actions->dt;
+        }
+
         player->next_camera_up = normal;
         player->ws_up_vector = normal;
         player->flags.contact = PCS_ON_GROUND;
 
         float vdotv = glm::dot(player->ws_velocity, player->ws_velocity);
-        if (vdotv < 0.00001f && vdotv > 0.0f) {
+        if (glm::abs(vdotv) == 0.0f) {
             player->ws_velocity = vector3_t(0.0f);
+        }
+        else {
+            // Apply normal force
+            player->ws_velocity += player->ws_up_vector * GRAVITY * actions->dt;
         }
     }
     else {
+        LOG_INFO("No collision detected\n");
         player->flags.contact = PCS_IN_AIR;
 
         // LOG_INFO("In air\n");
     }
-
 }
 
 static void s_accelerate_meteorite_player(
@@ -432,9 +483,9 @@ static void s_execute_player_actions(
             s_execute_player_triggers(player, actions, world);
         } break;
 
-        case PIM_FLYING: {
+        case PIM_FLOATING: {
             s_execute_player_direction_change(player, actions);
-            s_execute_player_movement(player, actions);
+            s_execute_player_floating_movement(player, actions);
             s_execute_player_triggers(player, actions, world);
         } break;
 

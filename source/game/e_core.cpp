@@ -239,6 +239,7 @@ static void s_world_ui_proc() {
             if (p->flags.is_local) {
                 ImGui::Text("- Position: %s", glm::to_string(p->ws_position).c_str());
                 ImGui::Text("- Direction: %s", glm::to_string(p->ws_view_direction).c_str());
+                ImGui::Text("- Velocity: %s", glm::to_string(p->ws_velocity).c_str());
                 vector3_t cc = glm::floor(p->ws_position);
                 vector3_t from_origin = (vector3_t)cc;
                 vector3_t xs_sized = glm::floor(from_origin / (float)CHUNK_EDGE_LENGTH);

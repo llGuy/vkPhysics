@@ -104,7 +104,7 @@ enum player_interaction_mode_t {
     PIM_METEORITE,
     PIM_STANDING,
     // For spectator
-    PIM_FLYING,
+    PIM_FLOATING,
     PIM_BALL
 };
 

@@ -141,7 +141,6 @@ static void s_connect_to_address(
 
     if (err != 0) {
         fprintf(stderr, "%s: %s\n", address_name, gai_strerror(err));
-        abort();
     }
 
     // (This is a really bad way)
@@ -294,7 +293,6 @@ static uint32_t s_str_to_ipv4_int32(
 
     if (err != 0) {
         //fprintf(stderr, "%s: %s\n", name, gai_strerror(err));
-        abort();
     }
 
     // (This is a really bad way)
@@ -514,7 +512,6 @@ static void s_connect_to_address(
 
     if (err != 0) {
         fprintf(stderr, "%s: %s\n", address_name, gai_strerror(err));
-        abort();
     }
 
     // (This is a really bad way)
@@ -568,7 +565,6 @@ static uint32_t s_str_to_ipv4_int32(
 
     if (err != 0) {
         fprintf(stderr, "%s: %s\n", name, gai_strerror(err));
-        abort();
     }
 
     // (This is a really bad way)

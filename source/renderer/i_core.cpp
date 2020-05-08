@@ -251,6 +251,13 @@ void poll_input_events(event_submissions_t *submissions) {
 
     sdelta_time = get_current_time() - current_time;
 
+#if 0
+    //if (sdelta_time > 1.0f / 100.0f) {
+        // This is just for debugging
+        sdelta_time = 1.0f / 100.0f;
+        //}
+#endif
+
     // Start timing
     current_time = get_current_time();
 
