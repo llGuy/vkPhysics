@@ -269,10 +269,10 @@ struct collision_triangle_t {
     };
 };
 
-vector3_t collide_and_slide(
+vector3_t w_collide_and_slide(
     terrain_collision_t *collision);
 
-vector3_t test_collision(
+vector3_t w_test_collision(
     terrain_collision_t *collision,
     collision_triangle_t *triangle);
 

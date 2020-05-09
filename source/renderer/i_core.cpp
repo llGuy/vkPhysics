@@ -129,6 +129,7 @@ static void s_window_key_callback(
     case GLFW_KEY_BACKSPACE: { s_set_button_state(BT_BACKSPACE, state); } break;
     case GLFW_KEY_ESCAPE: { s_set_button_state(BT_ESCAPE, state); } break;
     case GLFW_KEY_F11: { s_set_button_state(BT_F11, state); } break;
+    case GLFW_KEY_F9: { s_set_button_state(BT_F9, state); } break;
     }
 
     /*if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
@@ -301,6 +302,10 @@ void poll_input_events(event_submissions_t *submissions) {
             raw_input.window_width = vidmode->width;
             raw_input.window_height = vidmode->height;
         }
+    }
+    
+    if (raw_input.buttons[BT_F9].instant) {
+        printf("Break code\n");
     }
 
     if (raw_input.resized) {

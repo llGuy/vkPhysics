@@ -351,17 +351,15 @@ static void s_execute_player_movement(
 
     vector3_t previous_position = player->ws_position;
 
-    vector3_t ws_new_position = collide_and_slide(&collision) * player_scale;
+    vector3_t ws_new_position = w_collide_and_slide(&collision) * player_scale;
 
-    if (!collision.detected) {
-        terrain_collision_t new_collision = {};
-        new_collision.ws_size = player_scale;
-        new_collision.ws_position = player->ws_position;
-        new_collision.ws_velocity = player->ws_velocity * actions->dt;
-        new_collision.es_position = new_collision.ws_position / new_collision.ws_size;
-        new_collision.es_velocity = new_collision.ws_velocity / new_collision.ws_size;
-        collide_and_slide(&new_collision);
-    }
+    terrain_collision_t new_collision = {};
+    new_collision.ws_size = player_scale;
+    new_collision.ws_position = player->ws_position;
+    new_collision.ws_velocity = player->ws_velocity * actions->dt;
+    new_collision.es_position = new_collision.ws_position / new_collision.ws_size;
+    new_collision.es_velocity = new_collision.ws_velocity / new_collision.ws_size;
+    w_collide_and_slide(&new_collision);
 
     player->ws_position = ws_new_position;
     //player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
@@ -426,7 +424,7 @@ static void s_accelerate_meteorite_player(
     collision.es_position = collision.ws_position / collision.ws_size;
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
-    player->ws_position = collide_and_slide(&collision) * player_scale;
+    player->ws_position = w_collide_and_slide(&collision) * player_scale;
     player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {
