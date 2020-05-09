@@ -159,7 +159,7 @@ void w_handle_input(
     }
 }
 
-#define TERRAFORMING_SPEED 500.0f
+#define TERRAFORMING_SPEED 100.0f
 
 void w_push_player_actions(
     player_t *player,
@@ -365,7 +365,7 @@ static void s_execute_player_movement(
     //player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {
-        LOG_INFO("Collision detected\n");
+        //LOG_INFO("Collision detected\n");
         vector3_t normal = glm::normalize(collision.es_surface_normal * player_scale);
 
         if (player->flags.contact == PCS_IN_AIR) {
@@ -393,7 +393,7 @@ static void s_execute_player_movement(
         }
     }
     else {
-        LOG_INFO("No collision detected\n");
+        //LOG_INFO("No collision detected\n");
         player->flags.contact = PCS_IN_AIR;
 
         // LOG_INFO("In air\n");
@@ -499,7 +499,7 @@ static void s_execute_player_actions(
 
             vector3_t up_diff = player->next_camera_up - player->current_camera_up;
             if (glm::dot(up_diff, up_diff) > 0.00001f) {
-                player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * actions->dt * 2.0f);
+                player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * actions->dt * 0.5f);
             }
 
             if (connected_to_server()) {

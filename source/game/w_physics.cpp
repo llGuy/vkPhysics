@@ -417,7 +417,7 @@ static bool s_collided_with_triangle(
                 cinstance = cinstance0;
 
                 if (inside_terrain) {
-                    LOG_ERRORV("We got a problem, cinstance < 0: %f\n", cinstance);
+                    //LOG_ERRORV("We got a problem, cinstance < 0: %f\n", cinstance);
                 }
 
                 if (cinstance < 0.0f) {
@@ -536,7 +536,7 @@ vector3_t w_collide_and_slide(
     float close_distance = 0.005f;
 
     if (collision->under_terrain) {
-        LOG_ERROR("Under terrain\n");
+        //LOG_ERROR("Under terrain\n");
         actual_position = collision->es_contact_point + collision->es_surface_normal * (1.0f + close_distance);
     }
     else if (collision->es_nearest_distance >= close_distance) {
@@ -562,7 +562,7 @@ vector3_t w_collide_and_slide(
     if (distance_to_plane < 1.0f) {
         // Make sure that sphere is not inside the plane
         //actual_position += (1.0f - distance_to_plane) * plane_normal;
-        LOG_ERROR("Sinked into terrain\n");
+        //LOG_ERROR("Sinked into terrain\n");
     }
     
     ++(collision->recurse);

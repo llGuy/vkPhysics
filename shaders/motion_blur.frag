@@ -60,12 +60,12 @@ void main() {
     float scale = current_fps / desired_fps;
     vec2 blur = (previous.xy - in_fs.uvs);// * scale;
 
-    int num_samples = 8;
-    for (int i = 1; i < num_samples; ++i) {
-        vec2 offset = blur * (float(i) / float(num_samples - 1) - 0.5f);
-        vec2 current_sample_position = in_fs.uvs + offset;
-        color += texture(u_diffuse, current_sample_position);
-    }
+    int num_samples = 1;
+    // for (int i = 1; i < num_samples; ++i) {
+    //     vec2 offset = blur * (float(i) / float(num_samples - 1) - 0.5f);
+    //     vec2 current_sample_position = in_fs.uvs + offset;
+    //     color += texture(u_diffuse, current_sample_position);
+    // }
 
     color /= float(num_samples);
     color.a = 1.0f;
