@@ -1,5 +1,6 @@
 #pragma once
 
+#include "log.hpp"
 #include "tools.hpp"
 #include "allocators.hpp"
 
@@ -63,7 +64,8 @@ template <
             }
         }
         
-        assert(false);
+        LOG_ERROR("Fatal error in hash table insert()\n");
+        assert(0);
     }
     
     void remove(
@@ -81,7 +83,7 @@ template <
             }
         }
 
-        assert(false);
+        LOG_ERROR("Error in hash table remove()\n");
     }
     
     T *get(
@@ -105,7 +107,7 @@ template <
         }
 
         if (filled_items == Bucket_Size) {
-            assert(false);
+            LOG_ERROR("Error in hash table get()\n");
         }
 
         return NULL;
