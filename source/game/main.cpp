@@ -1,3 +1,5 @@
+#include <glm/glm.hpp>
+
 #include "engine.hpp"
 
 #ifdef __ANDROID__
@@ -36,7 +38,7 @@ int32_t main(
     game_init_data.argv = argv;
 
     game_main(&game_init_data);
-    
+
     return 0;
 }
 

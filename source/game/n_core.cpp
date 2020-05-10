@@ -33,6 +33,7 @@ available_servers_t *get_available_servers() {
 
 static float client_command_output_interval = 1.0f / 25.0f;
 static float server_snapshot_output_interval = 1.0f / 20.0f;
+static float server_chunk_world_output_interval = 1.0f / 40.0f;
 
 #define MAX_MESSAGE_SIZE 65507
 
@@ -81,6 +82,11 @@ static bool client_check_incoming_packets = 0;
 
 #define MAX_CLIENTS 50
 static stack_container_t<client_t> clients;
+
+static flexible_stack_container_t<uint32_t> clients_to_send_chunks_to;
+
+static bool still_receiving_chunk_packets;
+static uint32_t chunks_to_receive;
 
 static uint8_t dummy_voxels[CHUNK_VOXEL_COUNT];
 
@@ -138,6 +144,9 @@ static void s_request_available_servers() {
 
 static void s_start_client(
     event_start_client_t *data) {
+    still_receiving_chunk_packets = 0;
+    chunks_to_receive = 0;
+
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
     s_main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
@@ -235,6 +244,9 @@ static void s_process_connection_handshake(
     }
 
     submit_event(ET_ENTER_SERVER, data, events);
+
+    still_receiving_chunk_packets = 1;
+    chunks_to_receive = handshake.loaded_chunk_count;
 }
 
 static void s_process_player_joined(
@@ -912,6 +924,8 @@ static void s_process_chunk_voxels(
     event_submissions_t *events) {
     uint32_t loaded_chunk_count = serialiser->deserialise_uint32();
 
+    LOG_INFOV("Received %d chunks\n", loaded_chunk_count);
+
     for (uint32_t c = 0; c < loaded_chunk_count; ++c) {
         int16_t x = serialiser->deserialise_int16();
         int16_t y = serialiser->deserialise_int16();
@@ -1186,6 +1200,8 @@ static bool started_server = 0;
 
 static void s_start_server(
     event_start_server_t *data) {
+    clients_to_send_chunks_to.init(50);
+
     memset(dummy_voxels, SPECIAL_VALUE, sizeof(dummy_voxels));
 
     s_main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
@@ -1365,6 +1381,9 @@ static void s_serialise_voxel_chunks_and_send(
 
     uint32_t chunk_values_start = serialiser.data_buffer_head;
     
+    uint32_t index = clients_to_send_chunks_to.add();
+    clients_to_send_chunks_to[index] = client->client_id;
+
     for (uint32_t i = 0; i < count; ++i) {
         s_serialise_chunk(&serialiser, &chunks_in_packet, values, i);
 
@@ -1372,18 +1391,18 @@ static void s_serialise_voxel_chunks_and_send(
             i + 1 == count) {
             // Need to send in new packet
             serialiser.serialise_uint32(chunks_in_packet, chunk_count_byte);
-
-            if (s_send_to(&serialiser, client->address)) {
-                LOG_INFOV("Sent %i chunks to %s\n", chunks_in_packet, client->name);
-            }
-            else {
-                LOG_INFOV("Failed to send %i chunks to %s\n", chunks_in_packet, client->name);
-            }
+            client_chunk_packet_t *packet_to_save = &client->chunk_packets[client->chunk_packet_count++];
+            packet_to_save->chunk_data = FL_MALLOC(uint8_t, serialiser.data_buffer_head);
+            memcpy(packet_to_save->chunk_data, serialiser.data_buffer, serialiser.data_buffer_head);
+            //packet_to_save->chunk_data = serialiser.data_buffer;
+            packet_to_save->size = serialiser.data_buffer_head;
 
             serialiser.data_buffer_head = chunk_values_start;
             chunks_in_packet = 0;
         }
     }
+
+    client->current_chunk_sending = 0;
 }
 
 static void s_send_game_state_to_new_client(
@@ -1419,7 +1438,8 @@ static void s_send_game_state_to_new_client(
         }
 
         loaded_chunk_count = count;
-        
+
+        // Cannot send all of these at the same bloody time
         s_serialise_voxel_chunks_and_send(client, voxel_chunks, loaded_chunk_count);
     }
 }
@@ -1867,16 +1887,57 @@ static void s_dispatch_game_state_snapshot() {
     //putchar('\n');
 }
 
+static void s_send_pending_chunks() {
+    uint32_t to_remove_count = 0;
+    uint32_t *to_remove = LN_MALLOC(uint32_t, clients_to_send_chunks_to.data_count);
+    for (uint32_t i = 0; i < clients_to_send_chunks_to.data_count; ++i) {
+        uint32_t client_id = clients_to_send_chunks_to[i];
+        client_t *c_ptr = &clients[client_id];
+        if (c_ptr->current_chunk_sending < c_ptr->chunk_packet_count) {
+            client_chunk_packet_t *packet = &c_ptr->chunk_packets[c_ptr->current_chunk_sending];
+            serialiser_t serialiser = {};
+            serialiser.data_buffer_head = packet->size;
+            serialiser.data_buffer = packet->chunk_data;
+            serialiser.data_buffer_size = packet->size;
+            if (s_send_to(&serialiser, c_ptr->address)) {
+                LOG_INFO("Sent chunk packet to client\n");
+            }
+
+            // Free
+            FL_FREE(packet->chunk_data);
+
+            c_ptr->current_chunk_sending++;
+        }
+        else {
+            to_remove[to_remove_count++] = i;
+        }
+    }
+
+    for (uint32_t i = 0; i < to_remove_count; ++i) {
+        clients_to_send_chunks_to.remove(to_remove[i]);
+    }
+}
+
 void tick_server(
     event_submissions_t *events) {
-    // In future, have a separate thread do this kind of stuff
-    static float elapsed = 0.0f;
-    elapsed += logic_delta_time();
-    if (elapsed >= server_snapshot_output_interval) {
+    static float snapshot_elapsed = 0.0f;
+    snapshot_elapsed += logic_delta_time();
+    
+    if (snapshot_elapsed >= server_snapshot_output_interval) {
         // Send commands to the server
         s_dispatch_game_state_snapshot();
 
-        elapsed = 0.0f;
+        snapshot_elapsed = 0.0f;
+    }
+
+    // For sending chunks to new players
+    static float world_elapsed = 0.0f;
+    world_elapsed += logic_delta_time();
+
+    if (world_elapsed >= server_chunk_world_output_interval) {
+        s_send_pending_chunks();
+
+        world_elapsed = 0.0f;
     }
 
     for (uint32_t i = 0; i < clients.data_count + 1; ++i) {

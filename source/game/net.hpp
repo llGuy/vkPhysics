@@ -36,6 +36,11 @@ struct chunk_modifications_t {
     };
 };
 
+struct client_chunk_packet_t {
+    uint8_t *chunk_data;
+    uint32_t size;
+};
+
 struct client_t {
     union {
         struct {
@@ -74,6 +79,10 @@ struct client_t {
 
     uint64_t tick;
     uint64_t tick_at_which_client_terraformed;
+
+    uint32_t chunk_packet_count;
+    uint32_t current_chunk_sending;
+    client_chunk_packet_t chunk_packets[20];
 };
 
 struct local_client_info_t {
