@@ -595,17 +595,12 @@ void w_chunk_world_init(
     chunks_to_interpolate.modifications = FL_MALLOC(chunk_modifications_t, chunks_to_interpolate.max_modified);
     memset(chunks_to_interpolate.modifications, 0, sizeof(chunk_modifications_t) * chunks_to_interpolate.max_modified);
 
-    //w_add_sphere_m(vector3_t(0.0f), 5.0f, world);
-
-    //w_add_sphere_m(vector3_t(24.0f), 2.0f, world);
-
+#if 1
     w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
-    //w_add_sphere_m(vector3_t(0.0f), 20.0f, world);
-
     w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
     w_add_sphere_m(vector3_t(-40.0f), 20.0f, world);
-
     w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
+#endif
 
 #if 0
     for (uint32_t z = 0; z < 32; ++z) {

@@ -419,6 +419,7 @@ static bool s_collided_with_triangle(
                 cinstance = cinstance0;
 
                 if (inside_terrain) {
+                    
                     //LOG_ERRORV("We got a problem, cinstance < 0: %f\n", cinstance);
                 }
 
@@ -475,7 +476,13 @@ static bool s_collided_with_triangle(
             float distance_to_collision = glm::abs(cinstance) * glm::length(collision->es_velocity);
 
             if (!collision->detected || distance_to_collision < collision->es_nearest_distance) {
-                collision->es_nearest_distance = distance_to_collision;
+                if (inside_terrain) {
+                    collision->es_nearest_distance = es_distance_to_plane;
+                }
+                else {
+                    collision->es_nearest_distance = distance_to_collision;
+                }
+                
                 collision->es_contact_point = triangle_contact_point;
                 collision->es_surface_normal = es_plane_normal;
                 collision->detected = 1;
@@ -538,46 +545,55 @@ vector3_t w_collide_and_slide(
     float close_distance = 0.005f;
 
     if (collision->under_terrain) {
-        //LOG_ERROR("Under terrain\n");
-        actual_position = collision->es_contact_point + collision->es_surface_normal * (1.0f + close_distance);
+        LOG_ERROR("Under terrain\n");
+        //actual_position = collision->es_contact_point + collision->es_surface_normal * (1.0f + close_distance);
+        actual_position = collision->es_position + (1.0f + close_distance - collision->es_nearest_distance) * collision->es_surface_normal;
+
+        ++(collision->recurse);
+        collision->es_position = actual_position;
+        collision->es_nearest_distance = 1000.0f;
+
+        return w_collide_and_slide(collision);
     }
-    else if (collision->es_nearest_distance >= close_distance) {
-        // Make sure that sphere never touches the terrain
-        vector3_t normalized_velocity = glm::normalize(collision->es_velocity);
-        vector3_t velocity = normalized_velocity * (collision->es_nearest_distance - close_distance);
+    else {
+        if (collision->es_nearest_distance >= close_distance) {
+            // Make sure that sphere never touches the terrain
+            vector3_t normalized_velocity = glm::normalize(collision->es_velocity);
+            vector3_t velocity = normalized_velocity * (collision->es_nearest_distance - close_distance);
 
-        actual_position = collision->es_position + velocity;
+            actual_position = collision->es_position + velocity;
 
-        collision->es_contact_point -= close_distance * normalized_velocity;
-    }
+            collision->es_contact_point -= close_distance * normalized_velocity;
+        }
 
-    vector3_t plane_origin = collision->es_contact_point;
-    vector3_t plane_normal = glm::normalize(actual_position - collision->es_contact_point);
+        vector3_t plane_origin = collision->es_contact_point;
+        vector3_t plane_normal = glm::normalize(actual_position - collision->es_contact_point);
 
-    float plane_constant = s_get_plane_constant(plane_origin, plane_normal);
-    float distance_noc_dest_to_plane = glm::dot(noc_destination, plane_normal) + plane_constant;
+        float plane_constant = s_get_plane_constant(plane_origin, plane_normal);
+        float distance_noc_dest_to_plane = glm::dot(noc_destination, plane_normal) + plane_constant;
 
-    vector3_t plane_destination_point = noc_destination - distance_noc_dest_to_plane * plane_normal;
-    vector3_t actual_velocity = plane_destination_point - collision->es_contact_point;
+        vector3_t plane_destination_point = noc_destination - distance_noc_dest_to_plane * plane_normal;
+        vector3_t actual_velocity = plane_destination_point - collision->es_contact_point;
 
-    float distance_to_plane = glm::dot(actual_position, plane_normal) + plane_constant;
-    if (distance_to_plane < 1.0f) {
-        // Make sure that sphere is not inside the plane
-        //actual_position += (1.0f - distance_to_plane) * plane_normal;
-        //LOG_ERROR("Sinked into terrain\n");
-    }
+        float distance_to_plane = glm::dot(actual_position, plane_normal) + plane_constant;
+        if (distance_to_plane < 1.0f) {
+            // Make sure that sphere is not inside the plane
+            //actual_position += (1.0f - distance_to_plane) * plane_normal;
+            //LOG_ERROR("Sinked into terrain\n");
+        }
     
-    ++(collision->recurse);
-    collision->es_position = actual_position;
-    collision->es_velocity = actual_velocity;
-    // TODO: Make sure to check that it's plane_normal and not triangle surface normal
-    collision->es_surface_normal = plane_normal;
+        ++(collision->recurse);
+        collision->es_position = actual_position;
+        collision->es_velocity = actual_velocity;
+        // TODO: Make sure to check that it's plane_normal and not triangle surface normal
+        collision->es_surface_normal = plane_normal;
     
-    if (glm::dot(actual_velocity, actual_velocity) < close_distance * close_distance) {
-        return actual_position;
-    }
+        if (glm::dot(actual_velocity, actual_velocity) < close_distance * close_distance) {
+            return actual_position;
+        }
 
-    return w_collide_and_slide(collision);
+        return w_collide_and_slide(collision);
+    }
 }
 
 

@@ -470,21 +470,21 @@ static void s_execute_player_actions(
 
             // FOR NOW STANDING AND BALL ARE EQUIVALENT ///////////////////////
         case PIM_STANDING: {
+            s_execute_player_triggers(player, actions, world);
             s_execute_player_direction_change(player, actions);
             s_execute_player_movement(player, actions);
-            s_execute_player_triggers(player, actions, world);
         } break;
 
         case PIM_BALL: {
+            s_execute_player_triggers(player, actions, world);
             s_execute_player_direction_change(player, actions);
             s_execute_player_movement(player, actions);
-            s_execute_player_triggers(player, actions, world);
         } break;
 
         case PIM_FLOATING: {
+            s_execute_player_triggers(player, actions, world);
             s_execute_player_direction_change(player, actions);
             s_execute_player_floating_movement(player, actions);
-            s_execute_player_triggers(player, actions, world);
         } break;
 
         default: {

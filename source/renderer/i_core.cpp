@@ -255,7 +255,7 @@ void poll_input_events(event_submissions_t *submissions) {
 #if 0
     //if (sdelta_time > 1.0f / 100.0f) {
         // This is just for debugging
-        sdelta_time = 1.0f / 100.0f;
+        sdelta_time = 1.0f / 500.0f;
         //}
 #endif
 
