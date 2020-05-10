@@ -958,6 +958,24 @@ static void s_process_chunk_voxels(
         chunk_t *chunk = get_chunk(ivector3_t(x, y, z));
         chunk->flags.has_to_update_vertices = 1;
 
+        // Also force update surrounding chunks
+        get_chunk(ivector3_t(x + 1, y, z))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x - 1, y, z))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x, y + 1, z))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x, y - 1, z))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x, y, z + 1))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x, y, z - 1))->flags.has_to_update_vertices = 1;
+        
+        get_chunk(ivector3_t(x + 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x + 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x + 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x + 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
+
+        get_chunk(ivector3_t(x - 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x - 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x - 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
+        get_chunk(ivector3_t(x - 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
+        
         for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
             uint8_t current_value = serialiser->deserialise_uint8();
 
