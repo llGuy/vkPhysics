@@ -245,8 +245,10 @@ static void s_process_connection_handshake(
 
     submit_event(ET_ENTER_SERVER, data, events);
 
-    still_receiving_chunk_packets = 1;
-    chunks_to_receive = handshake.loaded_chunk_count;
+    if (handshake.loaded_chunk_count) {
+        still_receiving_chunk_packets = 1;
+        chunks_to_receive = handshake.loaded_chunk_count;
+    }
 }
 
 static void s_process_player_joined(
@@ -722,10 +724,11 @@ static void s_merge_all_recent_modifications(
 }
 
 static void s_create_voxels_that_need_to_be_interpolated(
-    packet_game_state_snapshot_t *packet) {
+    uint32_t modified_chunk_count,
+    chunk_modifications_t *chunk_modifications) {
     chunks_to_interpolate_t *cti_ptr = get_chunks_to_interpolate();
-    for (uint32_t recv_cm_index = 0; recv_cm_index < packet->modified_chunk_count; ++recv_cm_index) {
-        chunk_modifications_t *recv_cm_ptr = &packet->chunk_modifications[recv_cm_index];
+    for (uint32_t recv_cm_index = 0; recv_cm_index < modified_chunk_count; ++recv_cm_index) {
+        chunk_modifications_t *recv_cm_ptr = &chunk_modifications[recv_cm_index];
         chunk_t *c_ptr = get_chunk(ivector3_t(recv_cm_ptr->x, recv_cm_ptr->y, recv_cm_ptr->z));
 
         if (c_ptr->flags.modified_marker) {
@@ -833,30 +836,51 @@ static void s_handle_correct_state(
         p->next_random_spawn_position = snapshot->ws_next_random_spawn;
     }
 
-    // Mark all chunks / voxels that were modified from tick that server just processed, to current tick
-    // These voxels should not be interpolated, and just left alone, because client just modified them
-    // First make sure to finish interpolation of previous voxels
-    s_set_voxels_to_final_interpolated_values();
+    if (still_receiving_chunk_packets){
+        accumulated_predicted_modification_t *new_modification = s_add_acc_predicted_modification();
+        s_acc_predicted_modification_init(new_modification, 0);
 
-    // Fill merged recent modifications
-    s_acc_predicted_modification_init(
-        &merged_recent_modifications,
-        0);
+        new_modification->acc_predicted_chunk_mod_count = packet->modified_chunk_count;
+        for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
+            chunk_modifications_t *cm_ptr_dst = &new_modification->acc_predicted_modifications[i];
+            chunk_modifications_t *cm_ptr_src = &packet->chunk_modifications[i];
 
-    s_merge_all_recent_modifications(
-        snapshot);
+            cm_ptr_dst->x = cm_ptr_src->x;
+            cm_ptr_dst->y = cm_ptr_src->y;
+            cm_ptr_dst->z = cm_ptr_src->z;
 
-    s_flag_modified_chunks(
-        merged_recent_modifications.acc_predicted_modifications,
-        merged_recent_modifications.acc_predicted_chunk_mod_count);
+            cm_ptr_dst->modified_voxels_count = cm_ptr_src->modified_voxels_count;
+            memcpy(cm_ptr_dst->modifications, cm_ptr_src->modifications, sizeof(voxel_modification_t) * cm_ptr_src->modified_voxels_count);
+        }
+    }
+    else {
+        // Mark all chunks / voxels that were modified from tick that server just processed, to current tick
+        // These voxels should not be interpolated, and just left alone, because client just modified them
+        // First make sure to finish interpolation of previous voxels
+        s_set_voxels_to_final_interpolated_values();
 
-    s_create_voxels_that_need_to_be_interpolated(packet);
+        // Fill merged recent modifications
+        s_acc_predicted_modification_init(
+            &merged_recent_modifications,
+            0);
 
-    s_unflag_modified_chunks(
-        merged_recent_modifications.acc_predicted_modifications,
-        merged_recent_modifications.acc_predicted_chunk_mod_count);
+        s_merge_all_recent_modifications(
+            snapshot);
 
-    s_clear_outdated_modifications_from_history(snapshot);
+        s_flag_modified_chunks(
+            merged_recent_modifications.acc_predicted_modifications,
+            merged_recent_modifications.acc_predicted_chunk_mod_count);
+
+        s_create_voxels_that_need_to_be_interpolated(
+            packet->modified_chunk_count,
+            packet->chunk_modifications);
+
+        s_unflag_modified_chunks(
+            merged_recent_modifications.acc_predicted_modifications,
+            merged_recent_modifications.acc_predicted_chunk_mod_count);
+
+        s_clear_outdated_modifications_from_history(snapshot);
+    }
 }
 
 static void s_handle_local_player_snapshot(
@@ -962,7 +986,7 @@ static void s_process_chunk_voxels(
         }
     }
 
-    //LOG_INFOV("Received %i chunks\n", loaded_chunk_count);
+    chunks_to_receive -= loaded_chunk_count;
 }
 
 static void s_check_incoming_game_server_packets(
@@ -1060,6 +1084,25 @@ static void s_check_incoming_game_server_packets(
             } 
 
             ++i;
+        }
+
+        if (chunks_to_receive == 0) {
+            LOG_INFO("Finished receiving chunks\n");
+            still_receiving_chunk_packets = 0;
+
+            // Set voxels to be interpolated
+            player_snapshot_t dummy {};
+            dummy.tick = 0;
+
+            s_merge_all_recent_modifications(&dummy);
+
+            s_create_voxels_that_need_to_be_interpolated(
+                merged_recent_modifications.acc_predicted_chunk_mod_count,
+                merged_recent_modifications.acc_predicted_modifications);
+
+            acc_predicted_modifications.tail = 0;
+            acc_predicted_modifications.head = 0;
+            acc_predicted_modifications.head_tail_difference = 0;
         }
     }
 }
