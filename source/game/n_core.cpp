@@ -1086,7 +1086,7 @@ static void s_check_incoming_game_server_packets(
             ++i;
         }
 
-        if (chunks_to_receive == 0) {
+        if (chunks_to_receive == 0 && still_receiving_chunk_packets) {
             LOG_INFO("Finished receiving chunks\n");
             still_receiving_chunk_packets = 0;
 
