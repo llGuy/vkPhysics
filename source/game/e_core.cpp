@@ -212,6 +212,7 @@ static void s_world_ui_proc() {
         data->info.ws_up_vector = up;
         data->info.default_speed = default_speed;
         data->info.client_data = NULL;
+        data->info.next_random_spawn_position = vector3_t(data->info.ws_position);
 
         player_flags_t flags;
         flags.u32 = 0;

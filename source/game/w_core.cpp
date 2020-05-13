@@ -32,6 +32,11 @@ static void s_add_player_from_info(
     p->accumulated_dt = 0.0f;
 
     p->flags.u32 = init_info->flags;
+
+    if (!init_info->client_data) {
+        p->flags.alive_state = PAS_ALIVE;
+        p->flags.interaction_mode = PIM_FLOATING;
+    }
     
     if (p->flags.is_local) {
         LOG_INFOV("%s is local\n", p->name);

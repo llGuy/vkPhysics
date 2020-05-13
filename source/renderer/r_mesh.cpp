@@ -6,6 +6,7 @@
 #include <vulkan/vulkan.h>
 #include <common/tools.hpp>
 #include <common/allocators.hpp>
+#include <common/serialiser.hpp>
 
 void push_buffer_to_mesh(
     buffer_type_t buffer_type,
@@ -67,8 +68,16 @@ shader_binding_info_t create_mesh_binding_info(
             format = VK_FORMAT_R32G32_SFLOAT;
             stride = sizeof(vector2_t);
         } break;
+        case BT_JOINT_WEIGHT: {
+            format = VK_FORMAT_R32G32B32A32_SFLOAT;
+            stride = sizeof(vector4_t);
+        } break;
+        case BT_JOINT_INDICES: {
+            format = VK_FORMAT_R32G32B32A32_UINT;
+            stride = sizeof(ivector4_t);
+        } break;
         default: {
-            LOG_ERROR("Mesh buffer not supported\n");
+            LOG_ERRORV("Mesh buffer %d not supported\n", current_mesh_buffer->type);
             exit(1);
         } break;
         }
@@ -328,6 +337,142 @@ void load_mesh_internal(
         s_load_cube(mesh, info);
     } break;
     }
+}
+
+struct header_t {
+    uint32_t vertices_count;
+    uint32_t normals_count;
+    uint32_t tcoords_count;
+    uint32_t joint_weights_count;
+    uint32_t joint_ids_count;
+    // UINT32_T
+    uint32_t indices_count;
+};
+
+void load_mesh_external(
+    mesh_t *mesh,
+    shader_binding_info_t *binding_info,
+    const char *path) {
+    uint32_t strlen_path = (uint32_t)strlen(path);
+    uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
+    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
+    memcpy(final_path, PROJECT_ROOT, strlen_root);
+
+    final_path[strlen_root] = '/';
+    memcpy(final_path + strlen_root + 1, path, strlen_path + 1);
+
+    FILE *mesh_data = fopen(final_path, "rb");
+    if (!mesh_data) {
+        LOG_ERRORV("Failed to load mesh from path: %s\n", final_path);
+    }
+    fseek(mesh_data, 0L, SEEK_END);
+    uint32_t size = ftell(mesh_data);
+    char *binaries = (char *)malloc(sizeof(char) * (size));
+    rewind(mesh_data);
+    fread(binaries, sizeof(char), size, mesh_data);
+    // TODO: Make sure to have a file loading utility
+    
+    serialiser_t serialiser = {};
+    serialiser.data_buffer = (uint8_t *)binaries;
+    serialiser.data_buffer_size = size;
+
+    header_t file_header = {};
+    file_header.vertices_count = serialiser.deserialise_uint32();
+    file_header.normals_count = serialiser.deserialise_uint32();
+    file_header.tcoords_count = serialiser.deserialise_uint32();
+    file_header.joint_weights_count = serialiser.deserialise_uint32();
+    file_header.joint_ids_count = serialiser.deserialise_uint32();
+    file_header.indices_count = serialiser.deserialise_uint32();
+
+    vector3_t *vertices = LN_MALLOC(vector3_t, file_header.vertices_count);
+    vector3_t *normals = LN_MALLOC(vector3_t, file_header.normals_count);
+    vector2_t *tcoords = LN_MALLOC(vector2_t, file_header.tcoords_count);
+    vector4_t *joint_weights = LN_MALLOC(vector4_t, file_header.joint_weights_count);
+    ivector4_t *joint_ids = LN_MALLOC(ivector4_t, file_header.joint_ids_count);
+    uint32_t *indices = LN_MALLOC(uint32_t, file_header.indices_count);
+
+    for (uint32_t i = 0; i < file_header.vertices_count; ++i) {
+        vertices[i] = serialiser.deserialise_vector3();
+    }
+
+    for (uint32_t i = 0; i < file_header.normals_count; ++i) {
+        normals[i] = serialiser.deserialise_vector3();
+    }
+
+    for (uint32_t i = 0; i < file_header.tcoords_count; ++i) {
+        tcoords[i].x = serialiser.deserialise_float32();
+        tcoords[i].y = serialiser.deserialise_float32();
+    }
+
+    for (uint32_t i = 0; i < file_header.joint_weights_count; ++i) {
+        joint_weights[i].x = serialiser.deserialise_float32();
+        joint_weights[i].y = serialiser.deserialise_float32();
+        joint_weights[i].z = serialiser.deserialise_float32();
+        joint_weights[i].w = serialiser.deserialise_float32();
+    }
+
+    for (uint32_t i = 0; i < file_header.joint_ids_count; ++i) {
+        joint_ids[i].x = (int32_t)serialiser.deserialise_uint32();
+        joint_ids[i].y = (int32_t)serialiser.deserialise_uint32();
+        joint_ids[i].z = (int32_t)serialiser.deserialise_uint32();
+        joint_ids[i].w = (int32_t)serialiser.deserialise_uint32();
+    }
+
+    for (uint32_t i = 0; i < file_header.indices_count; ++i) {
+        indices[i] = serialiser.deserialise_uint32();
+    }
+
+    push_buffer_to_mesh(BT_INDICES, mesh);
+    mesh_buffer_t *indices_gpu_buffer = get_mesh_buffer(BT_INDICES, mesh);
+    indices_gpu_buffer->gpu_buffer = create_gpu_buffer(
+        sizeof(uint32_t) * file_header.indices_count,
+        indices,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+
+    push_buffer_to_mesh(BT_VERTEX, mesh);
+    mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, mesh);
+    vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
+        sizeof(vector3_t) * file_header.vertices_count,
+        vertices,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+    push_buffer_to_mesh(BT_NORMAL, mesh);
+    mesh_buffer_t *normal_gpu_buffer = get_mesh_buffer(BT_NORMAL, mesh);
+    normal_gpu_buffer->gpu_buffer = create_gpu_buffer(
+        sizeof(vector3_t) * file_header.normals_count,
+        normals,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+    if (file_header.joint_weights_count) {
+        push_buffer_to_mesh(BT_JOINT_WEIGHT, mesh);
+        mesh_buffer_t *weights_gpu_buffer = get_mesh_buffer(BT_JOINT_WEIGHT, mesh);
+        weights_gpu_buffer->gpu_buffer = create_gpu_buffer(
+            sizeof(vector4_t) * file_header.joint_weights_count,
+            joint_weights,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    }
+    
+    if (file_header.joint_ids_count) {
+        push_buffer_to_mesh(BT_JOINT_INDICES, mesh);
+        mesh_buffer_t *joints_gpu_buffer = get_mesh_buffer(BT_JOINT_INDICES, mesh);
+        joints_gpu_buffer->gpu_buffer = create_gpu_buffer(
+            sizeof(ivector4_t) * file_header.joint_ids_count,
+            joint_ids,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    }
+
+    if (binding_info) {
+        *binding_info = create_mesh_binding_info(mesh);
+    }
+
+    mesh->vertex_offset = 0;
+    mesh->vertex_count = file_header.vertices_count;
+    mesh->first_index = 0;
+    mesh->index_offset = 0;
+    mesh->index_count = file_header.indices_count;
+    mesh->index_type = VK_INDEX_TYPE_UINT32;
+
+    create_mesh_vbo_final_list(mesh);
 }
 
 void submit_mesh(

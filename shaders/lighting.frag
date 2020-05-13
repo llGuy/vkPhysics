@@ -341,6 +341,7 @@ void main() {
     }
 
     out_final_color = vec4(color, 1.0f);
+
     // Not enabling bloom for the moment
     out_bright_color = vec4(0.0f);
 }

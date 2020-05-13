@@ -198,7 +198,7 @@ struct mesh_buffer_t {
     buffer_type_t type;
 };
 
-#define MAX_MESH_BUFFERS 6
+#define MAX_MESH_BUFFERS BT_MAX_VALUE
 
 // For the data needed to render (vertex offset, first index, index_count, index_offset, index_type) - will be set to default values by load_mesh_* functions
 struct mesh_t {
@@ -254,7 +254,10 @@ DECLARE_VOID_RENDERER_PROC(void, load_mesh_internal,
     mesh_t *mesh,
     shader_binding_info_t *info);
 
-DECLARE_VOID_RENDERER_PROC(void, load_mesh_external, void);
+DECLARE_VOID_RENDERER_PROC(void, load_mesh_external,
+    mesh_t *mesh,
+    shader_binding_info_t *info,
+    const char *path);
 
 struct shader_t {
     VkPipeline pipeline;

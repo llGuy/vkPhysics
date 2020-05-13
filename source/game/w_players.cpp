@@ -41,24 +41,25 @@ static shader_t player_shader;
 
 void w_players_data_init() {
     shader_binding_info_t mesh_info = {};
-    load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
-
-    // const char *shader_paths[] = {
-    //     "shaders/SPV/untextured_mesh.vert.spv",
-    //     "shaders/SPV/untextured_mesh.geom.spv",
-    //     "shaders/SPV/untextured_mesh.frag.spv"
-    // };
+    //load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
+    load_mesh_external(&player_mesh, &mesh_info, "assets/models/player.mesh");
 
     // For now, just use smooth shaded sphere
+    // const char *shader_paths[] = {
+    //     "shaders/SPV/mesh.vert.spv",
+    //     "shaders/SPV/mesh.frag.spv"
+    // };
+
     const char *shader_paths[] = {
-        "shaders/SPV/mesh.vert.spv",
-        "shaders/SPV/mesh.frag.spv"
+        "shaders/SPV/skeletal.vert.spv",
+        "shaders/SPV/skeletal.geom.spv",
+        "shaders/SPV/skeletal.frag.spv"
     };
 
     player_shader = create_mesh_shader_color(
         &mesh_info,
         shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | /*VK_SHADER_STAGE_GEOMETRY_BIT | */VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE);
 
     player_scale = vector3_t(0.5f);
@@ -159,7 +160,7 @@ void w_handle_input(
     }
 }
 
-#define TERRAFORMING_SPEED 100.0f
+#define TERRAFORMING_SPEED 200.0f
 
 void w_push_player_actions(
     player_t *player,
@@ -499,7 +500,7 @@ static void s_execute_player_actions(
 
             vector3_t up_diff = player->next_camera_up - player->current_camera_up;
             if (glm::dot(up_diff, up_diff) > 0.00001f) {
-                player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * actions->dt * 0.5f);
+                player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * actions->dt * 1.5f);
             }
 
             if (connected_to_server()) {

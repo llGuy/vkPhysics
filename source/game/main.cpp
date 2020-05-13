@@ -1,4 +1,5 @@
 #include <glm/glm.hpp>
+#include <glm/detail/type_vec.hpp>
 
 #include "engine.hpp"
 

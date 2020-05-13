@@ -46,6 +46,9 @@ struct serialiser_t {
     
     void serialise_vector3(
         const vector3_t &v3);
+
+    void serialise_vector4(
+        const vector4_t &v4);
     
     void serialise_string(
         const char *string);
