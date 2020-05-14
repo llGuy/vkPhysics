@@ -37,12 +37,14 @@ void w_player_world_init(
 }
 
 static mesh_t player_mesh;
+static skeleton_t player_skeleton;
 static shader_t player_shader;
 
 void w_players_data_init() {
     shader_binding_info_t mesh_info = {};
     //load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
     load_mesh_external(&player_mesh, &mesh_info, "assets/models/player.mesh");
+    load_skeleton(&player_skeleton, "assets/models/player.skeleton");
 
     // For now, just use smooth shaded sphere
     // const char *shader_paths[] = {

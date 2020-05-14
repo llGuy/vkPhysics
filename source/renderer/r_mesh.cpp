@@ -5,6 +5,7 @@
 #include "r_internal.hpp"
 #include <vulkan/vulkan.h>
 #include <common/tools.hpp>
+#include <common/string.hpp>
 #include <common/allocators.hpp>
 #include <common/serialiser.hpp>
 
@@ -367,7 +368,7 @@ void load_mesh_external(
     }
     fseek(mesh_data, 0L, SEEK_END);
     uint32_t size = ftell(mesh_data);
-    char *binaries = (char *)malloc(sizeof(char) * (size));
+    char *binaries = (char *)LN_MALLOC(char, size);
     rewind(mesh_data);
     fread(binaries, sizeof(char), size, mesh_data);
     // TODO: Make sure to have a file loading utility
@@ -473,6 +474,55 @@ void load_mesh_external(
     mesh->index_type = VK_INDEX_TYPE_UINT32;
 
     create_mesh_vbo_final_list(mesh);
+}
+
+void load_skeleton(
+    skeleton_t *skeleton,
+    const char *path) {
+    uint32_t strlen_path = (uint32_t)strlen(path);
+    uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
+    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
+    memcpy(final_path, PROJECT_ROOT, strlen_root);
+
+    final_path[strlen_root] = '/';
+    memcpy(final_path + strlen_root + 1, path, strlen_path + 1);
+
+    FILE *mesh_data = fopen(final_path, "rb");
+    if (!mesh_data) {
+        LOG_ERRORV("Failed to load mesh from path: %s\n", final_path);
+    }
+    fseek(mesh_data, 0L, SEEK_END);
+    uint32_t size = ftell(mesh_data);
+    char *binaries = (char *)LN_MALLOC(char, size);
+    rewind(mesh_data);
+    fread(binaries, sizeof(char), size, mesh_data);
+
+    serialiser_t serialiser = {};
+    serialiser.data_buffer = (uint8_t *)binaries;
+    serialiser.data_buffer_size = size;
+
+    uint32_t joint_count = serialiser.deserialise_uint32();
+    skeleton->joints = FL_MALLOC(joint_t, joint_count);
+    for (uint32_t i = 0; i < joint_count; ++i) {
+        joint_t *joint = &skeleton->joints[i];
+        joint->joint_id = serialiser.deserialise_uint32();
+        joint->joint_name = create_fl_string(serialiser.deserialise_string());
+
+        for (uint32_t c = 0; c < 4; ++c) {
+            joint->inverse_bind_transform[c][0] = serialiser.deserialise_float32();
+            joint->inverse_bind_transform[c][1] = serialiser.deserialise_float32();
+            joint->inverse_bind_transform[c][2] = serialiser.deserialise_float32();
+            joint->inverse_bind_transform[c][3] = serialiser.deserialise_float32();
+        }
+
+        joint->children_count = serialiser.deserialise_uint32();
+
+        assert(joint->children_count < MAX_CHILD_JOINTS);
+
+        for (uint32_t c = 0; c < joint->children_count; ++c) {
+            joint->children_ids[c] = serialiser.deserialise_uint32();
+        }
+    }
 }
 
 void submit_mesh(

@@ -1550,7 +1550,7 @@ static char *s_read_shader(
 
     fseek(shader, 0L, SEEK_END);
     *file_size = ftell(shader);
-    char *code = (char *)malloc(sizeof(char) * (*file_size));
+    char *code = (char *)LN_MALLOC(char, (*file_size));
     rewind(shader);
     fread(code, sizeof(char), *file_size, shader);
     return code;
