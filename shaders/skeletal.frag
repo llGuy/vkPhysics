@@ -20,7 +20,6 @@ layout(push_constant) uniform push_constant_t {
 
 void main() {
     out_albedo = vec4(u_push_constant.color.rgb, u_push_constant.pbr_info.x);
-    out_albedo = vec4(in_fs.weights);
     out_normal = vec4(in_fs.vs_normal, u_push_constant.pbr_info.y);
     out_position = vec4(in_fs.vs_position, 1.0f);
     out_sun = vec4(0);

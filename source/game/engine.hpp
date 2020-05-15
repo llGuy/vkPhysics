@@ -28,3 +28,5 @@ void game_main(
 float logic_delta_time();
 
 uint64_t &get_current_tick();
+
+game_init_flags_t get_game_init_flags();

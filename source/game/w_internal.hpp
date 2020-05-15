@@ -44,6 +44,9 @@ void w_link_client_id_to_local_id(
     uint32_t local_id,
     struct world_t *world);
 
+void w_player_animation_init(
+  player_t *player);
+
 void w_player_world_init(
     struct world_t *world);
 

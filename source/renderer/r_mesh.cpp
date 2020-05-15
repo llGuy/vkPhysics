@@ -106,16 +106,30 @@ shader_t create_mesh_shader_color(
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
-    VkCullModeFlags culling) {
-    VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    VkCullModeFlags culling,
+    mesh_type_t mesh_type) {
+    if (mesh_type == MT_STATIC) {
+        VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     
-    return create_3d_shader_color(
-        binding_info,
-        sizeof(mesh_render_data_t),
-        &ubo_type, 1,
-        shader_paths,
-        shader_flags,
-        culling);
+        return create_3d_shader_color(
+            binding_info,
+            sizeof(mesh_render_data_t),
+            &ubo_type, 1,
+            shader_paths,
+            shader_flags,
+            culling);
+    }
+    else {
+        VkDescriptorType ubo_types[] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
+    
+        return create_3d_shader_color(
+            binding_info,
+            sizeof(mesh_render_data_t),
+            ubo_types, 2,
+            shader_paths,
+            shader_flags,
+            culling);
+    }
 }
 
 shader_t create_mesh_shader_shadow(
@@ -592,6 +606,140 @@ void load_animation_cycles(
     }
 }
 
+void animated_instance_init(
+    animated_instance_t *instance,
+    skeleton_t *skeleton,
+    animation_cycles_t *cycles) {
+    memset(instance, 0, sizeof(animated_instance_t));
+    instance->current_animation_time = 0.0f;
+    instance->is_interpolating_between_cycles = 0;
+    instance->skeleton = skeleton;
+    instance->next_bound_cycle = 0;
+    instance->interpolated_transforms = FL_MALLOC(matrix4_t, skeleton->joint_count);
+    instance->current_positions = FL_MALLOC(vector3_t, skeleton->joint_count);
+    instance->current_rotations = FL_MALLOC(quaternion_t, skeleton->joint_count);
+    instance->current_scales = FL_MALLOC(vector3_t, skeleton->joint_count);
+    instance->current_position_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
+    instance->current_rotation_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
+    instance->current_scale_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
+    instance->cycles = cycles;
+
+    memset(instance->current_position_indices, 0, sizeof(uint32_t) * skeleton->joint_count);
+    memset(instance->current_rotation_indices, 0, sizeof(uint32_t) * skeleton->joint_count);
+    memset(instance->current_scale_indices, 0, sizeof(uint32_t) * skeleton->joint_count);
+
+    for (uint32_t i = 0; i < skeleton->joint_count; ++i) {
+        instance->interpolated_transforms[i] = matrix4_t(1.0f);
+    }
+
+    instance->interpolated_transforms_ubo = create_gpu_buffer(
+        sizeof(matrix4_t) * skeleton->joint_count,
+        instance->interpolated_transforms,
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+    instance->descriptor_set = create_buffer_descriptor_set(
+        instance->interpolated_transforms_ubo.buffer,
+        sizeof(matrix4_t) * skeleton->joint_count,
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+}
+
+static void s_calculate_bone_space_transforms(
+    animated_instance_t *instance,
+    animation_cycle_t *bound_cycle,
+    float current_time) {
+    for (uint32_t joint_index = 0; joint_index < instance->skeleton->joint_count; ++joint_index) {
+        vector3_t *current_position = &instance->current_positions[joint_index];
+        quaternion_t *current_rotation = &instance->current_rotations[joint_index];
+        vector3_t *current_scale = &instance->current_scales[joint_index];
+
+        joint_key_frames_t *current_joint_keyframes = &bound_cycle->joint_animations[joint_index];
+
+        for (
+            uint32_t p = instance->current_position_indices[joint_index];
+            p < current_joint_keyframes->position_count;
+            ++p) {
+            if (current_joint_keyframes->positions[p].time_stamp > current_time) {
+                uint32_t next_position_index = p;
+                uint32_t prev_position_index = p - 1;
+
+                joint_position_key_frame_t *prev = &current_joint_keyframes->positions[prev_position_index];
+                joint_position_key_frame_t *next = &current_joint_keyframes->positions[next_position_index];
+                float position_progression = (current_time - prev->time_stamp) / (next->time_stamp - prev->time_stamp);
+                *current_position = prev->position + position_progression * (next->position - prev->position);
+
+                instance->current_position_indices[joint_index] = prev_position_index;
+
+                break;
+            }
+        }
+
+        for (
+            uint32_t r = instance->current_rotation_indices[joint_index];
+            r < current_joint_keyframes->rotation_count;
+            ++r) {
+            if (current_joint_keyframes->rotations[r].time_stamp > current_time) {
+                uint32_t next_rotation_index = r;
+                uint32_t prev_rotation_index = r - 1;
+
+                joint_rotation_key_frame_t *prev = &current_joint_keyframes->rotations[prev_rotation_index];
+                joint_rotation_key_frame_t *next = &current_joint_keyframes->rotations[next_rotation_index];
+                float rotation_progression = (current_time - prev->time_stamp) / (next->time_stamp - prev->time_stamp);
+                *current_rotation = glm::slerp(prev->rotation, next->rotation, rotation_progression);
+
+                instance->current_rotation_indices[joint_index] = prev_rotation_index;
+
+                break;
+            }
+        }
+
+        // For now don't interpolate scale
+        *current_scale = vector3_t(1.0f);
+    }
+}
+
+static void s_calculate_final_offset(
+    animated_instance_t *instance,
+    uint32_t joint_index,
+    matrix4_t parent_transform) {
+    vector3_t *current_position = &instance->current_positions[joint_index];
+    quaternion_t *current_rotation = &instance->current_rotations[joint_index];
+    vector3_t *current_scale = &instance->current_scales[joint_index];
+
+    matrix4_t local_transform = glm::translate(*current_position) * glm::mat4_cast(*current_rotation) * glm::scale(*current_scale);
+
+    matrix4_t model_transform = parent_transform * local_transform;
+
+    joint_t *joint_data = &instance->skeleton->joints[joint_index];
+    for (uint32_t child = 0; child < joint_data->children_count; ++child) {
+        s_calculate_final_offset(instance, joint_data->children_ids[child], model_transform);
+    }
+
+    instance->interpolated_transforms[joint_index] = model_transform * joint_data->inverse_bind_transform;
+}
+
+void interpolate_joints(
+    animated_instance_t *instance,
+    float dt) {
+    animation_cycle_t *bound_cycle = &instance->cycles->cycles[instance->next_bound_cycle];
+    float current_time = fmod(instance->current_animation_time + dt, bound_cycle->duration);
+    instance->current_animation_time = current_time;
+
+    s_calculate_bone_space_transforms(instance, bound_cycle, current_time);
+    s_calculate_final_offset(instance, 0, glm::mat4(1.0f));
+}
+
+void sync_gpu_with_animated_transforms(
+    animated_instance_t *instance,
+    VkCommandBuffer command_buffer) {
+    update_gpu_buffer(
+        command_buffer,
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+        0,
+        sizeof(matrix4_t) * instance->skeleton->joint_count,
+        instance->interpolated_transforms,
+        &instance->interpolated_transforms_ubo);
+}
+
 void submit_mesh(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
@@ -667,6 +815,52 @@ void submit_mesh_shadow(
 
     vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
 
+    if (mesh_has_buffer(BT_INDICES, mesh)) {
+        vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
+        vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);
+
+        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, mesh->vertex_offset, 0);
+    }
+    else {
+        vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
+        vkCmdDraw(command_buffer, mesh->vertex_count, 1, mesh->vertex_offset, 0);
+    }
+}
+
+void submit_skeletal_mesh(
+    VkCommandBuffer command_buffer,
+    mesh_t *mesh,
+    shader_t *shader,
+    mesh_render_data_t *render_data,
+    animated_instance_t *instance) {
+    VkViewport viewport = {};
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent = r_swapchain_extent();
+    vkCmdSetScissor(command_buffer, 0, 1, &rect);
+    
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline);
+
+    VkDescriptorSet camera_transforms = r_camera_transforms_uniform();
+    VkDescriptorSet descriptor_sets[] = {camera_transforms, instance->descriptor_set};
+
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        shader->layout,
+        0,
+        2,
+        descriptor_sets,
+        0,
+        NULL);
+
+    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
+
+    
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
         vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);

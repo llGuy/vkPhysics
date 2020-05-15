@@ -176,6 +176,8 @@ struct player_t {
     // This will be constantly interpolating depending on the surface the ball is on
     vector3_t current_camera_up;
     vector3_t next_camera_up;
+
+    animated_instance_t animations;
 };
 
 player_t *get_player(

@@ -434,6 +434,12 @@ static void s_not_windowed_game_main(
     }
 }
 
+int32_t init_flags;
+
+game_init_flags_t get_game_init_flags() {
+    return (game_init_flags_t)init_flags;
+}
+
 void game_main(
     game_init_data_t *game_init_data) {
     global_linear_allocator_init((uint32_t)megabytes(30));
@@ -446,6 +452,8 @@ void game_main(
         &events);
 
     running = 1;
+
+    init_flags = game_init_data->flags;
 
     current_tick = 0;
     if (game_init_data->flags & GIF_WINDOWED) {

@@ -41,6 +41,11 @@ static skeleton_t player_skeleton;
 static animation_cycles_t player_cycles;
 static shader_t player_shader;
 
+void w_player_animation_init(
+    player_t *player) {
+    animated_instance_init(&player->animations, &player_skeleton, &player_cycles);
+}
+
 void w_players_data_init() {
     shader_binding_info_t mesh_info = {};
     //load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
@@ -64,7 +69,7 @@ void w_players_data_init() {
         &mesh_info,
         shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        VK_CULL_MODE_NONE);
+        VK_CULL_MODE_NONE, MT_ANIMATED);
 
     player_scale = vector3_t(0.5f);
 }
@@ -606,6 +611,9 @@ void w_players_gpu_sync_and_render(
                     w_player_render_init(p);
                 }
 
+                interpolate_joints(&p->animations, logic_delta_time());
+                sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
+
                 p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
                 p->render->render_data.color = vector4_t(1.0f);
                 p->render->render_data.pbr_info.x = 0.1f;
@@ -613,19 +621,21 @@ void w_players_gpu_sync_and_render(
 
                 if ((int32_t)i == (int32_t)world->local_player) {
                     if (p->flags.camera_type == CT_THIRD_PERSON) {
-                        submit_mesh(
+                        submit_skeletal_mesh(
                             render_command_buffer,
                             &player_mesh,
                             &player_shader,
-                            &p->render->render_data);
+                            &p->render->render_data,
+                            &p->animations);
                     }
                 }
                 else {
-                    submit_mesh(
+                    submit_skeletal_mesh(
                         render_command_buffer,
                         &player_mesh,
                         &player_shader,
-                        &p->render->render_data);
+                        &p->render->render_data,
+                        &p->animations);
                 }
             }
         }

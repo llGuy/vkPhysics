@@ -66,6 +66,10 @@ static void s_add_player_from_info(
         p->elapsed = 0.0f;
     }
 
+    if (get_game_init_flags() | GIF_WINDOWED) {
+        w_player_animation_init(p);
+    }
+
     LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
 }
 

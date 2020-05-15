@@ -302,8 +302,10 @@ struct joint_scale_key_frame_t {
 struct joint_key_frames_t {
     uint32_t position_count;
     joint_position_key_frame_t *positions;
+
     uint32_t rotation_count;
     joint_rotation_key_frame_t *rotations;
+
     uint32_t scale_count;
     joint_scale_key_frame_t *scales;
 };
@@ -324,6 +326,42 @@ struct animation_cycles_t {
 DECLARE_VOID_RENDERER_PROC(void, load_animation_cycles,
     animation_cycles_t *cycles,
     const char *path);
+
+struct animated_instance_t {
+    float current_animation_time;
+    float in_between_interpolation_time = 0.1f;
+    bool is_interpolating_between_cycles;
+
+    skeleton_t *skeleton;
+    uint32_t prev_bound_cycle;
+    uint32_t next_bound_cycle;
+    animation_cycles_t *cycles;
+
+    matrix4_t *interpolated_transforms;
+
+    gpu_buffer_t interpolated_transforms_ubo;
+    VkDescriptorSet descriptor_set;
+
+    uint32_t *current_position_indices;
+    vector3_t *current_positions;
+    uint32_t *current_rotation_indices;
+    quaternion_t *current_rotations;
+    uint32_t *current_scale_indices;
+    vector3_t *current_scales;
+};
+
+DECLARE_VOID_RENDERER_PROC(void, animated_instance_init,
+    animated_instance_t *instance,
+    skeleton_t *skeleton,
+    animation_cycles_t *cycles);
+
+DECLARE_VOID_RENDERER_PROC(void, interpolate_joints,
+    animated_instance_t *instance,
+    float dt);
+
+DECLARE_VOID_RENDERER_PROC(void, sync_gpu_with_animated_transforms,
+    animated_instance_t *instance,
+    VkCommandBuffer command_buffer);
 
 struct shader_t {
     VkPipeline pipeline;
@@ -372,11 +410,17 @@ DECLARE_RENDERER_PROC(shader_t, create_3d_shader_color,
     VkShaderStageFlags shader_flags,
     VkCullModeFlags culling);
 
+enum mesh_type_t {
+    MT_STATIC,
+    MT_ANIMATED
+};
+
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_color,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
-    VkCullModeFlags culling);
+    VkCullModeFlags culling,
+    mesh_type_t type);
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
     shader_binding_info_t *binding_info,
@@ -401,6 +445,13 @@ DECLARE_VOID_RENDERER_PROC(void, submit_mesh_shadow,
     mesh_t *mesh,
     shader_t *shader,
     mesh_render_data_t * render_data);
+
+DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh,
+    VkCommandBuffer command_buffer,
+    mesh_t *mesh,
+    shader_t *shader,
+    mesh_render_data_t *render_data,
+    animated_instance_t *instance);
 
 /* Descriptor set */
 DECLARE_RENDERER_PROC(VkDescriptorSet, create_image_descriptor_set,

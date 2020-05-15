@@ -547,7 +547,8 @@ void w_chunks_data_init() {
         &binding_info,
         shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        VK_CULL_MODE_FRONT_BIT);
+        VK_CULL_MODE_FRONT_BIT,
+        MT_STATIC);
 }
 
 void w_clear_chunk_world(
@@ -595,11 +596,11 @@ void w_chunk_world_init(
     chunks_to_interpolate.modifications = FL_MALLOC(chunk_modifications_t, chunks_to_interpolate.max_modified);
     memset(chunks_to_interpolate.modifications, 0, sizeof(chunk_modifications_t) * chunks_to_interpolate.max_modified);
 
-#if 0
+#if 1
     w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
-    w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
-    w_add_sphere_m(vector3_t(-40.0f), 20.0f, world);
-    w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
+    //w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
+    //w_add_sphere_m(vector3_t(-40.0f), 20.0f, world);
+    //w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
 #endif
 
 #if 0
