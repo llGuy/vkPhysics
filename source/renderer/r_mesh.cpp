@@ -501,9 +501,9 @@ void load_skeleton(
     serialiser.data_buffer = (uint8_t *)binaries;
     serialiser.data_buffer_size = size;
 
-    uint32_t joint_count = serialiser.deserialise_uint32();
-    skeleton->joints = FL_MALLOC(joint_t, joint_count);
-    for (uint32_t i = 0; i < joint_count; ++i) {
+    skeleton->joint_count = serialiser.deserialise_uint32();
+    skeleton->joints = FL_MALLOC(joint_t, skeleton->joint_count);
+    for (uint32_t i = 0; i < skeleton->joint_count; ++i) {
         joint_t *joint = &skeleton->joints[i];
         joint->joint_id = serialiser.deserialise_uint32();
         joint->joint_name = create_fl_string(serialiser.deserialise_string());
@@ -521,6 +521,73 @@ void load_skeleton(
 
         for (uint32_t c = 0; c < joint->children_count; ++c) {
             joint->children_ids[c] = serialiser.deserialise_uint32();
+        }
+    }
+}
+
+void load_animation_cycles(
+    animation_cycles_t *cycles,
+    const char *path) {
+    uint32_t strlen_path = (uint32_t)strlen(path);
+    uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
+    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
+    memcpy(final_path, PROJECT_ROOT, strlen_root);
+
+    final_path[strlen_root] = '/';
+    memcpy(final_path + strlen_root + 1, path, strlen_path + 1);
+
+    FILE *mesh_data = fopen(final_path, "rb");
+    if (!mesh_data) {
+        LOG_ERRORV("Failed to load mesh from path: %s\n", final_path);
+    }
+    fseek(mesh_data, 0L, SEEK_END);
+    uint32_t size = ftell(mesh_data);
+    char *binaries = (char *)LN_MALLOC(char, size);
+    rewind(mesh_data);
+    fread(binaries, sizeof(char), size, mesh_data);
+
+    serialiser_t serialiser = {};
+    serialiser.data_buffer = (uint8_t *)binaries;
+    serialiser.data_buffer_size = size;
+
+    cycles->cycle_count = serialiser.deserialise_uint32();
+    cycles->cycles = FL_MALLOC(animation_cycle_t, cycles->cycle_count);
+
+    for (uint32_t i = 0; i < cycles->cycle_count; ++i) {
+        animation_cycle_t *cycle = &cycles->cycles[i];
+        cycle->animation_name = create_fl_string(serialiser.deserialise_string());
+        cycle->duration = serialiser.deserialise_float32();
+        cycle->joint_animation_count = serialiser.deserialise_uint32();
+        
+        cycle->joint_animations = FL_MALLOC(joint_key_frames_t, cycle->joint_animation_count);
+
+        for (uint32_t j = 0; j < cycle->joint_animation_count; ++j) {
+            joint_key_frames_t *key_frames = &cycle->joint_animations[j];
+            key_frames->position_count = serialiser.deserialise_uint32();
+            key_frames->rotation_count = serialiser.deserialise_uint32();
+            key_frames->scale_count = serialiser.deserialise_uint32();
+
+            key_frames->positions = FL_MALLOC(joint_position_key_frame_t, key_frames->position_count);
+            key_frames->rotations = FL_MALLOC(joint_rotation_key_frame_t, key_frames->rotation_count);
+            key_frames->scales = FL_MALLOC(joint_scale_key_frame_t, key_frames->scale_count);
+
+            for (uint32_t position = 0; position < key_frames->position_count; ++position) {
+                key_frames->positions[position].time_stamp = serialiser.deserialise_float32();
+                key_frames->positions[position].position = serialiser.deserialise_vector3();
+            }
+
+            for (uint32_t rotation = 0; rotation < key_frames->rotation_count; ++rotation) {
+                key_frames->rotations[rotation].time_stamp = serialiser.deserialise_float32();
+                key_frames->rotations[rotation].rotation.w = serialiser.deserialise_float32();
+                key_frames->rotations[rotation].rotation.x = serialiser.deserialise_float32();
+                key_frames->rotations[rotation].rotation.y = serialiser.deserialise_float32();
+                key_frames->rotations[rotation].rotation.z = serialiser.deserialise_float32();
+            }
+
+            for (uint32_t scale = 0; scale < key_frames->scale_count; ++scale) {
+                key_frames->scales[scale].time_stamp = serialiser.deserialise_float32();
+                key_frames->scales[scale].scale = serialiser.deserialise_vector3();
+            }
         }
     }
 }

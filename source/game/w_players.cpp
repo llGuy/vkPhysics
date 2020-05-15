@@ -38,6 +38,7 @@ void w_player_world_init(
 
 static mesh_t player_mesh;
 static skeleton_t player_skeleton;
+static animation_cycles_t player_cycles;
 static shader_t player_shader;
 
 void w_players_data_init() {
@@ -45,6 +46,7 @@ void w_players_data_init() {
     //load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
     load_mesh_external(&player_mesh, &mesh_info, "assets/models/player.mesh");
     load_skeleton(&player_skeleton, "assets/models/player.skeleton");
+    load_animation_cycles(&player_cycles, "assets/models/player.animations");
 
     // For now, just use smooth shaded sphere
     // const char *shader_paths[] = {
