@@ -424,6 +424,9 @@ void load_mesh_external(
         joint_weights[i].y = serialiser.deserialise_float32();
         joint_weights[i].z = serialiser.deserialise_float32();
         joint_weights[i].w = serialiser.deserialise_float32();
+        float sum = joint_weights[i].x + joint_weights[i].y + joint_weights[i].z + joint_weights[i].w;
+        float q = 1.0f / sum;
+        joint_weights[i] *= q;
     }
 
     for (uint32_t i = 0; i < file_header.joint_ids_count; ++i) {
@@ -721,6 +724,15 @@ void interpolate_joints(
     animated_instance_t *instance,
     float dt) {
     animation_cycle_t *bound_cycle = &instance->cycles->cycles[instance->next_bound_cycle];
+
+    if (dt + instance->current_animation_time > bound_cycle->duration) {
+        for (uint32_t i = 0; i < instance->skeleton->joint_count; ++i) {
+            instance->current_position_indices[i] = 0;
+            instance->current_rotation_indices[i] = 0;
+            instance->current_scale_indices[i] = 0;
+        }
+    }
+
     float current_time = fmod(instance->current_animation_time + dt, bound_cycle->duration);
     instance->current_animation_time = current_time;
 

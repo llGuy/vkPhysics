@@ -34,6 +34,32 @@ layout(set = 1, binding = 0) uniform joint_transforms_t {
 
 #define MAX_WEIGHTS 4
 
+mat4 rotate(
+    float angle,
+    vec3 axis) {
+    float a = angle;
+    float c = cos(a);
+    float s = sin(a);
+
+    axis = normalize(axis);
+    vec3 temp = ((1.0f - c) * axis);
+
+    mat4 rotate = mat4(1.0f);
+    rotate[0][0] = c + temp[0] * axis[0];
+    rotate[0][1] = temp[0] * axis[1] + s * axis[2];
+    rotate[0][2] = temp[0] * axis[2] - s * axis[1];
+
+    rotate[1][0] = temp[1] * axis[0] - s * axis[2];
+    rotate[1][1] = c + temp[1] * axis[1];
+    rotate[1][2] = temp[1] * axis[2] + s * axis[0];
+
+    rotate[2][0] = temp[2] * axis[0] + s * axis[1];
+    rotate[2][1] = temp[2] * axis[1] - s * axis[0];
+    rotate[2][2] = c + temp[2] * axis[2];
+
+    return rotate;
+}
+
 void main() {
     mat4 identity = mat4(
         1, 0, 0, 0,
@@ -56,13 +82,15 @@ void main() {
         vec4 world_normal = joint * vec4(in_normal, 0.0f);
         accumulated_normal += world_normal * in_weights[i];
     }
-	
-    vec3 ws_position = vec3(u_push_constant.model * (accumulated_local));
+
+    mat4 rotation_correction = rotate(radians(-90.0f), vec3(1, 0, 0));
+    
+    vec3 ws_position = vec3(u_push_constant.model * rotation_correction * (accumulated_local));
     vec4 vs_position = u_camera_transforms.view * vec4(ws_position, 1.0);
 
     gl_Position = u_camera_transforms.projection * vs_position;
     out_vs.vs_position = vec3(vs_position);
-    out_vs.vs_normal = vec3(u_camera_transforms.view * u_push_constant.model * vec4(accumulated_normal.xyz, 0.0f));
+    out_vs.vs_normal = vec3(u_camera_transforms.view * u_push_constant.model * rotation_correction * vec4(accumulated_normal.xyz, 0.0f));
     out_vs.weights = in_weights;
 }
 
