@@ -93,6 +93,7 @@ enum game_input_action_type_t {
     GIAT_TRIGGER4,
     GIAT_TRIGGER5,
     GIAT_TRIGGER6,
+    GIAT_TRIGGER7,
     // Invalid
     GIAT_INVALID_ACTION };
 

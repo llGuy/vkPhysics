@@ -43,6 +43,7 @@ struct player_actions_t {
             uint16_t trigger_right: 1;
             // Switch between player mode and ball mode
             uint16_t switch_shapes: 1;
+            uint16_t flashlight: 1;
         };
 
         uint16_t bytes;
@@ -129,6 +130,7 @@ union player_flags_t {
         uint32_t camera_type: 1;
         uint32_t contact: 1;
         uint32_t moving: 1;
+        uint32_t flashing_light: 1;
     };
 
     uint32_t u32;

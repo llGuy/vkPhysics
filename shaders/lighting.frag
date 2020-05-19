@@ -307,7 +307,7 @@ void main() {
             roughness,
             metalness);
 
-#if 0
+#if 1
         for (int i = 0; i < u_lighting.point_light_count; ++i) {
             l += point_luminance(
                 i,

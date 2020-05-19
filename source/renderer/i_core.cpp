@@ -356,6 +356,7 @@ void game_input_settings_init() {
     bound_key_mouse_buttons[GIAT_TRIGGER4].bound_button = BT_SPACE;
     bound_key_mouse_buttons[GIAT_TRIGGER5].bound_button = BT_E;
     bound_key_mouse_buttons[GIAT_TRIGGER6].bound_button = BT_LEFT_SHIFT;
+    bound_key_mouse_buttons[GIAT_TRIGGER7].bound_button = BT_G;
 }
 
 static game_input_t game_input;

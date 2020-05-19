@@ -379,7 +379,7 @@ static void s_destroy_deferred() {
     
 }
 
-#define KERNEL_COUNT 54
+#define KERNEL_COUNT 40
 static struct {
     vector4_t k[KERNEL_COUNT];
     float resolution_coefficient;

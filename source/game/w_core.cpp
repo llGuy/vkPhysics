@@ -325,6 +325,14 @@ lighting_info_t create_lighting_info() {
     info.light_colors[0] = vector4_t(100.0f);*/
     info.lights_count = 0;
 
+    for (uint32_t i = 0; i < world.players.data_count; ++i) {
+        if (world.players[i]->flags.flashing_light) {
+            info.ws_light_positions[info.lights_count] = vector4_t(world.players[i]->ws_position + world.players[i]->ws_up_vector, 1.0f);
+            info.ws_light_directions[info.lights_count] = vector4_t(world.players[i]->ws_view_direction, 0.0f);
+            info.light_colors[info.lights_count++] = vector4_t(100.0f);
+        }
+    }
+
     return info;
 }
 

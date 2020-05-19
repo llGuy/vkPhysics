@@ -202,6 +202,10 @@ void w_handle_input(
     if (game_input->actions[GIAT_TRIGGER5].instant == BS_DOWN) {
         actions.switch_shapes = 1;
     }
+    
+    if (game_input->actions[GIAT_TRIGGER7].instant == BS_DOWN) {
+        actions.flashlight = 1;
+    }
 
     actions.tick = get_current_tick();
     
@@ -289,6 +293,10 @@ static void s_execute_player_triggers(
             TERRAFORMING_SPEED,
             player_actions->accumulated_dt,
             world);
+    }
+
+    if (player_actions->flashlight) {
+        player->flags.flashing_light ^= 1;
     }
 }
 
@@ -420,7 +428,6 @@ static void s_apply_forces(
             player->ws_velocity += -player->ws_up_vector * force_values->gravity * actions->dt;
         }
         else {
-            LOG_INFO("Not inclined enough\n");
         }
     }
     else {
