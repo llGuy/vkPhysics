@@ -71,6 +71,7 @@ static listener_t game_core_listener;
 
 static uint32_t secondary_command_buffer_count;
 static VkCommandBuffer render_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
+static VkCommandBuffer render_shadow_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 static VkCommandBuffer transfer_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 
 static void s_handle_input() {
@@ -91,6 +92,7 @@ static uint64_t current_tick;
 // Records a secondary 
 static void s_tick(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
     tick_net(
         &events);
@@ -101,6 +103,7 @@ static void s_tick(
 
 static void s_render(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
     VkCommandBuffer final_command_buffer = begin_frame();
 
@@ -116,6 +119,18 @@ static void s_render(
     submit_secondary_command_buffer(
         final_command_buffer,
         transfer_command_buffer);
+
+#if 0
+    begin_shadow_rendering(
+        final_command_buffer);
+
+    submit_secondary_command_buffer(
+        final_command_buffer,
+        render_shadow_command_buffer);
+
+    end_shadow_rendering(
+        final_command_buffer);
+#endif
     
     begin_scene_rendering(
         final_command_buffer);
@@ -146,14 +161,21 @@ static void s_run_windowed_game() {
         static uint32_t command_buffer_index = 0;
         VkCommandBuffer render_command_buffer = render_command_buffers[command_buffer_index];
         VkCommandBufferInheritanceInfo inheritance_info = {};
-        fill_main_inheritance_info(&inheritance_info);
+        fill_main_inheritance_info(&inheritance_info, RPI_DEFERRED);
         begin_command_buffer(
             render_command_buffer,
             VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
             &inheritance_info);
 
+        VkCommandBuffer render_shadow_command_buffer = render_shadow_command_buffers[command_buffer_index];
+        fill_main_inheritance_info(&inheritance_info, RPI_SHADOW);
+        begin_command_buffer(
+            render_shadow_command_buffer,
+            VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+            &inheritance_info);
+
         VkCommandBuffer transfer_command_buffer = transfer_command_buffers[command_buffer_index];
-        fill_main_inheritance_info(&inheritance_info);
+        fill_main_inheritance_info(&inheritance_info, RPI_DEFERRED);
         begin_command_buffer(
             transfer_command_buffer,
             0,
@@ -161,17 +183,21 @@ static void s_run_windowed_game() {
 
         s_tick(
             render_command_buffer,
+            render_shadow_command_buffer,
             transfer_command_buffer);
 
         gpu_sync_world(
             render_command_buffer,
+            render_shadow_command_buffer,
             transfer_command_buffer);
 
         end_command_buffer(render_command_buffer);
         end_command_buffer(transfer_command_buffer);
+        end_command_buffer(render_shadow_command_buffer);
 
         s_render(
             render_command_buffer,
+            render_shadow_command_buffer,
             transfer_command_buffer);
 
         ldelta_time = surface_delta_time();
@@ -352,6 +378,11 @@ static void s_windowed_game_main(
 
     create_command_buffers(
         VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+        render_shadow_command_buffers,
+        secondary_command_buffer_count);
+
+    create_command_buffers(
+        VK_COMMAND_BUFFER_LEVEL_SECONDARY,
         transfer_command_buffers,
         secondary_command_buffer_count);
 
@@ -390,6 +421,7 @@ static void s_run_not_windowed_game() {
         LN_CLEAR();
 
         s_tick(
+            VK_NULL_HANDLE,
             VK_NULL_HANDLE,
             VK_NULL_HANDLE);
 

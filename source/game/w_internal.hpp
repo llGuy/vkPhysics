@@ -29,6 +29,7 @@ void w_handle_input(
 
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     struct world_t *world);
 
@@ -94,6 +95,7 @@ chunk_t *w_destroy_chunk(
 #define MAX_LOADED_CHUNKS 1000
 #define MAX_PLAYERS 50
 
+// Structure which holds all of the world data
 struct world_t {
     int32_t local_player;
     player_t *spectator;

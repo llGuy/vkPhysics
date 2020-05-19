@@ -33,6 +33,7 @@ static void s_add_player_from_info(
 
     p->flags.u32 = init_info->flags;
 
+    // If offline
     if (!init_info->client_data) {
         p->flags.alive_state = PAS_ALIVE;
         p->flags.interaction_mode = PIM_FLOATING;
@@ -123,7 +124,7 @@ static void s_world_event_listener(
             w_set_local_player(p->local_id, &world);
             p->flags.camera_type = CT_THIRD_PERSON;
 
-            p->camera_distance.set(1, 12.0f, 10.0f);
+            p->camera_distance.set(1, 12.0f, 10.0f, 1.0f);
             p->camera_fov.set(1, 90.0f, 60.0f);
             p->current_camera_up = p->ws_up_vector;
         }
@@ -251,9 +252,11 @@ void tick_world(
 
 void gpu_sync_world(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
     w_players_gpu_sync_and_render(
         render_command_buffer,
+        render_shadow_command_buffer,
         transfer_command_buffer,
         &world);
 

@@ -100,8 +100,13 @@ DECLARE_VOID_RENDERER_PROC(void, create_command_buffers,
     VkCommandBufferLevel level, 
     VkCommandBuffer *command_buffers, uint32_t count);
 
+enum render_pass_inheritance_t {
+    RPI_SHADOW, RPI_DEFERRED
+};
+
 DECLARE_VOID_RENDERER_PROC(void, fill_main_inheritance_info,
-    VkCommandBufferInheritanceInfo *info);
+    VkCommandBufferInheritanceInfo *info,
+    render_pass_inheritance_t inheritance_type);
 
 DECLARE_VOID_RENDERER_PROC(void, begin_command_buffer,
     VkCommandBuffer command_buffer,
@@ -425,7 +430,8 @@ DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_color,
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
-    VkShaderStageFlags shader_flags);
+    VkShaderStageFlags shader_flags,
+    mesh_type_t type);
 
 DECLARE_RENDERER_PROC(shader_binding_info_t, create_mesh_binding_info,
     mesh_t *mesh);
@@ -447,6 +453,13 @@ DECLARE_VOID_RENDERER_PROC(void, submit_mesh_shadow,
     mesh_render_data_t * render_data);
 
 DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh,
+    VkCommandBuffer command_buffer,
+    mesh_t *mesh,
+    shader_t *shader,
+    mesh_render_data_t *render_data,
+    animated_instance_t *instance);
+
+DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh_shadow,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,

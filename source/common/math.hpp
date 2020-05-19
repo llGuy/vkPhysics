@@ -74,7 +74,6 @@ template <
     }
 };
 
-
 // Starts fast, then slows down - this name is utter BS - I don't know the mathy name for it, it just looks like an exponential function
 struct smooth_exponential_interpolation_t {
     bool in_animation;

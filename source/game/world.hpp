@@ -17,6 +17,7 @@ void tick_world(
 
 void gpu_sync_world(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer);
 
 eye_3d_info_t create_eye_info();
@@ -40,6 +41,8 @@ struct player_actions_t {
             uint16_t crouch: 1;
             uint16_t trigger_left: 1;
             uint16_t trigger_right: 1;
+            // Switch between player mode and ball mode
+            uint16_t switch_shapes: 1;
         };
 
         uint16_t bytes;

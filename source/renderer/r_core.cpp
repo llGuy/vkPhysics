@@ -113,7 +113,7 @@ static VKAPI_ATTR VkBool32 VKAPI_PTR s_debug_messenger_callback(
     VkDebugUtilsMessageTypeFlagsEXT,
     const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
     void *) {
-    LOG_ERRORV("Validation layer: %s\n", callback_data->pMessage);
+    LOG_ERRORV("Validation layer: %s\n\n", callback_data->pMessage);
     return 0;
 }
 #endif
@@ -960,8 +960,19 @@ void create_command_buffers(
 }
 
 void fill_main_inheritance_info(
-    VkCommandBufferInheritanceInfo *info) {
-    rpipeline_stage_t *stage = r_deferred_stage();
+    VkCommandBufferInheritanceInfo *info,
+    render_pass_inheritance_t type) {
+    rpipeline_stage_t *stage;
+    
+    switch (type) {
+    default: case RPI_DEFERRED: {
+        stage = r_deferred_stage();
+    } break;
+
+    case RPI_SHADOW: {
+        stage = r_shadow_stage();
+    } break;
+    }
 
     info->sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     info->renderPass = stage->render_pass;

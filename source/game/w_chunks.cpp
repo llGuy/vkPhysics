@@ -598,15 +598,15 @@ void w_chunk_world_init(
 
 #if 1
     w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
-    //w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
-    //w_add_sphere_m(vector3_t(-40.0f), 20.0f, world);
-    //w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
+    w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
+    w_add_sphere_m(vector3_t(-40.0f), 20.0f, world);
+    w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);
 #endif
 
 #if 0
-    for (uint32_t z = 0; z < 32; ++z) {
-        for (uint32_t x = 0; x < 32; ++x) {
-            ivector3_t voxel_coord = ivector3_t((float)x, 4.0f, (float)z);
+    for (int32_t z = -32; z < 32; ++z) {
+        for (int32_t x = -32; x < 32; ++x) {
+            ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
             ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel_coord);
             chunk_t *chunk = w_get_chunk(chunk_coord, world);
             chunk->flags.has_to_update_vertices = 1;

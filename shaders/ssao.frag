@@ -37,6 +37,7 @@ const float div_total = 1.0f / 40.0f;
 const float div_fade_distance_cap = 1.0f / 100.0f;
 
 void main() {
+#if 1
     vec2 noise_scale = vec2(u_camera_transforms.width, u_camera_transforms.height) * div_magic;
 
     vec3 vs_normal = texture(u_gbuffer_normal, in_fs.uvs).xyz;
@@ -78,4 +79,7 @@ void main() {
     else {
         out_final_ao = 1.0f;
     }
+#else
+    out_final_ao = 1.0f;
+#endif
 }

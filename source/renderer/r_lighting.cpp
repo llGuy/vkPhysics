@@ -162,6 +162,7 @@ void r_lighting_init() {
 void r_update_lighting(
     lighting_info_t *lighting) {
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
+    cpu_camera_data_t *camera_data = r_cpu_camera_data();
 
     for (uint32_t i = 0; i < lighting->lights_count; ++i) {
         lighting_data.ws_light_positions[i] = lighting->ws_light_positions[i];
@@ -172,6 +173,14 @@ void r_update_lighting(
     }
 
     lighting_data.point_light_count = lighting->lights_count;
+
+    s_update_shadow_box(
+        glm::radians(camera_data->fov),
+        transforms->width / transforms->height,
+        camera_data->position,
+        camera_data->direction,
+        camera_data->up,
+        &scene_shadow_box);
 
     matrix4_t view_rotation = transforms->view;
     view_rotation[3][0] = 0.0f;

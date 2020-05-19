@@ -12,6 +12,7 @@ const float div_total = 1.0f / (4.0f * 4.0f);
 
 // Replace this with a gaussian blur
 void main() {
+#if 1
     vec2 texel_size = 1.0f / vec2(textureSize(u_ao, 0));
     float result = 0.0f;
     for (int x = -2; x < 2; ++x) {
@@ -24,4 +25,7 @@ void main() {
     out_final_ao = result * div_total;
 
     //out_final_ao = texture(u_ao, in_fs.uvs).r;
+#else
+    out_final_ao = 1.0f;
+#endif
 }

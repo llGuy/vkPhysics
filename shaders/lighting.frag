@@ -20,6 +20,7 @@ layout(binding = 0, set = 4) uniform sampler2D u_integral_lookup;
 layout(binding = 0, set = 5) uniform samplerCube u_prefilter_map;
 
 layout(binding = 0, set = 6) uniform sampler2D u_ao;
+//layout(binding = 0, set = 7) uniform sampler2D u_shadow_map;
 
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[10];
@@ -123,7 +124,7 @@ bool get_shadow_factor(
     
     for (int x = int(-pcf_count); x <= int(pcf_count); ++x) {
         for (int y = int(-pcf_count); y <= int(pcf_count); ++y) {
-            float depth = texture(u_shadow_map, ls_position.xy).r;
+            float depth = texture(u_shadow_map, ls_position.xy + vec2(x, y) * texel_size).r;
             
             if (ls_position.z - 0.0009f > depth) {
                 occlusion += 0.95f;
@@ -336,6 +337,9 @@ void main() {
         float ao = texture(u_ao, in_fs.uvs).r;
         
         vec3 ambient = (diffuse + specular);
+
+        //float occluded = 1.0f;
+        //get_shadow_factor(ws_position, occluded);
         
         color = (ambient + l) * pow(ao, 10.0f);
     }

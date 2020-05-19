@@ -279,7 +279,7 @@ void begin_shadow_rendering(
     begin_info.pClearValues = &clear_value;
     begin_info.renderArea = render_area;
 
-    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 }
 
 void end_shadow_rendering(
@@ -758,7 +758,8 @@ static void s_lighting_init() {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+        //r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -814,6 +815,7 @@ void r_execute_lighting_pass(
         r_integral_lookup(),
         r_specular_ibl(),
         ssao_blur_stage.descriptor_set,
+        //shadow_stage.descriptor_set
     };
     
     vkCmdBindDescriptorSets(
@@ -1214,7 +1216,7 @@ void r_execute_final_pass(
 }
 
 void r_pipeline_init() {
-    //s_shadow_init();
+    s_shadow_init();
     
     s_deferred_render_pass_init();
     s_deferred_init();

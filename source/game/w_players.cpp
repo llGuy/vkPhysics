@@ -12,6 +12,9 @@ vector3_t w_get_player_scale() {
     return player_scale;
 }
 
+// DEBUGGING
+static animated_instance_t test_instance0;
+
 void w_player_world_init(
     world_t *world) {
     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
@@ -40,6 +43,11 @@ static mesh_t player_mesh;
 static skeleton_t player_skeleton;
 static animation_cycles_t player_cycles;
 static shader_t player_shader;
+static shader_t player_shadow_shader;
+
+static mesh_t player_ball_mesh;
+static shader_t player_ball_shader;
+static shader_t player_ball_shadow_shader;
 
 void w_player_animation_init(
     player_t *player) {
@@ -53,11 +61,6 @@ void w_players_data_init() {
     load_skeleton(&player_skeleton, "assets/models/player.skeleton");
     load_animation_cycles(&player_cycles, "assets/models/player.animations");
 
-    // For now, just use smooth shaded sphere
-    // const char *shader_paths[] = {
-    //     "shaders/SPV/mesh.vert.spv",
-    //     "shaders/SPV/mesh.frag.spv"
-    // };
 
     const char *shader_paths[] = {
         "shaders/SPV/skeletal.vert.spv",
@@ -69,9 +72,48 @@ void w_players_data_init() {
         &mesh_info,
         shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        VK_CULL_MODE_NONE, MT_ANIMATED);
+        VK_CULL_MODE_NONE, 
+        MT_ANIMATED);
+
+    const char *shadow_shader_paths[] = {
+        "shaders/SPV/skeletal_shadow.vert.spv",
+        "shaders/SPV/shadow.frag.spv"
+    };
+
+    player_shadow_shader = create_mesh_shader_shadow(
+        &mesh_info,
+        shadow_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        MT_ANIMATED);
+
+    const char *static_shader_paths[] = {
+        "shaders/SPV/mesh.vert.spv",
+        "shaders/SPV/mesh.frag.spv"
+    };
+
+    shader_binding_info_t ball_mesh_info = {};
+    load_mesh_internal(IM_SPHERE, &player_ball_mesh, &ball_mesh_info);
+    player_ball_shader = create_mesh_shader_color(
+        &ball_mesh_info,
+        static_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE,
+        MT_STATIC);
+
+    const char *static_shadow_shader_path[] = {
+        "shaders/SPV/mesh_shadow.vert.spv",
+        "shaders/SPV/shadow.frag.spv"
+    };
+
+    player_ball_shadow_shader = create_mesh_shader_shadow(
+        &ball_mesh_info,
+        static_shadow_shader_path,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
+        MT_STATIC);
 
     player_scale = vector3_t(0.5f);
+
+    animated_instance_init(&test_instance0, &player_skeleton, &player_cycles);
 }
 
 void w_player_render_init(
@@ -155,6 +197,10 @@ void w_handle_input(
         
     if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN) {
         actions.trigger_right = 1;
+    }
+
+    if (game_input->actions[GIAT_TRIGGER5].instant == BS_DOWN) {
+        actions.switch_shapes = 1;
     }
 
     actions.tick = get_current_tick();
@@ -363,14 +409,6 @@ static void s_execute_player_movement(
 
     vector3_t ws_new_position = w_collide_and_slide(&collision) * player_scale;
 
-    terrain_collision_t new_collision = {};
-    new_collision.ws_size = player_scale;
-    new_collision.ws_position = player->ws_position;
-    new_collision.ws_velocity = player->ws_velocity * actions->dt;
-    new_collision.es_position = new_collision.ws_position / new_collision.ws_size;
-    new_collision.es_velocity = new_collision.ws_velocity / new_collision.ws_size;
-    w_collide_and_slide(&new_collision);
-
     player->ws_position = ws_new_position;
     //player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
@@ -440,7 +478,7 @@ static void s_accelerate_meteorite_player(
     if (collision.detected) {
         // Change interaction mode to ball
         player->flags.interaction_mode = PIM_BALL;
-        player->camera_distance.set(1, 10.0f, player->camera_distance.current);
+        player->camera_distance.set(1, 10.0f, player->camera_distance.current, 1.0f);
         player->camera_fov.set(1, 60.0f, player->camera_fov.current);
 
         vector3_t normal = glm::normalize(collision.es_surface_normal * player_scale);
@@ -470,13 +508,23 @@ static void s_execute_player_actions(
     for (uint32_t i = 0; i < player->player_action_count; ++i) {
         player_actions_t *actions = &player->player_actions[i];
 
+        if (actions->switch_shapes) {
+            if (player->flags.interaction_mode == PIM_STANDING) {
+                player->flags.interaction_mode = PIM_BALL;
+                player->camera_distance.set(1, 10.0f, player->camera_distance.current, 7.0f);
+            }
+            else if (player->flags.interaction_mode == PIM_BALL) {
+                player->flags.interaction_mode = PIM_STANDING;
+                player->camera_distance.set(1, 0.0f, player->camera_distance.current, 7.0f);
+            }
+        }
+
         switch (player->flags.interaction_mode) {
             
         case PIM_METEORITE: {
             s_execute_player_direction_change(player, actions);
             s_accelerate_meteorite_player(player, actions);
         } break;
-
 
             // FOR NOW STANDING AND BALL ARE EQUIVALENT ///////////////////////
         case PIM_STANDING: {
@@ -600,9 +648,37 @@ void w_set_local_player(
 // When skeletal animation is implemented, this function will do stuff like handle that
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     struct world_t *world) {
     (void)transfer_command_buffer;
+    
+#if 0
+    interpolate_joints(&test_instance0, logic_delta_time());
+    sync_gpu_with_animated_transforms(&test_instance0, transfer_command_buffer);
+
+    mesh_render_data_t render_data = {};
+    render_data.model = glm::translate(glm::vec3(0.0f)) * glm::scale(player_scale);
+    render_data.color = vector4_t(1.0f);
+    render_data.pbr_info.x = 0.1f;
+    render_data.pbr_info.y = 0.1f;
+    submit_skeletal_mesh(
+        render_command_buffer,
+        &player_mesh,
+        &player_shader,
+        &render_data,
+        &test_instance0);
+
+    render_data.model = glm::translate(glm::vec3(5.0f, 0.0f, 0.0f)) * glm::scale(player_scale);
+    
+    submit_mesh(
+        render_command_buffer,
+        &player_ball_mesh,
+        &player_ball_shader,
+        &render_data);
+#endif
+
+#if 1
     for (uint32_t i = 0; i < world->players.data_count; ++i) {
         player_t *p = world->players[i];
         if (p) {
@@ -621,25 +697,24 @@ void w_players_gpu_sync_and_render(
 
                 if ((int32_t)i == (int32_t)world->local_player) {
                     if (p->flags.camera_type == CT_THIRD_PERSON) {
-                        submit_skeletal_mesh(
+                        submit_mesh(
                             render_command_buffer,
-                            &player_mesh,
-                            &player_shader,
-                            &p->render->render_data,
-                            &p->animations);
+                            &player_ball_mesh,
+                            &player_ball_shader,
+                            &p->render->render_data);
                     }
                 }
                 else {
-                    submit_skeletal_mesh(
+                    submit_mesh(
                         render_command_buffer,
-                        &player_mesh,
-                        &player_shader,
-                        &p->render->render_data,
-                        &p->animations);
+                        &player_ball_mesh,
+                        &player_ball_shader,
+                        &p->render->render_data);
                 }
             }
         }
     }
+#endif
 }
 
 player_t *w_get_local_player(
