@@ -409,7 +409,7 @@ static void s_ssao_kernels_init() {
 
         kernels.k[i] = glm::normalize(kernels.k[i]);
         kernels.k[i] *= random_float();
-        float scale = (float)i / 64.0f;
+        float scale = (float)i / float(KERNEL_COUNT);
         scale = lerp(0.1f, 1.0f, scale * scale);
         kernels.k[i] *= scale;
     }

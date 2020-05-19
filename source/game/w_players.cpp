@@ -345,58 +345,111 @@ static void s_execute_player_floating_movement(
     }
 }
 
-static void s_execute_player_movement(
+enum movement_resolution_flags_t {
+    MRF_ADOPT_GRAVITY = 1 << 0,
+    MRF_GRAVITY_CHECK_INCLINATION = 1 << 1,
+    MRF_ABRUPT_STOP = 1 << 2,
+    MRF_CAP_SPEED = 1 << 3,
+};
+
+struct force_values_t {
+    // This will be very high for standing mode
+    float friction;
+    // This will be very high for standing mode too (maybe?)
+    float movement_acceleration;
+    float gravity;
+    float maximum_walking_speed;
+};
+
+enum movement_change_type_t {
+    MCT_STOP, MCT_TOO_FAST, MCT_MADE_MOVEMENT
+};
+
+static bool s_create_acceleration_vector(
     player_t *player,
-    player_actions_t *actions) {
-    static const float GRAVITY = 10.0f;
-    
+    player_actions_t *actions,
+    movement_resolution_flags_t flags,
+    force_values_t *force_values,
+    vector3_t *acceleration) {
     movement_axes_t axes = compute_movement_axes(player->ws_view_direction, player->ws_up_vector);
 
-    vector3_t acceleration = vector3_t(0.0f);
-
     bool made_movement = 0;
+    vector3_t final_acceleration = vector3_t(0.0f);
     
     if (actions->move_forward) {
-        acceleration += axes.forward * actions->dt * player->default_speed;
+        final_acceleration += axes.forward * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->move_left) {
-        acceleration -= axes.right * actions->dt * player->default_speed;
+        final_acceleration -= axes.right * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->move_back) {
-        acceleration -= axes.forward * actions->dt * player->default_speed;
+        final_acceleration -= axes.forward * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->move_right) {
-        acceleration += axes.right * actions->dt * player->default_speed;
+        final_acceleration += axes.right * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->jump) {
-        acceleration += axes.up * actions->dt * player->default_speed;
+        final_acceleration += axes.up * actions->dt * player->default_speed;
         made_movement = 1;
     }
     if (actions->crouch) {
-        acceleration -= axes.up * actions->dt * player->default_speed;
+        final_acceleration -= axes.up * actions->dt * player->default_speed;
         made_movement = 1;
     }
-        
-    static const float ACCELERATION = 10.0f;
-    
-    //player->ws_velocity = axes.forward;
-    
-    if (made_movement && glm::dot(acceleration, acceleration) != 0.0f) {
-        acceleration = glm::normalize(acceleration);
+
+    *acceleration = final_acceleration;
+
+    return made_movement;
+}
+
+static void s_apply_forces(
+    player_t *player,
+    player_actions_t *actions,
+    force_values_t *force_values,
+    movement_resolution_flags_t flags,
+    const vector3_t &movement_acceleration) {
+    player->ws_velocity += movement_acceleration * actions->dt * force_values->movement_acceleration;
+
+    // Do some check between standing and ball mode
+    if (flags & MRF_GRAVITY_CHECK_INCLINATION) {
+        if (glm::dot(player->ws_up_vector, player->ws_surface_normal) < 0.7f || player->flags.contact == PCS_IN_AIR) {
+            player->ws_velocity += -player->ws_up_vector * force_values->gravity * actions->dt;
+        }
+        else {
+            LOG_INFO("Not inclined enough\n");
+        }
+    }
+    else {
+        player->ws_velocity += -player->ws_up_vector * force_values->gravity * actions->dt;
     }
 
-    player->ws_velocity += acceleration * actions->dt * ACCELERATION;
-    player->ws_velocity += -player->ws_up_vector * GRAVITY * actions->dt;
-
     if (player->flags.contact == PCS_ON_GROUND) {
-        player->ws_velocity += -player->ws_velocity * actions->dt;
+        player->ws_velocity += -player->ws_velocity * actions->dt * force_values->friction;
     }
     else {
     }
+}
+
+static terrain_collision_t s_resolve_player_movement(
+    player_t *player,
+    player_actions_t *actions,
+    force_values_t *force_values,
+    int32_t flags) {
+    vector3_t acceleration = vector3_t(0.0f);
+    bool made_movement = s_create_acceleration_vector(player, actions, (movement_resolution_flags_t)flags, force_values, &acceleration);
+        
+    if (made_movement && glm::dot(acceleration, acceleration) != 0.0f) {
+        acceleration = glm::normalize(acceleration);
+    }
+    if (!made_movement && player->flags.contact == PCS_ON_GROUND && flags & MRF_ABRUPT_STOP) {
+        //player->ws_velocity = vector3_t(0.0f);
+    }
+
+    s_apply_forces(player, actions, force_values, (movement_resolution_flags_t)flags, acceleration);
 
     terrain_collision_t collision = {};
     collision.ws_size = player_scale;
@@ -404,8 +457,6 @@ static void s_execute_player_movement(
     collision.ws_velocity = player->ws_velocity * actions->dt;
     collision.es_position = collision.ws_position / collision.ws_size;
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
-
-    vector3_t previous_position = player->ws_position;
 
     vector3_t ws_new_position = w_collide_and_slide(&collision) * player_scale;
 
@@ -415,6 +466,7 @@ static void s_execute_player_movement(
     if (collision.detected) {
         //LOG_INFO("Collision detected\n");
         vector3_t normal = glm::normalize(collision.es_surface_normal * player_scale);
+        player->ws_surface_normal = normal;
 
         if (player->flags.contact == PCS_IN_AIR) {
             if (glm::abs(glm::dot(player->ws_velocity, player->ws_velocity)) == 0.0f) {
@@ -427,9 +479,11 @@ static void s_execute_player_movement(
             //player->ws_velocity = (player->ws_position - previous_position) / actions->dt;
         }
 
-        player->next_camera_up = normal;
-        player->ws_up_vector = normal;
-        player->flags.contact = PCS_ON_GROUND;
+
+        if (flags & MRF_ADOPT_GRAVITY) {
+            player->ws_up_vector = normal;
+            player->next_camera_up = normal;
+        }
 
         float vdotv = glm::dot(player->ws_velocity, player->ws_velocity);
         if (glm::abs(vdotv) == 0.0f) {
@@ -437,8 +491,9 @@ static void s_execute_player_movement(
         }
         else {
             // Apply normal force
-            player->ws_velocity += player->ws_up_vector * GRAVITY * actions->dt;
+            player->ws_velocity += player->ws_up_vector * force_values->gravity * actions->dt;
         }
+        player->flags.contact = PCS_ON_GROUND;
     }
     else {
         //LOG_INFO("No collision detected\n");
@@ -446,6 +501,26 @@ static void s_execute_player_movement(
 
         // LOG_INFO("In air\n");
     }
+}
+
+static void s_execute_standing_player_movement(
+    player_t *player,
+    player_actions_t *actions) {
+    force_values_t forces = {};
+    forces.friction = 9.0f;
+    forces.movement_acceleration = 8.0f;
+    forces.gravity = 10.0f;
+    forces.maximum_walking_speed = player->default_speed * 0.5f;
+    s_resolve_player_movement(player, actions, &forces, MRF_GRAVITY_CHECK_INCLINATION | MRF_ABRUPT_STOP | MRF_CAP_SPEED);
+}
+
+static void s_execute_ball_player_movement(player_t *player, player_actions_t *actions) {
+    force_values_t forces = {};
+    forces.friction = 1.0f;
+    forces.movement_acceleration = 10.0f;
+    forces.gravity = 10.0f;
+    forces.maximum_walking_speed = player->default_speed;
+    s_resolve_player_movement(player, actions, &forces, MRF_ADOPT_GRAVITY | MRF_CAP_SPEED);
 }
 
 static void s_accelerate_meteorite_player(
@@ -530,13 +605,12 @@ static void s_execute_player_actions(
         case PIM_STANDING: {
             s_execute_player_triggers(player, actions, world);
             s_execute_player_direction_change(player, actions);
-            s_execute_player_movement(player, actions);
+            s_execute_standing_player_movement(player, actions);
         } break;
 
         case PIM_BALL: {
-            s_execute_player_triggers(player, actions, world);
             s_execute_player_direction_change(player, actions);
-            s_execute_player_movement(player, actions);
+            s_execute_ball_player_movement(player, actions);
         } break;
 
         case PIM_FLOATING: {
@@ -696,7 +770,7 @@ void w_players_gpu_sync_and_render(
                 p->render->render_data.pbr_info.y = 0.1f;
 
                 if ((int32_t)i == (int32_t)world->local_player) {
-                    if (p->flags.camera_type == CT_THIRD_PERSON) {
+                    if (p->flags.interaction_mode != PIM_STANDING) {
                         submit_mesh(
                             render_command_buffer,
                             &player_ball_mesh,

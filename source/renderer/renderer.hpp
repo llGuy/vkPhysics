@@ -433,6 +433,12 @@ DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
     VkShaderStageFlags shader_flags,
     mesh_type_t type);
 
+DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_alpha,
+                      shader_binding_info_t *binding_info,
+                      const char **shader_paths,
+                      VkShaderStageFlags shader_flags,
+                      mesh_type_t type);
+
 DECLARE_RENDERER_PROC(shader_binding_info_t, create_mesh_binding_info,
     mesh_t *mesh);
 

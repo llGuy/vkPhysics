@@ -150,6 +150,7 @@ struct player_t {
     float default_speed;
 
     vector3_t ws_velocity;
+    vector3_t ws_surface_normal;
 
     float ball_speed;
 
