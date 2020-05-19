@@ -67,15 +67,15 @@ struct player_snapshot_t {
     union {
         struct {
             // This means that the server has detected that the client has predicted wrong information
-            uint8_t client_needs_to_correct_state: 1;
+            uint16_t client_needs_to_correct_state: 1;
             // This means that the server has still not received any correction acknowledgement, so don't send another correction
             // packet, because otherwise, the client will just go into some frenzy of constantly correcting
-            uint8_t server_waiting_for_correction: 1;
+            uint16_t server_waiting_for_correction: 1;
             // Server sends this to client so that client can be sure to pop modification from accumulated history
-            uint8_t terraformed: 1;
-            uint8_t packet_contains_terrain_correction: 1;
-            uint8_t alive_state: 2;
-            uint8_t interaction_mode: 3;
+            uint16_t terraformed: 1;
+            uint16_t packet_contains_terrain_correction: 1;
+            uint16_t alive_state: 2;
+            uint16_t interaction_mode: 3;
         };
         uint16_t flags;
     };
@@ -128,6 +128,7 @@ union player_flags_t {
         uint32_t interaction_mode: 3;
         uint32_t camera_type: 1;
         uint32_t contact: 1;
+        uint32_t moving: 1;
     };
 
     uint32_t u32;

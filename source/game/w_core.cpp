@@ -279,15 +279,33 @@ eye_3d_info_t create_eye_info() {
         player = w_get_spectator(&world);
     }
 
+    vector3_t view_direction = player->ws_view_direction;
+
     if (player->flags.camera_type == CT_FIRST_PERSON) {
         info.position = player->ws_position;
     }
     else {
         info.position = player->ws_position - player->ws_view_direction * player->camera_distance.current * w_get_player_scale().x;
         info.position += player->current_camera_up * w_get_player_scale();
+
+        if (player->flags.interaction_mode == PIM_STANDING && player->flags.moving) {
+            // Add view bobbing
+            static float angle = 0.0f;
+            static float right = 0.0f;
+            angle += logic_delta_time() * 10.0f;
+            right += logic_delta_time() * 5.0f;
+            angle = fmod(angle, glm::radians(360.0f));
+            right = fmod(right, glm::radians(360.0f));
+
+            vector3_t view_dest = info.position + view_direction;
+
+            vector3_t right_vec = glm::normalize(glm::cross(player->ws_view_direction, player->current_camera_up));
+            info.position += player->current_camera_up * glm::sin(angle) * 0.002f + right_vec * glm::sin(right) * 0.002f;
+            view_direction = glm::normalize(view_dest - info.position);
+        }
     }
     
-    info.direction = player->ws_view_direction;
+    info.direction = view_direction;
     info.up = player->current_camera_up;
 
     info.fov = player->camera_fov.current;

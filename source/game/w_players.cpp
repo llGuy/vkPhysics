@@ -444,6 +444,10 @@ static terrain_collision_t s_resolve_player_movement(
         
     if (made_movement && glm::dot(acceleration, acceleration) != 0.0f) {
         acceleration = glm::normalize(acceleration);
+        player->flags.moving = 1;
+    }
+    else {
+        player->flags.moving = 0;
     }
     if (!made_movement && player->flags.contact == PCS_ON_GROUND && flags & MRF_ABRUPT_STOP) {
         //player->ws_velocity = vector3_t(0.0f);
