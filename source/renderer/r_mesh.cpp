@@ -107,36 +107,31 @@ shader_t create_mesh_shader_color(
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
     VkCullModeFlags culling,
-    mesh_type_t mesh_type) {
-    if (mesh_type == MT_STATIC) {
-        VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    
-        return create_3d_shader_color(
-            binding_info,
-            sizeof(mesh_render_data_t),
-            &ubo_type, 1,
-            shader_paths,
-            shader_flags,
-            culling);
+    mesh_type_flags_t mesh_type) {
+    VkDescriptorType types[] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
+    uint32_t type_count = 1;
+    if (mesh_type & MT_ANIMATED) {
+        type_count++;
     }
-    else {
-        VkDescriptorType ubo_types[] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
-    
-        return create_3d_shader_color(
-            binding_info,
-            sizeof(mesh_render_data_t),
-            ubo_types, 2,
-            shader_paths,
-            shader_flags,
-            culling);
+
+    if (mesh_type & MT_PASS_EXTRA_UNIFORM_BUFFER) {
+        type_count++;
     }
+
+    return create_3d_shader_color(
+        binding_info,
+        sizeof(mesh_render_data_t),
+        types, type_count,
+        shader_paths,
+        shader_flags,
+        culling);
 }
 
 shader_t create_mesh_shader_shadow(
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
-    mesh_type_t mesh_type) {
+    mesh_type_flags_t mesh_type) {
         if (mesh_type == MT_STATIC) {
         VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     
@@ -769,7 +764,8 @@ void submit_mesh(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data) {
+    mesh_render_data_t *render_data,
+    VkDescriptorSet extra_set) {
     VkViewport viewport = {};
     viewport.width = (float)r_swapchain_extent().width;
     viewport.height = (float)r_swapchain_extent().height;
@@ -782,15 +778,16 @@ void submit_mesh(
     
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline);
 
-    VkDescriptorSet camera_transforms = r_camera_transforms_uniform();
+    VkDescriptorSet sets[] = {r_camera_transforms_uniform(), extra_set};
+    uint32_t count = (extra_set == VK_NULL_HANDLE) ? 1 : 2;
 
     vkCmdBindDescriptorSets(
         command_buffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         shader->layout,
         0,
-        1,
-        &camera_transforms,
+        count,
+        sets,
         0,
         NULL);
 

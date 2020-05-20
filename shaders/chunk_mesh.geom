@@ -5,10 +5,12 @@ layout(triangle_strip, max_vertices = 3) out;
 
 layout(location = 0) in VS_DATA {
     vec4 vs_position;
+    vec4 ws_position;
 } in_gs[];
 
 layout(location = 0) out GS_DATA {
     vec4 vs_position;
+    vec4 ws_position;
     vec4 vs_normal;
 } out_gs;
 
@@ -24,6 +26,7 @@ void main() {
     for (int i = 0; i < 3; ++i) {
         out_gs.vs_normal = vec4(normal, 0.0f);
         out_gs.vs_position = in_gs[i].vs_position;
+        out_gs.ws_position = in_gs[i].ws_position;
 
         gl_Position = gl_in[i].gl_Position;
         EmitVertex();

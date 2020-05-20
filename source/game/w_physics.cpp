@@ -545,7 +545,6 @@ vector3_t w_collide_and_slide(
     float close_distance = 0.005f;
 
     if (collision->under_terrain) {
-        LOG_ERROR("Under terrain\n");
         //actual_position = collision->es_contact_point + collision->es_surface_normal * (1.0f + close_distance);
         actual_position = collision->es_position + (1.0f + close_distance - collision->es_nearest_distance) * collision->es_surface_normal;
 

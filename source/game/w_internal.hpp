@@ -95,6 +95,11 @@ chunk_t *w_destroy_chunk(
 #define MAX_LOADED_CHUNKS 1000
 #define MAX_PLAYERS 50
 
+struct terraform_package_t {
+    vector3_t position;
+    bool ray_hit_terrain;
+};
+
 // Structure which holds all of the world data
 struct world_t {
     int32_t local_player;
@@ -120,6 +125,9 @@ struct world_t {
         uint8_t track_history: 1;
         uint8_t in_server: 1;
     };
+
+    // Used for terrain pointer
+    terraform_package_t local_current_terraform_package;
 };
 
 uint32_t w_hash_chunk_coord(
@@ -174,7 +182,7 @@ chunk_t *w_get_chunk(
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
-void w_terraform(
+terraform_package_t w_terraform(
     terraform_type_t type,
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
@@ -182,6 +190,12 @@ void w_terraform(
     float radius,
     float speed,
     float dt,
+    world_t *world);
+
+terraform_package_t w_cast_terrain_ray(
+    const vector3_t &ws_ray_start,
+    const vector3_t &ws_ray_direction,
+    float max_reach,
     world_t *world);
 
 void w_toggle_mesh_update_wait(

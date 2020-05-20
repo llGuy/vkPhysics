@@ -1,5 +1,6 @@
 #include <math.h>
 #include "net.hpp"
+
 #include "engine.hpp"
 #include <common/log.hpp>
 #include "w_internal.hpp"
@@ -9,6 +10,7 @@
 static vector3_t player_scale;
 
 vector3_t w_get_player_scale() {
+
     return player_scale;
 }
 
@@ -63,9 +65,9 @@ void w_players_data_init() {
 
 
     const char *shader_paths[] = {
-        "shaders/SPV/skeletal.vert.spv",
-        "shaders/SPV/skeletal.geom.spv",
-        "shaders/SPV/skeletal.frag.spv"
+                                  "shaders/SPV/skeletal.vert.spv",
+                                  "shaders/SPV/skeletal.geom.spv",
+                                  "shaders/SPV/skeletal.frag.spv"
     };
 
     player_shader = create_mesh_shader_color(
@@ -76,8 +78,8 @@ void w_players_data_init() {
         MT_ANIMATED);
 
     const char *shadow_shader_paths[] = {
-        "shaders/SPV/skeletal_shadow.vert.spv",
-        "shaders/SPV/shadow.frag.spv"
+                                         "shaders/SPV/skeletal_shadow.vert.spv",
+                                         "shaders/SPV/shadow.frag.spv"
     };
 
     player_shadow_shader = create_mesh_shader_shadow(
@@ -87,8 +89,8 @@ void w_players_data_init() {
         MT_ANIMATED);
 
     const char *static_shader_paths[] = {
-        "shaders/SPV/mesh.vert.spv",
-        "shaders/SPV/mesh.frag.spv"
+                                         "shaders/SPV/mesh.vert.spv",
+                                         "shaders/SPV/mesh.frag.spv"
     };
 
     shader_binding_info_t ball_mesh_info = {};
@@ -101,8 +103,8 @@ void w_players_data_init() {
         MT_STATIC);
 
     const char *static_shadow_shader_path[] = {
-        "shaders/SPV/mesh_shadow.vert.spv",
-        "shaders/SPV/shadow.frag.spv"
+                                               "shaders/SPV/mesh_shadow.vert.spv",
+                                               "shaders/SPV/shadow.frag.spv"
     };
 
     player_ball_shadow_shader = create_mesh_shader_shadow(
@@ -269,8 +271,13 @@ static void s_execute_player_triggers(
     player_actions_t *player_actions,
     world_t *world) {
     if (player_actions->trigger_left) {
+        
 #if NET_DEBUG
-        LOG_INFOV("(Tick %llu) Terraforming (adt %f) p: %s d:%s\n", (unsigned long long)player_actions->tick, player_actions->accumulated_dt, glm::to_string(player->ws_position).c_str(), glm::to_string(player->ws_view_direction).c_str());
+        LOG_INFOV("(Tick %llu) Terraforming (adt %f) p: %s d:%s\n",
+                  (unsigned long long)player_actions->tick,
+                  player_actions->accumulated_dt,
+                  glm::to_string(player->ws_position).c_str(),
+                  glm::to_string(player->ws_view_direction).c_str());
 #endif
 
         w_terraform(
@@ -639,6 +646,11 @@ static void s_execute_player_actions(
         if ((int32_t)player->local_id == world->local_player && connected_to_server()) {
             player->camera_distance.animate(actions->dt);
             player->camera_fov.animate(actions->dt);
+
+            world->local_current_terraform_package = w_cast_terrain_ray(player->ws_position, player->ws_view_direction, 10.0f, world);
+            if (player->flags.interaction_mode != PIM_STANDING) {
+                world->local_current_terraform_package.ray_hit_terrain = 0;
+            }
 
             vector3_t up_diff = player->next_camera_up - player->current_camera_up;
             if (glm::dot(up_diff, up_diff) > 0.00001f) {

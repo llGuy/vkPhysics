@@ -286,7 +286,7 @@ eye_3d_info_t create_eye_info() {
     }
     else {
         info.position = player->ws_position - player->ws_view_direction * player->camera_distance.current * w_get_player_scale().x;
-        info.position += player->current_camera_up * w_get_player_scale();
+        info.position += player->current_camera_up * w_get_player_scale() * 2.0f;
 
         if (player->flags.interaction_mode == PIM_STANDING && player->flags.moving) {
             // Add view bobbing
@@ -300,7 +300,7 @@ eye_3d_info_t create_eye_info() {
             vector3_t view_dest = info.position + view_direction;
 
             vector3_t right_vec = glm::normalize(glm::cross(player->ws_view_direction, player->current_camera_up));
-            info.position += player->current_camera_up * glm::sin(angle) * 0.002f + right_vec * glm::sin(right) * 0.002f;
+            info.position += player->current_camera_up * glm::sin(angle) * 0.004f + right_vec * glm::sin(right) * 0.002f;
             view_direction = glm::normalize(view_dest - info.position);
         }
     }

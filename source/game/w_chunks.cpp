@@ -71,6 +71,15 @@ void w_chunk_render_init(
 static vector3_t *temp_mesh_vertices;
 static shader_t chunk_shader;
 
+static struct chunk_color_data_t {
+    vector4_t pointer_position;
+    vector4_t pointer_color;
+    float pointer_radius;
+} chunk_color_data;
+
+static gpu_buffer_t chunk_color_data_buffer;
+static VkDescriptorSet chunk_color_data_buffer_set;
+
 static uint8_t s_chunk_edge_voxel_value(
     int32_t x,
     int32_t y,
@@ -443,6 +452,21 @@ void w_chunk_gpu_sync_and_render(
     const uint32_t max_chunks_loaded_per_frame = 10;
     uint32_t chunks_loaded = 0;
 
+    if (world->local_current_terraform_package.ray_hit_terrain) {
+        chunk_color_data.pointer_radius = 3.0f;
+    }
+
+    chunk_color_data.pointer_position = vector4_t(world->local_current_terraform_package.position, 1.0f);
+    chunk_color_data.pointer_color = vector4_t(1.0f, 0.0f, 0.0f, 1.0f);
+
+    update_gpu_buffer(
+        transfer_command_buffer,
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+        0,
+        sizeof(chunk_color_data_t),
+        &chunk_color_data,
+        &chunk_color_data_buffer);
+
     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
         chunk_t *c = world->chunks[i];
         if (c) {
@@ -465,7 +489,8 @@ void w_chunk_gpu_sync_and_render(
                     render_command_buffer,
                     &c->render->mesh,
                     &chunk_shader,
-                    &c->render->render_data);
+                    &c->render->render_data,
+                    chunk_color_data_buffer_set);
             }
         }
     }
@@ -544,11 +569,26 @@ void w_chunks_data_init() {
         "shaders/SPV/chunk_mesh.frag.spv" };
     
     chunk_shader = create_mesh_shader_color(
+
         &binding_info,
         shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_FRONT_BIT,
-        MT_STATIC);
+        MT_STATIC | MT_PASS_EXTRA_UNIFORM_BUFFER);
+
+    chunk_color_data.pointer_position = vector4_t(0.0f);
+    chunk_color_data.pointer_color = vector4_t(0.0f);
+    chunk_color_data.pointer_radius = 0.0f;
+
+    chunk_color_data_buffer = create_gpu_buffer(
+        sizeof(chunk_color_data_t),
+        &chunk_color_data,
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+    chunk_color_data_buffer_set = create_buffer_descriptor_set(
+        chunk_color_data_buffer.buffer,
+        sizeof(chunk_color_data_t),
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 }
 
 void w_clear_chunk_world(
@@ -770,7 +810,41 @@ chunk_t *w_get_chunk(
     }
 }
 
-static void s_terraform_with_history(
+terraform_package_t w_cast_terrain_ray(
+    const vector3_t &ws_ray_start,
+    const vector3_t &ws_ray_direction,
+    float max_reach,
+    world_t *world) {
+    vector3_t vs_position = ws_ray_start;
+    vector3_t vs_dir = ws_ray_direction;
+
+    static const float PRECISION = 1.0f / 10.0f;
+    
+    vector3_t vs_step = vs_dir * max_reach * PRECISION;
+
+    float max_reach_squared = max_reach * max_reach;
+
+    terraform_package_t package = {};
+    package.ray_hit_terrain = 0;
+
+    for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
+        ivector3_t voxel = w_convert_world_to_voxel(vs_position);
+        ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
+        chunk_t *chunk = w_access_chunk(chunk_coord, world);
+
+        if (chunk) {
+            ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
+            if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                package.ray_hit_terrain = 1;
+                package.position = vs_position;
+            }
+        }
+    }
+
+    return package;
+}
+
+static terraform_package_t s_terraform_with_history(
     terraform_type_t type,
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
@@ -788,6 +862,9 @@ static void s_terraform_with_history(
 
     float max_reach_squared = max_reach * max_reach;
 
+    terraform_package_t package = {};
+    package.ray_hit_terrain = 0;
+
     for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
         ivector3_t voxel = w_convert_world_to_voxel(vs_position);
         ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
@@ -796,6 +873,9 @@ static void s_terraform_with_history(
         if (chunk) {
             ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
             if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                package.ray_hit_terrain = 1;
+                package.position = vs_position;
+
                 if (!chunk->flags.made_modification) {
                     // Push this chunk onto list of modified chunks
                     world->modified_chunks[world->modified_chunk_count++] = chunk;
@@ -901,9 +981,11 @@ static void s_terraform_with_history(
             }
         }
     }
+
+    return package;
 }
 
-static void s_terraform_without_history(
+static terraform_package_t s_terraform_without_history(
     terraform_type_t type,
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
@@ -921,6 +1003,9 @@ static void s_terraform_without_history(
 
     float max_reach_squared = max_reach * max_reach;
 
+    terraform_package_t package = {};
+    package.ray_hit_terrain = 0;
+
     for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
         ivector3_t voxel = w_convert_world_to_voxel(vs_position);
         ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
@@ -929,6 +1014,9 @@ static void s_terraform_without_history(
         if (chunk) {
             ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
             if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+                package.ray_hit_terrain = 1;
+                package.position = vs_position;
+
                 chunk->flags.made_modification = 1;
                 chunk->flags.has_to_update_vertices = 1;
 
@@ -1006,7 +1094,7 @@ static void s_terraform_without_history(
     }
 }
 
-void w_terraform(
+terraform_package_t w_terraform(
     terraform_type_t type,
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
@@ -1016,7 +1104,7 @@ void w_terraform(
     float dt,
     world_t *world) {
     if (world->track_history) {
-        s_terraform_with_history(
+        return s_terraform_with_history(
             type,
             ws_ray_start,
             ws_ray_direction,
@@ -1027,7 +1115,7 @@ void w_terraform(
             world);
     }
     else {
-        s_terraform_without_history(
+        return s_terraform_without_history(
             type,
             ws_ray_start,
             ws_ray_direction,

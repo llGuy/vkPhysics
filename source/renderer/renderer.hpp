@@ -406,6 +406,12 @@ DECLARE_RENDERER_PROC(shader_t, create_3d_shader_shadow,
     const char **shader_paths,
     VkShaderStageFlags shader_flags);
 
+
+// NOTE: Very important
+// FOR 3D MESHES (NOT ANIMATED) THE FIRST DESCRIPTOR TYPE NEEDS TO BE UNIFORM BUFFER
+// FOR CAMERA TRANSFORMS UNIFORM BUFFER WHICH WILL PASSED BY DEFAULT FOR SUBMIT_MESH FUNCTION
+// FOR SKELETAL ANIMATIONS, THE SECOND NEEDS TO BE UNIFORM BUFFER AS WELL BECAUSE OF SKELETAL
+// JOINT TRANSFORMS. THIS WILL BE PASSED TO SUBMIT_SKELETAL_MESH FUNCTION.
 DECLARE_RENDERER_PROC(shader_t, create_3d_shader_color,
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
@@ -415,29 +421,37 @@ DECLARE_RENDERER_PROC(shader_t, create_3d_shader_color,
     VkShaderStageFlags shader_flags,
     VkCullModeFlags culling);
 
+// By default, a uniform buffer is added for camera transforms
+// If STATIC is chosen, no extra descriptors will be added to shader information
+// If ANIMATED is chosen, 1 extra uniform buffer will be added for joint transforms
+// If PASS_EXTRA_UNIFORM_BUFFER, all uniforms will be added from previous options, and
+// Extra ones will be added that you pass in the extra descriptors array
 enum mesh_type_t {
-    MT_STATIC,
-    MT_ANIMATED
+    MT_STATIC = 1 << 0,
+    MT_ANIMATED = 1 << 1,
+    MT_PASS_EXTRA_UNIFORM_BUFFER = 1 << 2
 };
+
+typedef int32_t mesh_type_flags_t;
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_color,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
     VkCullModeFlags culling,
-    mesh_type_t type);
+    mesh_type_flags_t type);
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
-    mesh_type_t type);
+    mesh_type_flags_t type);
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_alpha,
-                      shader_binding_info_t *binding_info,
-                      const char **shader_paths,
-                      VkShaderStageFlags shader_flags,
-                      mesh_type_t type);
+    shader_binding_info_t *binding_info,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags,
+    mesh_type_flags_t type);
 
 DECLARE_RENDERER_PROC(shader_binding_info_t, create_mesh_binding_info,
     mesh_t *mesh);
@@ -450,7 +464,8 @@ DECLARE_VOID_RENDERER_PROC(void, submit_mesh,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data);
+    mesh_render_data_t *render_data,
+    VkDescriptorSet set = VK_NULL_HANDLE);
 
 DECLARE_VOID_RENDERER_PROC(void, submit_mesh_shadow,
     VkCommandBuffer command_buffer,

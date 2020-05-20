@@ -4,6 +4,7 @@ layout(location = 0) in vec3 in_position;
 
 layout(location = 0) out VS_DATA {
     vec4 vs_position;
+    vec4 ws_position;
 } out_vs;
 
 layout(push_constant) uniform push_constant_t {
@@ -27,4 +28,5 @@ void main() {
     vec4 ms_position = u_push_constant.model * vec4(in_position, 1.0f);
     gl_Position = u_camera_transforms.view_projection * ms_position;
     out_vs.vs_position = u_camera_transforms.view * vec4(ms_position.xyz, 1.0f);
+    out_vs.ws_position = ms_position;
 }
