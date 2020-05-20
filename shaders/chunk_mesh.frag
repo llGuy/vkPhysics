@@ -32,7 +32,9 @@ void main() {
     out_albedo = vec4(u_push_constant.color.rgb, u_push_constant.pbr_info.x);
 
     if (dist2 < u_chunk_color_data.pointer_radius * u_chunk_color_data.pointer_radius) {
-        out_albedo = mix(out_albedo, vec4(u_chunk_color_data.pointer_color.rgb, 1.0f), 0.8f);
+        float quot = 1.0f - dist2 / (u_chunk_color_data.pointer_radius * u_chunk_color_data.pointer_radius);
+        quot = pow(quot, 3);
+        out_albedo = mix(out_albedo, vec4(u_chunk_color_data.pointer_color.rgb, 1.0f), quot);
     }
 
     out_normal = vec4(in_fs.vs_normal.xyz, u_push_constant.pbr_info.y);

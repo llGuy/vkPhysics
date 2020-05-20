@@ -136,6 +136,11 @@ union player_flags_t {
     uint32_t u32;
 };
 
+struct terraform_package_t {
+    vector3_t position;
+    bool ray_hit_terrain;
+};
+
 // TODO: Make sure to only allocate camera stuff for local player
 struct player_t {
     player_flags_t flags;
@@ -185,6 +190,8 @@ struct player_t {
     vector3_t next_camera_up;
 
     animated_instance_t animations;
+
+    terraform_package_t terraform_package;
 };
 
 player_t *get_player(

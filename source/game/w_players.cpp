@@ -270,8 +270,13 @@ static void s_execute_player_triggers(
     player_t *player,
     player_actions_t *player_actions,
     world_t *world) {
+    player->terraform_package = w_cast_terrain_ray(
+        player->ws_position,
+        player->ws_view_direction,
+        10.0f,
+        world);
+
     if (player_actions->trigger_left) {
-        
 #if NET_DEBUG
         LOG_INFOV("(Tick %llu) Terraforming (adt %f) p: %s d:%s\n",
                   (unsigned long long)player_actions->tick,
@@ -282,9 +287,7 @@ static void s_execute_player_triggers(
 
         w_terraform(
             TT_DESTROY,
-            player->ws_position,
-            player->ws_view_direction,
-            10.0f,
+            player->terraform_package,
             TERRAFORMING_RADIUS,
             TERRAFORMING_SPEED,
             player_actions->accumulated_dt,
@@ -293,9 +296,7 @@ static void s_execute_player_triggers(
     if (player_actions->trigger_right) {
         w_terraform(
             TT_BUILD,
-            player->ws_position,
-            player->ws_view_direction,
-            10.0f,
+            player->terraform_package,
             TERRAFORMING_RADIUS,
             TERRAFORMING_SPEED,
             player_actions->accumulated_dt,
@@ -647,7 +648,7 @@ static void s_execute_player_actions(
             player->camera_distance.animate(actions->dt);
             player->camera_fov.animate(actions->dt);
 
-            world->local_current_terraform_package = w_cast_terrain_ray(player->ws_position, player->ws_view_direction, 10.0f, world);
+            world->local_current_terraform_package = player->terraform_package;
             if (player->flags.interaction_mode != PIM_STANDING) {
                 world->local_current_terraform_package.ray_hit_terrain = 0;
             }

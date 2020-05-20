@@ -95,11 +95,6 @@ chunk_t *w_destroy_chunk(
 #define MAX_LOADED_CHUNKS 1000
 #define MAX_PLAYERS 50
 
-struct terraform_package_t {
-    vector3_t position;
-    bool ray_hit_terrain;
-};
-
 // Structure which holds all of the world data
 struct world_t {
     int32_t local_player;
@@ -182,11 +177,19 @@ chunk_t *w_get_chunk(
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
-terraform_package_t w_terraform(
+// terraform_package_t w_terraform(
+//     terraform_type_t type,
+//     const vector3_t &ws_ray_start,
+//     const vector3_t &ws_ray_direction,
+//     float max_reach,
+//     float radius,
+//     float speed,
+//     float dt,
+//     world_t *world);
+
+bool w_terraform(
     terraform_type_t type,
-    const vector3_t &ws_ray_start,
-    const vector3_t &ws_ray_direction,
-    float max_reach,
+    terraform_package_t package,
     float radius,
     float speed,
     float dt,
