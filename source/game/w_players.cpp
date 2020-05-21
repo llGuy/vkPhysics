@@ -10,7 +10,6 @@
 static vector3_t player_scale;
 
 vector3_t w_get_player_scale() {
-
     return player_scale;
 }
 
@@ -65,9 +64,9 @@ void w_players_data_init() {
 
 
     const char *shader_paths[] = {
-                                  "shaders/SPV/skeletal.vert.spv",
-                                  "shaders/SPV/skeletal.geom.spv",
-                                  "shaders/SPV/skeletal.frag.spv"
+        "shaders/SPV/skeletal.vert.spv",
+        "shaders/SPV/skeletal.geom.spv",
+        "shaders/SPV/skeletal.frag.spv"
     };
 
     player_shader = create_mesh_shader_color(
@@ -78,8 +77,8 @@ void w_players_data_init() {
         MT_ANIMATED);
 
     const char *shadow_shader_paths[] = {
-                                         "shaders/SPV/skeletal_shadow.vert.spv",
-                                         "shaders/SPV/shadow.frag.spv"
+        "shaders/SPV/skeletal_shadow.vert.spv",
+        "shaders/SPV/shadow.frag.spv"
     };
 
     player_shadow_shader = create_mesh_shader_shadow(
@@ -89,8 +88,8 @@ void w_players_data_init() {
         MT_ANIMATED);
 
     const char *static_shader_paths[] = {
-                                         "shaders/SPV/mesh.vert.spv",
-                                         "shaders/SPV/mesh.frag.spv"
+        "shaders/SPV/mesh.vert.spv",
+        "shaders/SPV/mesh.frag.spv"
     };
 
     shader_binding_info_t ball_mesh_info = {};
@@ -103,8 +102,8 @@ void w_players_data_init() {
         MT_STATIC);
 
     const char *static_shadow_shader_path[] = {
-                                               "shaders/SPV/mesh_shadow.vert.spv",
-                                               "shaders/SPV/shadow.frag.spv"
+        "shaders/SPV/mesh_shadow.vert.spv",
+        "shaders/SPV/shadow.frag.spv"
     };
 
     player_ball_shadow_shader = create_mesh_shader_shadow(
