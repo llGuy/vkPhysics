@@ -74,6 +74,7 @@ static uint32_t secondary_command_buffer_count;
 static VkCommandBuffer render_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 static VkCommandBuffer render_shadow_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 static VkCommandBuffer transfer_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
+static VkCommandBuffer ui_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 
 static void s_handle_input() {
     switch(focus) {
@@ -105,7 +106,8 @@ static void s_tick(
 static void s_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
-    VkCommandBuffer transfer_command_buffer) {
+    VkCommandBuffer transfer_command_buffer,
+    VkCommandBuffer ui_command_buffer) {
     VkCommandBuffer final_command_buffer = begin_frame();
 
     eye_3d_info_t eye_info = create_eye_info();
@@ -144,7 +146,8 @@ static void s_render(
     end_scene_rendering(
         final_command_buffer);
 
-    post_process_scene();
+    post_process_scene(
+        ui_command_buffer);
 
     // Render UI
 
@@ -186,6 +189,13 @@ static void s_run_windowed_game() {
             0,
             &inheritance_info);
 
+        VkCommandBuffer ui_command_buffer = ui_command_buffers[command_buffer_index];
+        fill_main_inheritance_info(&inheritance_info, RPI_POST_PROCESS);
+        begin_command_buffer(
+            ui_command_buffer,
+            VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+            &inheritance_info);
+
         s_tick(
             render_command_buffer,
             render_shadow_command_buffer,
@@ -199,11 +209,13 @@ static void s_run_windowed_game() {
         end_command_buffer(render_command_buffer);
         end_command_buffer(transfer_command_buffer);
         end_command_buffer(render_shadow_command_buffer);
+        end_command_buffer(ui_command_buffer);
 
         s_render(
             render_command_buffer,
             render_shadow_command_buffer,
-            transfer_command_buffer);
+            transfer_command_buffer,
+            ui_command_buffer);
 
         ldelta_time = surface_delta_time();
         
@@ -389,6 +401,11 @@ static void s_windowed_game_main(
     create_command_buffers(
         VK_COMMAND_BUFFER_LEVEL_SECONDARY,
         transfer_command_buffers,
+        secondary_command_buffer_count);
+
+    create_command_buffers(
+        VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+        ui_command_buffers,
         secondary_command_buffer_count);
 
     world_init(&events);

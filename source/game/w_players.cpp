@@ -66,8 +66,6 @@ void w_players_data_init() {
         "shaders/SPV/skeletal.vert.spv",
         "shaders/SPV/skeletal.geom.spv",
         "shaders/SPV/skeletal.frag.spv"
-
-
     };
 
     player_shader = create_mesh_shader_color(
@@ -109,7 +107,6 @@ void w_players_data_init() {
 
     player_ball_shadow_shader = create_mesh_shader_shadow(
         &ball_mesh_info,
-
         static_shadow_shader_path,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
         MT_STATIC);

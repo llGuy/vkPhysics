@@ -47,7 +47,8 @@ void r_execute_bloom_pass(
     VkCommandBuffer command_buffer);
 
 void r_execute_motion_blur_pass(
-    VkCommandBuffer command_buffer);
+    VkCommandBuffer command_buffer,
+    VkCommandBuffer ui_command_buffer);
 
 void r_execute_final_pass(
     VkCommandBuffer command_buffer);
@@ -139,6 +140,7 @@ VkAttachmentDescription r_fill_depth_attachment_description(
 
 rpipeline_stage_t *r_deferred_stage();
 rpipeline_stage_t *r_shadow_stage();
+rpipeline_stage_t *r_motion_blur_stage();
 
 void r_lighting_init();
 

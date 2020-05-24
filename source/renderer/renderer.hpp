@@ -81,7 +81,8 @@ DECLARE_VOID_RENDERER_PROC(void, gpu_data_sync,
     eye_3d_info_t *eye,
     lighting_info_t *lighting);
 
-DECLARE_VOID_RENDERER_PROC(void, post_process_scene, void);
+DECLARE_VOID_RENDERER_PROC(void, post_process_scene,
+    VkCommandBuffer ui_command_buffer);
 
 DECLARE_VOID_RENDERER_PROC(void, end_frame, void);
 
@@ -103,7 +104,7 @@ DECLARE_VOID_RENDERER_PROC(void, create_command_buffers,
     VkCommandBuffer *command_buffers, uint32_t count);
 
 enum render_pass_inheritance_t {
-    RPI_SHADOW, RPI_DEFERRED
+    RPI_SHADOW, RPI_DEFERRED, RPI_POST_PROCESS
 };
 
 DECLARE_VOID_RENDERER_PROC(void, fill_main_inheritance_info,

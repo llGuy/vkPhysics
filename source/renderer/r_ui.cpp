@@ -227,7 +227,7 @@ void ui_core_init() {
         0,
         color_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        r_stage_before_final_render(),
+        r_motion_blur_stage(),
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 }
 

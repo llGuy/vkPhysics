@@ -865,11 +865,14 @@ void gpu_data_sync(
     r_render_environment_to_offscreen_if_updated(command_buffer);
 }
 
-void post_process_scene() {
+// Need to pass the command buffer containing all user interface rendering
+void post_process_scene(
+    VkCommandBuffer ui_command_buffer) {
     r_execute_ssao_pass(primary_command_buffers[image_index]);
     r_execute_ssao_blur_pass(primary_command_buffers[image_index]);
     r_execute_lighting_pass(primary_command_buffers[image_index]);
-    r_execute_motion_blur_pass(primary_command_buffers[image_index]);
+    // Pass this to whatever the last pass is
+    r_execute_motion_blur_pass(primary_command_buffers[image_index], ui_command_buffer);
 }
 
 void end_frame() {
@@ -972,6 +975,10 @@ void fill_main_inheritance_info(
 
     case RPI_SHADOW: {
         stage = r_shadow_stage();
+    } break;
+
+    case RPI_POST_PROCESS: {
+        stage = r_motion_blur_stage();
     } break;
     }
 

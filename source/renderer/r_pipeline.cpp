@@ -835,6 +835,12 @@ void r_execute_lighting_pass(
 
 static rpipeline_shader_t motion_blur_shader;
 static rpipeline_stage_t motion_blur_stage;
+static uint32_t post_process_command_buffer_count;
+static VkCommandBuffer post_process_command_buffer[3];
+
+rpipeline_stage_t *r_motion_blur_stage() {
+    return &motion_blur_stage;
+}
 
 static void s_motion_blur_render_pass_init() {
     motion_blur_stage.color_attachment_count = 1;
@@ -921,6 +927,61 @@ static void s_motion_blur_init() {
         "shaders/SPV/motion_blur.frag.spv",
         &motion_blur_stage,
         pipeline_layout);
+
+    swapchain_information_t swapchain_info = {};
+    swapchain_information(&swapchain_info);
+
+    post_process_command_buffer_count = swapchain_info.image_count;
+
+    create_command_buffers(
+        VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+        post_process_command_buffer,
+        post_process_command_buffer_count);
+
+    for (uint32_t i = 0; i < post_process_command_buffer_count; ++i) {
+        VkCommandBufferInheritanceInfo inheritance_info = {};
+        fill_main_inheritance_info(
+            &inheritance_info,
+            RPI_POST_PROCESS);
+
+        begin_command_buffer(
+            post_process_command_buffer[i],
+            VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+            &inheritance_info);
+
+        VkViewport viewport = {};
+        viewport.width = (float)r_swapchain_extent().width;
+        viewport.height = (float)r_swapchain_extent().height;
+        viewport.maxDepth = 1;
+        vkCmdSetViewport(post_process_command_buffer[i], 0, 1, &viewport);
+
+        VkRect2D rect = {};
+        rect.extent = r_swapchain_extent();
+        vkCmdSetScissor(post_process_command_buffer[i], 0, 1, &rect);
+
+        vkCmdBindPipeline(post_process_command_buffer[i], VK_PIPELINE_BIND_POINT_GRAPHICS, motion_blur_shader.pipeline);
+
+        VkDescriptorSet inputs[] = {
+            deferred.descriptor_set,
+            r_camera_transforms_uniform(),
+            lighting_stage.descriptor_set,
+            r_lighting_uniform(),
+        };
+    
+        vkCmdBindDescriptorSets(
+            post_process_command_buffer[i],
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            motion_blur_shader.layout,
+            0,
+            sizeof(inputs) / sizeof(VkDescriptorSet),
+            inputs,
+            0,
+            NULL);
+
+        vkCmdDraw(post_process_command_buffer[i], 4, 1, 0, 0);
+
+        end_command_buffer(post_process_command_buffer[i]);
+    }
 }
 
 rpipeline_stage_t *r_stage_before_final_render() {
@@ -928,7 +989,9 @@ rpipeline_stage_t *r_stage_before_final_render() {
 }
 
 void r_execute_motion_blur_pass(
-    VkCommandBuffer command_buffer) {
+    VkCommandBuffer command_buffer,
+    VkCommandBuffer ui_command_buffer) {
+    static uint32_t current_command_buffer = 0;
     VkClearValue clear_values = {};
     
     VkRect2D render_area = {};
@@ -942,40 +1005,15 @@ void r_execute_motion_blur_pass(
     begin_info.pClearValues = &clear_values;
     begin_info.renderArea = render_area;
 
-    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
-    VkViewport viewport = {};
-    viewport.width = (float)r_swapchain_extent().width;
-    viewport.height = (float)r_swapchain_extent().height;
-    viewport.maxDepth = 1;
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+    vkCmdExecuteCommands(command_buffer, 1, &post_process_command_buffer[current_command_buffer]);
 
-    VkRect2D rect = {};
-    rect.extent = r_swapchain_extent();
-    vkCmdSetScissor(command_buffer, 0, 1, &rect);
-
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, motion_blur_shader.pipeline);
-
-    VkDescriptorSet inputs[] = {
-        deferred.descriptor_set,
-        r_camera_transforms_uniform(),
-        lighting_stage.descriptor_set,
-        r_lighting_uniform(),
-    };
-    
-    vkCmdBindDescriptorSets(
-        command_buffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        motion_blur_shader.layout,
-        0,
-        sizeof(inputs) / sizeof(VkDescriptorSet),
-        inputs,
-        0,
-        NULL);
-
-    vkCmdDraw(command_buffer, 4, 1, 0, 0);
+    vkCmdExecuteCommands(command_buffer, 1, &ui_command_buffer);
 
     vkCmdEndRenderPass(command_buffer);
+
+    current_command_buffer = (current_command_buffer + 1) % post_process_command_buffer_count;
 }
 
 static rpipeline_shader_t blur_shader;
