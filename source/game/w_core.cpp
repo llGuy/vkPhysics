@@ -84,6 +84,9 @@ static void s_world_event_listener(
 
         world.in_server = 1;
 
+
+
+
         // Reinitialise chunks / players
         w_clear_players(&world);
         w_clear_chunk_world(&world);

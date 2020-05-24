@@ -923,6 +923,10 @@ static void s_motion_blur_init() {
         pipeline_layout);
 }
 
+rpipeline_stage_t *r_stage_before_final_render() {
+    return &motion_blur_stage;
+}
+
 void r_execute_motion_blur_pass(
     VkCommandBuffer command_buffer) {
     VkClearValue clear_values = {};

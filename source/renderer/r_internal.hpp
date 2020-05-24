@@ -240,3 +240,7 @@ VkDescriptorSet r_camera_transforms_uniform();
 VkDescriptorSet r_lighting_uniform();
 
 void r_environment_debug_menu();
+
+// The stage that is before the stage that renders with the screen as a back buffer
+// (As of writing this, it's the motion blur pipeline stage)
+rpipeline_stage_t *r_stage_before_final_render();

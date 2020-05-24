@@ -9,6 +9,7 @@
 #include <common/log.hpp>
 #include <common/time.hpp>
 #include <common/event.hpp>
+#include <common/files.hpp>
 #include <common/string.hpp>
 #include <renderer/input.hpp>
 #include <common/allocators.hpp>
@@ -142,6 +143,10 @@ static void s_render(
 
     end_scene_rendering(
         final_command_buffer);
+
+    post_process_scene();
+
+    // Render UI
 
     end_frame();
 }
@@ -486,6 +491,8 @@ void game_main(
     running = 1;
 
     init_flags = game_init_data->flags;
+
+    files_init();
 
     current_tick = 0;
     if (game_init_data->flags & GIF_WINDOWED) {

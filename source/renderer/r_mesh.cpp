@@ -5,6 +5,7 @@
 #include "r_internal.hpp"
 #include <vulkan/vulkan.h>
 #include <common/tools.hpp>
+#include <common/files.hpp>
 #include <common/string.hpp>
 #include <common/allocators.hpp>
 #include <common/serialiser.hpp>
@@ -20,6 +21,7 @@ bool mesh_has_buffer(
     buffer_type_t buffer_type,
     mesh_t *mesh) {
     return mesh->buffers[buffer_type].type == buffer_type;
+
 }
 
 mesh_buffer_t *get_mesh_buffer(
@@ -376,28 +378,13 @@ void load_mesh_external(
     mesh_t *mesh,
     shader_binding_info_t *binding_info,
     const char *path) {
-    uint32_t strlen_path = (uint32_t)strlen(path);
-    uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
-    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
-    memcpy(final_path, PROJECT_ROOT, strlen_root);
-
-    final_path[strlen_root] = '/';
-    memcpy(final_path + strlen_root + 1, path, strlen_path + 1);
-
-    FILE *mesh_data = fopen(final_path, "rb");
-    if (!mesh_data) {
-        LOG_ERRORV("Failed to load mesh from path: %s\n", final_path);
-    }
-    fseek(mesh_data, 0L, SEEK_END);
-    uint32_t size = ftell(mesh_data);
-    char *binaries = (char *)LN_MALLOC(char, size);
-    rewind(mesh_data);
-    fread(binaries, sizeof(char), size, mesh_data);
-    // TODO: Make sure to have a file loading utility
+    file_handle_t file_handle = create_file(path, FLF_BINARY);
+    file_contents_t contents = read_file(file_handle);
+    free_file(file_handle);
     
     serialiser_t serialiser = {};
-    serialiser.data_buffer = (uint8_t *)binaries;
-    serialiser.data_buffer_size = size;
+    serialiser.data_buffer = (uint8_t *)contents.data;
+    serialiser.data_buffer_size = contents.size;
 
     header_t file_header = {};
     file_header.vertices_count = serialiser.deserialise_uint32();
@@ -504,27 +491,13 @@ void load_mesh_external(
 void load_skeleton(
     skeleton_t *skeleton,
     const char *path) {
-    uint32_t strlen_path = (uint32_t)strlen(path);
-    uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
-    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
-    memcpy(final_path, PROJECT_ROOT, strlen_root);
-
-    final_path[strlen_root] = '/';
-    memcpy(final_path + strlen_root + 1, path, strlen_path + 1);
-
-    FILE *mesh_data = fopen(final_path, "rb");
-    if (!mesh_data) {
-        LOG_ERRORV("Failed to load mesh from path: %s\n", final_path);
-    }
-    fseek(mesh_data, 0L, SEEK_END);
-    uint32_t size = ftell(mesh_data);
-    char *binaries = (char *)LN_MALLOC(char, size);
-    rewind(mesh_data);
-    fread(binaries, sizeof(char), size, mesh_data);
+    file_handle_t file_handle = create_file(path, FLF_BINARY);
+    file_contents_t contents = read_file(file_handle);
+    free_file(file_handle);
 
     serialiser_t serialiser = {};
-    serialiser.data_buffer = (uint8_t *)binaries;
-    serialiser.data_buffer_size = size;
+    serialiser.data_buffer = (uint8_t *)contents.data;
+    serialiser.data_buffer_size = contents.size;
 
     skeleton->joint_count = serialiser.deserialise_uint32();
     skeleton->joints = FL_MALLOC(joint_t, skeleton->joint_count);
@@ -553,27 +526,13 @@ void load_skeleton(
 void load_animation_cycles(
     animation_cycles_t *cycles,
     const char *path) {
-    uint32_t strlen_path = (uint32_t)strlen(path);
-    uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
-    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
-    memcpy(final_path, PROJECT_ROOT, strlen_root);
-
-    final_path[strlen_root] = '/';
-    memcpy(final_path + strlen_root + 1, path, strlen_path + 1);
-
-    FILE *mesh_data = fopen(final_path, "rb");
-    if (!mesh_data) {
-        LOG_ERRORV("Failed to load mesh from path: %s\n", final_path);
-    }
-    fseek(mesh_data, 0L, SEEK_END);
-    uint32_t size = ftell(mesh_data);
-    char *binaries = (char *)LN_MALLOC(char, size);
-    rewind(mesh_data);
-    fread(binaries, sizeof(char), size, mesh_data);
+    file_handle_t file_handle = create_file(path, FLF_BINARY);
+    file_contents_t contents = read_file(file_handle);
+    free_file(file_handle);
 
     serialiser_t serialiser = {};
-    serialiser.data_buffer = (uint8_t *)binaries;
-    serialiser.data_buffer_size = size;
+    serialiser.data_buffer = (uint8_t *)contents.data;
+    serialiser.data_buffer_size = contents.size;
 
     cycles->cycle_count = serialiser.deserialise_uint32();
     cycles->cycles = FL_MALLOC(animation_cycle_t, cycles->cycle_count);

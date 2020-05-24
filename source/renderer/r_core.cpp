@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <stb_image.h>
 #include "renderer.hpp"
 #include <GLFW/glfw3.h>
 #include "r_internal.hpp"
 #include <common/log.hpp>
 #include <vulkan/vulkan.h>
+#include <common/files.hpp>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <common/allocators.hpp>
@@ -865,15 +865,16 @@ void gpu_data_sync(
     r_render_environment_to_offscreen_if_updated(command_buffer);
 }
 
-void end_frame() {
-    VkOffset2D offset;
-    memset(&offset, 0, sizeof(offset));
-
+void post_process_scene() {
     r_execute_ssao_pass(primary_command_buffers[image_index]);
     r_execute_ssao_blur_pass(primary_command_buffers[image_index]);
     r_execute_lighting_pass(primary_command_buffers[image_index]);
     r_execute_motion_blur_pass(primary_command_buffers[image_index]);
-    //r_execute_bloom_pass(primary_command_buffers[image_index]);
+}
+
+void end_frame() {
+    VkOffset2D offset;
+    memset(&offset, 0, sizeof(offset));
 
     VkRect2D render_area = {};
     render_area.offset = offset;
@@ -1545,26 +1546,15 @@ VkRenderPass r_final_render_pass() {
 static char *s_read_shader(
     const char *path,
     uint32_t *file_size) {
-    uint32_t strlen_path = (uint32_t)strlen(path);
-    uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
-    
-    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
-    memcpy(final_path, PROJECT_ROOT, strlen_root);
-    // May need to vary for Windows
-    final_path[strlen_root] = '/';
-    memcpy(final_path + strlen_root + 1, path, strlen_path + 1);
+    file_handle_t handle = create_file(path, FLF_BINARY);
 
-    FILE *shader = fopen(final_path, "rb");
-    if (!shader) {
-        LOG_ERROR("Failed to load shader\n");
-    }
+    file_contents_t contents = read_file(handle);
 
-    fseek(shader, 0L, SEEK_END);
-    *file_size = ftell(shader);
-    char *code = (char *)LN_MALLOC(char, (*file_size));
-    rewind(shader);
-    fread(code, sizeof(char), *file_size, shader);
-    return code;
+    free_file(handle);
+
+    *file_size = contents.size;
+
+    return (char *)contents.data;
 }
 
 VkPipelineShaderStageCreateInfo *r_fill_shader_stage_create_infos(
@@ -1828,7 +1818,14 @@ texture_t create_texture(
     int32_t x, y, channels;
     void *pixels;
     if (!data && path) {
-        pixels = stbi_load(path, &x, &y, &channels, STBI_rgb_alpha);
+        file_handle_t file_handle = create_file(path, FLF_IMAGE);
+        file_contents_t contents = read_file(file_handle);
+        pixels = contents.pixels;
+        x = contents.width;
+        y = contents.height;
+        channels = contents.channels;
+        free_image(contents);
+        free_file(file_handle);
     }
     else {
         switch (format) {
