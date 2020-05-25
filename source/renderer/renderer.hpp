@@ -553,35 +553,35 @@ struct ui_vector2_t {
     inline ivector2_t to_ivec2(void) const { return ivector2_t(ix, iy); }
 };
 
-enum relative_to_t { LEFT_DOWN, LEFT_UP, CENTER, RIGHT_DOWN, RIGHT_UP };
+enum relative_to_t { RT_LEFT_DOWN, RT_LEFT_UP, RT_CENTER, RT_RIGHT_DOWN, RT_RIGHT_UP };
 
 // Math functions
-vector2_t convert_glsl_to_normalized(
+DECLARE_RENDERER_PROC(vector2_t, convert_glsl_to_normalized,
     const vector2_t &position);
 
-vector2_t convert_normalized_to_glsl(
+DECLARE_RENDERER_PROC(vector2_t, convert_normalized_to_glsl,
     const vector2_t &position);
 
-ui_vector2_t glsl_to_pixel_coord(
+DECLARE_RENDERER_PROC(ui_vector2_t, glsl_to_pixel_coord,
     const ui_vector2_t &position,
     const VkExtent2D &resolution);
 
-vector2_t glsl_to_pixel_coord(
+DECLARE_RENDERER_PROC(vector2_t, glsl_to_pixel_coord,
     const vector2_t &position,
     const VkExtent2D &resolution);
 
-ui_vector2_t pixel_to_glsl_coord(
+DECLARE_RENDERER_PROC(ui_vector2_t, pixel_to_glsl_coord,
     const ui_vector2_t &position,
     const VkExtent2D &resolution);
 
-vector2_t pixel_to_glsl_coord(
+DECLARE_RENDERER_PROC(vector2_t, pixel_to_glsl_coord,
     const vector2_t &position,
     const VkExtent2D &resolution);
 
-uint32_t vec4_color_to_ui32b(
+DECLARE_RENDERER_PROC(uint32_t, vec4_color_to_ui32b,
     const vector4_t &color);
 
-vector4_t ui32b_color_to_vec4(
+DECLARE_RENDERER_PROC(vector4_t, ui32b_color_to_vec4,
     uint32_t color);
 
 struct gui_colored_vertex_t {
@@ -594,6 +594,8 @@ struct gui_textured_vertex_t {
     vector2_t uvs;
     uint32_t color;
 };
+
+#define UI_BOX_SPECIAL_RESOLUTION 0xFFFFFFFF
 
 struct ui_box_t {
     ui_box_t *parent {nullptr};
@@ -608,63 +610,64 @@ struct ui_box_t {
     float aspect_ratio;
     uint32_t color;
 
-    void init(
-        relative_to_t relative_to,
-        float aspect_ratio,
+    DECLARE_VOID_RENDERER_PROC(void, init,
+        relative_to_t in_relative_to,
+        float in_aspect_ratio,
         ui_vector2_t position /* coord_t space agnostic */,
-        ui_vector2_t gls_max_values /* max_t X and Y size */,
-        ui_box_t *parent,
-        const uint32_t &color,
-        VkExtent2D backbuffer_resolution = {});
+        ui_vector2_t in_gls_max_values /* max_t X and Y size */,
+        ui_box_t *in_parent,
+        uint32_t in_color,
+        VkExtent2D backbuffer_resolution = VkExtent2D{ UI_BOX_SPECIAL_RESOLUTION, UI_BOX_SPECIAL_RESOLUTION });
     
-    void update_size(
+    DECLARE_VOID_RENDERER_PROC(void, update_size,
         const VkExtent2D &backbuffer_resolution);
 
-    void update_position(
+    DECLARE_VOID_RENDERER_PROC(void, update_position,
         const VkExtent2D &backbuffer_resolution);
 
-    void rotate_clockwise(
+    DECLARE_VOID_RENDERER_PROC(void, rotate_clockwise,
         float rad_angle);
 };
 
 #define MAX_TEXTURES_IN_RENDER_LIST 20
 #define MAX_QUADS_TO_RENDER 1000
 
-struct gui_textured_vertex_render_list_t {
-    shader_t shader;
+DECLARE_VOID_RENDERER_PROC(void, ui_rendering_init,
+    void);
+
+DECLARE_VOID_RENDERER_PROC(void, mark_ui_textured_section,
+    VkDescriptorSet group);
+
+DECLARE_VOID_RENDERER_PROC(void, push_textured_vertex,
+    const gui_textured_vertex_t &vertex);
+
+DECLARE_VOID_RENDERER_PROC(void, push_textured_ui_box,
+    const ui_box_t *box);
+
+DECLARE_VOID_RENDERER_PROC(void, clear_texture_list_containers,
+    void);
+
+DECLARE_VOID_RENDERER_PROC(void, sync_gpu_with_textured_vertex_list,
+    VkCommandBuffer command_buffer); 
     
-    struct vertex_section_t {
-        uint32_t section_start, section_size;
-    };
+DECLARE_VOID_RENDERER_PROC(void, render_textured_quads,
+    VkCommandBuffer command_buffer); 
+
+DECLARE_VOID_RENDERER_PROC(void, push_vertex,
+    const gui_colored_vertex_t &vertex); 
+
+DECLARE_VOID_RENDERER_PROC(void, push_colored_ui_box,
+    const ui_box_t *box);
     
-    uint32_t section_count = 0;
-    // Index where there is a transition to the next texture to bind for the following vertices
-    vertex_section_t sections[MAX_TEXTURES_IN_RENDER_LIST] = {};
-    // Corresponds to the same index as the index of the current section
-    VkDescriptorSet textures[MAX_TEXTURES_IN_RENDER_LIST] = {};
+DECLARE_VOID_RENDERER_PROC(void, clear_ui_color_containers,
+    void);
 
-    uint32_t vertex_count;
-    gui_textured_vertex_t vertices[MAX_QUADS_TO_RENDER * 6];
+DECLARE_VOID_RENDERER_PROC(void, sync_gpu_with_vertex_list,
+    VkCommandBuffer command_buffer); 
 
-    gpu_buffer_t vtx_buffer;
+DECLARE_VOID_RENDERER_PROC(void, render_colored_quads,
+    VkCommandBuffer command_buffer); 
 
-    void mark_section(
-        VkDescriptorSet group);
-
-    void push_vertex(
-        const gui_textured_vertex_t &vertex);
-
-    void push_ui_box(
-        const ui_box_t *box);
-
-    void clear_containers();
-
-    // Don't need to surround with DECLARE_VOID_RENDERER_PROC because it calls renderer functions
-    // Which are surrounded by this macro
-    void sync_gpu_with_vertex_list(
-        VkCommandBuffer command_buffer); 
-    
-    // Contains Vulkan code so need to wrap with DECLARE_VOID_RENDERER_PROC
-    DECLARE_VOID_RENDERER_PROC(void, render_textured_quads,
-        VkCommandBuffer command_buffer); 
-};
+DECLARE_VOID_RENDERER_PROC(void, render_submitted_ui,
+    VkCommandBuffer transfer_command_buffer,
+    VkCommandBuffer ui_command_buffer);

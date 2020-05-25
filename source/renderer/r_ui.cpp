@@ -73,18 +73,18 @@ vector4_t ui32b_color_to_vec4(
 }
 
 static constexpr vector2_t RELATIVE_TO_ADD_VALUES[] { vector2_t(0.0f, 0.0f),
-    vector2_t(0.0f, 1.0f),
-    vector2_t(0.5f, 0.5f),
-    vector2_t(1.0f, 0.0f),
-    vector2_t(1.0f, 1.0f)
-};
+        vector2_t(0.0f, 1.0f),
+        vector2_t(0.5f, 0.5f),
+        vector2_t(1.0f, 0.0f),
+        vector2_t(1.0f, 1.0f)
+        };
 
 static constexpr vector2_t RELATIVE_TO_FACTORS[] { vector2_t(0.0f, 0.0f),
-    vector2_t(0.0f, -1.0f),
-    vector2_t(-0.5f, -0.5f),
-    vector2_t(-1.0f, 0.0f),
-    vector2_t(-1.0f, -1.0f)
-};
+        vector2_t(0.0f, -1.0f),
+        vector2_t(-0.5f, -0.5f),
+        vector2_t(-1.0f, 0.0f),
+        vector2_t(-1.0f, -1.0f)
+        };
 
 void ui_box_t::update_size(
     const VkExtent2D &backbuffer_resolution) {
@@ -164,15 +164,22 @@ void ui_box_t::update_position(
         backbuffer_resolution);
 }
 
-
 void ui_box_t::init(
-    relative_to_t in_relative_to, float in_aspect_ratio,
+    relative_to_t in_relative_to,
+    float in_aspect_ratio,
     ui_vector2_t position /* coord_t space agnostic */,
     ui_vector2_t in_gls_max_values /* max_t X and Y size */,
     ui_box_t *in_parent,
-    const uint32_t &in_color,
+    uint32_t in_color,
     VkExtent2D backbuffer_resolution) {
-    VkExtent2D dst_resolution = backbuffer_resolution;
+    VkExtent2D dst_resolution;
+    if (backbuffer_resolution.width == UI_BOX_SPECIAL_RESOLUTION &&
+        backbuffer_resolution.height == UI_BOX_SPECIAL_RESOLUTION) {
+        dst_resolution = r_swapchain_extent();
+    }
+    else {
+        dst_resolution = backbuffer_resolution;
+    }
     
     if (parent) {
         dst_resolution = VkExtent2D{ (uint32_t)parent->px_current_size.ix, (uint32_t)parent->px_current_size.iy };
@@ -192,10 +199,34 @@ void ui_box_t::init(
     this->color = in_color;
 }
 
+struct vertex_section_t {
+    uint32_t section_start, section_size;
+};
+
+static struct gui_textured_vertex_render_list_t {
+    uint32_t section_count = 0;
+    // Index where there is a transition to the next texture to bind for the following vertices
+    vertex_section_t sections[MAX_TEXTURES_IN_RENDER_LIST] = {};
+    // Corresponds to the same index as the index of the current section
+    VkDescriptorSet textures[MAX_TEXTURES_IN_RENDER_LIST] = {};
+
+    uint32_t vertex_count;
+    gui_textured_vertex_t vertices[MAX_QUADS_TO_RENDER * 6];
+
+    gpu_buffer_t vtx_buffer;
+} textured_list;
+
+static struct gui_colored_vertex_render_list_t {
+    uint32_t vertex_count;
+    gui_colored_vertex_t vertices[MAX_QUADS_TO_RENDER * 6];
+
+    gpu_buffer_t vtx_buffer;
+} colored_list;
+
 static shader_t textured_quads_shader;
 static shader_t colored_quads_shader;
 
-void ui_core_init() {
+void ui_rendering_init() {
     shader_binding_info_t binding_info = {};
     binding_info.binding_count = 1;
     binding_info.binding_descriptions = LN_MALLOC(VkVertexInputBindingDescription, 1);
@@ -220,7 +251,7 @@ void ui_core_init() {
         "shaders/SPV/uiquad.frag.spv"
     };
 
-    create_2d_shader(
+    colored_quads_shader = create_2d_shader(
         &binding_info,
         0,
         NULL,
@@ -229,65 +260,82 @@ void ui_core_init() {
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         r_motion_blur_stage(),
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+    colored_list.vtx_buffer = create_gpu_buffer(
+        MAX_QUADS_TO_RENDER * 6 * sizeof(gui_colored_vertex_t),
+        colored_list.vertices,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+    textured_list.vtx_buffer = create_gpu_buffer(
+        MAX_QUADS_TO_RENDER * 6 * sizeof(gui_textured_vertex_t),
+        textured_list.vertices,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 }
 
-void gui_textured_vertex_render_list_t::mark_section(
+void mark_ui_textured_section(
     VkDescriptorSet set) {
-    if (section_count) {
+    if (textured_list.section_count) {
         // Get current section
-        vertex_section_t *next = &sections[section_count];
+        vertex_section_t *next = &textured_list.sections[textured_list.section_count];
 
-        next->section_start = sections[section_count - 1].section_start + sections[section_count - 1].section_size;
+        next->section_start = textured_list.sections[textured_list.section_count - 1].section_start + textured_list.sections[textured_list.section_count - 1].section_size;
         // Starts at 0. Every vertex that gets pushed adds to this variable
         next->section_size = 0;
 
-        textures[section_count] = set;
+        textured_list.textures[textured_list.section_count] = set;
 
-        ++section_count;
+        ++textured_list.section_count;
     }
     else {
-        sections[0].section_start = 0;
-        sections[0].section_size = 0;
+        textured_list.sections[0].section_start = 0;
+        textured_list.sections[0].section_size = 0;
 
-        textures[0] = set;
+        textured_list.textures[0] = set;
             
-        ++section_count;
+        ++textured_list.section_count;
     }
 }
 
-void gui_textured_vertex_render_list_t::push_vertex(
+void push_textured_vertex(
     const gui_textured_vertex_t &vertex) {
-    vertices[vertex_count++] = vertex;
-    sections[section_count - 1].section_size += 1;
+    textured_list.vertices[textured_list.vertex_count++] = vertex;
+    textured_list.sections[textured_list.section_count - 1].section_size += 1;
 }
 
-void gui_textured_vertex_render_list_t::push_ui_box(
+void push_textured_ui_box(
     const ui_box_t *box) {
     vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
+    vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
     
+    push_textured_vertex({normalized_base_position, vector2_t(0.0f, 1.0f), box->color});
+    push_textured_vertex({normalized_base_position + vector2_t(0.0f, normalized_size.y), vector2_t(0.0f), box->color});
+    push_textured_vertex({normalized_base_position + vector2_t(normalized_size.x, 0.0f), vector2_t(1.0f), box->color});
+    push_textured_vertex({normalized_base_position + vector2_t(0.0f, normalized_size.y), vector2_t(0.0f), box->color});
+    push_textured_vertex({normalized_base_position + vector2_t(normalized_size.x, 0.0f), vector2_t(1.0f), box->color});
+    push_textured_vertex({normalized_base_position + normalized_size, vector2_t(1.0f, 0.0f), box->color});
 }
 
-void gui_textured_vertex_render_list_t::clear_containers() {
-    section_count = 0;
-    vertex_count = 0;
+void clear_texture_list_containers() {
+    textured_list.section_count = 0;
+    textured_list.vertex_count = 0;
 }
 
-void gui_textured_vertex_render_list_t::sync_gpu_with_vertex_list(
+void sync_gpu_with_textured_vertex_list(
     VkCommandBuffer command_buffer) {
-    if (vertex_count) {
+    if (textured_list.vertex_count) {
         update_gpu_buffer(
             command_buffer,
             VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             0,
-            sizeof(gui_textured_vertex_t) * vertex_count,
-            vertices,
-            &vtx_buffer);
+            sizeof(gui_textured_vertex_t) * textured_list.vertex_count,
+            textured_list.vertices,
+            &textured_list.vtx_buffer);
     }
 }
 
-void gui_textured_vertex_render_list_t::render_textured_quads(
+void render_textured_quads(
     VkCommandBuffer command_buffer) {
-    if (vertex_count) {
+    if (textured_list.vertex_count) {
         VkViewport viewport = {};
         viewport.width = (float)r_swapchain_extent().width;
         viewport.height = (float)r_swapchain_extent().height;
@@ -301,19 +349,19 @@ void gui_textured_vertex_render_list_t::render_textured_quads(
         vkCmdBindPipeline(
             command_buffer,
             VK_PIPELINE_BIND_POINT_GRAPHICS,
-            shader.pipeline);
+            textured_quads_shader.pipeline);
 
         // Loop through each section, bind texture, and render the quads from the section
-        for (uint32_t current_section = 0; current_section < section_count; ++current_section) {
-            vertex_section_t *section = &sections[current_section];
+        for (uint32_t current_section = 0; current_section < textured_list.section_count; ++current_section) {
+            vertex_section_t *section = &textured_list.sections[current_section];
                 
             vkCmdBindDescriptorSets(
                 command_buffer,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
-                shader.layout,
+                textured_quads_shader.layout,
                 0,
                 1,
-                &textures[current_section],
+                &textured_list.textures[current_section],
                 0,
                 NULL);
 
@@ -322,7 +370,7 @@ void gui_textured_vertex_render_list_t::render_textured_quads(
                 command_buffer,
                 0,
                 1,
-                &vtx_buffer.buffer,
+                &textured_list.vtx_buffer.buffer,
                 &zero);
 
             vkCmdDraw(
@@ -333,4 +381,88 @@ void gui_textured_vertex_render_list_t::render_textured_quads(
                 0);
         }
     }
+}
+
+void push_colored_vertex(
+    const gui_colored_vertex_t &vertex) {
+    colored_list.vertices[colored_list.vertex_count++] = vertex;
+}
+
+void push_colored_ui_box(
+    const ui_box_t *box) {
+    vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
+    vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
+    
+    push_colored_vertex({normalized_base_position, box->color});
+    push_colored_vertex({normalized_base_position + vector2_t(0.0f, normalized_size.y), box->color});
+    push_colored_vertex({normalized_base_position + vector2_t(normalized_size.x, 0.0f), box->color});
+    push_colored_vertex({normalized_base_position + vector2_t(0.0f, normalized_size.y), box->color});
+    push_colored_vertex({normalized_base_position + vector2_t(normalized_size.x, 0.0f), box->color});
+    push_colored_vertex({normalized_base_position + normalized_size, box->color});
+}
+
+void clear_ui_color_containers() {
+    colored_list.vertex_count = 0;
+}
+
+void sync_gpu_with_colored_vertex_list(
+    VkCommandBuffer command_buffer) {
+    if (colored_list.vertex_count) {
+        update_gpu_buffer(
+            command_buffer,
+            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+            0,
+            sizeof(gui_colored_vertex_t) * colored_list.vertex_count,
+            colored_list.vertices,
+            &colored_list.vtx_buffer);
+    }
+}
+
+void render_colored_quads(
+    VkCommandBuffer command_buffer) {
+    if (colored_list.vertex_count) {
+        VkViewport viewport = {};
+        viewport.width = (float)r_swapchain_extent().width;
+        viewport.height = (float)r_swapchain_extent().height;
+        viewport.maxDepth = 1;
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+        VkRect2D rect = {};
+        rect.extent = r_swapchain_extent();
+        vkCmdSetScissor(command_buffer, 0, 1, &rect);
+
+        vkCmdBindPipeline(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            colored_quads_shader.pipeline);
+
+        VkDeviceSize zero = 0;
+        vkCmdBindVertexBuffers(
+            command_buffer,
+            0,
+            1,
+            &colored_list.vtx_buffer.buffer,
+            &zero);
+
+        vkCmdDraw(
+            command_buffer,
+            colored_list.vertex_count,
+            1,
+            0,
+            0);
+    }
+}
+
+void render_submitted_ui(
+    VkCommandBuffer transfer_command_buffer,
+    VkCommandBuffer ui_command_buffer) {
+    sync_gpu_with_colored_vertex_list(transfer_command_buffer);
+    sync_gpu_with_textured_vertex_list(transfer_command_buffer);
+
+    render_colored_quads(ui_command_buffer);
+    render_textured_quads(ui_command_buffer);
+
+    // Clear containers
+    clear_texture_list_containers();
+    clear_ui_color_containers();
 }

@@ -783,6 +783,8 @@ void renderer_init(
 
     s_sensitive_buffer_deletion_init();
 
+    ui_rendering_init();
+
     frame_id = 0;
 }
 

@@ -1008,7 +1008,6 @@ void r_execute_motion_blur_pass(
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
     vkCmdExecuteCommands(command_buffer, 1, &post_process_command_buffer[current_command_buffer]);
-
     vkCmdExecuteCommands(command_buffer, 1, &ui_command_buffer);
 
     vkCmdEndRenderPass(command_buffer);

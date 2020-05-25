@@ -1,4 +1,5 @@
 // Engine core
+#include "ui.hpp"
 #include <time.h>
 #include "net.hpp"
 #include <stdio.h>
@@ -113,6 +114,8 @@ static void s_render(
     eye_3d_info_t eye_info = create_eye_info();
     lighting_info_t lighting_info = create_lighting_info();
 
+    ui_submit();
+
     gpu_data_sync(
         final_command_buffer,
         &eye_info,
@@ -205,6 +208,10 @@ static void s_run_windowed_game() {
             render_command_buffer,
             render_shadow_command_buffer,
             transfer_command_buffer);
+
+        render_submitted_ui(
+            transfer_command_buffer,
+            ui_command_buffer);
 
         end_command_buffer(render_command_buffer);
         end_command_buffer(transfer_command_buffer);
@@ -368,6 +375,8 @@ static void s_windowed_game_main(
     input_interface_data_t input_interface = input_interface_init();
 
     game_input_settings_init();
+
+    ui_init();
 
     renderer_init(
         input_interface.application_name,
