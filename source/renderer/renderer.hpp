@@ -7,6 +7,10 @@
 typedef int32_t result_t;
 typedef void(*surface_proc_t)(struct VkInstance_T *instance, struct VkSurfaceKHR_T **surface, void *window);
 
+// (For server application - just console application), we aren't linking with the renderer static library
+// So there won't be any binary definitions for the renderer's functions.
+// If we aren't linking against renderer, we need to give all the functions an inline definition
+// That will just be an empty body, hence these macros.
 #if LINK_AGAINST_RENDERER
 #define DECLARE_RENDERER_PROC(return_type, name, ...)   \
     return_type name(__VA_ARGS__)
@@ -23,7 +27,9 @@ typedef void(*surface_proc_t)(struct VkInstance_T *instance, struct VkSurfaceKHR
     inline return_type name(__VA_ARGS__) {}
 #endif
 
-/* Initialise the renderer (graphics API, rendering pipeline, mesh managers, ...) */
+
+
+// CORE VULKAN FUNCTIONS //////////////////////////////////////////////////////
 DECLARE_VOID_RENDERER_PROC(void, renderer_init,
     const char *application_name,
     surface_proc_t create_surface,
@@ -34,7 +40,6 @@ DECLARE_VOID_RENDERER_PROC(void, renderer_init,
 DECLARE_VOID_RENDERER_PROC(void, destroy_renderer,
     void);
 
-/* Swapchain */
 DECLARE_VOID_RENDERER_PROC(void, handle_resize,
     uint32_t width,
     uint32_t height);
@@ -49,56 +54,6 @@ struct swapchain_information_t {
 DECLARE_VOID_RENDERER_PROC(void, swapchain_information,
     swapchain_information_t *dst);
 
-/* Rendering begin / end */
-DECLARE_RENDERER_PROC(VkCommandBuffer, begin_frame, void);
-
-struct eye_3d_info_t {
-    vector3_t position;
-    vector3_t direction;
-    vector3_t up;
-    float fov;
-    float near;
-    float far;
-    float dt;
-};
-
-#define MAX_LIGHTS 10
-
-struct lighting_info_t {
-    vector4_t ws_light_positions[MAX_LIGHTS];
-    vector4_t ws_light_directions[MAX_LIGHTS];
-    vector4_t light_colors[MAX_LIGHTS];
-    uint32_t lights_count;
-
-    vector4_t ws_directional_light;
-};
-
-DECLARE_VOID_RENDERER_PROC(void, render_environment,
-    VkCommandBuffer command_buffer);
-
-DECLARE_VOID_RENDERER_PROC(void, gpu_data_sync,
-    VkCommandBuffer command_buffer,
-    eye_3d_info_t *eye,
-    lighting_info_t *lighting);
-
-DECLARE_VOID_RENDERER_PROC(void, post_process_scene,
-    VkCommandBuffer ui_command_buffer);
-
-DECLARE_VOID_RENDERER_PROC(void, end_frame, void);
-
-DECLARE_VOID_RENDERER_PROC(void, begin_scene_rendering,
-    VkCommandBuffer command_buffer);
-
-DECLARE_VOID_RENDERER_PROC(void, end_scene_rendering,
-    VkCommandBuffer command_buffer);
-
-DECLARE_VOID_RENDERER_PROC(void, begin_shadow_rendering,
-    VkCommandBuffer command_buffer);
-
-DECLARE_VOID_RENDERER_PROC(void, end_shadow_rendering,
-    VkCommandBuffer command_buffer);
-
-/* Command buffer utility */
 DECLARE_VOID_RENDERER_PROC(void, create_command_buffers,
     VkCommandBufferLevel level, 
     VkCommandBuffer *command_buffers, uint32_t count);
@@ -185,7 +140,149 @@ DECLARE_RENDERER_PROC(VkBufferMemoryBarrier, create_gpu_buffer_barrier,
     uint32_t offset,
     uint32_t max);
 
-/* Mesh */
+struct shader_binding_info_t {
+    uint32_t binding_count;
+    VkVertexInputBindingDescription *binding_descriptions;
+
+    uint32_t attribute_count;
+    VkVertexInputAttributeDescription *attribute_descriptions;
+};
+
+struct shader_t {
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
+    VkShaderStageFlags flags;
+};
+
+// Disabled depth
+DECLARE_RENDERER_PROC(shader_t, create_2d_shader,
+    shader_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags,
+    struct rpipeline_stage_t *stage,
+    VkPrimitiveTopology topology);
+
+// Enables depth and will always happen in deferred stage
+DECLARE_RENDERER_PROC(shader_t, create_3d_shader_shadow,
+    shader_binding_info_t *binding_info,
+    uint32_t push_constant_size, VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags);
+
+// NOTE: Very important
+// FOR 3D MESHES (NOT ANIMATED) THE FIRST DESCRIPTOR TYPE NEEDS TO BE UNIFORM BUFFER
+// FOR CAMERA TRANSFORMS UNIFORM BUFFER WHICH WILL PASSED BY DEFAULT FOR SUBMIT_MESH FUNCTION
+// FOR SKELETAL ANIMATIONS, THE SECOND NEEDS TO BE UNIFORM BUFFER AS WELL BECAUSE OF SKELETAL
+// JOINT TRANSFORMS. THIS WILL BE PASSED TO SUBMIT_SKELETAL_MESH FUNCTION.
+DECLARE_RENDERER_PROC(shader_t, create_3d_shader_color,
+    shader_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags,
+    VkCullModeFlags culling);
+
+/* Descriptor set */
+DECLARE_RENDERER_PROC(VkDescriptorSet, create_image_descriptor_set,
+    VkImageView image,
+    VkSampler sampler,
+    VkDescriptorType type);
+
+DECLARE_RENDERER_PROC(VkDescriptorSet, create_image_descriptor_set,
+    VkImageView *images,
+    VkSampler *samplers,
+    uint32_t count,
+    VkDescriptorType type);
+
+DECLARE_RENDERER_PROC(VkDescriptorSet, create_buffer_descriptor_set,
+    VkBuffer buffer,
+    VkDeviceSize buffer_size,
+    VkDescriptorType type);
+
+DECLARE_RENDERER_PROC(VkDescriptorSet, create_buffer_descriptor_set,
+    VkBuffer *buffers,
+    uint32_t count,
+    VkDeviceSize buffer_size,
+    VkDescriptorType type);
+
+struct texture_t {
+    VkImage image;
+    VkImageView image_view;
+    VkDeviceMemory image_memory;
+    VkSampler sampler;
+    VkFormat format;
+
+    VkDescriptorSet descriptor;
+};
+
+DECLARE_RENDERER_PROC(texture_t, create_texture,
+    const char *path,
+    VkFormat format,
+    void *data,
+    uint32_t width, uint32_t height,
+    VkFilter filter);
+
+
+
+// RENDERING FUNCTIONALITY ////////////////////////////////////////////////////
+DECLARE_RENDERER_PROC(VkCommandBuffer, begin_frame, void);
+
+DECLARE_VOID_RENDERER_PROC(void, end_frame, void);
+
+// This needs to be created and passed to the renderer module to update camera transforms
+// And lighting information
+struct eye_3d_info_t {
+    vector3_t position;
+    vector3_t direction;
+    vector3_t up;
+    float fov;
+    float near;
+    float far;
+    float dt;
+};
+
+#define MAX_LIGHTS 10
+
+struct lighting_info_t {
+    vector4_t ws_light_positions[MAX_LIGHTS];
+    vector4_t ws_light_directions[MAX_LIGHTS];
+    vector4_t light_colors[MAX_LIGHTS];
+    uint32_t lights_count;
+
+    vector4_t ws_directional_light;
+};
+
+DECLARE_VOID_RENDERER_PROC(void, gpu_data_sync,
+    VkCommandBuffer command_buffer,
+    eye_3d_info_t *eye,
+    lighting_info_t *lighting);
+
+DECLARE_VOID_RENDERER_PROC(void, render_environment,
+    VkCommandBuffer command_buffer);
+
+DECLARE_VOID_RENDERER_PROC(void, post_process_scene,
+    VkCommandBuffer ui_command_buffer);
+
+DECLARE_VOID_RENDERER_PROC(void, begin_scene_rendering,
+    VkCommandBuffer command_buffer);
+
+DECLARE_VOID_RENDERER_PROC(void, end_scene_rendering,
+    VkCommandBuffer command_buffer);
+
+DECLARE_VOID_RENDERER_PROC(void, begin_shadow_rendering,
+    VkCommandBuffer command_buffer);
+
+DECLARE_VOID_RENDERER_PROC(void, end_shadow_rendering,
+    VkCommandBuffer command_buffer);
+
+
+
+// MESH AND ANIMATIONS ////////////////////////////////////////////////////////
 enum buffer_type_t : char {
     BT_INVALID_BUFFER_TYPE,
     BT_INDICES,
@@ -247,14 +344,6 @@ DECLARE_VOID_RENDERER_PROC(void, create_mesh_vbo_final_list,
 enum internal_mesh_type_t {
     IM_SPHERE,
     IM_CUBE
-};
-
-struct shader_binding_info_t {
-    uint32_t binding_count;
-    VkVertexInputBindingDescription *binding_descriptions;
-
-    uint32_t attribute_count;
-    VkVertexInputAttributeDescription *attribute_descriptions;
 };
 
 DECLARE_VOID_RENDERER_PROC(void, load_mesh_internal,
@@ -371,12 +460,6 @@ DECLARE_VOID_RENDERER_PROC(void, sync_gpu_with_animated_transforms,
     animated_instance_t *instance,
     VkCommandBuffer command_buffer);
 
-struct shader_t {
-    VkPipeline pipeline;
-    VkPipelineLayout layout;
-    VkShaderStageFlags flags;
-};
-
 struct mesh_render_data_t {
     matrix4_t model;
     vector4_t color;
@@ -388,40 +471,6 @@ struct mesh_render_data_t {
     // To add later with texture stuff
     int32_t texture_index;
 };
-
-// Disabled depth
-DECLARE_RENDERER_PROC(shader_t, create_2d_shader,
-    shader_binding_info_t *binding_info,
-    uint32_t push_constant_size,
-    VkDescriptorType *descriptor_layout_types,
-    uint32_t descriptor_layout_count,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    struct rpipeline_stage_t *stage,
-    VkPrimitiveTopology topology);
-
-// Enables depth and will always happen in deferred stage
-DECLARE_RENDERER_PROC(shader_t, create_3d_shader_shadow,
-    shader_binding_info_t *binding_info,
-    uint32_t push_constant_size, VkDescriptorType *descriptor_layout_types,
-    uint32_t descriptor_layout_count,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags);
-
-
-// NOTE: Very important
-// FOR 3D MESHES (NOT ANIMATED) THE FIRST DESCRIPTOR TYPE NEEDS TO BE UNIFORM BUFFER
-// FOR CAMERA TRANSFORMS UNIFORM BUFFER WHICH WILL PASSED BY DEFAULT FOR SUBMIT_MESH FUNCTION
-// FOR SKELETAL ANIMATIONS, THE SECOND NEEDS TO BE UNIFORM BUFFER AS WELL BECAUSE OF SKELETAL
-// JOINT TRANSFORMS. THIS WILL BE PASSED TO SUBMIT_SKELETAL_MESH FUNCTION.
-DECLARE_RENDERER_PROC(shader_t, create_3d_shader_color,
-    shader_binding_info_t *binding_info,
-    uint32_t push_constant_size,
-    VkDescriptorType *descriptor_layout_types,
-    uint32_t descriptor_layout_count,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkCullModeFlags culling);
 
 // By default, a uniform buffer is added for camera transforms
 // If STATIC is chosen, no extra descriptors will be added to shader information
@@ -489,52 +538,16 @@ DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh_shadow,
     mesh_render_data_t *render_data,
     animated_instance_t *instance);
 
-/* Descriptor set */
-DECLARE_RENDERER_PROC(VkDescriptorSet, create_image_descriptor_set,
-    VkImageView image,
-    VkSampler sampler,
-    VkDescriptorType type);
 
-DECLARE_RENDERER_PROC(VkDescriptorSet, create_image_descriptor_set,
-    VkImageView *images,
-    VkSampler *samplers,
-    uint32_t count,
-    VkDescriptorType type);
 
-DECLARE_RENDERER_PROC(VkDescriptorSet, create_buffer_descriptor_set,
-    VkBuffer buffer,
-    VkDeviceSize buffer_size,
-    VkDescriptorType type);
-
-DECLARE_RENDERER_PROC(VkDescriptorSet, create_buffer_descriptor_set,
-    VkBuffer *buffers,
-    uint32_t count,
-    VkDeviceSize buffer_size,
-    VkDescriptorType type);
-
-struct texture_t {
-    VkImage image;
-    VkImageView image_view;
-    VkDeviceMemory image_memory;
-    VkSampler sampler;
-    VkFormat format;
-
-    VkDescriptorSet descriptor;
-};
-
-DECLARE_RENDERER_PROC(texture_t, create_texture,
-    const char *path,
-    VkFormat format,
-    void *data,
-    uint32_t width, uint32_t height,
-    VkFilter filter);
-
-// Debug stuff
+// DEBUGGIN ///////////////////////////////////////////////////////////////////
 typedef void (*debug_ui_proc_t)();
 DECLARE_VOID_RENDERER_PROC(void, add_debug_ui_proc,
     debug_ui_proc_t proc);
 
-// User interface stuff (more implementation side like rendering) - actual menus will be implemented somewhere else
+
+
+// USER INTERFACE /////////////////////////////////////////////////////////////
 enum coordinate_type_t { PIXEL, GLSL };
 
 struct ui_vector2_t {

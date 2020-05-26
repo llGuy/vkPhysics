@@ -5,6 +5,9 @@
 #include <common/tools.hpp>
 #include <common/serialiser.hpp>
 
+
+
+// PACKET TYPES ///////////////////////////////////////////////////////////////
 enum packet_type_t {
     // Client sends to server when requesting to join game
     PT_CONNECTION_REQUEST,
@@ -24,6 +27,9 @@ enum packet_type_t {
     PT_CHUNK_VOXELS,
 };
 
+
+
+// HEADER /////////////////////////////////////////////////////////////////////
 struct packet_header_t {
     union {
         struct {
@@ -50,6 +56,9 @@ void n_deserialise_packet_header(
     packet_header_t *header,
     serialiser_t *serialiser);
 
+
+
+// DEFINITION OF PACKET TYPES /////////////////////////////////////////////////
 #define CLIENT_NAME_MAX_LENGTH 50
 
 struct packet_connection_request_t {

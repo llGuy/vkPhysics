@@ -128,6 +128,9 @@ static accumulated_predicted_modification_t *s_add_acc_predicted_modification() 
     return apm_ptr;
 }
 
+
+
+// CLIENT CODE ////////////////////////////////////////////////////////////////
 static void s_request_available_servers() {
     serialiser_t serialiser = {};
     serialiser.init(20);
@@ -1257,6 +1260,9 @@ static void s_send_disconnect_to_server() {
     s_send_to(&serialiser, bound_server_address);
 }
 
+
+
+// SERVER CODE ////////////////////////////////////////////////////////////////
 static bool started_server = 0;
 
 static void s_start_server(

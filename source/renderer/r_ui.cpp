@@ -159,6 +159,14 @@ void ui_box_t::update_position(
 
     gls_position = ui_vector2_t(gls_relative_position.x, gls_relative_position.y);
 
+    if (relative_to == RT_CENTER) { 
+        vector2_t normalized_size = vector2_t(0.0f) - gls_current_size.to_fvec2();
+        vector2_t normalized_base_position = vector2_t(0.0f) - normalized_size / 2.0f;
+
+        gls_position.fx = normalized_base_position.x;
+        gls_position.fy = normalized_base_position.y;
+    }
+
     px_position = glsl_to_pixel_coord(
         gls_position,
         backbuffer_resolution);
