@@ -376,14 +376,14 @@ static void s_windowed_game_main(
 
     game_input_settings_init();
 
-    ui_init();
-
     renderer_init(
         input_interface.application_name,
         input_interface.surface_creation_proc,
         input_interface.window,
         input_interface.surface_width,
         input_interface.surface_height);
+
+    ui_init();
     
     net_init(&events);
 

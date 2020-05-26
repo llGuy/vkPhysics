@@ -8,8 +8,8 @@ void u_hud_init() {
     crosshair.init(
         RT_CENTER,
         1.0f,
-        ui_vector2_t(-0.5f, -0.5f),
-        ui_vector2_t(1.0f, 1.0f),
+        ui_vector2_t(0.0f, 0.0f),
+        ui_vector2_t(0.01f, 0.01f),
         NULL,
         0xFFFFFFFF);
 }

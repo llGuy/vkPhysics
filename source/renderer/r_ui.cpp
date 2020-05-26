@@ -160,8 +160,9 @@ void ui_box_t::update_position(
     gls_position = ui_vector2_t(gls_relative_position.x, gls_relative_position.y);
 
     if (relative_to == RT_CENTER) { 
-        vector2_t normalized_size = vector2_t(0.0f) - gls_current_size.to_fvec2();
+        vector2_t normalized_size = gls_current_size.to_fvec2() * 2.0f;
         vector2_t normalized_base_position = vector2_t(0.0f) - normalized_size / 2.0f;
+        normalized_base_position = (normalized_base_position + vector2_t(1.0f)) / 2.0f;
 
         gls_position.fx = normalized_base_position.x;
         gls_position.fy = normalized_base_position.y;
@@ -198,11 +199,11 @@ void ui_box_t::init(
     aspect_ratio = in_aspect_ratio;
     gls_max_values = in_gls_max_values;
     
-    update_size(backbuffer_resolution);
+    update_size(dst_resolution);
     
     relative_to = in_relative_to;
     
-    update_position(backbuffer_resolution);
+    update_position(dst_resolution);
     
     this->color = in_color;
 }
@@ -400,7 +401,7 @@ void push_colored_ui_box(
     const ui_box_t *box) {
     vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
     vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
-    
+
     push_colored_vertex({normalized_base_position, box->color});
     push_colored_vertex({normalized_base_position + vector2_t(0.0f, normalized_size.y), box->color});
     push_colored_vertex({normalized_base_position + vector2_t(normalized_size.x, 0.0f), box->color});
