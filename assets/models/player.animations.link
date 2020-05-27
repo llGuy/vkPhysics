@@ -1,0 +1,13 @@
+# Links animations together
+# "link" command links animation name to player animated state
+# animated state 0 = idle
+# animated state 1 = walking
+# animated state 2 = running
+# ...
+
+link 0 "Armature|Idle"
+link 1 "Armature|Walking"
+link 2 "Armature|Running"
+
+# Also defines how bones interact
+# May also link bones to specific IDs

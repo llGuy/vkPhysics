@@ -17,7 +17,8 @@ enum file_load_flags_t {
     FLF_TEXT,
     FLF_BINARY = 1 << 1,
     FLF_IMAGE = 1 << 2,
-    FLF_WRITEABLE = 1 << 3
+    FLF_WRITEABLE = 1 << 3,
+    FLF_NONE = 1 << 4
 };
 
 void files_init();

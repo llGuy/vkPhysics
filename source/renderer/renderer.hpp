@@ -427,6 +427,7 @@ struct animation_cycles_t {
 
 DECLARE_VOID_RENDERER_PROC(void, load_animation_cycles,
     animation_cycles_t *cycles,
+    const char *linker_path, // Defines relationship between bone and index + blending between animations (priorities)
     const char *path);
 
 struct animated_instance_t {

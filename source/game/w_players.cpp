@@ -749,7 +749,7 @@ void w_players_gpu_sync_and_render(
     struct world_t *world) {
     (void)transfer_command_buffer;
     
-#if 0
+#if 1
     interpolate_joints(&test_instance0, logic_delta_time());
     sync_gpu_with_animated_transforms(&test_instance0, transfer_command_buffer);
 
@@ -774,7 +774,7 @@ void w_players_gpu_sync_and_render(
         &render_data);
 #endif
 
-#if 1
+#if 0
     for (uint32_t i = 0; i < world->players.data_count; ++i) {
         player_t *p = world->players[i];
         if (p) {

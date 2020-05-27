@@ -9,6 +9,7 @@
 #include <common/string.hpp>
 #include <common/allocators.hpp>
 #include <common/serialiser.hpp>
+#include <common/containers.hpp>
 
 void push_buffer_to_mesh(
     buffer_type_t buffer_type,
@@ -523,8 +524,90 @@ void load_skeleton(
     }
 }
 
+// The same linker will be used for al animations
+static hash_table_t<uint32_t, 25, 5, 5> animation_name_linker;
+
+static bool s_str_comp(
+    const char *a,
+    uint32_t a_len,
+    const char *b,
+    uint32_t b_len) {
+    if (a_len == b_len) {
+        for (uint32_t i = 0; i < a_len; ++i) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+static void s_fill_animation_linker(
+    const char *linker_path) {
+    file_handle_t file_handle = create_file(linker_path, FLF_NONE);
+    file_contents_t contents = read_file(file_handle); // Just text
+    free_file(file_handle);
+
+    enum parser_state_t {
+        PS_NONE,
+        PS_COMMENT,
+        PS_NEW_INSTRUCTION,
+        PS_END_OF_LINE,
+        PS_INSTRUCTION_KEYWORD,
+        PS_WHITESPACE,
+        PS_LINK_INSTRUCTION
+    } parser_state;
+
+    const char *current_keyword = NULL;
+    uint32_t current_keyword_length = 0:
+
+    for (char *c = (char *)contents.data; c != 0; ++c) {
+        // Get parser state
+        if (*c == '#') {
+            // Go until end of line
+            parser_state = PS_COMMENT;
+        }
+        else if (*c == '\n') {
+            parser_state = PS_END_OF_LINE;
+        }
+        else if (*c == ' ' || *c == '\t') {
+            parser_state = PS_WHITESPACE;
+        }
+
+        switch (parser_state) {
+        case PS_COMMENT: {
+        } break;
+
+        case PS_END_OF_LINE: {
+            parser_state = PS_NEW_INSTRUCTION;
+            current_keyword = c + 1;
+        } break;
+
+        case PS_NEW_INSTRUCTION: {
+            current_keyword_length += 1;
+        } break;
+
+        case PS_WHITESPACE: {
+            if (current_keyword) {
+                // Process keyword
+                if (s_str_comp(current_keyword, current_keyword_length, "link", strlen("link"))) {
+                    parser_state = PS_LINK_INSTRUCTION;
+                }
+            }
+            else {
+                // Do nothing
+            }
+        }
+        }
+    }
+}
+
 void load_animation_cycles(
     animation_cycles_t *cycles,
+    const char *linker_path,
     const char *path) {
     file_handle_t file_handle = create_file(path, FLF_BINARY);
     file_contents_t contents = read_file(file_handle);
@@ -584,7 +667,7 @@ void animated_instance_init(
     instance->current_animation_time = 0.0f;
     instance->is_interpolating_between_cycles = 0;
     instance->skeleton = skeleton;
-    instance->next_bound_cycle = 0;
+    instance->next_bound_cycle = 2;
     instance->interpolated_transforms = FL_MALLOC(matrix4_t, skeleton->joint_count);
     instance->current_positions = FL_MALLOC(vector3_t, skeleton->joint_count);
     instance->current_rotations = FL_MALLOC(quaternion_t, skeleton->joint_count);
