@@ -129,7 +129,8 @@ void r_rpipeline_descriptor_set_output_init(
     rpipeline_stage_t *stage);
 
 VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(
-    rpipeline_stage_t *stage);
+    rpipeline_stage_t *stage,
+    alpha_blending_t alpha_blending = AB_NONE);
 
 VkAttachmentDescription r_fill_color_attachment_description(
     VkImageLayout layout,

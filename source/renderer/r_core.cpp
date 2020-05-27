@@ -1826,15 +1826,16 @@ texture_t create_texture(
     uint32_t pixel_component_size = 1;
     int32_t x, y, channels;
     void *pixels;
+
+    file_handle_t file_handle;
+    file_contents_t contents;
     if (!data && path) {
-        file_handle_t file_handle = create_file(path, FLF_IMAGE);
-        file_contents_t contents = read_file(file_handle);
+        file_handle = create_file(path, FLF_IMAGE);
+        contents = read_file(file_handle);
         pixels = contents.pixels;
         x = contents.width;
         y = contents.height;
         channels = contents.channels;
-        free_image(contents);
-        free_file(file_handle);
     }
     else {
         switch (format) {
@@ -1987,6 +1988,11 @@ texture_t create_texture(
     vkFreeMemory(r_device(), staging.memory, NULL);
     vkDestroyBuffer(r_device(), staging.buffer, NULL);
 
+    if (!data && path) {
+        free_image(contents);
+        free_file(file_handle);
+    }
+
     return texture;
 }
 
@@ -2028,7 +2034,8 @@ shader_t create_2d_shader(
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
     rpipeline_stage_t *stage,
-    VkPrimitiveTopology topology) {
+    VkPrimitiveTopology topology,
+    alpha_blending_t alpha_blending) {
     VkPipelineLayout layout = r_create_pipeline_layout(
         shader_flags,
         descriptor_layout_types,
@@ -2079,7 +2086,7 @@ shader_t create_2d_shader(
     multisample_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisample_info.minSampleShading = 1.0f;
 
-    VkPipelineColorBlendStateCreateInfo blend_info = r_fill_blend_state_info(stage);
+    VkPipelineColorBlendStateCreateInfo blend_info = r_fill_blend_state_info(stage, alpha_blending);
 
     VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     

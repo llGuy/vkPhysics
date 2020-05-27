@@ -235,7 +235,7 @@ static struct gui_colored_vertex_render_list_t {
 static shader_t textured_quads_shader;
 static shader_t colored_quads_shader;
 
-void ui_rendering_init() {
+static void s_colored_shader_init() {
     shader_binding_info_t binding_info = {};
     binding_info.binding_count = 1;
     binding_info.binding_descriptions = LN_MALLOC(VkVertexInputBindingDescription, 1);
@@ -243,17 +243,17 @@ void ui_rendering_init() {
     binding_info.binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     binding_info.binding_descriptions[0].stride = sizeof(gui_colored_vertex_t);
 
-    binding_info.attribute_count = 1;
+    binding_info.attribute_count = 2;
     binding_info.attribute_descriptions = LN_MALLOC(VkVertexInputAttributeDescription, 2);
     binding_info.attribute_descriptions[0].location = 0;
     binding_info.attribute_descriptions[0].binding = 0;
     binding_info.attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
     binding_info.attribute_descriptions[0].offset = 0;
 
-    binding_info.attribute_descriptions[0].location = 1;
-    binding_info.attribute_descriptions[0].binding = 0;
-    binding_info.attribute_descriptions[0].format = VK_FORMAT_R32_UINT;
-    binding_info.attribute_descriptions[0].offset = sizeof(vector2_t);
+    binding_info.attribute_descriptions[1].location = 1;
+    binding_info.attribute_descriptions[1].binding = 0;
+    binding_info.attribute_descriptions[1].format = VK_FORMAT_R32_UINT;
+    binding_info.attribute_descriptions[1].offset = sizeof(vector2_t);
 
     const char *color_shader_paths[] = {
         "shaders/SPV/uiquad.vert.spv",
@@ -269,6 +269,55 @@ void ui_rendering_init() {
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         r_motion_blur_stage(),
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+}
+
+static void s_textured_shader_init() {
+    shader_binding_info_t binding_info = {};
+    binding_info.binding_count = 1;
+    binding_info.binding_descriptions = LN_MALLOC(VkVertexInputBindingDescription, 1);
+    binding_info.binding_descriptions[0].binding = 0;
+    binding_info.binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    binding_info.binding_descriptions[0].stride = sizeof(gui_textured_vertex_t);
+
+    binding_info.attribute_count = 3;
+    binding_info.attribute_descriptions = LN_MALLOC(VkVertexInputAttributeDescription, 3);
+    binding_info.attribute_descriptions[0].location = 0;
+    binding_info.attribute_descriptions[0].binding = 0;
+    binding_info.attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    binding_info.attribute_descriptions[0].offset = 0;
+
+    binding_info.attribute_descriptions[1].location = 1;
+    binding_info.attribute_descriptions[1].binding = 0;
+    binding_info.attribute_descriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+    binding_info.attribute_descriptions[1].offset = sizeof(vector2_t);
+
+    binding_info.attribute_descriptions[2].location = 2;
+    binding_info.attribute_descriptions[2].binding = 0;
+    binding_info.attribute_descriptions[2].format = VK_FORMAT_R32_UINT;
+    binding_info.attribute_descriptions[2].offset = sizeof(vector2_t) + sizeof(vector2_t);
+
+    const char *texture_shader_paths[] = {
+        "shaders/SPV/uiquadtex.vert.spv",
+        "shaders/SPV/uiquadtex.frag.spv"
+    };
+
+    VkDescriptorType texture_descriptor_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+    textured_quads_shader = create_2d_shader(
+        &binding_info,
+        0,
+        &texture_descriptor_type,
+        1,
+        texture_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        r_motion_blur_stage(),
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        AB_ONE_MINUS_SRC_ALPHA);
+}
+
+void ui_rendering_init() {
+    s_colored_shader_init();
+    s_textured_shader_init();
 
     colored_list.vtx_buffer = create_gpu_buffer(
         MAX_QUADS_TO_RENDER * 6 * sizeof(gui_colored_vertex_t),
@@ -309,6 +358,20 @@ void push_textured_vertex(
     const gui_textured_vertex_t &vertex) {
     textured_list.vertices[textured_list.vertex_count++] = vertex;
     textured_list.sections[textured_list.section_count - 1].section_size += 1;
+}
+
+void push_textured_ui_box(
+    const ui_box_t *box,
+    vector2_t *uvs) {
+    vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
+    vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
+    
+    push_textured_vertex({normalized_base_position, uvs[0], box->color});
+    push_textured_vertex({normalized_base_position + vector2_t(0.0f, normalized_size.y), uvs[1], box->color});
+    push_textured_vertex({normalized_base_position + vector2_t(normalized_size.x, 0.0f), uvs[2], box->color});
+    push_textured_vertex({normalized_base_position + vector2_t(0.0f, normalized_size.y), uvs[3], box->color});
+    push_textured_vertex({normalized_base_position + vector2_t(normalized_size.x, 0.0f), uvs[4], box->color});
+    push_textured_vertex({normalized_base_position + normalized_size, uvs[5], box->color});
 }
 
 void push_textured_ui_box(

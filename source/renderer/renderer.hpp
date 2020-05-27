@@ -154,6 +154,10 @@ struct shader_t {
     VkShaderStageFlags flags;
 };
 
+enum alpha_blending_t {
+    AB_ONE_MINUS_SRC_ALPHA,
+    AB_NONE
+};
 // Disabled depth
 DECLARE_RENDERER_PROC(shader_t, create_2d_shader,
     shader_binding_info_t *binding_info,
@@ -163,7 +167,8 @@ DECLARE_RENDERER_PROC(shader_t, create_2d_shader,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
     struct rpipeline_stage_t *stage,
-    VkPrimitiveTopology topology);
+    VkPrimitiveTopology topology,
+    alpha_blending_t blending = AB_NONE);
 
 // Enables depth and will always happen in deferred stage
 DECLARE_RENDERER_PROC(shader_t, create_3d_shader_shadow,
@@ -656,6 +661,10 @@ DECLARE_VOID_RENDERER_PROC(void, push_textured_vertex,
 
 DECLARE_VOID_RENDERER_PROC(void, push_textured_ui_box,
     const ui_box_t *box);
+
+DECLARE_VOID_RENDERER_PROC(void, push_textured_ui_box,
+    const ui_box_t *box,
+    vector2_t *uvs); // Needs 6 uvs
 
 DECLARE_VOID_RENDERER_PROC(void, clear_texture_list_containers,
     void);
