@@ -558,11 +558,18 @@ static void s_fill_animation_linker(
         PS_END_OF_LINE,
         PS_INSTRUCTION_KEYWORD,
         PS_WHITESPACE,
+        PS_A_KEYWORD,
         PS_LINK_INSTRUCTION
     } parser_state;
 
-    const char *current_keyword = NULL;
-    uint32_t current_keyword_length = 0:
+    const char *current_token = NULL;
+    uint32_t current_token_length = 0;
+
+    const char *link_parameter1 = NULL;
+    uint32_t link_parameter1_length = 0;
+
+    const char *link_parameter2 = NULL;
+    uint32_t link_parameter2_length = 0;
 
     for (char *c = (char *)contents.data; c != 0; ++c) {
         // Get parser state
@@ -573,8 +580,14 @@ static void s_fill_animation_linker(
         else if (*c == '\n') {
             parser_state = PS_END_OF_LINE;
         }
-        else if (*c == ' ' || *c == '\t') {
-            parser_state = PS_WHITESPACE;
+
+        if (parser_state != PS_COMMENT) {
+            if (*c == ' ' || *c == '\t') {
+                parser_state = PS_WHITESPACE;
+            }
+            else if (parser_state == PS_WHITESPACE) {
+                parser_state = PS_A_KEYWORD;
+            }
         }
 
         switch (parser_state) {
@@ -583,17 +596,17 @@ static void s_fill_animation_linker(
 
         case PS_END_OF_LINE: {
             parser_state = PS_NEW_INSTRUCTION;
-            current_keyword = c + 1;
         } break;
 
         case PS_NEW_INSTRUCTION: {
-            current_keyword_length += 1;
+            current_token_length += 1;
+            parser_state = PS_WHITESPACE;
         } break;
 
         case PS_WHITESPACE: {
-            if (current_keyword) {
+            if (current_token) {
                 // Process keyword
-                if (s_str_comp(current_keyword, current_keyword_length, "link", strlen("link"))) {
+                if (s_str_comp(current_token, current_token_length, "link", strlen("link"))) {
                     parser_state = PS_LINK_INSTRUCTION;
                 }
             }
@@ -609,6 +622,8 @@ void load_animation_cycles(
     animation_cycles_t *cycles,
     const char *linker_path,
     const char *path) {
+    // s_fill_animation_linker(linker_path);
+
     file_handle_t file_handle = create_file(path, FLF_BINARY);
     file_contents_t contents = read_file(file_handle);
     free_file(file_handle);

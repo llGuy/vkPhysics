@@ -60,7 +60,7 @@ void w_players_data_init() {
     //load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
     load_mesh_external(&player_mesh, &mesh_info, "assets/models/player.mesh");
     load_skeleton(&player_skeleton, "assets/models/player.skeleton");
-    load_animation_cycles(&player_cycles, "assets/models/player.animations");
+    load_animation_cycles(&player_cycles, "assets/models/player.animations.link", "assets/models/player.animations");
 
     const char *shader_paths[] = {
         "shaders/SPV/skeletal.vert.spv",

@@ -1,7 +1,6 @@
 #include "files.hpp"
 #include "containers.hpp"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 //For now all that file_object_t holds
