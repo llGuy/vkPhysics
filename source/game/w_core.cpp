@@ -284,10 +284,11 @@ eye_3d_info_t create_eye_info() {
 
     vector3_t view_direction = player->ws_view_direction;
 
-    if (player->flags.camera_type == CT_FIRST_PERSON) {
-        info.position = player->ws_position;
-    }
-    else {
+    // if (player->flags.camera_type == CT_FIRST_PERSON) {
+    //     info.position = player->ws_position;
+    // }
+    // else {
+    {
         info.position = player->ws_position - player->ws_view_direction * player->camera_distance.current * w_get_player_scale().x;
         info.position += player->current_camera_up * w_get_player_scale() * 2.0f;
 

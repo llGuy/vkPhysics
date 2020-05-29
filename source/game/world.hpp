@@ -141,6 +141,12 @@ struct terraform_package_t {
     bool ray_hit_terrain;
 };
 
+enum player_animated_state_t {
+    PAS_IDLE,
+    PAS_WALKING,
+    PAS_RUNNING
+};
+
 // TODO: Make sure to only allocate camera stuff for local player
 struct player_t {
     player_flags_t flags;

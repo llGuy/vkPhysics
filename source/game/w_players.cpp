@@ -603,11 +603,11 @@ static void s_execute_player_actions(
         if (actions->switch_shapes) {
             if (player->flags.interaction_mode == PIM_STANDING) {
                 player->flags.interaction_mode = PIM_BALL;
-                player->camera_distance.set(1, 10.0f, player->camera_distance.current, 7.0f);
+                //player->camera_distance.set(1, 10.0f, player->camera_distance.current, 7.0f);
             }
             else if (player->flags.interaction_mode == PIM_BALL) {
                 player->flags.interaction_mode = PIM_STANDING;
-                player->camera_distance.set(1, 0.0f, player->camera_distance.current, 7.0f);
+                //player->camera_distance.set(1, 0.0f, player->camera_distance.current, 7.0f);
             }
         }
 
@@ -749,7 +749,7 @@ void w_players_gpu_sync_and_render(
     struct world_t *world) {
     (void)transfer_command_buffer;
     
-#if 1
+#if 0
     interpolate_joints(&test_instance0, logic_delta_time());
     sync_gpu_with_animated_transforms(&test_instance0, transfer_command_buffer);
 
@@ -774,7 +774,7 @@ void w_players_gpu_sync_and_render(
         &render_data);
 #endif
 
-#if 0
+#if 1
     for (uint32_t i = 0; i < world->players.data_count; ++i) {
         player_t *p = world->players[i];
         if (p) {
@@ -786,19 +786,42 @@ void w_players_gpu_sync_and_render(
                 interpolate_joints(&p->animations, logic_delta_time());
                 sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
 
-                p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
                 p->render->render_data.color = vector4_t(1.0f);
                 p->render->render_data.pbr_info.x = 0.1f;
                 p->render->render_data.pbr_info.y = 0.1f;
 
                 if ((int32_t)i == (int32_t)world->local_player) {
-                    if (p->flags.interaction_mode != PIM_STANDING) {
+                    if (p->flags.interaction_mode == PIM_STANDING) {
+                        // This has to be a bit different
+                        movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
+                        matrix3_t normal_rotation_matrix3 = (matrix3_t(glm::normalize(axes.right), glm::normalize(axes.up), glm::normalize(-axes.forward)));
+                        matrix4_t normal_rotation_matrix = matrix4_t(normal_rotation_matrix3);
+                        normal_rotation_matrix[3][3] = 1.0f;
+
+                        vector3_t view_dir = glm::normalize(p->ws_view_direction);
+                        float dir_x = view_dir.x;
+                        float dir_z = view_dir.z;
+                        float rotation_angle = atan2(dir_z, dir_x);
+
+                        matrix4_t rot_matrix = glm::rotate(-rotation_angle, vector3_t(0.0f, 1.0f, 0.0f));
+
+                        p->render->render_data.model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(player_scale);
+                        submit_skeletal_mesh(
+                            render_command_buffer,
+                            &player_mesh,
+                            &player_shader,
+                            &p->render->render_data,
+                            &p->animations);
+                    }
+                    else {
+                        p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
                         submit_mesh(
                             render_command_buffer,
                             &player_ball_mesh,
                             &player_ball_shader,
                             &p->render->render_data);
-                    }
+                        
+                    } 
                 }
                 else {
                     submit_mesh(

@@ -540,8 +540,10 @@ static uint32_t s_skip_whitespaces(
     assert(0);
 }
 
-static void s_fill_animation_linker(
+static uint32_t s_fill_animation_linker(
     const char *linker_path) {
+    uint32_t animation_count = 0;
+
     animation_name_linker.clear();
     animation_name_linker.init();
 
@@ -618,17 +620,21 @@ static void s_fill_animation_linker(
                     i = s_skip_whitespaces(i, tokens) - 1; // -1 because of for loop increment
 
                     animation_name_linker.insert(simple_string_hash(name, name_length), animation_id);
+
+                    ++animation_count;
                 }
             }
         }
     }
+
+    return animation_count;
 }
 
 void load_animation_cycles(
     animation_cycles_t *cycles,
     const char *linker_path,
     const char *path) {
-    s_fill_animation_linker(linker_path);
+    uint32_t linked_animations = s_fill_animation_linker(linker_path);
 
     file_handle_t file_handle = create_file(path, FLF_BINARY);
     file_contents_t contents = read_file(file_handle);
@@ -639,18 +645,20 @@ void load_animation_cycles(
     serialiser.data_buffer_size = contents.size;
 
     cycles->cycle_count = serialiser.deserialise_uint32();
+    cycles->cycle_count = linked_animations;
     cycles->cycles = FL_MALLOC(animation_cycle_t, cycles->cycle_count);
 
     for (uint32_t i = 0; i < cycles->cycle_count; ++i) {
-        animation_cycle_t *cycle = &cycles->cycles[i];
-        cycle->animation_name = create_fl_string(serialiser.deserialise_string());
+        const char *animation_name = create_fl_string(serialiser.deserialise_string());
 
-        uint32_t *animation_id_p = animation_name_linker.get(simple_string_hash(cycle->animation_name));
+        uint32_t *animation_id_p = animation_name_linker.get(simple_string_hash(animation_name));
         if (animation_id_p) {
             uint32_t animation_id = *animation_id_p;
-            printf("Animation %d links with %s\n", animation_id, cycle->animation_name);
+            printf("Animation %d links with %s\n", animation_id, animation_name);
         }
 
+        animation_cycle_t *cycle = &cycles->cycles[*animation_id_p];
+        cycle->animation_name = animation_name;
         cycle->duration = serialiser.deserialise_float32();
         cycle->joint_animation_count = serialiser.deserialise_uint32();
         
@@ -695,7 +703,7 @@ void animated_instance_init(
     instance->current_animation_time = 0.0f;
     instance->is_interpolating_between_cycles = 0;
     instance->skeleton = skeleton;
-    instance->next_bound_cycle = 2;
+    instance->next_bound_cycle = 0;
     instance->interpolated_transforms = FL_MALLOC(matrix4_t, skeleton->joint_count);
     instance->current_positions = FL_MALLOC(vector3_t, skeleton->joint_count);
     instance->current_rotations = FL_MALLOC(quaternion_t, skeleton->joint_count);
