@@ -31,6 +31,6 @@ void tokeniser_init(
     uint32_t keyword_count);
 
 token_t *tokenise(
-    const char *input,
+    char *input,
     char comment_character,
     uint32_t *token_count);

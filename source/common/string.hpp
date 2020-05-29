@@ -24,3 +24,27 @@ inline uint32_t simple_string_hash(
 
     return hash;
 }
+
+inline uint32_t simple_string_hash(
+    const char *string,
+    uint32_t length) {
+    unsigned long hash = 5381;
+
+    uint32_t current = 0;
+
+    while (current < length) {
+        hash = ((hash << 5) + hash) + string[current];
+
+        ++current;
+    }
+
+    return hash;
+}
+
+inline uint32_t str_to_int(const char *str, uint32_t length) {
+    int32_t ret = 0;
+    for(int32_t i = 0; i < length; ++i) {
+        ret = ret * 10 + (str[i] - '0');
+    }
+    return ret;
+}    

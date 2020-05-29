@@ -7,6 +7,7 @@
 #include <common/tools.hpp>
 #include <common/files.hpp>
 #include <common/string.hpp>
+#include <common/tokeniser.hpp>
 #include <common/allocators.hpp>
 #include <common/serialiser.hpp>
 #include <common/containers.hpp>
@@ -527,93 +528,98 @@ void load_skeleton(
 // The same linker will be used for al animations
 static hash_table_t<uint32_t, 25, 5, 5> animation_name_linker;
 
-static bool s_str_comp(
-    const char *a,
-    uint32_t a_len,
-    const char *b,
-    uint32_t b_len) {
-    if (a_len == b_len) {
-        for (uint32_t i = 0; i < a_len; ++i) {
-            if (a[i] != b[i]) {
-                return false;
-            }
+static uint32_t s_skip_whitespaces(
+    uint32_t i,
+    token_t *tokens) {
+    for (;; ++i) {
+        if (tokens[i].type != TT_WHITESPACE) {
+            return i;
         }
-
-        return true;
     }
 
-    return false;
+    assert(0);
 }
 
 static void s_fill_animation_linker(
     const char *linker_path) {
+    animation_name_linker.clear();
+    animation_name_linker.init();
+
+    uint32_t keyword_ids[] = {
+        100
+    };
+
+    const char *keywords[] = {
+        "link"
+    };
+
+    enum {
+        KEYWORD_LINK
+    };
+
+    tokeniser_init(
+        keyword_ids,
+        keywords,
+        1);
+
     file_handle_t file_handle = create_file(linker_path, FLF_NONE);
-    file_contents_t contents = read_file(file_handle); // Just text
+    file_contents_t contents = read_file(file_handle);
     free_file(file_handle);
+    
+    uint32_t token_count = 0;
 
-    enum parser_state_t {
-        PS_NONE,
-        PS_COMMENT,
-        PS_NEW_INSTRUCTION,
-        PS_END_OF_LINE,
-        PS_INSTRUCTION_KEYWORD,
-        PS_WHITESPACE,
-        PS_A_KEYWORD,
-        PS_LINK_INSTRUCTION
-    } parser_state;
+    token_t *tokens = tokenise(
+        (char *)contents.data,
+        '#',
+        &token_count);
 
-    const char *current_token = NULL;
-    uint32_t current_token_length = 0;
+    struct {
+        uint32_t in_comment: 1;
+        uint32_t link: 1;
+    } flags;
 
-    const char *link_parameter1 = NULL;
-    uint32_t link_parameter1_length = 0;
-
-    const char *link_parameter2 = NULL;
-    uint32_t link_parameter2_length = 0;
-
-    for (char *c = (char *)contents.data; c != 0; ++c) {
-        // Get parser state
-        if (*c == '#') {
-            // Go until end of line
-            parser_state = PS_COMMENT;
+    for (uint32_t i = 0; i < token_count; ++i) {
+        if (tokens[i].type == TT_NEW_LINE) {
+            flags.in_comment = 0;
         }
-        else if (*c == '\n') {
-            parser_state = PS_END_OF_LINE;
-        }
-
-        if (parser_state != PS_COMMENT) {
-            if (*c == ' ' || *c == '\t') {
-                parser_state = PS_WHITESPACE;
-            }
-            else if (parser_state == PS_WHITESPACE) {
-                parser_state = PS_A_KEYWORD;
-            }
-        }
-
-        switch (parser_state) {
-        case PS_COMMENT: {
-        } break;
-
-        case PS_END_OF_LINE: {
-            parser_state = PS_NEW_INSTRUCTION;
-        } break;
-
-        case PS_NEW_INSTRUCTION: {
-            current_token_length += 1;
-            parser_state = PS_WHITESPACE;
-        } break;
-
-        case PS_WHITESPACE: {
-            if (current_token) {
-                // Process keyword
-                if (s_str_comp(current_token, current_token_length, "link", strlen("link"))) {
-                    parser_state = PS_LINK_INSTRUCTION;
-                }
+        else if (!flags.in_comment) {
+            if (tokens[i].type == TT_COMMENT) {
+                // Ignore until new line
+                flags.in_comment = 1;
             }
             else {
-                // Do nothing
+                if (tokens[i].type == keyword_ids[KEYWORD_LINK]) {
+                    flags.link = 1;
+
+                    ++i;
+
+                    i = s_skip_whitespaces(i, tokens);
+
+                    token_t *dst_id = &tokens[i];
+                    uint32_t animation_id = str_to_int(tokens[i].at, tokens[i].length);
+
+                    ++i;
+
+                    i = s_skip_whitespaces(i, tokens);
+
+                    // Next token should be double quote
+                    if (tokens[i].type != TT_DOUBLE_QUOTE) {
+                        LOG_ERROR("Error double quote missing\n");
+                    }
+
+                    ++i;
+
+                    char *name = tokens[i].at;
+                    uint32_t name_length = 0;
+                    for (; tokens[i].type != TT_DOUBLE_QUOTE; ++i) {
+                        name_length += tokens[i].length;
+                    }
+
+                    i = s_skip_whitespaces(i, tokens) - 1; // -1 because of for loop increment
+
+                    animation_name_linker.insert(simple_string_hash(name, name_length), animation_id);
+                }
             }
-        }
         }
     }
 }
@@ -622,7 +628,7 @@ void load_animation_cycles(
     animation_cycles_t *cycles,
     const char *linker_path,
     const char *path) {
-    // s_fill_animation_linker(linker_path);
+    s_fill_animation_linker(linker_path);
 
     file_handle_t file_handle = create_file(path, FLF_BINARY);
     file_contents_t contents = read_file(file_handle);
@@ -638,6 +644,13 @@ void load_animation_cycles(
     for (uint32_t i = 0; i < cycles->cycle_count; ++i) {
         animation_cycle_t *cycle = &cycles->cycles[i];
         cycle->animation_name = create_fl_string(serialiser.deserialise_string());
+
+        uint32_t *animation_id_p = animation_name_linker.get(simple_string_hash(cycle->animation_name));
+        if (animation_id_p) {
+            uint32_t animation_id = *animation_id_p;
+            printf("Animation %d links with %s\n", animation_id, cycle->animation_name);
+        }
+
         cycle->duration = serialiser.deserialise_float32();
         cycle->joint_animation_count = serialiser.deserialise_uint32();
         

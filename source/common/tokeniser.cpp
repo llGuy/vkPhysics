@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "allocators.hpp"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -17,7 +18,7 @@ struct string_tree_node_data_t {
         uint64_t initialised : 1;
         uint64_t hash : 32;
     };
-    char *string;
+    const char *string;
 
     struct string_tree_node_t *next;
 };
@@ -53,7 +54,7 @@ static string_tree_node_t *s_tree_node_create() {
 
 static void s_string_data_init(
     uint32_t data, 
-    char *string,
+    const char *string,
     uint32_t string_length, 
     uint32_t hash, 
     string_tree_node_data_t *node_data) {
@@ -125,7 +126,7 @@ static void *s_handle_conflict(
 
 static void s_register_string(
     string_tree_node_t *root, 
-    char *string, 
+    const char *string, 
     uint32_t length,
     uint32_t data) {
     string_tree_node_t *current = root;
@@ -140,7 +141,6 @@ static void s_register_string(
 
     // The symbol already exists
     if (string_data->hash == hash) {
-        printf("Symbol already exists\n");
         exit(1);
     }
 
@@ -177,7 +177,6 @@ static string_tree_node_data_t *s_traverse_tree(
         current = current->nodes[string[i]].next;
     }
 
-    printf("Symbol does not exist\n");
     return NULL;
 }
 
@@ -192,6 +191,8 @@ static token_type_t s_determine_character_token_type(
     case '}': return TT_CLOSE_CURLY;
     case ';': return TT_SEMI_COLON;
     case '\"': return TT_DOUBLE_QUOTE;
+    case ' ': case '\t': return TT_WHITESPACE;
+    case '\n': return TT_NEW_LINE;
     default: return TT_NONE;
 
     }
@@ -201,9 +202,10 @@ static string_tree_node_t *root;
 
 void tokeniser_init(
     uint32_t *keyword_ids,
-    char **keywords,
+    const char **keywords,
     uint32_t keyword_count) {
-    string_tree_node_t *root = s_tree_node_create();
+    tokens_buffer = LN_MALLOC(token_t, 1000);
+    root = s_tree_node_create();
 
     for (uint32_t i = 0; i < keyword_count; ++i) {
         s_register_string(root, keywords[i], strlen(keywords[i]), keyword_ids[i]);
@@ -214,7 +216,7 @@ token_t *tokenise(
     char *input,
     char comment_character,
     uint32_t *token_count) {
-    // Tokenise string for easy parsing
+    // Tokenise string for easy 
     token_t *tokens = tokens_buffer;
     *token_count = 0;
 
@@ -225,6 +227,9 @@ token_t *tokenise(
 
     for (char *c = input; *c != 0; ++c) {
         token_type_t type = s_determine_character_token_type(*c);
+        if (*c == comment_character) {
+            type = TT_COMMENT;
+        }
 
         if (word_start && (type != TT_NONE && type != TT_NUMBER)) {
             // Add a new token
@@ -240,7 +245,8 @@ token_t *tokenise(
                 token.type = TT_NONE;
             }
 
-            tokens[*token_count++] = token;
+            tokens[*token_count] = token;
+            ++(*token_count);
 
             word_start = NULL;
         }
@@ -251,7 +257,8 @@ token_t *tokenise(
             token.length = c - number_start;
             token.type = TT_NUMBER;
 
-            tokens[*token_count++] = token;
+            tokens[*token_count] = token;
+            ++(*token_count);
 
             number_start = NULL;
         }
@@ -262,7 +269,8 @@ token_t *tokenise(
             token.at = c;
             token.length = 1;
             token.type = TT_NEW_LINE;
-            tokens[*token_count++] = token;
+            tokens[*token_count] = token;
+            ++(*token_count);
         } break;
 
         case TT_COMMENT: {
@@ -270,7 +278,8 @@ token_t *tokenise(
             token.at = c;
             token.length = 1;
             token.type = TT_COMMENT;
-            tokens[*token_count++] = token;
+            tokens[*token_count] = token;
+            ++(*token_count);
         } break;
 
         case TT_WHITESPACE: {
@@ -278,7 +287,8 @@ token_t *tokenise(
             token.at = c;
             token.length = 1;
             token.type = TT_WHITESPACE;
-            tokens[*token_count++] = token;
+            tokens[*token_count] = token;
+            ++(*token_count);
         } break;
 
         case TT_NONE: {
@@ -300,7 +310,8 @@ token_t *tokenise(
             token.at = c;
             token.length = 1;
             token.type = TT_DOUBLE_QUOTE;
-            tokens[*token_count++] = token;
+            tokens[*token_count] = token;
+            ++(*token_count);
         } break;
 
         default: {
