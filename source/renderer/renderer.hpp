@@ -462,6 +462,11 @@ DECLARE_VOID_RENDERER_PROC(void, interpolate_joints,
     animated_instance_t *instance,
     float dt);
 
+DECLARE_VOID_RENDERER_PROC(void, switch_to_cycle,
+    animated_instance_t *instance,
+    uint32_t cycle_index,
+    bool force);
+
 DECLARE_VOID_RENDERER_PROC(void, sync_gpu_with_animated_transforms,
     animated_instance_t *instance,
     VkCommandBuffer command_buffer);

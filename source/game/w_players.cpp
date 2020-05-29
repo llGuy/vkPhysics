@@ -523,12 +523,26 @@ static terrain_collision_t s_resolve_player_movement(
 static void s_execute_standing_player_movement(
     player_t *player,
     player_actions_t *actions) {
+    if (player->flags.contact == PCS_ON_GROUND) {
+        if (actions->move_forward) {
+            player->animated_state = PAS_WALKING;
+        }
+        else {
+            player->animated_state = PAS_IDLE;
+        }
+    }
+
     force_values_t forces = {};
     forces.friction = 9.0f;
     forces.movement_acceleration = 8.0f;
     forces.gravity = 10.0f;
     forces.maximum_walking_speed = player->default_speed * 0.5f;
-    s_resolve_player_movement(player, actions, &forces, MRF_GRAVITY_CHECK_INCLINATION | MRF_ABRUPT_STOP | MRF_CAP_SPEED);
+
+    s_resolve_player_movement(
+        player,
+        actions,
+        &forces,
+        MRF_GRAVITY_CHECK_INCLINATION | MRF_ABRUPT_STOP | MRF_CAP_SPEED);
 }
 
 static void s_execute_ball_player_movement(player_t *player, player_actions_t *actions) {
@@ -783,15 +797,22 @@ void w_players_gpu_sync_and_render(
                     w_player_render_init(p);
                 }
 
-                interpolate_joints(&p->animations, logic_delta_time());
-                sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
-
                 p->render->render_data.color = vector4_t(1.0f);
                 p->render->render_data.pbr_info.x = 0.1f;
                 p->render->render_data.pbr_info.y = 0.1f;
 
                 if ((int32_t)i == (int32_t)world->local_player) {
                     if (p->flags.interaction_mode == PIM_STANDING) {
+                        if (p->animations.next_bound_cycle != p->animated_state) {
+                            switch_to_cycle(
+                                &p->animations,
+                                p->animated_state,
+                                0);
+                        }
+
+                        interpolate_joints(&p->animations, logic_delta_time());
+                        sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
+
                         // This has to be a bit different
                         movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
                         matrix3_t normal_rotation_matrix3 = (matrix3_t(glm::normalize(axes.right), glm::normalize(axes.up), glm::normalize(-axes.forward)));

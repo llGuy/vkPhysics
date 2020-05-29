@@ -198,6 +198,8 @@ struct player_t {
     animated_instance_t animations;
 
     terraform_package_t terraform_package;
+
+    player_animated_state_t animated_state;
 };
 
 player_t *get_player(

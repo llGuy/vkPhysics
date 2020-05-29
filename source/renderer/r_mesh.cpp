@@ -712,6 +712,7 @@ void animated_instance_init(
     instance->current_rotation_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
     instance->current_scale_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
     instance->cycles = cycles;
+    instance->in_between_interpolation_time = 0.2f;
 
     memset(instance->current_position_indices, 0, sizeof(uint32_t) * skeleton->joint_count);
     memset(instance->current_rotation_indices, 0, sizeof(uint32_t) * skeleton->joint_count);
@@ -730,6 +731,50 @@ void animated_instance_init(
         instance->interpolated_transforms_ubo.buffer,
         sizeof(matrix4_t) * skeleton->joint_count,
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+}
+
+static void s_calculate_in_between_final_offsets(
+    animated_instance_t *instance,
+    uint32_t joint_index,
+    matrix4_t parent_transforms) {
+    matrix4_t local_transform = instance->interpolated_transforms[joint_index];
+
+    matrix4_t model_transform = parent_transforms * local_transform;
+
+    joint_t *joint_data = &instance->skeleton->joints[joint_index];
+    for (uint32_t child = 0; child < joint_data->children_count; ++child) {
+        s_calculate_in_between_final_offsets(instance, joint_data->children_ids[child], model_transform);
+    }
+
+    instance->interpolated_transforms[joint_index] = model_transform * joint_data->inverse_bind_transform;
+}
+
+static void s_calculate_in_between_bone_space_transforms(
+    float progression,
+    animated_instance_t *instance,
+    animation_cycle_t *next) {
+    for (uint32_t joint_index = 0; joint_index < instance->skeleton->joint_count; ++joint_index) {
+        vector3_t *current_position = &instance->current_positions[joint_index];
+        quaternion_t *current_rotation = &instance->current_rotations[joint_index];
+        vector3_t *current_scale = &instance->current_scales[joint_index];
+
+        joint_key_frames_t *next_key_frames = &next->joint_animations[joint_index];
+
+        joint_position_key_frame_t *next_position_kf = &next_key_frames->positions[0];
+        joint_rotation_key_frame_t *next_rotation_kf = &next_key_frames->rotations[0];
+
+        vector3_t next_position = next_position_kf->position;
+        quaternion_t next_rotation = next_rotation_kf->rotation;
+
+        vector3_t new_position = *current_position + progression * (next_position - *current_position);
+        quaternion_t new_rotation = glm::slerp(*current_rotation, next_rotation, progression);
+
+        // For now don't interpolate scale
+        *current_scale = vector3_t(1.0f);
+
+        // For now, store here
+        instance->interpolated_transforms[joint_index] = glm::translate(new_position) * glm::mat4_cast(new_rotation) * glm::scale(*current_scale);
+    }
 }
 
 static void s_calculate_bone_space_transforms(
@@ -809,22 +854,69 @@ static void s_calculate_final_offset(
 void interpolate_joints(
     animated_instance_t *instance,
     float dt) {
-    animation_cycle_t *bound_cycle = &instance->cycles->cycles[instance->next_bound_cycle];
+    if (instance->is_interpolating_between_cycles) {
+        animation_cycle_t *next_cycle = &instance->cycles->cycles[instance->next_bound_cycle];
 
-    if (dt + instance->current_animation_time > bound_cycle->duration) {
-        for (uint32_t i = 0; i < instance->skeleton->joint_count; ++i) {
-            instance->current_position_indices[i] = 0;
-            instance->current_rotation_indices[i] = 0;
-            instance->current_scale_indices[i] = 0;
+        if (dt + instance->current_animation_time > instance->in_between_interpolation_time) {
+            instance->is_interpolating_between_cycles = 0;
+            instance->current_animation_time = 0.0f;
+        }
+        else {
+            float current_time = fmod(instance->current_animation_time + dt, instance->in_between_interpolation_time);
+            instance->current_animation_time = current_time;
+
+            float progression = instance->current_animation_time / instance->in_between_interpolation_time;
+
+            s_calculate_in_between_bone_space_transforms(
+                progression,
+                instance,
+                next_cycle);
+
+            s_calculate_in_between_final_offsets(
+                instance,
+                0,
+                matrix4_t(1.0f));
         }
     }
 
-    float current_time = fmod(instance->current_animation_time + dt, bound_cycle->duration);
-    instance->current_animation_time = current_time;
+    // Is not else so that we can continue directly from interpolating between two cycles
+    if (!instance->is_interpolating_between_cycles) {
+        animation_cycle_t *bound_cycle = &instance->cycles->cycles[instance->next_bound_cycle];
 
-    s_calculate_bone_space_transforms(instance, bound_cycle, current_time);
-    s_calculate_final_offset(instance, 0, glm::mat4(1.0f));
+        if (dt + instance->current_animation_time > bound_cycle->duration) {
+            for (uint32_t i = 0; i < instance->skeleton->joint_count; ++i) {
+                instance->current_position_indices[i] = 0;
+                instance->current_rotation_indices[i] = 0;
+                instance->current_scale_indices[i] = 0;
+            }
+        }
+
+        float current_time = fmod(instance->current_animation_time + dt, bound_cycle->duration);
+        instance->current_animation_time = current_time;
+
+        s_calculate_bone_space_transforms(instance, bound_cycle, current_time);
+        s_calculate_final_offset(instance, 0, glm::mat4(1.0f));
+    }
 }
+
+void switch_to_cycle(
+    animated_instance_t *instance,
+    uint32_t cycle_index,
+    bool force) {
+    instance->current_animation_time = 0.0f;
+    if (!force) {
+        instance->is_interpolating_between_cycles = 1;
+    }
+
+    instance->prev_bound_cycle = instance->next_bound_cycle;
+    instance->next_bound_cycle = cycle_index;
+
+    for (uint32_t i = 0; i < instance->skeleton->joint_count; ++i) {
+        instance->current_position_indices[i] = 0;
+        instance->current_rotation_indices[i] = 0;
+        instance->current_scale_indices[i] = 0;
+    }
+}    
 
 void sync_gpu_with_animated_transforms(
     animated_instance_t *instance,
