@@ -525,7 +525,7 @@ static void s_execute_standing_player_movement(
     player_actions_t *actions) {
     if (player->flags.contact == PCS_ON_GROUND) {
         if (actions->move_forward) {
-            player->animated_state = PAS_WALKING;
+            player->animated_state = PAS_RUNNING;
         }
         else {
             player->animated_state = PAS_IDLE;

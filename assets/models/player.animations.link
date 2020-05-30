@@ -8,7 +8,8 @@
 link 0 "Armature|Idle"
 link 1 "Armature|Walking"
 link 2 "Armature|Running"
-link 3 "Armature|Jumping"
+link 3 "Armature|Jumping_Up"
+link 4 "Armature|Jumping_Down"
 
 # Also defines how bones interact
 # May also link bones to specific IDs

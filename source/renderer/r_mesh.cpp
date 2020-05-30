@@ -645,7 +645,7 @@ void load_animation_cycles(
     serialiser.data_buffer_size = contents.size;
 
     cycles->cycle_count = serialiser.deserialise_uint32();
-    cycles->cycle_count = linked_animations;
+    cycles->cycle_count = MAX(linked_animations, cycles->cycle_count);
     cycles->cycles = FL_MALLOC(animation_cycle_t, cycles->cycle_count);
 
     for (uint32_t i = 0; i < cycles->cycle_count; ++i) {
@@ -654,42 +654,72 @@ void load_animation_cycles(
         uint32_t *animation_id_p = animation_name_linker.get(simple_string_hash(animation_name));
         if (animation_id_p) {
             uint32_t animation_id = *animation_id_p;
-            printf("Animation %d links with %s\n", animation_id, animation_name);
-        }
+            LOG_INFOV("Animation %d links with %s\n", animation_id, animation_name);
 
-        animation_cycle_t *cycle = &cycles->cycles[*animation_id_p];
-        cycle->animation_name = animation_name;
-        cycle->duration = serialiser.deserialise_float32();
-        cycle->joint_animation_count = serialiser.deserialise_uint32();
+            animation_cycle_t *cycle = &cycles->cycles[*animation_id_p];
+            cycle->animation_name = animation_name;
+            cycle->duration = serialiser.deserialise_float32();
+            cycle->joint_animation_count = serialiser.deserialise_uint32();
         
-        cycle->joint_animations = FL_MALLOC(joint_key_frames_t, cycle->joint_animation_count);
+            cycle->joint_animations = FL_MALLOC(joint_key_frames_t, cycle->joint_animation_count);
 
-        for (uint32_t j = 0; j < cycle->joint_animation_count; ++j) {
-            joint_key_frames_t *key_frames = &cycle->joint_animations[j];
-            key_frames->position_count = serialiser.deserialise_uint32();
-            key_frames->rotation_count = serialiser.deserialise_uint32();
-            key_frames->scale_count = serialiser.deserialise_uint32();
+            for (uint32_t j = 0; j < cycle->joint_animation_count; ++j) {
+                joint_key_frames_t *key_frames = &cycle->joint_animations[j];
+                key_frames->position_count = serialiser.deserialise_uint32();
+                key_frames->rotation_count = serialiser.deserialise_uint32();
+                key_frames->scale_count = serialiser.deserialise_uint32();
 
-            key_frames->positions = FL_MALLOC(joint_position_key_frame_t, key_frames->position_count);
-            key_frames->rotations = FL_MALLOC(joint_rotation_key_frame_t, key_frames->rotation_count);
-            key_frames->scales = FL_MALLOC(joint_scale_key_frame_t, key_frames->scale_count);
+                key_frames->positions = FL_MALLOC(joint_position_key_frame_t, key_frames->position_count);
+                key_frames->rotations = FL_MALLOC(joint_rotation_key_frame_t, key_frames->rotation_count);
+                key_frames->scales = FL_MALLOC(joint_scale_key_frame_t, key_frames->scale_count);
 
-            for (uint32_t position = 0; position < key_frames->position_count; ++position) {
-                key_frames->positions[position].time_stamp = serialiser.deserialise_float32();
-                key_frames->positions[position].position = serialiser.deserialise_vector3();
+                for (uint32_t position = 0; position < key_frames->position_count; ++position) {
+                    key_frames->positions[position].time_stamp = serialiser.deserialise_float32();
+                    key_frames->positions[position].position = serialiser.deserialise_vector3();
+                }
+
+                for (uint32_t rotation = 0; rotation < key_frames->rotation_count; ++rotation) {
+                    key_frames->rotations[rotation].time_stamp = serialiser.deserialise_float32();
+                    key_frames->rotations[rotation].rotation.w = serialiser.deserialise_float32();
+                    key_frames->rotations[rotation].rotation.x = serialiser.deserialise_float32();
+                    key_frames->rotations[rotation].rotation.y = serialiser.deserialise_float32();
+                    key_frames->rotations[rotation].rotation.z = serialiser.deserialise_float32();
+                }
+
+                for (uint32_t scale = 0; scale < key_frames->scale_count; ++scale) {
+                    key_frames->scales[scale].time_stamp = serialiser.deserialise_float32();
+                    key_frames->scales[scale].scale = serialiser.deserialise_vector3();
+                }
             }
+        }
+        else {
+            LOG_ERRORV("Animation %s hasn't been linked to animation ID!\n", animation_name);
 
-            for (uint32_t rotation = 0; rotation < key_frames->rotation_count; ++rotation) {
-                key_frames->rotations[rotation].time_stamp = serialiser.deserialise_float32();
-                key_frames->rotations[rotation].rotation.w = serialiser.deserialise_float32();
-                key_frames->rotations[rotation].rotation.x = serialiser.deserialise_float32();
-                key_frames->rotations[rotation].rotation.y = serialiser.deserialise_float32();
-                key_frames->rotations[rotation].rotation.z = serialiser.deserialise_float32();
-            }
+            float duration = serialiser.deserialise_float32();
+            uint32_t joint_animation_count = serialiser.deserialise_uint32();
+        
+            for (uint32_t j = 0; j < joint_animation_count; ++j) {
+                uint32_t position_count = serialiser.deserialise_uint32();
+                uint32_t rotation_count = serialiser.deserialise_uint32();
+                uint32_t scale_count = serialiser.deserialise_uint32();
 
-            for (uint32_t scale = 0; scale < key_frames->scale_count; ++scale) {
-                key_frames->scales[scale].time_stamp = serialiser.deserialise_float32();
-                key_frames->scales[scale].scale = serialiser.deserialise_vector3();
+                for (uint32_t position = 0; position < position_count; ++position) {
+                    serialiser.deserialise_float32();
+                    serialiser.deserialise_vector3();
+                }
+
+                for (uint32_t rotation = 0; rotation < rotation_count; ++rotation) {
+                    serialiser.deserialise_float32();
+                    serialiser.deserialise_float32();
+                    serialiser.deserialise_float32();
+                    serialiser.deserialise_float32();
+                    serialiser.deserialise_float32();
+                }
+
+                for (uint32_t scale = 0; scale < scale_count; ++scale) {
+                    serialiser.deserialise_float32();
+                    serialiser.deserialise_vector3();
+                }
             }
         }
     }
