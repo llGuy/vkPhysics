@@ -24,6 +24,9 @@ enum event_type_t {
     ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA,
     ET_SET_CHUNK_HISTORY_TRACKER,
     ET_REQUEST_REFRESH_SERVER_PAGE,
+    ET_BEGIN_FADE, // With data, can be in / out
+    ET_FADE_FINISHED, // Just so that game can know when to do some sort of transition or something...
+    ET_OPEN_MAIN_MENU,
     ET_INVALID_EVENT_TYPE
 };
 
@@ -89,6 +92,11 @@ struct event_chunk_voxel_packet_t {
 
 struct event_set_chunk_history_tracker_t {
     bool value;
+};
+
+struct event_begin_fade_effect_t {
+    float dest_value;
+    float duration;
 };
 
 struct event_t {

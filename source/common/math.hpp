@@ -34,20 +34,19 @@ inline float squared(
 }
 
 // Linear interpolation (constant speed)
-template <
-    typename T> struct smooth_linear_interpolation_t {
+struct smooth_linear_interpolation_t {
     bool in_animation;
 
-    T current;
-    T prev;
-    T next;
+    float current;
+    float prev;
+    float next;
     float current_time;
     float max_time;
 
     void set(
         bool iin_animation,
-        T iprev,
-        T inext,
+        float iprev,
+        float inext,
         float imax_time) {
         in_animation = iin_animation;
         prev = iprev;

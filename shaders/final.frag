@@ -6,12 +6,11 @@ layout(location = 0) in VS_DATA {
 
 layout(location = 0) out vec4 out_final_color;
 
-//layout(binding = 0, set = 0) uniform sampler2D u_diffuse;
-//layout(binding = 1, set = 0) uniform sampler2D u_bright;
-
 layout(binding = 0, set = 0) uniform sampler2D u_diffuse;
 
-//layout(binding = 0, set = 1) uniform sampler2D u_bloom;
+layout(push_constant) uniform push_constant_t {
+    float alpha; // For fading and stuff
+} u_push_constant;
 
 void main() {
     out_final_color = texture(u_diffuse, in_fs.uvs);// + texture(u_bloom, in_fs.uvs);
@@ -21,5 +20,5 @@ void main() {
     color = color / (color + vec3(1.0f));
     color = pow(color, vec3(1.0f / 2.2f));
 
-    out_final_color = vec4(color, 1.0f);
+    out_final_color = vec4(color, 1.0f) * u_push_constant.alpha;
 }

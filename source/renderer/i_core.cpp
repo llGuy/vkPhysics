@@ -234,7 +234,13 @@ input_interface_data_t input_interface_init() {
 }
 
 void poll_input_events(event_submissions_t *submissions) {
+    static bool initialised_time = 0;
     static float current_time = 0.0f;
+
+    if (!initialised_time) {
+        current_time = glfwGetTime();
+        initialised_time = 1;
+    }
     
     // Reset instant presses
     for (uint32_t i = 0; i < raw_input.instant_count; ++i) {

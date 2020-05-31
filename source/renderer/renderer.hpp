@@ -158,6 +158,7 @@ enum alpha_blending_t {
     AB_ONE_MINUS_SRC_ALPHA,
     AB_NONE
 };
+
 // Disabled depth
 DECLARE_RENDERER_PROC(shader_t, create_2d_shader,
     shader_binding_info_t *binding_info,
@@ -699,3 +700,7 @@ DECLARE_VOID_RENDERER_PROC(void, render_colored_quads,
 DECLARE_VOID_RENDERER_PROC(void, render_submitted_ui,
     VkCommandBuffer transfer_command_buffer,
     VkCommandBuffer ui_command_buffer);
+
+// FADE EFFECT SUPPORT ////////////////////////////////////////////////////////
+DECLARE_VOID_RENDERER_PROC(void, set_main_screen_brightness,
+    float brightness);

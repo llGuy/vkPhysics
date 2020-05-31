@@ -45,6 +45,14 @@ static void s_game_event_listener(
         FL_FREE(data);
     } break;
 
+    case ET_BEGIN_FADE: {
+        event_begin_fade_effect_t *data = (event_begin_fade_effect_t *)event->data;
+        
+        float duration = data->duration;
+        float dest = data->dest_value;
+        e_begin_fade_effect(duration, dest);
+    } break;
+
     case ET_PRESSED_ESCAPE: {
         // Handle focus change
         // TODO: Have proper focus sort of stack system
@@ -218,6 +226,8 @@ static void s_run_windowed_game() {
         end_command_buffer(render_shadow_command_buffer);
         end_command_buffer(ui_command_buffer);
 
+        e_tick_fade_effect(&events);
+
         s_render(
             render_command_buffer,
             render_shadow_command_buffer,
@@ -370,6 +380,8 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_CLOSED_WINDOW, game_core_listener, &events);
     subscribe_to_event(ET_RESIZE_SURFACE, game_core_listener, &events);
     subscribe_to_event(ET_PRESSED_ESCAPE, game_core_listener, &events);
+    subscribe_to_event(ET_BEGIN_FADE, game_core_listener, &events);
+    subscribe_to_event(ET_FADE_FINISHED, game_core_listener, &events);
 
     focus = HF_UI;
     input_interface_data_t input_interface = input_interface_init();
@@ -383,8 +395,15 @@ static void s_windowed_game_main(
         input_interface.surface_width,
         input_interface.surface_height);
 
+    e_fader_init();
+
+    // Launch fade effect immediately
+    event_begin_fade_effect_t fade_info = {};
+    fade_info.dest_value = 1.0f;
+    fade_info.duration = 2.0f;
+    submit_event(ET_BEGIN_FADE, &fade_info, &events);
+
     ui_init();
-    
     net_init(&events);
 
 #if LINK_AGAINST_RENDERER

@@ -1210,7 +1210,16 @@ void r_execute_bloom_pass(
 static rpipeline_stage_t final_stage;
 static rpipeline_shader_t final_shader;
 
+static float main_screen_brightness;
+
+void set_main_screen_brightness(
+    float brightness) {
+    main_screen_brightness = brightness;
+}
+
 static void s_final_init() {
+    main_screen_brightness = 0.0f;
+
     final_stage.color_attachment_count = 1;
     final_stage.color_attachments = FL_MALLOC(attachment_t, 1);
     final_stage.color_attachments[0].format = r_swapchain_format();
@@ -1226,6 +1235,12 @@ static void s_final_init() {
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = sizeof(input_layouts) / sizeof(VkDescriptorSetLayout);
     pipeline_layout_info.pSetLayouts = input_layouts;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    VkPushConstantRange range = {};
+    range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    range.size = sizeof(float); // Just to hold alpha / brightness value
+    pipeline_layout_info.pPushConstantRanges = &range;
+    
     VkPipelineLayout pipeline_layout;
     vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
     
@@ -1237,7 +1252,7 @@ static void s_final_init() {
 }
 
 void r_execute_final_pass(
-    VkCommandBuffer command_buffer) {
+    VkCommandBuffer command_buffer) {   // brightness is for fade effect
     VkViewport viewport = {};
     viewport.width = (float)r_swapchain_extent().width;
     viewport.height = (float)r_swapchain_extent().height;
@@ -1267,6 +1282,14 @@ void r_execute_final_pass(
         inputs,
         0,
         NULL);
+
+    vkCmdPushConstants(
+        command_buffer,
+        final_shader.layout,
+        VK_SHADER_STAGE_FRAGMENT_BIT,
+        0,
+        sizeof(float),
+        &main_screen_brightness);
 
     vkCmdDraw(command_buffer, 4, 1, 0, 0);
 }
