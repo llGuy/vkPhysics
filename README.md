@@ -2,7 +2,7 @@
 
 ## Epic logo
 
-![photo](/assets/screenshots/epic_logo.png)
+<p align="center"><img src="https://github.com/llGuy/vkPhysics/tree/master/assets/screenshots/epic_logo.png"/></p>
 
 For now, an engine which will hopefully become a real-time multiplayer game!
 
@@ -21,8 +21,8 @@ For now, an engine which will hopefully become a real-time multiplayer game!
 
 ### Terrain deformation
 
-![photo](/assets/screenshots/coolstructure.png)
+<p align="center"><img src="https://github.com/llGuy/vkPhysics/tree/master/assets/screenshots/coolstructure.png"/></p>
 
 ### Graphics rendering tests
 
-![photo](/assets/screenshots/screenshot.png)
+<p align="center"><img src="https://github.com/llGuy/vkPhysics/tree/master/assets/screenshots/screenshot.png"/></p>
