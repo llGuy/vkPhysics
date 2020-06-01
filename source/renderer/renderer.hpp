@@ -30,12 +30,7 @@ typedef void(*surface_proc_t)(struct VkInstance_T *instance, struct VkSurfaceKHR
 
 
 // CORE VULKAN FUNCTIONS //////////////////////////////////////////////////////
-DECLARE_VOID_RENDERER_PROC(void, renderer_init,
-    const char *application_name,
-    surface_proc_t create_surface,
-    void *window,
-    uint32_t window_width,
-    uint32_t window_height);
+DECLARE_VOID_RENDERER_PROC(void, renderer_init, void);
 
 DECLARE_VOID_RENDERER_PROC(void, destroy_renderer,
     void);

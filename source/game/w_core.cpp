@@ -365,6 +365,10 @@ stack_container_t<player_t *> &DEBUG_get_players() {
     return world.players;
 }
 
+player_t *DEBUG_get_spectator() {
+    return world.spectator;
+}
+
 chunk_t **get_modified_chunks(
     uint32_t *count) {
     *count = world.modified_chunk_count;

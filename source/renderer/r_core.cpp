@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "input.hpp"
 #include "renderer.hpp"
 #include <GLFW/glfw3.h>
 #include "r_internal.hpp"
@@ -756,17 +757,17 @@ static void s_update_sensitive_buffer_deletions() {
     }
 }
 
-void renderer_init(
-    const char *application_name,
-    surface_proc_t create_surface,
-    void *window, 
-    uint32_t window_width, 
-    uint32_t window_height) {
+void renderer_init() {
+    const char *application_name = input_api_init();
+
     s_instance_init(application_name);
+
+    input_interface_data_t input_interface = input_interface_init();
+
     s_debug_messenger_init();
-    create_surface(instance, &surface, window);
+    input_interface.surface_creation_proc(instance, &surface, input_interface.window);
     s_device_init();
-    s_swapchain_init(window_width, window_height);
+    s_swapchain_init(input_interface.surface_width, input_interface.surface_height);
     s_command_pool_init();
     s_primary_command_buffers_init();
     s_synchronisation_init();
@@ -774,9 +775,9 @@ void renderer_init(
     s_final_render_pass_init();
     s_global_descriptor_layouts_init();
     
-    s_imgui_init(window);
+    s_imgui_init(input_interface.window);
     
-    r_camera_init(window);
+    r_camera_init(input_interface.window);
     r_lighting_init();
     r_pipeline_init();
     r_environment_init();
@@ -900,23 +901,23 @@ void end_frame() {
 
     r_execute_final_pass(primary_command_buffers[image_index]);
 
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    // ImGui_ImplVulkan_NewFrame();
+    // ImGui_ImplGlfw_NewFrame();
+    // ImGui::NewFrame();
 
-    // General stuff
-    ImGui::Begin("General");
-    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+    // // General stuff
+    // ImGui::Begin("General");
+    // ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
 
-    for (uint32_t i = 0; i < debug_ui_proc_count; ++i) {
-        (debug_ui_procs[i])();
-    }
+    // for (uint32_t i = 0; i < debug_ui_proc_count; ++i) {
+    //     (debug_ui_procs[i])();
+    // }
 
-    ImGui::End();
+    // ImGui::End();
 
-    ImGui::Render();
+    // ImGui::Render();
 
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
+    // ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
 
     vkCmdEndRenderPass(primary_command_buffers[image_index]);
 

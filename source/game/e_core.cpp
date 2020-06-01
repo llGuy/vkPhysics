@@ -53,24 +53,28 @@ static void s_game_event_listener(
         e_begin_fade_effect(duration, dest);
     } break;
 
-    case ET_PRESSED_ESCAPE: {
-        // Handle focus change
-        // TODO: Have proper focus sort of stack system
-        switch (focus) {
+    // case ET_PRESSED_ESCAPE: {
+    //     // Handle focus change
+    //     // TODO: Have proper focus sort of stack system
+    //     switch (focus) {
             
-        case HF_WORLD: {
-            focus = HF_UI;
-            enable_cursor_display();
-        } break;
+    //     case HF_WORLD: {
+    //         focus = HF_UI;
+    //         enable_cursor_display();
+    //     } break;
 
-        case HF_UI: {
-            focus = HF_WORLD;
-            disable_cursor_display();
-        } break;
+    //     case HF_UI: {
+    //         focus = HF_WORLD;
+    //         disable_cursor_display();
+    //     } break;
 
-        }
+    //     }
 
-    } break;
+    // } break;
+
+    case ET_LAUNCH_MAIN_MENU_SCREEN: {
+        focus = HF_UI;
+    } break;;
         
     }
 }
@@ -105,6 +109,10 @@ static void s_tick(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
+    (void)render_command_buffer;
+    (void)render_shadow_command_buffer;
+    (void)transfer_command_buffer;
+
     tick_net(
         &events);
 
@@ -117,6 +125,8 @@ static void s_render(
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     VkCommandBuffer ui_command_buffer) {
+    (void)render_shadow_command_buffer;
+
     VkCommandBuffer final_command_buffer = begin_frame();
 
     eye_3d_info_t eye_info = create_eye_info();
@@ -294,6 +304,11 @@ static void s_world_ui_proc() {
 
     auto &ps = DEBUG_get_players();
 
+    player_t *spectator = DEBUG_get_spectator();
+
+    ImGui::Text("- Position: %s", glm::to_string(spectator->ws_position).c_str());
+    ImGui::Text("- Direction: %s", glm::to_string(spectator->ws_view_direction).c_str());
+
     for (uint32_t i = 0; i < ps.data_count; ++i) {
         player_t *p = ps.data[i];
         if (p) {
@@ -384,26 +399,23 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_FADE_FINISHED, game_core_listener, &events);
 
     focus = HF_UI;
-    input_interface_data_t input_interface = input_interface_init();
 
     game_input_settings_init();
 
-    renderer_init(
-        input_interface.application_name,
-        input_interface.surface_creation_proc,
-        input_interface.window,
-        input_interface.surface_width,
-        input_interface.surface_height);
+    renderer_init();
 
     e_fader_init();
 
     // Launch fade effect immediately
     event_begin_fade_effect_t fade_info = {};
     fade_info.dest_value = 1.0f;
-    fade_info.duration = 2.0f;
+    fade_info.duration = 4.0f;
     submit_event(ET_BEGIN_FADE, &fade_info, &events);
 
-    ui_init();
+    ui_init(&events);
+
+    submit_event(ET_LAUNCH_MAIN_MENU_SCREEN, NULL, &events);
+
     net_init(&events);
 
 #if LINK_AGAINST_RENDERER

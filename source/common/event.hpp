@@ -26,7 +26,10 @@ enum event_type_t {
     ET_REQUEST_REFRESH_SERVER_PAGE,
     ET_BEGIN_FADE, // With data, can be in / out
     ET_FADE_FINISHED, // Just so that game can know when to do some sort of transition or something...
-    ET_OPEN_MAIN_MENU,
+
+    ET_LAUNCH_MAIN_MENU_SCREEN,
+    // All the other modes (launch server loading screen, etc...
+
     ET_INVALID_EVENT_TYPE
 };
 

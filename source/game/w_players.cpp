@@ -32,8 +32,8 @@ void w_player_world_init(
     world->spectator = FL_MALLOC(player_t, 1);
     memset(world->spectator, 0, sizeof(player_t));
     world->spectator->default_speed = 20.0f;
-    world->spectator->ws_position = vector3_t(-50.0f, 0.0f, -50.0f);
-    world->spectator->ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
+    world->spectator->ws_position = vector3_t(3.7f, -136.0f, -184.0f);
+    world->spectator->ws_view_direction = vector3_t(0.063291, 0.438437, 0.896531);
     world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
     world->spectator->flags.interaction_mode = PIM_FLOATING;
     world->spectator->camera_fov.current = 60.0f;
@@ -57,7 +57,6 @@ void w_player_animation_init(
 
 void w_players_data_init() {
     shader_binding_info_t mesh_info = {};
-    //load_mesh_internal(IM_SPHERE, &player_mesh, &mesh_info);
     load_mesh_external(&player_mesh, &mesh_info, "assets/models/player.mesh");
     load_skeleton(&player_skeleton, "assets/models/player.skeleton");
     load_animation_cycles(&player_cycles, "assets/models/player.animations.link", "assets/models/player.animations");

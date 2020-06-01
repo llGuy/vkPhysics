@@ -199,14 +199,21 @@ static void s_error_callback(int, const char *msg) {
     
 }
 
-input_interface_data_t input_interface_init() {
+static const char *application_name;
+
+const char *input_api_init() {
     if (!glfwInit()) {
         LOG_ERROR("Failed to initialize GLFW\n");
         exit(1);
     }
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    const char *application_name = "vkPhysics";
+    application_name = "vkPhysics";
+
+    return application_name;
+}
+
+input_interface_data_t input_interface_init() {
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     int32_t width = vidmode->width / 2;

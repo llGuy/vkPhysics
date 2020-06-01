@@ -14,6 +14,8 @@ struct input_interface_data_t {
     void *window;
 };
 
+DECLARE_POINTER_RENDERER_PROC(const char *, input_api_init, void);
+
 DECLARE_RENDERER_PROC(input_interface_data_t, input_interface_init, void);
 
 DECLARE_VOID_RENDERER_PROC(void, game_input_settings_init, void);
