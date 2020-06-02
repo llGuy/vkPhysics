@@ -901,23 +901,25 @@ void end_frame() {
 
     r_execute_final_pass(primary_command_buffers[image_index]);
 
-    // ImGui_ImplVulkan_NewFrame();
-    // ImGui_ImplGlfw_NewFrame();
-    // ImGui::NewFrame();
+#if 0
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
-    // // General stuff
-    // ImGui::Begin("General");
-    // ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+    // General stuff
+    ImGui::Begin("General");
+    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
 
-    // for (uint32_t i = 0; i < debug_ui_proc_count; ++i) {
-    //     (debug_ui_procs[i])();
-    // }
+    for (uint32_t i = 0; i < debug_ui_proc_count; ++i) {
+        (debug_ui_procs[i])();
+    }
 
-    // ImGui::End();
+    ImGui::End();
 
-    // ImGui::Render();
+    ImGui::Render();
 
-    // ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
+#endif
 
     vkCmdEndRenderPass(primary_command_buffers[image_index]);
 

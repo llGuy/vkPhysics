@@ -299,3 +299,14 @@ vector3_t w_test_collision(
     collision_triangle_t *triangle);
 
 vector3_t w_get_player_scale();
+
+// Startup screen (which is blurred, and those 3 planets)
+void w_render_startup_world(
+    VkCommandBuffer render_command_buffer);
+
+// Returns vertex count
+uint32_t w_create_chunk_vertices(
+    uint8_t surface_level,
+    vector3_t *mesh_vertices,
+    chunk_t *c,
+    world_t *world);

@@ -86,6 +86,15 @@ file_contents_t read_file(
     }
 }
 
+void write_file(
+    file_handle_t handle,
+    uint8_t *bytes,
+    uint32_t size) {
+    file_object_t *object = files.get(handle);
+
+    fwrite(bytes, 1, size, object->file);
+}
+
 void free_file(
     file_handle_t handle) {
     file_object_t *object = files.get(handle);

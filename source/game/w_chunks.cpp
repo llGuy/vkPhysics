@@ -222,8 +222,7 @@ static void s_update_chunk_mesh_voxel_pair(
     }
 }
 
-static void s_update_chunk_mesh(
-    VkCommandBuffer command_buffer,
+uint32_t w_create_chunk_vertices(
     uint8_t surface_level,
     vector3_t *mesh_vertices,
     chunk_t *c,
@@ -351,6 +350,21 @@ static void s_update_chunk_mesh(
             }
         }
     }
+
+    return vertex_count;
+}
+
+static void s_update_chunk_mesh(
+    VkCommandBuffer command_buffer,
+    uint8_t surface_level,
+    vector3_t *mesh_vertices,
+    chunk_t *c,
+    world_t *world) {
+    uint32_t vertex_count = w_create_chunk_vertices(
+        surface_level,
+        mesh_vertices,
+        c,
+        world);
 
     if (vertex_count) {
         c->flags.active_vertices = 1;

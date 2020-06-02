@@ -3,8 +3,10 @@
 #include "engine.hpp"
 #include "w_internal.hpp"
 #include <common/log.hpp>
+#include <common/files.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
+#include <common/serialiser.hpp>
 
 static world_t world;
 
@@ -83,9 +85,6 @@ static void s_world_event_listener(
         LOG_INFO("Entering server world\n");
 
         world.in_server = 1;
-
-
-
 
         // Reinitialise chunks / players
         w_clear_players(&world);
@@ -394,4 +393,67 @@ void reset_modification_tracker() {
 void set_chunk_history_tracker_value(
     bool value) {
     world.track_history = value;
+}
+
+void write_startup_screen() {
+    vector3_t *temp_vertices = LN_MALLOC(vector3_t, MAX_VERTICES_PER_CHUNK);
+
+    uint32_t vertex_count = 0;  // This is an estimate just to allocate enough memory in serialiser buffer
+    for (uint32_t i = 0; i < world.chunks.data_count; ++i) {
+        chunk_t *c = world.chunks[i];
+        if (c) {
+            if (c->flags.active_vertices) {
+                vertex_count += c->render->mesh.vertex_count;
+            }
+        }
+    }
+
+    serialiser_t serialiser = {};
+    // File has spectator position and view direction and visible vertices
+    serialiser.init(
+        sizeof(vector3_t) * 2 +
+        sizeof(uint32_t) +
+        vertex_count * sizeof(vector3_t));
+
+    serialiser.serialise_vector3(world.spectator->ws_position);
+    serialiser.serialise_vector3(world.spectator->ws_view_direction);
+
+    // Vertex count might change
+    uint8_t *vertex_count_ptr = serialiser.grow_data_buffer(sizeof(uint32_t));
+    vertex_count = 0;
+
+    for (uint32_t i = 0; i < world.chunks.data_count; ++i) {
+        chunk_t *c = world.chunks[i];
+        if (c) {
+            if (c->flags.active_vertices) {
+                uint32_t current_vertex_count = w_create_chunk_vertices(
+                    get_surface_level(),
+                    temp_vertices,
+                    c,
+                    &world);
+
+                for (uint32_t v = 0; v < current_vertex_count; ++v) {
+                    serialiser.serialise_vector3(temp_vertices[v]);
+                }
+
+                vertex_count += current_vertex_count;
+            }
+        }
+    }
+
+    serialiser.serialise_uint32(
+        vertex_count,
+        vertex_count_ptr);
+
+    file_handle_t output = create_file(
+        "assets/misc/startup/default.startup",
+        (file_load_flags_t)(FLF_BINARY | FLF_WRITEABLE));
+
+    write_file(
+        output,
+        serialiser.data_buffer,
+        serialiser.data_buffer_head);
+
+    free_file(
+        output);
 }

@@ -58,7 +58,7 @@ void free_file_contents(
 void write_file(
     file_handle_t file,
     uint8_t *bytes,
-    uint32_t *size);
+    uint32_t size);
 
 void free_file(
     file_handle_t handle);

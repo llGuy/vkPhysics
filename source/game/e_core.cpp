@@ -53,24 +53,24 @@ static void s_game_event_listener(
         e_begin_fade_effect(duration, dest);
     } break;
 
-    // case ET_PRESSED_ESCAPE: {
-    //     // Handle focus change
-    //     // TODO: Have proper focus sort of stack system
-    //     switch (focus) {
+    case ET_PRESSED_ESCAPE: {
+        // Handle focus change
+        // TODO: Have proper focus sort of stack system
+        switch (focus) {
             
-    //     case HF_WORLD: {
-    //         focus = HF_UI;
-    //         enable_cursor_display();
-    //     } break;
+        case HF_WORLD: {
+            focus = HF_UI;
+            enable_cursor_display();
+        } break;
 
-    //     case HF_UI: {
-    //         focus = HF_WORLD;
-    //         disable_cursor_display();
-    //     } break;
+        case HF_UI: {
+            focus = HF_WORLD;
+            disable_cursor_display();
+        } break;
 
-    //     }
+        }
 
-    // } break;
+    } break;
 
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
         focus = HF_UI;
@@ -248,6 +248,8 @@ static void s_run_windowed_game() {
         
         command_buffer_index = (command_buffer_index + 1) % secondary_command_buffer_count;
     }
+
+    write_startup_screen();
 }
 
 // Will remove this once have own UI system
