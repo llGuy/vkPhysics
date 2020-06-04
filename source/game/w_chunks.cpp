@@ -524,6 +524,18 @@ void w_chunk_gpu_sync_and_render(
 #endif
 }
 
+void w_render_startup_world(
+    VkCommandBuffer render_command_buffer) {
+    startup_screen_t *startup_data = get_startup_screen_data();
+
+    submit_mesh(
+        render_command_buffer,
+        &startup_data->world_mesh,
+        &chunk_shader,
+        &startup_data->world_render_data,
+        chunk_color_data_buffer_set);
+}
+
 void w_destroy_chunk_render(
     chunk_t *chunk) {
     if (chunk->render) {
@@ -654,7 +666,6 @@ void w_chunk_world_init(
     memset(chunks_to_interpolate.modifications, 0, sizeof(chunk_modifications_t) * chunks_to_interpolate.max_modified);
 
 #if 1
-    w_add_sphere_m(vector3_t(70.0f, 90.0f, -90.0f), 25.0f, world);
     w_add_sphere_m(vector3_t(0.0f), 40.0f, world);
     w_add_sphere_m(vector3_t(-40.0f), 20.0f, world);
     w_add_sphere_m(vector3_t(70.0f, -90.0f, 45.0f), 25.0f, world);

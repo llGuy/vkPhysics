@@ -296,4 +296,5 @@ chunks_to_interpolate_t *get_chunks_to_interpolate();
 stack_container_t<player_t *> &DEBUG_get_players();
 player_t *DEBUG_get_spectator();
 
+void read_startup_screen();
 void write_startup_screen();

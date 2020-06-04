@@ -6,9 +6,7 @@
 #include <common/containers.hpp>
 #include <renderer/renderer.hpp>
 
-#define MAX_VOXEL_VALUE_F 254.0f
-#define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
-
+// PLAYER STUFF ///////////////////////////////////////////////////////////////
 void w_push_player_actions(
     player_t *player,
     player_actions_t *action,
@@ -63,11 +61,12 @@ player_t *w_get_spectator(
 
 void w_destroy_player(
     uint32_t id,
-    world_t *world);
+    struct world_t *world);
 
 void w_clear_players(
-    world_t *world);
+    struct world_t *world);
 
+// CHUNKS /////////////////////////////////////////////////////////////////////
 uint32_t w_get_voxel_index(
     uint32_t x,
     uint32_t y,
@@ -91,52 +90,18 @@ void w_destroy_chunk_render(
 chunk_t *w_destroy_chunk(
     chunk_t *chunk);
 
-// Max loaded chunks for now (loaded chunk = chunk with active voxels)
-#define MAX_LOADED_CHUNKS 1000
-#define MAX_PLAYERS 50
-
-// Structure which holds all of the world data
-struct world_t {
-    int32_t local_player;
-    player_t *spectator;
-    stack_container_t<player_t *> players;
-    // From client id, get player
-    int16_t local_id_from_client_id[MAX_PLAYERS];
-
-    uint32_t loaded_radius;
-    // List of chunks
-    // Works like a stack
-    stack_container_t<chunk_t *> chunks;
-    uint32_t render_count;
-    chunk_t **chunks_to_render;
-    hash_table_t<uint32_t, 300, 30, 10> chunk_indices;
-
-    uint32_t max_modified_chunks;
-    uint32_t modified_chunk_count;
-    chunk_t **modified_chunks;
-
-    struct {
-        uint8_t wait_mesh_update: 1;
-        uint8_t track_history: 1;
-        uint8_t in_server: 1;
-    };
-
-    // Used for terrain pointer
-    terraform_package_t local_current_terraform_package;
-};
-
 uint32_t w_hash_chunk_coord(
     const ivector3_t &coord);
 
 void w_chunks_data_init();
 
 void w_clear_chunk_world(
-    world_t *world);
+    struct world_t *world);
 
 void w_destroy_chunk_data();
 
 void w_chunk_world_init(
-    world_t *world,
+    struct world_t *world,
     uint32_t loaded_radius);
 
 void w_tick_chunks(
@@ -145,13 +110,13 @@ void w_tick_chunks(
 void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,
-    world_t *world);
+    struct world_t *world);
 
 // Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpusync
 void w_add_sphere_m(
     const vector3_t &ws_center,
     float ws_radius,
-    world_t *world);
+    struct world_t *world);
 
 ivector3_t w_convert_world_to_voxel(
     const vector3_t &ws_position);
@@ -168,24 +133,14 @@ ivector3_t w_convert_voxel_to_local_chunk(
 // Does not create a chunk if it wasn't already created
 chunk_t *w_access_chunk(
     const ivector3_t &coord,
-    world_t *world);
+    struct world_t *world);
 
 // If chunk was not created, create it
 chunk_t *w_get_chunk(
     const ivector3_t &coord,
-    world_t *world);
+    struct world_t *world);
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
-
-// terraform_package_t w_terraform(
-//     terraform_type_t type,
-//     const vector3_t &ws_ray_start,
-//     const vector3_t &ws_ray_direction,
-//     float max_reach,
-//     float radius,
-//     float speed,
-//     float dt,
-//     world_t *world);
 
 bool w_terraform(
     terraform_type_t type,
@@ -193,62 +148,28 @@ bool w_terraform(
     float radius,
     float speed,
     float dt,
-    world_t *world);
+    struct world_t *world);
 
 terraform_package_t w_cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
     float max_reach,
-    world_t *world);
+    struct world_t *world);
 
 void w_toggle_mesh_update_wait(
     bool value,
-    world_t *world);
+    struct world_t *world);
 
 uint8_t get_surface_level();
 
-// enum collision_primitive_type_t { CPT_FACE, CPT_EDGE, CPT_VERTEX };
+// Returns vertex count
+uint32_t w_create_chunk_vertices(
+    uint8_t surface_level,
+    vector3_t *mesh_vertices,
+    chunk_t *c,
+    struct world_t *world);
 
-// struct terrain_collision_t {
-//     union {
-//         struct {
-//             uint32_t detected: 1;
-//             uint32_t under_terrain: 1;
-//             uint32_t is_currently_in_air: 1;
-//         };
-//         uint32_t flags;
-//     };
-
-//     // Velocity after sliding on terrain
-//     vector3_t es_new_velocity;
-
-//     // Point of contact between bounding sphere and terrain
-//     vector3_t es_contact_point;
-
-//     // Center position of sphere when collision happened
-//     vector3_t es_collision_point;
-
-//     // Normal of terrain at contact point
-//     vector3_t es_surface_normal;
-
-//     // Distance between contact point and center
-//     float es_distance_to_center;
-
-//     float es_distance_from_triangle;
-
-//     collision_primitive_type_t primitive_type;
-// };
-
-// terrain_collision_t collide_and_slide(
-//     const vector3_t &es_center,
-//     const vector3_t &es_velocity,
-//     const vector3_t &ws_size,
-//     uint32_t recurse_depth,
-//     terrain_collision_t previous_collision,
-//     terrain_collision_t *first_collision);
-
-// TODO: Make sure to revise collision detection implementation!
-
+// COLLISION WITH TERRAIN /////////////////////////////////////////////////////
 enum collision_primitive_type_t { CPT_FACE, CPT_EDGE, CPT_VERTEX };
 
 struct terrain_collision_t {
@@ -300,13 +221,54 @@ vector3_t w_test_collision(
 
 vector3_t w_get_player_scale();
 
-// Startup screen (which is blurred, and those 3 planets)
+// STARTUP SCREEN /////////////////////////////////////////////////////////////
+struct startup_screen_t {
+    mesh_t world_mesh;
+    mesh_render_data_t world_render_data;
+};
+
+startup_screen_t *get_startup_screen_data();
+
 void w_render_startup_world(
     VkCommandBuffer render_command_buffer);
 
-// Returns vertex count
-uint32_t w_create_chunk_vertices(
-    uint8_t surface_level,
-    vector3_t *mesh_vertices,
-    chunk_t *c,
-    world_t *world);
+void w_read_startup_screen(
+    struct world_t *world);
+
+void w_write_startup_screen(
+    struct world_t *world);
+
+// WORLD STRUCTURE CONTAINING EVERYTHING //////////////////////////////////////
+#define MAX_LOADED_CHUNKS 1000
+#define MAX_PLAYERS 50
+#define MAX_VOXEL_VALUE_F 254.0f
+#define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
+
+struct world_t {
+    int32_t local_player;
+    player_t *spectator;
+    stack_container_t<player_t *> players;
+    // From client id, get player
+    int16_t local_id_from_client_id[MAX_PLAYERS];
+
+    uint32_t loaded_radius;
+    // List of chunks
+    // Works like a stack
+    stack_container_t<chunk_t *> chunks;
+    uint32_t render_count;
+    chunk_t **chunks_to_render;
+    hash_table_t<uint32_t, 300, 30, 10> chunk_indices;
+
+    uint32_t max_modified_chunks;
+    uint32_t modified_chunk_count;
+    chunk_t **modified_chunks;
+
+    struct {
+        uint8_t wait_mesh_update: 1;
+        uint8_t track_history: 1;
+        uint8_t in_server: 1;
+    };
+
+    // Used for terrain pointer
+    terraform_package_t local_current_terraform_package;
+};

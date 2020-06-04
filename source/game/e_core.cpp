@@ -74,7 +74,7 @@ static void s_game_event_listener(
 
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
         focus = HF_UI;
-    } break;;
+    } break;
         
     }
 }
@@ -248,8 +248,6 @@ static void s_run_windowed_game() {
         
         command_buffer_index = (command_buffer_index + 1) % secondary_command_buffer_count;
     }
-
-    write_startup_screen();
 }
 
 // Will remove this once have own UI system
@@ -389,6 +387,11 @@ static void s_world_ui_proc() {
     if (leave_server) {
         submit_event(ET_LEAVE_SERVER, NULL, &events);
     }
+
+    bool write_startup = ImGui::Button("Write Startup");
+    if (write_startup) {
+        write_startup_screen();
+    }
 }
 #endif
 
@@ -399,6 +402,7 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_PRESSED_ESCAPE, game_core_listener, &events);
     subscribe_to_event(ET_BEGIN_FADE, game_core_listener, &events);
     subscribe_to_event(ET_FADE_FINISHED, game_core_listener, &events);
+    subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, game_core_listener, &events);
 
     focus = HF_UI;
 
@@ -411,7 +415,7 @@ static void s_windowed_game_main(
     // Launch fade effect immediately
     event_begin_fade_effect_t fade_info = {};
     fade_info.dest_value = 1.0f;
-    fade_info.duration = 4.0f;
+    fade_info.duration = 6.0f;
     submit_event(ET_BEGIN_FADE, &fade_info, &events);
 
     ui_init(&events);
@@ -451,7 +455,7 @@ static void s_windowed_game_main(
         secondary_command_buffer_count);
 
     world_init(&events);
-    
+
     s_run_windowed_game();
 
     dispatch_events(&events);

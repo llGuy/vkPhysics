@@ -10,6 +10,16 @@
 
 static world_t world;
 
+// If it's startup, we just render the packed "startup" chunks
+// If it's gameplay, we properly render chunks and stuff
+// If it's none, (for some reason), we don't render the world at all
+// (maybe for some special menu)
+static enum world_present_mode_t {
+    WPM_STARTUP,
+    WPM_GAMEPLAY,
+    WPM_NONE
+} current_world_present_mode;
+
 static void s_add_player_from_info(
     player_init_info_t *init_info) {
     player_t *p = w_add_player(&world);
@@ -98,6 +108,8 @@ static void s_world_event_listener(
 
         FL_FREE(data->infos);
         FL_FREE(event->data);
+
+        current_world_present_mode = WPM_GAMEPLAY;
     } break;
 
     case ET_LEAVE_SERVER: {
@@ -189,6 +201,10 @@ static void s_world_event_listener(
         FL_FREE(data);
     } break;
 
+    case ET_LAUNCH_MAIN_MENU_SCREEN: {
+        current_world_present_mode = WPM_STARTUP;
+    } break;
+
     default: {
     } break;
 
@@ -199,19 +215,6 @@ static listener_t world_listener;
 
 void world_init(
     event_submissions_t *events) {
-    // terrain_collision_t collision_test = {};
-    // collision_test.ws_size = vector3_t(1.0f);
-    // collision_test.ws_position = vector3_t(0.0f, 1.0f, 0.0f);
-    // collision_test.ws_velocity = vector3_t(1.0f, -1.0f, 1.0f) * 2.0f;
-    // collision_test.es_position = collision_test.ws_position / collision_test.ws_size;
-    // collision_test.es_velocity = collision_test.ws_velocity / collision_test.ws_size;
-
-    // collision_triangle_t triangle = {};
-    // triangle.vertices[0] = vector3_t(12.0f, 0.0f, 10.0f);
-    // triangle.vertices[2] = vector3_t(1.0f, 0.0f, 10.0f);
-    // triangle.vertices[1] = vector3_t(1.0f, 0.0f, -10.0f);
-    // test_collision(&collision_test, &triangle);
-
     world_listener = set_listener_callback(s_world_event_listener, NULL, events);
     subscribe_to_event(ET_ENTER_SERVER, world_listener, events);
     subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
@@ -224,6 +227,7 @@ void world_init(
     subscribe_to_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
     subscribe_to_event(ET_SET_CHUNK_HISTORY_TRACKER, world_listener, events);
     subscribe_to_event(ET_SPAWN, world_listener, events);
+    subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 
@@ -232,6 +236,9 @@ void world_init(
 
     w_chunks_data_init();
     w_chunk_world_init(&world, 4);
+
+    current_world_present_mode = WPM_NONE;
+    w_read_startup_screen(&world);
 }
 
 void destroy_world() {
@@ -256,19 +263,35 @@ void gpu_sync_world(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
-    w_players_gpu_sync_and_render(
-        render_command_buffer,
-        render_shadow_command_buffer,
-        transfer_command_buffer,
-        &world);
+    switch (current_world_present_mode) {
+    case WPM_STARTUP: {
+        w_render_startup_world(render_command_buffer);
 
-    w_chunk_gpu_sync_and_render(
-        render_command_buffer,
-        transfer_command_buffer,
-        &world);
+        if (render_command_buffer != VK_NULL_HANDLE) {
+            render_environment(render_command_buffer);
+        }
+    } break;
+
+    case WPM_GAMEPLAY: {
+        w_players_gpu_sync_and_render(
+            render_command_buffer,
+            render_shadow_command_buffer,
+            transfer_command_buffer,
+            &world);
+
+        w_chunk_gpu_sync_and_render(
+            render_command_buffer,
+            transfer_command_buffer,
+            &world);
     
-    if (render_command_buffer != VK_NULL_HANDLE) {
-        render_environment(render_command_buffer);
+        if (render_command_buffer != VK_NULL_HANDLE) {
+            render_environment(render_command_buffer);
+        }
+    } break;
+
+    case WPM_NONE: {
+        // Do nothing
+    } break;
     }
 }
 
@@ -396,64 +419,5 @@ void set_chunk_history_tracker_value(
 }
 
 void write_startup_screen() {
-    vector3_t *temp_vertices = LN_MALLOC(vector3_t, MAX_VERTICES_PER_CHUNK);
-
-    uint32_t vertex_count = 0;  // This is an estimate just to allocate enough memory in serialiser buffer
-    for (uint32_t i = 0; i < world.chunks.data_count; ++i) {
-        chunk_t *c = world.chunks[i];
-        if (c) {
-            if (c->flags.active_vertices) {
-                vertex_count += c->render->mesh.vertex_count;
-            }
-        }
-    }
-
-    serialiser_t serialiser = {};
-    // File has spectator position and view direction and visible vertices
-    serialiser.init(
-        sizeof(vector3_t) * 2 +
-        sizeof(uint32_t) +
-        vertex_count * sizeof(vector3_t));
-
-    serialiser.serialise_vector3(world.spectator->ws_position);
-    serialiser.serialise_vector3(world.spectator->ws_view_direction);
-
-    // Vertex count might change
-    uint8_t *vertex_count_ptr = serialiser.grow_data_buffer(sizeof(uint32_t));
-    vertex_count = 0;
-
-    for (uint32_t i = 0; i < world.chunks.data_count; ++i) {
-        chunk_t *c = world.chunks[i];
-        if (c) {
-            if (c->flags.active_vertices) {
-                uint32_t current_vertex_count = w_create_chunk_vertices(
-                    get_surface_level(),
-                    temp_vertices,
-                    c,
-                    &world);
-
-                for (uint32_t v = 0; v < current_vertex_count; ++v) {
-                    serialiser.serialise_vector3(temp_vertices[v]);
-                }
-
-                vertex_count += current_vertex_count;
-            }
-        }
-    }
-
-    serialiser.serialise_uint32(
-        vertex_count,
-        vertex_count_ptr);
-
-    file_handle_t output = create_file(
-        "assets/misc/startup/default.startup",
-        (file_load_flags_t)(FLF_BINARY | FLF_WRITEABLE));
-
-    write_file(
-        output,
-        serialiser.data_buffer,
-        serialiser.data_buffer_head);
-
-    free_file(
-        output);
+    w_write_startup_screen(&world);
 }

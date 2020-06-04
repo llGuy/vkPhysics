@@ -901,7 +901,7 @@ void end_frame() {
 
     r_execute_final_pass(primary_command_buffers[image_index]);
 
-#if 0
+#if 1
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
