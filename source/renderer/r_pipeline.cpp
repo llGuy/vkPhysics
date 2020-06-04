@@ -203,6 +203,14 @@ void destroy_rpipeline_stage(
     }
 }
 
+// Will get updated during frame
+static VkDescriptorSet previous_output;
+
+static void s_update_previous_output(
+    VkDescriptorSet output) {
+    previous_output = output;
+}
+
 static VkExtent2D shadow_map_extent;
 static rpipeline_stage_t shadow_stage;
 
@@ -584,8 +592,13 @@ static void s_ssao_init() {
 }
 
 void r_execute_ssao_pass(
-    VkCommandBuffer command_buffer) {
+    VkCommandBuffer command_buffer,
+    bool enabled) {
     VkClearValue clear_values = {};
+    clear_values.color.float32[0] = 1.0f;
+    clear_values.color.float32[1] = 1.0f;
+    clear_values.color.float32[2] = 1.0f;
+    clear_values.color.float32[3] = 1.0f;
     
     VkRect2D render_area = {};
     render_area.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
@@ -601,44 +614,53 @@ void r_execute_ssao_pass(
 
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
-    VkViewport viewport = {};
-    viewport.width = ((float)r_swapchain_extent().width / kernels.resolution_coefficient);
-    viewport.height = ((float)r_swapchain_extent().height / kernels.resolution_coefficient);
-    viewport.maxDepth = 1;
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+    if (enabled) {
+        VkViewport viewport = {};
+        viewport.width = ((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+        viewport.height = ((float)r_swapchain_extent().height / kernels.resolution_coefficient);
+        viewport.maxDepth = 1;
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
-    VkRect2D rect = {};
-    rect.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
-    rect.extent.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
-    vkCmdSetScissor(command_buffer, 0, 1, &rect);
+        VkRect2D rect = {};
+        rect.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+        rect.extent.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
+        vkCmdSetScissor(command_buffer, 0, 1, &rect);
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ssao_shader.pipeline);
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ssao_shader.pipeline);
 
-    VkDescriptorSet inputs[] = {
-        deferred.descriptor_set,
-        r_camera_transforms_uniform(),
-        noise_texture.descriptor,
-        kernel_uniform_buffer_set
-    };
+        VkDescriptorSet inputs[] = {
+                                    deferred.descriptor_set,
+                                    r_camera_transforms_uniform(),
+                                    noise_texture.descriptor,
+                                    kernel_uniform_buffer_set
+        };
     
-    vkCmdBindDescriptorSets(
-        command_buffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        ssao_shader.layout,
-        0,
-        sizeof(inputs) / sizeof(VkDescriptorSet),
-        inputs,
-        0,
-        NULL);
+        vkCmdBindDescriptorSets(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            ssao_shader.layout,
+            0,
+            sizeof(inputs) / sizeof(VkDescriptorSet),
+            inputs,
+            0,
+            NULL);
 
-    vkCmdDraw(command_buffer, 4, 1, 0, 0);
+        vkCmdDraw(command_buffer, 4, 1, 0, 0);
+    }
 
     vkCmdEndRenderPass(command_buffer);
+
+    s_update_previous_output(ssao_stage.descriptor_set);
 }
 
 void r_execute_ssao_blur_pass(
-    VkCommandBuffer command_buffer) {
+    VkCommandBuffer command_buffer,
+    bool enabled) {
     VkClearValue clear_values = {};
+    clear_values.color.float32[0] = 1.0f;
+    clear_values.color.float32[1] = 1.0f;
+    clear_values.color.float32[2] = 1.0f;
+    clear_values.color.float32[3] = 1.0f;
     
     VkRect2D render_area = {};
     render_area.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
@@ -653,37 +675,41 @@ void r_execute_ssao_blur_pass(
     begin_info.renderArea = render_area;
 
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    if (enabled) {
+        VkViewport viewport = {};
+        viewport.width = ((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+        viewport.height = ((float)r_swapchain_extent().height / kernels.resolution_coefficient);
+        viewport.maxDepth = 1;
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+        VkRect2D rect = {};
+        rect.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
+        rect.extent.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
+        vkCmdSetScissor(command_buffer, 0, 1, &rect);
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ssao_blur_shader.pipeline);
+
+        VkDescriptorSet inputs[] = {
+                                    ssao_stage.descriptor_set
+        };
     
-    VkViewport viewport = {};
-    viewport.width = ((float)r_swapchain_extent().width / kernels.resolution_coefficient);
-    viewport.height = ((float)r_swapchain_extent().height / kernels.resolution_coefficient);
-    viewport.maxDepth = 1;
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+        vkCmdBindDescriptorSets(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            ssao_blur_shader.layout,
+            0,
+            sizeof(inputs) / sizeof(VkDescriptorSet),
+            inputs,
+            0,
+            NULL);
 
-    VkRect2D rect = {};
-    rect.extent.width = (uint32_t)((float)r_swapchain_extent().width / kernels.resolution_coefficient);
-    rect.extent.height = (uint32_t)((float)r_swapchain_extent().height / kernels.resolution_coefficient);
-    vkCmdSetScissor(command_buffer, 0, 1, &rect);
-
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ssao_blur_shader.pipeline);
-
-    VkDescriptorSet inputs[] = {
-        ssao_stage.descriptor_set
-    };
-    
-    vkCmdBindDescriptorSets(
-        command_buffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        ssao_blur_shader.layout,
-        0,
-        sizeof(inputs) / sizeof(VkDescriptorSet),
-        inputs,
-        0,
-        NULL);
-
-    vkCmdDraw(command_buffer, 4, 1, 0, 0);
+        vkCmdDraw(command_buffer, 4, 1, 0, 0);
+    }
 
     vkCmdEndRenderPass(command_buffer);
+
+    s_update_previous_output(ssao_blur_stage.descriptor_set);
 }
 
 static rpipeline_stage_t lighting_stage;
@@ -846,6 +872,8 @@ void r_execute_lighting_pass(
     vkCmdDraw(command_buffer, 4, 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
+
+    s_update_previous_output(lighting_stage.descriptor_set);
 }
 
 static rpipeline_shader_t motion_blur_shader;
@@ -1028,6 +1056,8 @@ void r_execute_motion_blur_pass(
     vkCmdEndRenderPass(command_buffer);
 
     current_command_buffer = (current_command_buffer + 1) % post_process_command_buffer_count;
+
+    s_update_previous_output(motion_blur_stage.descriptor_set);
 }
 
 static rpipeline_shader_t blur_shader;
@@ -1141,10 +1171,10 @@ static void s_blur_init() {
 }
 
 // Blur bright colors
-void r_execute_bloom_pass(
+void r_execute_gaussian_blur_pass(
     VkCommandBuffer command_buffer) {
     VkDescriptorSet inputs[] = {
-        bright_colors_set
+        motion_blur_stage.descriptor_set
     };
 
     uint32_t horizontal = true;
@@ -1205,6 +1235,8 @@ void r_execute_bloom_pass(
         
         horizontal = !horizontal;
     }
+
+    s_update_previous_output(current_set);
 }
 
 static rpipeline_stage_t final_stage;
@@ -1266,11 +1298,7 @@ void r_execute_final_pass(
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, final_shader.pipeline);
 
     VkDescriptorSet inputs[] = {
-                                //lighting_stage.descriptor_set,
-                                        motion_blur_stage.descriptor_set
-                                //ssao_blur_stage.descriptor_set
-                                //shadow_stage.descriptor_set
-        //current_set
+        previous_output,
     };
     
     vkCmdBindDescriptorSets(
@@ -1307,7 +1335,7 @@ void r_pipeline_init() {
     s_lighting_render_pass_init();
     s_lighting_init();
     
-    //s_blur_init();
+    s_blur_init();
 
     s_motion_blur_render_pass_init();
     s_motion_blur_init();

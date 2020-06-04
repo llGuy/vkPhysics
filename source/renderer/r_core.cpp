@@ -871,11 +871,12 @@ void gpu_data_sync(
 // Need to pass the command buffer containing all user interface rendering
 void post_process_scene(
     VkCommandBuffer ui_command_buffer) {
-    r_execute_ssao_pass(primary_command_buffers[image_index]);
-    r_execute_ssao_blur_pass(primary_command_buffers[image_index]);
+    r_execute_ssao_pass(primary_command_buffers[image_index], true);
+    r_execute_ssao_blur_pass(primary_command_buffers[image_index], true);
     r_execute_lighting_pass(primary_command_buffers[image_index]);
     // Pass this to whatever the last pass is
     r_execute_motion_blur_pass(primary_command_buffers[image_index], ui_command_buffer);
+    r_execute_gaussian_blur_pass(primary_command_buffers[image_index]);
 }
 
 void end_frame() {

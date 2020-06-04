@@ -35,15 +35,17 @@ VkDevice r_device();
 void r_pipeline_init();
 
 void r_execute_ssao_pass(
-    VkCommandBuffer command_buffer);
+    VkCommandBuffer command_buffer,
+    bool enabled);
 
 void r_execute_ssao_blur_pass(
-    VkCommandBuffer command_buffer);
+    VkCommandBuffer command_buffer,
+    bool enabled);
 
 void r_execute_lighting_pass(
     VkCommandBuffer command_buffer);
 
-void r_execute_bloom_pass(
+void r_execute_gaussian_blur_pass(
     VkCommandBuffer command_buffer);
 
 void r_execute_motion_blur_pass(
