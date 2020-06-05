@@ -124,3 +124,48 @@ void w_write_startup_screen(
     free_file(
         output);
 }
+
+vector3_t w_update_spectator_view_direction(
+    const vector3_t &spectator_view_direction) {
+    game_input_t *game_input = get_game_input();
+
+    static bool rotating = 0;
+    static vector3_t dest = vector3_t(0.0f);
+
+    float dmouse_x = game_input->mouse_x - game_input->previous_mouse_x;
+    float dmouse_y = game_input->mouse_y - game_input->previous_mouse_y;
+
+    if (rotating) {
+        vector3_t diff = dest - spectator_view_direction;
+        if (glm::dot(diff, diff) > 0.00001f) {
+            return glm::normalize(spectator_view_direction + diff * surface_delta_time() * 3.0f);
+        }
+        else {
+            rotating = 0;
+            return spectator_view_direction;
+        }
+    }
+    else if (glm::abs(dmouse_x) > 0.0f || glm::abs(dmouse_y) > 0.0f) {
+        vector2_t delta = glm::normalize(vector2_t(dmouse_x, dmouse_y));
+
+        static constexpr float SENSITIVITY = 1.0f;
+
+        vector3_t res = spectator_view_direction;
+
+        float x_angle = glm::radians(-delta.x) * SENSITIVITY;// *elapsed;
+        float y_angle = glm::radians(-delta.y) * SENSITIVITY;// *elapsed;
+
+        vector3_t up = vector3_t(0.0f, 1.0f, 0.0f);
+                
+        res = matrix3_t(glm::rotate(x_angle, up)) * res;
+        vector3_t rotate_y = glm::cross(res, up);
+        res = matrix3_t(glm::rotate(y_angle, rotate_y)) * res;
+
+        dest = glm::normalize(res);
+        rotating = 1;
+
+        return spectator_view_direction;
+    }
+
+    return spectator_view_direction;
+}

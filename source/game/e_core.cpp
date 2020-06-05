@@ -28,6 +28,8 @@ static enum highlevel_focus_t {
     HF_WORLD, HF_UI
 } focus;
 
+static frame_info_t frame_info;
+
 static void s_game_event_listener(
     void *object,
     event_t *event) {
@@ -56,24 +58,29 @@ static void s_game_event_listener(
     case ET_PRESSED_ESCAPE: {
         // Handle focus change
         // TODO: Have proper focus sort of stack system
-        switch (focus) {
+
+        // switch (focus) {
             
-        case HF_WORLD: {
-            focus = HF_UI;
-            enable_cursor_display();
-        } break;
+        // case HF_WORLD: {
+        //     focus = HF_UI;
+        //     enable_cursor_display();
+        // } break;
 
-        case HF_UI: {
-            focus = HF_WORLD;
-            disable_cursor_display();
-        } break;
+        // case HF_UI: {
+        //     focus = HF_WORLD;
+        //     disable_cursor_display();
+        // } break;
 
-        }
+        // }
 
     } break;
 
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
         focus = HF_UI;
+        frame_info.blurred = 1;
+        frame_info.ssao = 0;
+
+        // When entering gameplay mode, enable ssao and disable blur
     } break;
         
     }
@@ -168,11 +175,11 @@ static void s_render(
         final_command_buffer);
 
     post_process_scene(
+        &frame_info,
         ui_command_buffer);
 
     // Render UI
-
-    end_frame();
+    end_frame(&frame_info);
 }
 
 static void s_run_windowed_game() {
@@ -455,6 +462,10 @@ static void s_windowed_game_main(
         secondary_command_buffer_count);
 
     world_init(&events);
+
+    frame_info.blurred = 0; 
+    frame_info.ssao = 0;
+    frame_info.debug_window = 0;
 
     s_run_windowed_game();
 

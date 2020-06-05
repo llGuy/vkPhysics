@@ -233,7 +233,20 @@ DECLARE_RENDERER_PROC(texture_t, create_texture,
 // RENDERING FUNCTIONALITY ////////////////////////////////////////////////////
 DECLARE_RENDERER_PROC(VkCommandBuffer, begin_frame, void);
 
-DECLARE_VOID_RENDERER_PROC(void, end_frame, void);
+struct frame_info_t {
+    union {
+        struct {
+            uint32_t blurred: 1;
+            uint32_t ssao: 1;
+            uint32_t debug_window: 1;
+        };
+
+        uint32_t flags;
+    };
+};
+
+DECLARE_VOID_RENDERER_PROC(void, end_frame,
+    frame_info_t *frame_info);
 
 // This needs to be created and passed to the renderer module to update camera transforms
 // And lighting information
@@ -267,6 +280,7 @@ DECLARE_VOID_RENDERER_PROC(void, render_environment,
     VkCommandBuffer command_buffer);
 
 DECLARE_VOID_RENDERER_PROC(void, post_process_scene,
+    frame_info_t *frame_info,
     VkCommandBuffer ui_command_buffer);
 
 DECLARE_VOID_RENDERER_PROC(void, begin_scene_rendering,

@@ -238,6 +238,9 @@ void w_read_startup_screen(
 void w_write_startup_screen(
     struct world_t *world);
 
+vector3_t w_update_spectator_view_direction(
+    const vector3_t &spectator_view_direction);
+
 // WORLD STRUCTURE CONTAINING EVERYTHING //////////////////////////////////////
 #define MAX_LOADED_CHUNKS 1000
 #define MAX_PLAYERS 50

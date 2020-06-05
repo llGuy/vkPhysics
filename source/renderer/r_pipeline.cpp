@@ -1062,17 +1062,21 @@ void r_execute_motion_blur_pass(
 
 static rpipeline_shader_t blur_shader;
 static rpipeline_stage_t blur_stage;
-VkDescriptorSet blur_sets[2];
-VkDescriptorSet current_set;
+static VkDescriptorSet blur_sets[2];
+static VkDescriptorSet current_set;
+static VkExtent2D blur_extent;
 
 static void s_blur_init() {
     blur_stage.color_attachment_count = 1;
     // Need 2 attachments for ping-pong rendering, but render pass only takes one
     blur_stage.color_attachments = FL_MALLOC(attachment_t, 2);
 
+    blur_extent.width = r_swapchain_extent().width / 2;
+    blur_extent.height = r_swapchain_extent().height / 2;
+
     VkExtent3D extent3d = {};
-    extent3d.width = r_swapchain_extent().width;
-    extent3d.height = r_swapchain_extent().height;
+    extent3d.width = blur_extent.width;
+    extent3d.height = blur_extent.height;
     extent3d.depth = 1;
     
     blur_stage.color_attachments[0] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
@@ -1123,7 +1127,7 @@ static void s_blur_init() {
         blur_stage.color_attachments,
         NULL,
         blur_stage.render_pass,
-        r_swapchain_extent(),
+        blur_extent,
         1);
 
     blur_stage.framebuffers[1] = r_create_framebuffer(
@@ -1131,7 +1135,7 @@ static void s_blur_init() {
         blur_stage.color_attachments + 1,
         NULL,
         blur_stage.render_pass,
-        r_swapchain_extent(),
+        blur_extent,
         1);
 
     //r_rpipeline_descriptor_set_output_init(&blur_stage);
@@ -1179,7 +1183,7 @@ void r_execute_gaussian_blur_pass(
 
     uint32_t horizontal = true;
     
-    for (uint32_t i = 0; i < 10; ++i) {
+    for (uint32_t i = 0; i < 2; ++i) {
         if (i > 0) {
             inputs[0] = blur_sets[!horizontal];
             current_set = blur_sets[horizontal];
@@ -1188,7 +1192,7 @@ void r_execute_gaussian_blur_pass(
         VkClearValue clear_values = {};
     
         VkRect2D render_area = {};
-        render_area.extent = r_swapchain_extent();
+        render_area.extent = blur_extent;
 
         VkRenderPassBeginInfo begin_info = {};
         begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1201,13 +1205,13 @@ void r_execute_gaussian_blur_pass(
         vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     
         VkViewport viewport = {};
-        viewport.width = (float)r_swapchain_extent().width;
-        viewport.height = (float)r_swapchain_extent().height;
+        viewport.width = (float)blur_extent.width;
+        viewport.height = (float)blur_extent.height;
         viewport.maxDepth = 1;
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
         VkRect2D rect = {};
-        rect.extent = r_swapchain_extent();
+        rect.extent = blur_extent;
         vkCmdSetScissor(command_buffer, 0, 1, &rect);
 
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, blur_shader.pipeline);
@@ -1379,9 +1383,11 @@ void r_handle_resize(
     destroy_rpipeline_stage(&ssao_blur_stage);
     destroy_rpipeline_stage(&lighting_stage);
     destroy_rpipeline_stage(&motion_blur_stage);
+    destroy_rpipeline_stage(&blur_stage);
     
     s_deferred_init();
     s_ssao_init();
     s_lighting_init();
     s_motion_blur_init();
+    s_blur_init();
 }

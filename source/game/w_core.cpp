@@ -265,6 +265,10 @@ void gpu_sync_world(
     VkCommandBuffer transfer_command_buffer) {
     switch (current_world_present_mode) {
     case WPM_STARTUP: {
+        // Update spectator view direction with mouse movement
+        world.spectator->ws_view_direction = w_update_spectator_view_direction(
+            world.spectator->ws_view_direction);
+
         w_render_startup_world(render_command_buffer);
 
         if (render_command_buffer != VK_NULL_HANDLE) {
