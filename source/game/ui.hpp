@@ -3,4 +3,4 @@
 void ui_init(
     struct event_submissions_t *events);
 
-void ui_submit();
+void tick_ui();

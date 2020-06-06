@@ -619,6 +619,9 @@ DECLARE_RENDERER_PROC(vector2_t, pixel_to_glsl_coord,
     const vector2_t &position,
     const VkExtent2D &resolution);
 
+DECLARE_RENDERER_PROC(vector2_t, convert_pixel_to_ndc,
+    const vector2_t &pixel_coord);
+
 DECLARE_RENDERER_PROC(uint32_t, vec4_color_to_ui32b,
     const vector4_t &color);
 

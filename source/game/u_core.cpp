@@ -1,6 +1,7 @@
 #include "ui.hpp"
 #include "u_internal.hpp"
 #include <common/event.hpp>
+#include <renderer/input.hpp>
 
 enum ui_stack_item_t {
     USI_MAIN_MENU,
@@ -51,7 +52,23 @@ void ui_init(
     u_hud_init();
 }
 
-void ui_submit() {
+void tick_ui() {
+    game_input_t *game_input = get_game_input();
+
+    if (stack_item_count) {
+        ui_stack_item_t last = stack_items[stack_item_count - 1];
+
+        switch (last) {
+        case USI_MAIN_MENU: {
+            u_main_menu_input(game_input);
+        } break;
+
+        default: {
+            // Nothing
+        } break;
+        }
+    }
+
     for (uint32_t i = 0; i < stack_item_count; ++i) {
         switch (stack_items[i]) {
         case USI_MAIN_MENU: {

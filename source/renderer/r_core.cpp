@@ -2299,3 +2299,25 @@ shader_t create_3d_shader_shadow(
         r_shadow_stage(),
         VK_CULL_MODE_FRONT_BIT);
 }
+
+vector2_t convert_pixel_to_ndc(
+    const vector2_t &pixel_coord) {
+    // TODO: When supporting smaller res backbuffer, need to change this
+    VkExtent2D swapchain_extent = r_swapchain_extent();
+    uint32_t rect2D_width, rect2D_height, rect2Dx, rect2Dy;
+
+    rect2D_width = swapchain_extent.width;
+    rect2D_height = swapchain_extent.height;
+    rect2Dx = 0;
+    rect2Dy = 0;
+
+    vector2_t ndc;
+
+    ndc.x = (float)(pixel_coord.x - rect2Dx) / (float)rect2D_width;
+    ndc.y = 1.0f - (float)(pixel_coord.y - rect2Dy) / (float)rect2D_height;
+
+    ndc.x = 2.0f * ndc.x - 1.0f;
+    ndc.y = 2.0f * ndc.y - 1.0f;
+
+    return ndc;
+}

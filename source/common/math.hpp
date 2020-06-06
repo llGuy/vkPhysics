@@ -51,7 +51,45 @@ struct smooth_linear_interpolation_t {
         in_animation = iin_animation;
         prev = iprev;
         next = inext;
-        current_time = prev;
+        current_time = 0.0f;
+        max_time = imax_time;
+    }
+
+    void animate(
+        float dt) {
+        if (in_animation) {
+            current_time += dt;
+            float progression = current_time / max_time;
+        
+            if (progression >= 1.0f) {
+                in_animation = 0;
+                current = next;
+            }
+            else {
+                current = prev + progression * (next - prev);
+            }
+        }
+    }
+};
+
+struct smooth_linear_interpolation_v3_t {
+    bool in_animation;
+
+    vector3_t current;
+    vector3_t prev;
+    vector3_t next;
+    float current_time;
+    float max_time;
+
+    void set(
+        bool iin_animation,
+        vector3_t iprev,
+        vector3_t inext,
+        float imax_time) {
+        in_animation = iin_animation;
+        prev = iprev;
+        next = inext;
+        current_time = 0.0f;
         max_time = imax_time;
     }
 
