@@ -587,7 +587,14 @@ struct ui_vector2_t {
     inline ivector2_t to_ivec2(void) const { return ivector2_t(ix, iy); }
 };
 
-enum relative_to_t { RT_LEFT_DOWN, RT_LEFT_UP, RT_CENTER, RT_RIGHT_DOWN, RT_RIGHT_UP };
+enum relative_to_t {
+    RT_LEFT_DOWN,
+    RT_LEFT_UP,
+    RT_RELATIVE_CENTER,
+    RT_RIGHT_DOWN,
+    RT_RIGHT_UP,
+    RT_CENTER,
+};
 
 // Math functions
 DECLARE_RENDERER_PROC(vector2_t, convert_glsl_to_normalized,

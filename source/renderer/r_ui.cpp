@@ -76,14 +76,16 @@ static constexpr vector2_t RELATIVE_TO_ADD_VALUES[] { vector2_t(0.0f, 0.0f),
         vector2_t(0.0f, 1.0f),
         vector2_t(0.5f, 0.5f),
         vector2_t(1.0f, 0.0f),
-        vector2_t(1.0f, 1.0f)
+        vector2_t(1.0f, 1.0f),
+        vector2_t(0.0f, 0.0f),
         };
 
 static constexpr vector2_t RELATIVE_TO_FACTORS[] { vector2_t(0.0f, 0.0f),
         vector2_t(0.0f, -1.0f),
         vector2_t(-0.5f, -0.5f),
         vector2_t(-1.0f, 0.0f),
-        vector2_t(-1.0f, -1.0f)
+        vector2_t(-1.0f, -1.0f),
+        vector2_t(0.0f, 0.0f),
         };
 
 void ui_box_t::update_size(
