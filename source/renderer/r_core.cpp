@@ -876,12 +876,14 @@ void post_process_scene(
     r_execute_ssao_blur_pass(primary_command_buffers[image_index], info->ssao);
     r_execute_lighting_pass(primary_command_buffers[image_index]);
 
+    r_execute_motion_blur_pass(primary_command_buffers[image_index], ui_command_buffer);
+
     if (info->blurred) {
         // Pass this to whatever the last pass is
-        r_execute_motion_blur_pass(primary_command_buffers[image_index], ui_command_buffer);
+        r_execute_gaussian_blur_pass(primary_command_buffers[image_index]);
     }
 
-    r_execute_gaussian_blur_pass(primary_command_buffers[image_index]);
+    r_execute_ui_pass(primary_command_buffers[image_index], ui_command_buffer);
 }
 
 void end_frame(
@@ -908,25 +910,25 @@ void end_frame(
 
     r_execute_final_pass(primary_command_buffers[image_index]);
 
-#if 0
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    if (info->debug_window) {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
-    // General stuff
-    ImGui::Begin("General");
-    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+        // General stuff
+        ImGui::Begin("General");
+        ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
 
-    for (uint32_t i = 0; i < debug_ui_proc_count; ++i) {
-        (debug_ui_procs[i])();
+        for (uint32_t i = 0; i < debug_ui_proc_count; ++i) {
+            (debug_ui_procs[i])();
+        }
+
+        ImGui::End();
+
+        ImGui::Render();
+
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
     }
-
-    ImGui::End();
-
-    ImGui::Render();
-
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
-#endif
 
     vkCmdEndRenderPass(primary_command_buffers[image_index]);
 
@@ -991,6 +993,10 @@ void fill_main_inheritance_info(
 
     case RPI_POST_PROCESS: {
         stage = r_motion_blur_stage();
+    } break;
+
+    case RPI_UI: {
+        stage = r_ui_stage();
     } break;
     }
 

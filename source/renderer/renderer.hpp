@@ -54,7 +54,7 @@ DECLARE_VOID_RENDERER_PROC(void, create_command_buffers,
     VkCommandBuffer *command_buffers, uint32_t count);
 
 enum render_pass_inheritance_t {
-    RPI_SHADOW, RPI_DEFERRED, RPI_POST_PROCESS
+    RPI_SHADOW, RPI_DEFERRED, RPI_POST_PROCESS, RPI_UI
 };
 
 DECLARE_VOID_RENDERER_PROC(void, fill_main_inheritance_info,

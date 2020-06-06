@@ -267,7 +267,7 @@ static void s_colored_shader_init() {
         0,
         color_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        r_motion_blur_stage(),
+        r_ui_stage(),
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         AB_ONE_MINUS_SRC_ALPHA);
 }
@@ -311,7 +311,7 @@ static void s_textured_shader_init() {
         1,
         texture_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        r_motion_blur_stage(),
+        r_ui_stage(),
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         AB_ONE_MINUS_SRC_ALPHA);
 }

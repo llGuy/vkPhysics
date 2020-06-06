@@ -41,6 +41,11 @@ void ui_init(
         NULL,
         events);
 
+    subscribe_to_event(
+        ET_LAUNCH_MAIN_MENU_SCREEN,
+        ui_listener,
+        events);
+
     u_main_menu_init();
 
     u_hud_init();

@@ -218,7 +218,7 @@ static void s_run_windowed_game() {
             &inheritance_info);
 
         VkCommandBuffer ui_command_buffer = ui_command_buffers[command_buffer_index];
-        fill_main_inheritance_info(&inheritance_info, RPI_POST_PROCESS);
+        fill_main_inheritance_info(&inheritance_info, RPI_UI);
         begin_command_buffer(
             ui_command_buffer,
             VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,

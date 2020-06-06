@@ -1051,7 +1051,10 @@ void r_execute_motion_blur_pass(
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
     vkCmdExecuteCommands(command_buffer, 1, &post_process_command_buffer[current_command_buffer]);
-    vkCmdExecuteCommands(command_buffer, 1, &ui_command_buffer);
+
+    // if (ui_command_buffer != VK_NULL_HANDLE) {
+    //     vkCmdExecuteCommands(command_buffer, 1, &ui_command_buffer);
+    // }
 
     vkCmdEndRenderPass(command_buffer);
 
@@ -1243,6 +1246,175 @@ void r_execute_gaussian_blur_pass(
     s_update_previous_output(current_set);
 }
 
+static rpipeline_stage_t ui_stage;
+static rpipeline_shader_t ui_shader; // This just renders the previous stage
+static VkCommandBuffer render_previous_command_buffer;
+
+rpipeline_stage_t *r_ui_stage() {
+    return &ui_stage;
+}
+
+static void s_ui_render_pass_init() {
+    ui_stage.color_attachment_count = 1;
+    
+    VkAttachmentDescription attachment_description = r_fill_color_attachment_description(
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_FORMAT_R16G16B16A16_SFLOAT);
+    
+    VkAttachmentReference attachment_reference = {};
+    attachment_reference.attachment = 0;
+    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = ui_stage.color_attachment_count;
+    subpass_description.pColorAttachments = &attachment_reference;
+    subpass_description.pDepthStencilAttachment = NULL;
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = ui_stage.color_attachment_count;
+    render_pass_info.pAttachments = &attachment_description;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &ui_stage.render_pass));
+}
+
+static void s_ui_stage_init() {
+    ui_stage.color_attachments = FL_MALLOC(attachment_t, ui_stage.color_attachment_count);
+
+    VkExtent3D extent3d = {};
+    extent3d.width = r_swapchain_extent().width;
+    extent3d.height = r_swapchain_extent().height;
+    extent3d.depth = 1;
+
+    // Can optimise memory usage by using R8G8B8A8_UNORM
+    ui_stage.color_attachments[0] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
+
+    ui_stage.framebuffer = r_create_framebuffer(
+        ui_stage.color_attachment_count,
+        ui_stage.color_attachments,
+        NULL,
+        ui_stage.render_pass,
+        r_swapchain_extent(),
+        1);
+
+    r_rpipeline_descriptor_set_output_init(&ui_stage);
+
+    create_command_buffers(
+        VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+        &render_previous_command_buffer,
+        1);
+
+    VkDescriptorSetLayout input_layouts[] = {
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+                                             //r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, lighting_stage.binding_count),
+    };
+    
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = sizeof(input_layouts) / sizeof(VkDescriptorSetLayout);
+    pipeline_layout_info.pSetLayouts = input_layouts;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    VkPushConstantRange range = {};
+    range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    range.size = sizeof(float); // Just to hold alpha / brightness value
+    pipeline_layout_info.pPushConstantRanges = &range;
+    
+    VkPipelineLayout pipeline_layout;
+    vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
+
+    ui_shader = s_create_rendering_pipeline_shader(
+        "shaders/SPV/render_quad.vert.spv",
+        "shaders/SPV/render_quad.frag.spv",
+        &ui_stage,
+        pipeline_layout);
+}
+
+void r_execute_ui_pass(
+    VkCommandBuffer command_buffer,
+    VkCommandBuffer ui_command_buffer) {
+    VkCommandBufferInheritanceInfo inheritance_info = {};
+    fill_main_inheritance_info(
+        &inheritance_info,
+        RPI_UI);
+
+    begin_command_buffer(
+        render_previous_command_buffer,
+        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+        &inheritance_info);
+
+    VkViewport viewport = {};
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(render_previous_command_buffer, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent = r_swapchain_extent();
+    vkCmdSetScissor(render_previous_command_buffer, 0, 1, &rect);
+
+    vkCmdBindPipeline(render_previous_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ui_shader.pipeline);
+
+    VkDescriptorSet inputs[] = {
+                                previous_output,
+    };
+    
+    vkCmdBindDescriptorSets(
+        render_previous_command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        ui_shader.layout,
+        0,
+        sizeof(inputs) / sizeof(VkDescriptorSet),
+        inputs,
+        0,
+        NULL);
+
+    vkCmdDraw(render_previous_command_buffer, 4, 1, 0, 0);
+
+    end_command_buffer(render_previous_command_buffer);
+
+    VkClearValue clear_values = {};
+    
+    VkRect2D render_area = {};
+    render_area.extent = r_swapchain_extent();
+
+    VkRenderPassBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    begin_info.framebuffer = ui_stage.framebuffer;
+    begin_info.renderPass = ui_stage.render_pass;
+    begin_info.clearValueCount = ui_stage.color_attachment_count;
+    begin_info.pClearValues = &clear_values;
+    begin_info.renderArea = render_area;
+
+    vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    
+    vkCmdExecuteCommands(command_buffer, 1, &render_previous_command_buffer);
+    vkCmdExecuteCommands(command_buffer, 1, &ui_command_buffer);
+
+    vkCmdEndRenderPass(command_buffer);
+
+    s_update_previous_output(ui_stage.descriptor_set);
+}
+
 static rpipeline_stage_t final_stage;
 static rpipeline_shader_t final_shader;
 
@@ -1344,6 +1516,9 @@ void r_pipeline_init() {
     s_motion_blur_render_pass_init();
     s_motion_blur_init();
 
+    s_ui_render_pass_init();
+    s_ui_stage_init();
+
     s_final_init();
 }
 
@@ -1384,10 +1559,12 @@ void r_handle_resize(
     destroy_rpipeline_stage(&lighting_stage);
     destroy_rpipeline_stage(&motion_blur_stage);
     destroy_rpipeline_stage(&blur_stage);
+    destroy_rpipeline_stage(&ui_stage);
     
     s_deferred_init();
     s_ssao_init();
     s_lighting_init();
     s_motion_blur_init();
     s_blur_init();
+    s_ui_stage_init();
 }
