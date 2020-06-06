@@ -1,5 +1,6 @@
 #include "ui.hpp"
 #include <common/math.hpp>
+#include <common/event.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 
@@ -185,10 +186,9 @@ static void s_start_color_fade_interpolation(
         HOVER_COLOR_FADE_SPEED);
 }
 
-void u_main_menu_input(
-    game_input_t *input) {
-    float cursor_x = input->mouse_x, cursor_y = input->mouse_y;
-
+static void s_widgets_mouse_hover_detection(
+    raw_input_t *input) {
+    float cursor_x = input->cursor_pos_x, cursor_y = input->cursor_pos_y;
     // Check if user is hovering over any buttons
     bool hovered_over_button = 0;
 
@@ -265,4 +265,40 @@ void u_main_menu_input(
     if (!hovered_over_button) {
         current_button = B_INVALID_MENU_BUTTON;
     }
+}
+
+static void s_widgets_input(
+    event_submissions_t *events,
+    raw_input_t *input) {
+    if (input->buttons[BT_MOUSE_LEFT].instant) {
+        switch (current_button) {
+            // Launch / unlaunch menus
+
+        case B_BROWSE_SERVER: {
+        } break;
+
+        case B_BUILD_MAP: {
+            
+        } break;
+
+        case B_SETTINGS: {
+
+        } break;
+
+        case B_QUIT: {
+            submit_event(ET_CLOSED_WINDOW, NULL, events);
+        } break;
+
+        case B_INVALID_MENU_BUTTON: {
+            // Don't do anything
+        } break;
+        }
+    }
+}
+
+void u_main_menu_input(
+    event_submissions_t *events,
+    raw_input_t *input) {
+    s_widgets_mouse_hover_detection(input);
+    s_widgets_input(events, input);
 }

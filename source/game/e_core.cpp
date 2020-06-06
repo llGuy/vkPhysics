@@ -139,7 +139,8 @@ static void s_render(
     eye_3d_info_t eye_info = create_eye_info();
     lighting_info_t lighting_info = create_lighting_info();
 
-    tick_ui();
+    tick_ui(
+        &events);
 
     gpu_data_sync(
         final_command_buffer,

@@ -52,15 +52,16 @@ void ui_init(
     u_hud_init();
 }
 
-void tick_ui() {
-    game_input_t *game_input = get_game_input();
+void tick_ui(
+    event_submissions_t *events) {
+    raw_input_t *raw_input = get_raw_input();
 
     if (stack_item_count) {
         ui_stack_item_t last = stack_items[stack_item_count - 1];
 
         switch (last) {
         case USI_MAIN_MENU: {
-            u_main_menu_input(game_input);
+            u_main_menu_input(events, raw_input);
         } break;
 
         default: {
