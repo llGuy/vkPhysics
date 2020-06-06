@@ -10,7 +10,7 @@ static enum button_t {
     B_SETTINGS,
     B_QUIT,
     B_INVALID_MENU_BUTTON
-} current_button;
+} current_button, current_open_menu;
 
 static const char *button_names[5] = {
     "BROWSE_SERVER",
@@ -24,6 +24,7 @@ static const char *button_names[5] = {
 // #define HOVERED_OVER_ICON_COLOR 0x46464636
 #define HOVERED_OVER_ICON_COLOR NOT_HOVERED_OVER_ICON_COLOR
 #define HOVERED_OVER_BACKGROUND_COLOR 0x76767636
+#define CURRENT_MENU_BACKGROUND 0x13131336
 
 static struct widget_t {
     texture_t texture;
@@ -40,6 +41,11 @@ static struct widget_t {
 
 // This won't be visible
 static ui_box_t main_box;
+
+static ui_box_t current_menu; // Menu that sliddes
+static smooth_linear_interpolation_t menu_slider;
+static bool menu_in_out_transition;
+static float menu_slider_x_min_size, menu_slider_x_max_size, menu_slider_y_min_size, menu_slider_y_max_size;
 
 static void s_widget_init(
     button_t button,
@@ -119,6 +125,23 @@ void u_main_menu_init() {
         current_button_y,
         button_size);
     current_button_y -= button_size;
+
+    current_menu.init(
+        RT_RIGHT_UP,
+        1.75f,
+        ui_vector2_t(-0.125f, 0.0f),
+        ui_vector2_t(1.0f, 1.0f),
+        &main_box,
+        CURRENT_MENU_BACKGROUND);
+
+    menu_slider_x_max_size = current_menu.gls_current_size.to_fvec2().x;
+    menu_slider_y_max_size = current_menu.gls_current_size.to_fvec2().y;
+
+    current_menu.gls_current_size.fx = 0.0f;
+
+    menu_in_out_transition = 0;
+
+    current_open_menu = B_INVALID_MENU_BUTTON;
 }
 
 void u_submit_main_menu() {
@@ -128,6 +151,10 @@ void u_submit_main_menu() {
 
         push_colored_ui_box(&widgets[i].box);
     }
+
+    push_reversed_colored_ui_box(
+        &current_menu,
+        vector2_t(menu_slider_x_max_size, menu_slider_y_max_size) * 2.0f);
 }
     
 static bool s_hover_over_box(
@@ -193,13 +220,11 @@ static void s_widgets_mouse_hover_detection(
     bool hovered_over_button = 0;
 
     for (uint32_t i = 0; i < (uint32_t)B_INVALID_MENU_BUTTON; ++i) {
-        uint32_t prev_background, prev_icon, next_background, next_icon;
+        uint32_t next_background, next_icon;
 
         bool start_interpolation = 0;
 
         if (s_hover_over_button((button_t)i, cursor_x, cursor_y)) {
-            prev_background = NOT_HOVERED_OVER_BACKGROUND_COLOR;
-            prev_icon = NOT_HOVERED_OVER_ICON_COLOR;
             next_background = HOVERED_OVER_BACKGROUND_COLOR;
             next_icon = HOVERED_OVER_ICON_COLOR;
 
@@ -212,8 +237,6 @@ static void s_widgets_mouse_hover_detection(
             widgets[i].hovered_on = 1;
         }
         else {
-            prev_background = HOVERED_OVER_BACKGROUND_COLOR;
-            prev_icon = HOVERED_OVER_ICON_COLOR;
             next_background = NOT_HOVERED_OVER_BACKGROUND_COLOR;
             next_icon = NOT_HOVERED_OVER_ICON_COLOR;
 
@@ -267,6 +290,43 @@ static void s_widgets_mouse_hover_detection(
     }
 }
 
+#define MENU_SLIDER_SPEED 0.3f
+
+static void s_open_menu(
+    button_t button) {
+    if (button != current_open_menu) {
+        if (current_open_menu == B_INVALID_MENU_BUTTON) {
+            current_open_menu = button;
+
+            menu_slider.set(
+                1,
+                menu_slider.current,
+                menu_slider_x_max_size,
+                MENU_SLIDER_SPEED);
+        }
+        else {
+            current_open_menu = button;
+
+            menu_slider.set(
+                1,
+                menu_slider.current,
+                0.0f,
+                MENU_SLIDER_SPEED);
+
+            menu_in_out_transition = 1;
+        }
+    }
+    else {
+        current_open_menu = B_INVALID_MENU_BUTTON;
+
+        menu_slider.set(
+            1,
+            menu_slider.current,
+            0.0f,
+            MENU_SLIDER_SPEED);
+    }
+}
+
 static void s_widgets_input(
     event_submissions_t *events,
     raw_input_t *input) {
@@ -274,15 +334,9 @@ static void s_widgets_input(
         switch (current_button) {
             // Launch / unlaunch menus
 
-        case B_BROWSE_SERVER: {
-        } break;
-
-        case B_BUILD_MAP: {
-            
-        } break;
-
-        case B_SETTINGS: {
-
+        case B_BROWSE_SERVER: case B_BUILD_MAP: case B_SETTINGS: {
+            s_open_menu(
+                current_button);
         } break;
 
         case B_QUIT: {
@@ -296,9 +350,28 @@ static void s_widgets_input(
     }
 }
 
+static void s_open_menu_input(
+    event_submissions_t *events,
+    raw_input_t *input) {
+    menu_slider.animate(surface_delta_time());
+    current_menu.gls_current_size.fx = menu_slider.current;
+
+    if (menu_in_out_transition && !menu_slider.in_animation) {
+        menu_in_out_transition = 0;
+        
+        menu_slider.set(
+            1,
+            menu_slider.current,
+            menu_slider_x_max_size,
+            MENU_SLIDER_SPEED);
+    }
+}
+
 void u_main_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
     s_widgets_mouse_hover_detection(input);
     s_widgets_input(events, input);
+
+    s_open_menu_input(events, input);
 }

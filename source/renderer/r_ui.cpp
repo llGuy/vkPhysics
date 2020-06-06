@@ -476,6 +476,22 @@ void push_colored_ui_box(
     push_colored_vertex({normalized_base_position + normalized_size, box->color});
 }
 
+void push_reversed_colored_ui_box(
+    const ui_box_t *box,
+    const vector2_t &size) {
+    vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
+    vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
+
+    normalized_base_position += size;
+
+    push_colored_vertex({normalized_base_position, box->color});
+    push_colored_vertex({normalized_base_position - vector2_t(0.0f, normalized_size.y), box->color});
+    push_colored_vertex({normalized_base_position - vector2_t(normalized_size.x, 0.0f), box->color});
+    push_colored_vertex({normalized_base_position - vector2_t(0.0f, normalized_size.y), box->color});
+    push_colored_vertex({normalized_base_position - vector2_t(normalized_size.x, 0.0f), box->color});
+    push_colored_vertex({normalized_base_position - normalized_size, box->color});
+}
+
 void clear_ui_color_containers() {
     colored_list.vertex_count = 0;
 }

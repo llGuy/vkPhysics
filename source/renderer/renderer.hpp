@@ -706,6 +706,10 @@ DECLARE_VOID_RENDERER_PROC(void, push_vertex,
 
 DECLARE_VOID_RENDERER_PROC(void, push_colored_ui_box,
     const ui_box_t *box);
+
+DECLARE_VOID_RENDERER_PROC(void, push_reversed_colored_ui_box,
+    const ui_box_t *box,
+    const vector2_t &size);
     
 DECLARE_VOID_RENDERER_PROC(void, clear_ui_color_containers,
     void);
