@@ -18,11 +18,11 @@ static const char *button_names[5] = {
     "QUIT",
     "INVALID"
 };
-
-#define HOVERED_OVER_ICON_COLOR 0x46464636
-#define HOVERED_OVER_BACKGROUND_COLOR 0x76767636
 #define NOT_HOVERED_OVER_ICON_COLOR 0xFFFFFF36
 #define NOT_HOVERED_OVER_BACKGROUND_COLOR 0x16161636
+// #define HOVERED_OVER_ICON_COLOR 0x46464636
+#define HOVERED_OVER_ICON_COLOR NOT_HOVERED_OVER_ICON_COLOR
+#define HOVERED_OVER_BACKGROUND_COLOR 0x76767636
 
 static struct widget_t {
     texture_t texture;
@@ -164,6 +164,27 @@ static bool s_hover_over_button(
 
 #define HOVER_COLOR_FADE_SPEED 0.3f
 
+static void s_start_color_fade_interpolation(
+    widget_t *widget,
+    uint32_t final_background,
+    uint32_t final_icon) {
+    // Start interpolation
+    vector4_t background_final = ui32b_color_to_vec4(final_background);
+    widget->background_color.set(
+        1,
+        widget->background_color.current,
+        background_final,
+        HOVER_COLOR_FADE_SPEED);
+
+    vector4_t icon_final = ui32b_color_to_vec4(final_icon);
+
+    widget->icon_color.set(
+        1,
+        widget->icon_color.current,
+        icon_final,
+        HOVER_COLOR_FADE_SPEED);
+}
+
 void u_main_menu_input(
     game_input_t *input) {
     float cursor_x = input->mouse_x, cursor_y = input->mouse_y;
@@ -172,104 +193,76 @@ void u_main_menu_input(
     bool hovered_over_button = 0;
 
     for (uint32_t i = 0; i < (uint32_t)B_INVALID_MENU_BUTTON; ++i) {
+        uint32_t prev_background, prev_icon, next_background, next_icon;
+
+        bool start_interpolation = 0;
+
         if (s_hover_over_button((button_t)i, cursor_x, cursor_y)) {
-            hovered_over_button = 1;
-            
-            // Wasn't hovered over before
-            if (current_button != i) {
-                // Start interpolation
-                vector4_t background_final = ui32b_color_to_vec4(HOVERED_OVER_BACKGROUND_COLOR);
-                widgets[i].background_color.set(
-                    1,
-                    widgets[i].background_color.current,
-                    background_final,
-                    HOVER_COLOR_FADE_SPEED);
+            prev_background = NOT_HOVERED_OVER_BACKGROUND_COLOR;
+            prev_icon = NOT_HOVERED_OVER_ICON_COLOR;
+            next_background = HOVERED_OVER_BACKGROUND_COLOR;
+            next_icon = HOVERED_OVER_ICON_COLOR;
 
-                vector4_t icon_final = ui32b_color_to_vec4(HOVERED_OVER_ICON_COLOR);
-
-                widgets[i].icon_color.set(
-                    1,
-                    widgets[i].icon_color.current,
-                    icon_final,
-                    HOVER_COLOR_FADE_SPEED);
+            if (!widgets[i].hovered_on) {
+                start_interpolation = 1;
             }
-            
+
             current_button = (button_t)i;
+            hovered_over_button = 1;
             widgets[i].hovered_on = 1;
-
-            if (widgets[i].background_color.in_animation) {
-                widgets[i].background_color.animate(surface_delta_time());
-                widgets[i].icon_color.animate(surface_delta_time());
-
-                vector4_t current_background = vector4_t(
-                    widgets[i].background_color.current.r,
-                    widgets[i].background_color.current.g,
-                    widgets[i].background_color.current.b,
-                    ((float)0x36) / 255.0f);
-
-                widgets[i].box.color = vec4_color_to_ui32b(current_background);
-
-                vector4_t current_icon = vector4_t(
-                    widgets[i].icon_color.current.r,
-                    widgets[i].icon_color.current.g,
-                    widgets[i].icon_color.current.b,
-                    ((float)0x36) / 255.0f);
-
-                widgets[i].image_box.color = vec4_color_to_ui32b(current_icon);
-            }
-            //main_menu.icon_color_interpolation.animate(raw_input->dt);
         }
         else {
-            // Need to switch animation direction
+            prev_background = HOVERED_OVER_BACKGROUND_COLOR;
+            prev_icon = HOVERED_OVER_ICON_COLOR;
+            next_background = NOT_HOVERED_OVER_BACKGROUND_COLOR;
+            next_icon = NOT_HOVERED_OVER_ICON_COLOR;
+
             if (widgets[i].hovered_on) {
-                current_button = B_INVALID_MENU_BUTTON;
-
-                vector4_t background_final = ui32b_color_to_vec4(NOT_HOVERED_OVER_BACKGROUND_COLOR);
-                widgets[i].background_color.set(
-                    1,
-                    widgets[i].background_color.current,
-                    background_final,
-                    HOVER_COLOR_FADE_SPEED);
-
-                vector4_t icon_final = ui32b_color_to_vec4(NOT_HOVERED_OVER_ICON_COLOR);
-
-                widgets[i].icon_color.set(
-                    1,
-                    widgets[i].icon_color.current,
-                    icon_final,
-                    HOVER_COLOR_FADE_SPEED);
-            }
-            else {
-                if (widgets[i].background_color.in_animation) {
-                    widgets[i].background_color.animate(surface_delta_time());
-                    widgets[i].icon_color.animate(surface_delta_time());
-
-                    vector4_t current_background = vector4_t(
-                        widgets[i].background_color.current.r,
-                        widgets[i].background_color.current.g,
-                        widgets[i].background_color.current.b,
-                        ((float)0x36) / 255.0f);
-
-                    widgets[i].box.color = vec4_color_to_ui32b(current_background);
-
-                    vector4_t current_icon = vector4_t(
-                        widgets[i].icon_color.current.r,
-                        widgets[i].icon_color.current.g,
-                        widgets[i].icon_color.current.b,
-                        ((float)0x36) / 255.0f);
-
-                    widgets[i].image_box.color = vec4_color_to_ui32b(current_icon);
-                }
-                else {
-                    widgets[i].image_box.color = NOT_HOVERED_OVER_ICON_COLOR;
-                    widgets[i].box.color = NOT_HOVERED_OVER_BACKGROUND_COLOR;
-
-                    widgets[i].background_color.current = vector3_t(ui32b_color_to_vec4(NOT_HOVERED_OVER_BACKGROUND_COLOR));
-                    widgets[i].icon_color.current = vector3_t(ui32b_color_to_vec4(NOT_HOVERED_OVER_ICON_COLOR));
-                }
+                start_interpolation = 1;
             }
 
             widgets[i].hovered_on = 0;
         }
+
+        if (start_interpolation) {
+            s_start_color_fade_interpolation(
+                &widgets[i],
+                next_background,
+                next_icon);
+        }
+
+        if (
+            widgets[i].background_color.in_animation ||
+            widgets[i].icon_color.in_animation) {
+            widgets[i].background_color.animate(surface_delta_time());
+            widgets[i].icon_color.animate(surface_delta_time());
+
+            vector4_t current_background = vector4_t(
+                widgets[i].background_color.current.r,
+                widgets[i].background_color.current.g,
+                widgets[i].background_color.current.b,
+                ((float)0x36) / 255.0f);
+
+            widgets[i].box.color = vec4_color_to_ui32b(current_background);
+
+            vector4_t current_icon = vector4_t(
+                widgets[i].icon_color.current.r,
+                widgets[i].icon_color.current.g,
+                widgets[i].icon_color.current.b,
+                ((float)0x36) / 255.0f);
+
+            widgets[i].image_box.color = vec4_color_to_ui32b(current_icon);
+        }
+        else {
+            widgets[i].image_box.color = next_icon;
+            widgets[i].box.color = next_background;
+
+            widgets[i].background_color.current = vector3_t(ui32b_color_to_vec4(next_background));
+            widgets[i].icon_color.current = vector3_t(ui32b_color_to_vec4(next_icon));
+        }
+    }
+
+    if (!hovered_over_button) {
+        current_button = B_INVALID_MENU_BUTTON;
     }
 }
