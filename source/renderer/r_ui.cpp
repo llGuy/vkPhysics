@@ -492,6 +492,107 @@ void push_reversed_colored_ui_box(
     push_colored_vertex({normalized_base_position - normalized_size, box->color});
 }
 
+static ivector2_t get_px_cursor_position(
+    ui_box_t *box,
+    ui_text_t *text,
+    const VkExtent2D &resolution) {
+    uint32_t px_char_width = (box->px_current_size.ix) / text->chars_per_line;
+    uint32_t x_start = (uint32_t)((float)px_char_width * text->x_start);
+    px_char_width = (box->px_current_size.ix - 2 * x_start) / text->chars_per_line;
+    uint32_t px_char_height = (uint32_t)(text->line_height * (float)px_char_width);
+    
+    ivector2_t px_cursor_position;
+    switch(text->relative_to) {
+    case ui_text_t::font_stream_box_relative_to_t::TOP: {
+            uint32_t px_box_top = box->px_position.iy + box->px_current_size.iy;
+            px_cursor_position = ivector2_t(x_start + box->px_position.ix, px_box_top - (uint32_t)(text->y_start * (float)px_char_width));
+            break;
+        }
+    case ui_text_t::font_stream_box_relative_to_t::BOTTOM: {
+            uint32_t px_box_bottom = box->px_position.iy;
+            px_cursor_position = ivector2_t(x_start + box->px_position.ix, px_box_bottom + ((uint32_t)(text->y_start * (float)(px_char_width)) + px_char_height));
+            break;
+        }
+    }
+    return(px_cursor_position);
+}
+
+void push_ui_text(
+    ui_text_t *text) {
+    VkExtent2D resolution = r_swapchain_extent();
+
+    ui_box_t *box = text->dst_box;
+
+    uint32_t px_char_width = (box->px_current_size.ix) / text->chars_per_line;
+    uint32_t x_start = (uint32_t)((float)px_char_width * text->x_start);
+    px_char_width = (box->px_current_size.ix - 2 * x_start) / text->chars_per_line;
+    uint32_t px_char_height = (uint32_t)(text->line_height * (float)px_char_width);
+    
+    ivector2_t px_cursor_position = get_px_cursor_position(box, text, resolution);
+
+    uint32_t chars_since_new_line = 0;
+    
+    for (uint32_t character = 0;
+         character < text->char_count;) {
+        char current_char_value = text->characters[character];
+        if (current_char_value == '\n') {
+            px_cursor_position.y -= px_char_height;
+            px_cursor_position.x = x_start + box->px_position.ix;
+            ++character;
+            chars_since_new_line = 0;
+            continue;
+        }
+        
+        font_character_t *font_character_data = &text->font->font_characters[(uint32_t)current_char_value];
+        uint32_t color = text->colors[character];
+
+        // Top left
+        
+        vector2_t px_character_size = vector2_t(vector2_t(font_character_data->display_size) * (float)px_char_width);
+        vector2_t px_character_base_position =  vector2_t(px_cursor_position) + vector2_t(vector2_t(font_character_data->offset) * (float)px_char_width);
+        vector2_t normalized_base_position = px_character_base_position;
+        normalized_base_position /= vector2_t((float)resolution.width, (float)resolution.height);
+        normalized_base_position *= 2.0f;
+        normalized_base_position -= vector2_t(1.0f);
+        vector2_t normalized_size = (px_character_size / vector2_t((float)resolution.width, (float)resolution.height)) * 2.0f;
+        vector2_t adjust = vector2_t(0.0f, -normalized_size.y);
+        
+        vector2_t current_uvs = font_character_data->uvs_base;
+        current_uvs.y = 1.0f - current_uvs.y;
+        
+        push_textured_vertex({normalized_base_position + adjust, current_uvs, color});
+        
+        current_uvs = font_character_data->uvs_base + vector2_t(0.0f, font_character_data->uvs_size.y);
+        current_uvs.y = 1.0f - current_uvs.y;
+        push_textured_vertex({normalized_base_position + adjust + vector2_t(0.0f, normalized_size.y), current_uvs, color});
+        
+        current_uvs = font_character_data->uvs_base + vector2_t(font_character_data->uvs_size.x, 0.0f);
+        current_uvs.y = 1.0f - current_uvs.y;
+        push_textured_vertex({normalized_base_position + adjust + vector2_t(normalized_size.x, 0.0f), current_uvs, color});
+        
+        current_uvs = font_character_data->uvs_base + vector2_t(0.0f, font_character_data->uvs_size.y);
+        current_uvs.y = 1.0f - current_uvs.y;
+        push_textured_vertex({normalized_base_position + adjust + vector2_t(0.0f, normalized_size.y), current_uvs, color});
+
+        current_uvs = font_character_data->uvs_base + vector2_t(font_character_data->uvs_size.x, 0.0f);
+        current_uvs.y = 1.0f - current_uvs.y;
+        push_textured_vertex({normalized_base_position + adjust + vector2_t(normalized_size.x, 0.0f), current_uvs, color});
+
+        current_uvs = font_character_data->uvs_base + font_character_data->uvs_size;
+        current_uvs.y = 1.0f - current_uvs.y;
+        push_textured_vertex({normalized_base_position + adjust + normalized_size, current_uvs, color});
+
+        px_cursor_position += ivector2_t(px_char_width, 0.0f);
+
+        ++character;
+        ++chars_since_new_line;
+        if (chars_since_new_line % text->chars_per_line == 0) {
+            px_cursor_position.y -= px_char_height;
+            px_cursor_position.x = (uint32_t)(text->x_start + box->px_position.ix);
+        }
+    }
+}
+
 void clear_ui_color_containers() {
     colored_list.vertex_count = 0;
 }

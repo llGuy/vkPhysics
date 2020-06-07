@@ -710,6 +710,9 @@ DECLARE_VOID_RENDERER_PROC(void, push_colored_ui_box,
 DECLARE_VOID_RENDERER_PROC(void, push_reversed_colored_ui_box,
     const ui_box_t *box,
     const vector2_t &size);
+
+DECLARE_VOID_RENDERER_PROC(void, push_ui_text,
+    struct ui_text_t *text);
     
 DECLARE_VOID_RENDERER_PROC(void, clear_ui_color_containers,
     void);
@@ -723,6 +726,69 @@ DECLARE_VOID_RENDERER_PROC(void, render_colored_quads,
 DECLARE_VOID_RENDERER_PROC(void, render_submitted_ui,
     VkCommandBuffer transfer_command_buffer,
     VkCommandBuffer ui_command_buffer);
+
+struct font_character_t {
+    char character_value;
+    vector2_t uvs_base;
+    vector2_t uvs_size;
+    vector2_t display_size;
+    vector2_t offset;
+    float advance;
+};
+
+struct font_t {
+    uint32_t char_count;
+    texture_t font_img;
+
+    font_character_t font_characters[0xFF];
+};
+
+struct ui_text_t {
+    ui_box_t *dst_box;
+    struct font_t *font;
+    
+    // Max characters = 500
+    uint32_t colors[500] = {};
+    char characters[500] = {};
+    uint32_t char_count = 0;
+
+    enum font_stream_box_relative_to_t { TOP, BOTTOM /* add CENTER in the future */ };
+
+    font_stream_box_relative_to_t relative_to;
+
+    // Relative to xadvance
+    float x_start;
+    float y_start;
+
+    uint32_t chars_per_line;
+
+    // Relative to xadvance
+    float line_height;
+
+    DECLARE_VOID_RENDERER_PROC(void, init,
+        ui_box_t *box,
+        font_t *font,
+        font_stream_box_relative_to_t relative_to,
+        float px_x_start,
+        float px_y_start,
+        uint32_t chars_per_line,
+        float line_height);
+
+    DECLARE_VOID_RENDERER_PROC(void, draw_char,
+        char character,
+        uint32_t color);
+
+    DECLARE_VOID_RENDERER_PROC(void, draw_string,
+        const char *string,
+        uint32_t color);
+
+    DECLARE_VOID_RENDERER_PROC(void, null_terminate,
+        void);
+};
+
+DECLARE_POINTER_RENDERER_PROC(font_t *, load_font,
+    const char *fnt_file,
+    const char *png_file);
 
 // FADE EFFECT SUPPORT ////////////////////////////////////////////////////////
 DECLARE_VOID_RENDERER_PROC(void, set_main_screen_brightness,

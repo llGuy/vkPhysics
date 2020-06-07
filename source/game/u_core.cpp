@@ -2,6 +2,7 @@
 #include "u_internal.hpp"
 #include <common/event.hpp>
 #include <renderer/input.hpp>
+#include <renderer/renderer.hpp>
 
 enum ui_stack_item_t {
     USI_MAIN_MENU,
@@ -25,6 +26,10 @@ static void s_ui_event_listener(
         stack_item_count = 1;
     } break;
 
+    case ET_RESIZE_SURFACE: {
+        // Need to reinitialise UI system
+    } break;
+
     default: {
     } break;
 
@@ -32,6 +37,12 @@ static void s_ui_event_listener(
 }
 
 static listener_t ui_listener;
+
+static struct font_t *global_font;
+
+struct font_t *u_game_font() {
+    return global_font;
+}
 
 void ui_init(
     event_submissions_t *events) {
@@ -46,6 +57,10 @@ void ui_init(
         ET_LAUNCH_MAIN_MENU_SCREEN,
         ui_listener,
         events);
+
+    global_font = load_font(
+        "assets/font/fixedsys.fnt",
+        "assets/font/fixedsys.png");
 
     u_main_menu_init();
 
@@ -81,4 +96,114 @@ void tick_ui(
         } break;
         }
     }
+}
+
+void widget_color_t::init(
+    uint32_t iunhovered_background,
+    uint32_t ihovered_background,
+    uint32_t iunhovered_foreground,
+    uint32_t ihovered_foreground) {
+    unhovered_background = iunhovered_background;
+    hovered_background = ihovered_background;
+    unhovered_foreground = iunhovered_foreground;
+    hovered_foreground = ihovered_foreground;
+
+    vector4_t current_background = ui32b_color_to_vec4(unhovered_background);
+    background_color.current = vector3_t(current_background);
+
+    vector4_t current_foreground = ui32b_color_to_vec4(unhovered_foreground);
+    foreground_color.current = vector3_t(current_foreground);
+
+    is_hovered_on = 0;
+}
+
+void widget_color_t::start_interpolation(
+    float interpolation_speed,
+    uint32_t final_background,
+    uint32_t final_foreground) {
+    // Start interpolation
+    vector4_t background_final = ui32b_color_to_vec4(final_background);
+    background_color.set(
+        1,
+        background_color.current,
+        background_final,
+        interpolation_speed);
+
+    vector4_t icon_final = ui32b_color_to_vec4(final_foreground);
+
+    foreground_color.set(
+        1,
+        foreground_color.current,
+        icon_final,
+        interpolation_speed);
+}
+
+color_pair_t widget_color_t::update(
+    float interpolation_speed,
+    bool hovered_on) {
+    color_pair_t result = {};
+
+    uint32_t next_background, next_icon;
+
+    bool should_start_interpolation = 0;
+
+    if (hovered_on) {
+        next_background = hovered_background;
+        next_icon = hovered_foreground;
+
+        if (!is_hovered_on) {
+            should_start_interpolation = 1;
+        }
+
+        is_hovered_on = 1;
+    }
+    else {
+        next_background = unhovered_background;
+        next_icon = unhovered_foreground;
+
+        if (is_hovered_on) {
+            should_start_interpolation = 1;
+        }
+
+        is_hovered_on = 0;
+    }
+
+    if (should_start_interpolation) {
+        start_interpolation(
+            interpolation_speed,
+            next_background,
+            next_icon);
+    }
+
+    if (
+        background_color.in_animation ||
+        foreground_color.in_animation) {
+        background_color.animate(surface_delta_time());
+        foreground_color.animate(surface_delta_time());
+
+        vector4_t current_background = vector4_t(
+            background_color.current.r,
+            background_color.current.g,
+            background_color.current.b,
+            ((float)0x36) / 255.0f);
+
+        result.current_background = vec4_color_to_ui32b(current_background);
+
+        vector4_t current_icon = vector4_t(
+            foreground_color.current.r,
+            foreground_color.current.g,
+            foreground_color.current.b,
+            ((float)0x36) / 255.0f);
+
+        result.current_foreground = vec4_color_to_ui32b(current_icon);
+    }
+    else {
+        result.current_foreground = next_icon;
+        result.current_background = next_background;
+
+        background_color.current = vector3_t(ui32b_color_to_vec4(next_background));
+        foreground_color.current = vector3_t(ui32b_color_to_vec4(next_icon));
+    }
+
+    return result;
 }

@@ -1,4 +1,5 @@
 #include "ui.hpp"
+#include "u_internal.hpp"
 #include <common/math.hpp>
 #include <common/event.hpp>
 #include <renderer/input.hpp>
@@ -19,12 +20,14 @@ static const char *button_names[5] = {
     "QUIT",
     "INVALID"
 };
+
 #define NOT_HOVERED_OVER_ICON_COLOR 0xFFFFFF36
 #define NOT_HOVERED_OVER_BACKGROUND_COLOR 0x16161636
 // #define HOVERED_OVER_ICON_COLOR 0x46464636
 #define HOVERED_OVER_ICON_COLOR NOT_HOVERED_OVER_ICON_COLOR
 #define HOVERED_OVER_BACKGROUND_COLOR 0x76767636
 #define CURRENT_MENU_BACKGROUND 0x13131336
+#define HOVER_COLOR_FADE_SPEED 0.3f
 
 static struct widget_t {
     texture_t texture;
@@ -33,8 +36,7 @@ static struct widget_t {
     // Box where the image will be rendered to
     ui_box_t image_box;
 
-    smooth_linear_interpolation_v3_t background_color;
-    smooth_linear_interpolation_v3_t icon_color;
+    widget_color_t color;
 
     bool hovered_on;
 } widgets[B_INVALID_MENU_BUTTON];
@@ -76,25 +78,14 @@ static void s_widget_init(
         0,
         VK_FILTER_LINEAR);
 
-    vector4_t current_background_color = ui32b_color_to_vec4(0x16161636);
-    widgets[button].background_color.current = vector3_t(current_background_color);
-
-    vector4_t current_icon_color = ui32b_color_to_vec4(0xFFFFFF36);
-    widgets[button].icon_color.current = vector3_t(current_icon_color);
+    widgets[button].color.init(
+        NOT_HOVERED_OVER_BACKGROUND_COLOR,
+        HOVERED_OVER_BACKGROUND_COLOR,
+        NOT_HOVERED_OVER_ICON_COLOR,
+        HOVERED_OVER_ICON_COLOR);
 }
 
-void u_main_menu_init() {
-    current_button = B_INVALID_MENU_BUTTON;
-    memset(widgets, sizeof(widgets), 0);
-
-    main_box.init(
-        RT_CENTER,
-        2.0f,
-        ui_vector2_t(0.0f, 0.0f),
-        ui_vector2_t(0.8f, 0.8f),
-        NULL,
-        0x46464646);
-
+static void s_widgets_init() {
     float button_size = 0.25f;
     float current_button_y = 0.0f;
 
@@ -125,7 +116,46 @@ void u_main_menu_init() {
         current_button_y,
         button_size);
     current_button_y -= button_size;
+}
 
+static struct {
+    // When you select a server, press connect to request connection
+    ui_box_t connect_button;
+    ui_text_t connect_text;
+
+    widget_color_t connect_color;
+} browse_server_menu;
+
+static void s_browse_server_menu_init() {
+    browse_server_menu.connect_button.init(
+        RT_RIGHT_DOWN,
+        4.0f,
+        ui_vector2_t(-0.02f, 0.03f),
+        ui_vector2_t(0.2f, 0.2f),
+        &current_menu,
+        0x09090936);
+
+    browse_server_menu.connect_text.init(
+        &browse_server_menu.connect_button,
+        u_game_font(),
+        ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+        0.8f, 0.9f,
+        10, 1.8f);
+
+    browse_server_menu.connect_text.draw_string(
+        "Connect",
+        0xFFFFFFFF);
+
+    browse_server_menu.connect_color.init(
+        0x09090936,
+        HOVERED_OVER_BACKGROUND_COLOR,
+        0xFFFFFFFF,
+        0xFFFFFFFF);
+
+    browse_server_menu.connect_text.null_terminate();
+}
+
+static void s_menus_init() {
     current_menu.init(
         RT_RIGHT_UP,
         1.75f,
@@ -133,6 +163,9 @@ void u_main_menu_init() {
         ui_vector2_t(1.0f, 1.0f),
         &main_box,
         CURRENT_MENU_BACKGROUND);
+
+    // Here initialise all the different menus (browse server, build map, settings, etc...)
+    s_browse_server_menu_init();
 
     menu_slider_x_max_size = current_menu.gls_current_size.to_fvec2().x;
     menu_slider_y_max_size = current_menu.gls_current_size.to_fvec2().y;
@@ -142,6 +175,22 @@ void u_main_menu_init() {
     menu_in_out_transition = 0;
 
     current_open_menu = B_INVALID_MENU_BUTTON;
+}
+
+void u_main_menu_init() {
+    current_button = B_INVALID_MENU_BUTTON;
+    memset(widgets, sizeof(widgets), 0);
+
+    main_box.init(
+        RT_CENTER,
+        2.0f,
+        ui_vector2_t(0.0f, 0.0f),
+        ui_vector2_t(0.8f, 0.8f),
+        NULL,
+        0x46464646);
+
+    s_widgets_init();
+    s_menus_init();
 }
 
 void u_submit_main_menu() {
@@ -155,6 +204,20 @@ void u_submit_main_menu() {
     push_reversed_colored_ui_box(
         &current_menu,
         vector2_t(menu_slider_x_max_size, menu_slider_y_max_size) * 2.0f);
+
+    if (current_open_menu != B_INVALID_MENU_BUTTON && !menu_slider.in_animation) {
+        switch(current_open_menu) {
+        case B_BROWSE_SERVER: {
+            mark_ui_textured_section(u_game_font()->font_img.descriptor);
+    
+            push_ui_text(
+                &browse_server_menu.connect_text);
+
+            push_colored_ui_box(
+                &browse_server_menu.connect_button);
+        } break;
+        }
+    }
 }
     
 static bool s_hover_over_box(
@@ -190,28 +253,6 @@ static bool s_hover_over_button(
         cursor_y);
 }
 
-#define HOVER_COLOR_FADE_SPEED 0.3f
-
-static void s_start_color_fade_interpolation(
-    widget_t *widget,
-    uint32_t final_background,
-    uint32_t final_icon) {
-    // Start interpolation
-    vector4_t background_final = ui32b_color_to_vec4(final_background);
-    widget->background_color.set(
-        1,
-        widget->background_color.current,
-        background_final,
-        HOVER_COLOR_FADE_SPEED);
-
-    vector4_t icon_final = ui32b_color_to_vec4(final_icon);
-
-    widget->icon_color.set(
-        1,
-        widget->icon_color.current,
-        icon_final,
-        HOVER_COLOR_FADE_SPEED);
-}
 
 static void s_widgets_mouse_hover_detection(
     raw_input_t *input) {
@@ -220,69 +261,23 @@ static void s_widgets_mouse_hover_detection(
     bool hovered_over_button = 0;
 
     for (uint32_t i = 0; i < (uint32_t)B_INVALID_MENU_BUTTON; ++i) {
-        uint32_t next_background, next_icon;
+        bool hovered_over = s_hover_over_button((button_t)i, cursor_x, cursor_y);
 
-        bool start_interpolation = 0;
+        color_pair_t pair = widgets[i].color.update(
+            HOVER_COLOR_FADE_SPEED,
+            hovered_over);
 
-        if (s_hover_over_button((button_t)i, cursor_x, cursor_y)) {
-            next_background = HOVERED_OVER_BACKGROUND_COLOR;
-            next_icon = HOVERED_OVER_ICON_COLOR;
-
-            if (!widgets[i].hovered_on) {
-                start_interpolation = 1;
-            }
-
+        if (hovered_over) {
             current_button = (button_t)i;
             hovered_over_button = 1;
             widgets[i].hovered_on = 1;
         }
         else {
-            next_background = NOT_HOVERED_OVER_BACKGROUND_COLOR;
-            next_icon = NOT_HOVERED_OVER_ICON_COLOR;
-
-            if (widgets[i].hovered_on) {
-                start_interpolation = 1;
-            }
-
             widgets[i].hovered_on = 0;
         }
 
-        if (start_interpolation) {
-            s_start_color_fade_interpolation(
-                &widgets[i],
-                next_background,
-                next_icon);
-        }
-
-        if (
-            widgets[i].background_color.in_animation ||
-            widgets[i].icon_color.in_animation) {
-            widgets[i].background_color.animate(surface_delta_time());
-            widgets[i].icon_color.animate(surface_delta_time());
-
-            vector4_t current_background = vector4_t(
-                widgets[i].background_color.current.r,
-                widgets[i].background_color.current.g,
-                widgets[i].background_color.current.b,
-                ((float)0x36) / 255.0f);
-
-            widgets[i].box.color = vec4_color_to_ui32b(current_background);
-
-            vector4_t current_icon = vector4_t(
-                widgets[i].icon_color.current.r,
-                widgets[i].icon_color.current.g,
-                widgets[i].icon_color.current.b,
-                ((float)0x36) / 255.0f);
-
-            widgets[i].image_box.color = vec4_color_to_ui32b(current_icon);
-        }
-        else {
-            widgets[i].image_box.color = next_icon;
-            widgets[i].box.color = next_background;
-
-            widgets[i].background_color.current = vector3_t(ui32b_color_to_vec4(next_background));
-            widgets[i].icon_color.current = vector3_t(ui32b_color_to_vec4(next_icon));
-        }
+        widgets[i].image_box.color = pair.current_foreground;
+        widgets[i].box.color = pair.current_background;
     }
 
     if (!hovered_over_button) {
@@ -350,6 +345,26 @@ static void s_widgets_input(
     }
 }
 
+static void s_browse_menu_input(
+    event_submissions_t *events,
+    raw_input_t *input) {
+    // Check connect button
+    bool hovered_over_connect = s_hover_over_box(
+        &browse_server_menu.connect_button,
+        input->cursor_pos_x,
+        input->cursor_pos_y);
+
+    color_pair_t pair = browse_server_menu.connect_color.update(
+        HOVER_COLOR_FADE_SPEED,
+        hovered_over_connect);
+
+    browse_server_menu.connect_button.color = pair.current_background;
+
+    if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_connect) {
+        printf("Pressed connect\n");
+    }
+}
+
 static void s_open_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
@@ -364,6 +379,15 @@ static void s_open_menu_input(
             menu_slider.current,
             menu_slider_x_max_size,
             MENU_SLIDER_SPEED);
+    }
+    else if (current_open_menu != B_INVALID_MENU_BUTTON && !menu_slider.in_animation) {
+        switch (current_open_menu) {
+        case B_BROWSE_SERVER: {
+            s_browse_menu_input(
+                events,
+                input);
+        } break;
+        }
     }
 }
 
