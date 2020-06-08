@@ -1,4 +1,5 @@
 #include "ui.hpp"
+#include "net.hpp"
 #include "u_internal.hpp"
 #include <common/math.hpp>
 #include <common/event.hpp>
@@ -118,15 +119,87 @@ static void s_widgets_init() {
     current_button_y -= button_size;
 }
 
+struct server_button_t {
+    ui_box_t box;
+    ui_text_t server_name;
+
+    game_server_t *server;
+
+    widget_color_t color;
+};
+
 static struct {
     // When you select a server, press connect to request connection
     ui_box_t connect_button;
     ui_text_t connect_text;
-
     widget_color_t connect_color;
+
+    ui_box_t refresh_button;
+    ui_text_t refresh_text;
+    widget_color_t refresh_color;
+
+    ui_box_t server_list_box;
+
+    uint32_t server_count;
+    server_button_t *servers;
 } browse_server_menu;
 
+static void s_refresh_browse_server_list() {
+    game_server_t srv_array[4] = {
+        { "Yoshi's Island", 0 },
+        { "Bowser's Castle", 0 },
+        { "Super Mario Land", 0 },
+        { "Super Mario Galaxy", 0 },
+    };
+
+    available_servers_t servers;
+    servers.server_count = 4;
+    servers.servers = srv_array;
+    // available_servers_t *servers = get_available_servers();
+
+    browse_server_menu.server_count = servers.server_count;
+
+    float server_button_height = 0.1f;
+
+    if (browse_server_menu.server_count) {
+        browse_server_menu.servers = FL_MALLOC(server_button_t, browse_server_menu.server_count);
+
+        for (uint32_t i = 0; i < browse_server_menu.server_count; ++i) {
+            server_button_t *current_button = &browse_server_menu.servers[i];
+            current_button->box.init(
+                RT_LEFT_UP,
+                20.8f,
+                ui_vector2_t(0.0f, -server_button_height * (float)i),
+                ui_vector2_t(1.0f, server_button_height),
+                &browse_server_menu.server_list_box,
+                0x05050536);
+
+            current_button->server_name.init(
+                &current_button->box,
+                u_game_font(),
+                ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+                0.8f,
+                0.8f,
+                60,
+                1.8f);
+
+            current_button->server_name.draw_string(
+                srv_array[i].server_name,
+                0xFFFFFFFF);
+
+            current_button->server_name.null_terminate();
+        }
+    }
+}
+
 static void s_browse_server_menu_init() {
+    browse_server_menu.server_list_box.init(
+        RT_RIGHT_DOWN,
+        2.1f,
+        ui_vector2_t(-0.02f, 0.15f),
+        ui_vector2_t(0.95f, 0.95f), &current_menu, 0x09090936);
+
+    // CONNECT_BUTTON ////////////////////////////////////////////////////////
     browse_server_menu.connect_button.init(
         RT_RIGHT_DOWN,
         4.0f,
@@ -153,6 +226,37 @@ static void s_browse_server_menu_init() {
         0xFFFFFFFF);
 
     browse_server_menu.connect_text.null_terminate();
+
+    // REFRESH BUTTON /////////////////////////////////////////////////////////
+    browse_server_menu.refresh_button.init(
+        RT_RIGHT_DOWN,
+        4.0f,
+        ui_vector2_t(-0.25f, 0.03f),
+        ui_vector2_t(0.2f, 0.2f),
+        &current_menu,
+        0x09090936);
+
+    browse_server_menu.refresh_text.init(
+        &browse_server_menu.refresh_button,
+        u_game_font(),
+        ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+        0.8f, 0.9f,
+        10, 1.8f);
+
+    browse_server_menu.refresh_text.draw_string(
+        "Refresh",
+        0xFFFFFFFF);
+
+    browse_server_menu.refresh_color.init(
+        0x09090936,
+        HOVERED_OVER_BACKGROUND_COLOR,
+        0xFFFFFFFF,
+        0xFFFFFFFF);
+
+    browse_server_menu.refresh_text.null_terminate();
+
+    // SERVERS ////////////////////////////////////////////////////////////////
+    s_refresh_browse_server_list();
 }
 
 static void s_menus_init() {
@@ -215,6 +319,23 @@ void u_submit_main_menu() {
 
             push_colored_ui_box(
                 &browse_server_menu.connect_button);
+
+            push_colored_ui_box(
+                &browse_server_menu.server_list_box);
+
+            push_ui_text(
+                &browse_server_menu.refresh_text);
+
+            push_colored_ui_box(
+                &browse_server_menu.refresh_button);
+
+            for (uint32_t i = 0; i < browse_server_menu.server_count; ++i) {
+                server_button_t *button = &browse_server_menu.servers[i];
+                push_colored_ui_box(
+                    &button->box);
+                push_ui_text(
+                    &button->server_name);
+            }
         } break;
         }
     }
@@ -348,7 +469,7 @@ static void s_widgets_input(
 static void s_browse_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
-    // Check connect button
+    // CONNECT BUTTON /////////////////////////////////////////////////////////
     bool hovered_over_connect = s_hover_over_box(
         &browse_server_menu.connect_button,
         input->cursor_pos_x,
@@ -362,6 +483,22 @@ static void s_browse_menu_input(
 
     if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_connect) {
         printf("Pressed connect\n");
+    }
+
+    // REFRESH BUTTON /////////////////////////////////////////////////////////
+    bool hovered_over_refresh = s_hover_over_box(
+        &browse_server_menu.refresh_button,
+        input->cursor_pos_x,
+        input->cursor_pos_y);
+
+    pair = browse_server_menu.refresh_color.update(
+        HOVER_COLOR_FADE_SPEED,
+        hovered_over_refresh);
+
+    browse_server_menu.refresh_button.color = pair.current_background;
+
+    if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_refresh) {
+        printf("Pressed refresh\n");
     }
 }
 
