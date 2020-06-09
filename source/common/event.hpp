@@ -30,6 +30,7 @@ enum event_type_t {
     ET_LAUNCH_MAIN_MENU_SCREEN,
     ET_CLEAR_MENUS,
     // All the other modes (launch server loading screen, etc...
+    ET_LAUNCH_GAME_MENU_SCREEN,
 
     ET_INVALID_EVENT_TYPE
 };

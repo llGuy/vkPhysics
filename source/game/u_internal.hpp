@@ -16,6 +16,11 @@ void u_clear_main_menu();
 void u_hud_init();
 void u_submit_hud();
 
+// GAME MENU //////////////////////////////////////////////////////////////////
+void u_game_menu_init();
+void u_submit_game_menu();
+void u_game_menu_input(struct event_submissions_t *events, struct raw_input_t *input);
+
 // UTILITIES //////////////////////////////////////////////////////////////////
 // This allows for interpolation when user hovers / unhovers over widgets
 

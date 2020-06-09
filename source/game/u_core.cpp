@@ -7,6 +7,7 @@
 enum ui_stack_item_t {
     USI_MAIN_MENU,
     USI_HUD,
+    USI_GAME_MENU,
     USI_INVALID,
 };
 
@@ -23,6 +24,11 @@ static void s_ui_event_listener(
 
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
         stack_items[0] = USI_MAIN_MENU;
+        stack_item_count = 1;
+    } break;
+
+    case ET_LAUNCH_GAME_MENU_SCREEN: {
+        stack_items[0] = USI_GAME_MENU;
         stack_item_count = 1;
     } break;
 
@@ -67,6 +73,10 @@ void ui_init(
         ET_CLEAR_MENUS,
         ui_listener,
         events);
+    subscribe_to_event(
+        ET_LAUNCH_GAME_MENU_SCREEN,
+        ui_listener,
+        events);
 
     global_font = load_font(
         "assets/font/fixedsys.fnt",
@@ -75,6 +85,8 @@ void ui_init(
     u_main_menu_init();
 
     u_hud_init();
+
+    u_game_menu_init();
 }
 
 void tick_ui(
@@ -87,6 +99,10 @@ void tick_ui(
         switch (last) {
         case USI_MAIN_MENU: {
             u_main_menu_input(events, raw_input);
+        } break;
+
+        case USI_GAME_MENU: {
+            u_game_menu_input(events, raw_input);
         } break;
 
         default: {
@@ -103,6 +119,10 @@ void tick_ui(
 
         case USI_HUD: {
             u_submit_hud();
+        } break;
+
+        case USI_GAME_MENU: {
+            u_submit_game_menu();
         } break;
         }
     }
