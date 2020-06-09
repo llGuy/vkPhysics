@@ -26,6 +26,12 @@ static void s_ui_event_listener(
         stack_item_count = 1;
     } break;
 
+    case ET_CLEAR_MENUS: {
+        stack_item_count = 0;
+
+        u_clear_main_menu();
+    } break;
+
     case ET_RESIZE_SURFACE: {
         // Need to reinitialise UI system
     } break;
@@ -55,6 +61,10 @@ void ui_init(
 
     subscribe_to_event(
         ET_LAUNCH_MAIN_MENU_SCREEN,
+        ui_listener,
+        events);
+    subscribe_to_event(
+        ET_CLEAR_MENUS,
         ui_listener,
         events);
 

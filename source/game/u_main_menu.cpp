@@ -48,7 +48,7 @@ static ui_box_t main_box;
 static ui_box_t current_menu; // Menu that sliddes
 static smooth_linear_interpolation_t menu_slider;
 static bool menu_in_out_transition;
-static float menu_slider_x_min_size, menu_slider_x_max_size, menu_slider_y_min_size, menu_slider_y_max_size;
+static float menu_slider_x_max_size, menu_slider_y_max_size;
 
 static void s_widget_init(
     button_t button,
@@ -123,6 +123,8 @@ struct server_button_t {
     ui_box_t box;
     ui_text_t server_name;
 
+    widget_color_t button_color;
+
     game_server_t *server;
 
     widget_color_t color;
@@ -142,6 +144,8 @@ static struct {
 
     uint32_t server_count;
     server_button_t *servers;
+
+    uint32_t selected_server = 0xFFFF;
 } browse_server_menu;
 
 static void s_refresh_browse_server_list() {
@@ -188,6 +192,12 @@ static void s_refresh_browse_server_list() {
                 0xFFFFFFFF);
 
             current_button->server_name.null_terminate();
+
+            current_button->button_color.init(
+                0x05050536,
+                HOVERED_OVER_BACKGROUND_COLOR,
+                0xFFFFFFFF,
+                0xFFFFFFFF);
         }
     }
 }
@@ -374,7 +384,6 @@ static bool s_hover_over_button(
         cursor_y);
 }
 
-
 static void s_widgets_mouse_hover_detection(
     raw_input_t *input) {
     float cursor_x = input->cursor_pos_x, cursor_y = input->cursor_pos_y;
@@ -482,7 +491,21 @@ static void s_browse_menu_input(
     browse_server_menu.connect_button.color = pair.current_background;
 
     if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_connect) {
-        printf("Pressed connect\n");
+        if (browse_server_menu.selected_server != 0xFFFF) {
+            // event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
+            // game_server_t *server = browse_server_menu.servers[browse_server_menu.selected_server].server;
+
+            // data->server_name = server->server_name;
+            // submit_event(ET_REQUEST_TO_JOIN_SERVER, data, events);
+            // Need to close the main menu, and start a fade effect
+            submit_event(ET_CLEAR_MENUS, NULL, events);
+
+            event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
+            effect_data->dest_value = 0.0f;
+            effect_data->duration = 2.5f;
+            effect_data->fade_back = 1;
+            submit_event(ET_BEGIN_FADE, effect_data, events);
+        }
     }
 
     // REFRESH BUTTON /////////////////////////////////////////////////////////
@@ -498,7 +521,32 @@ static void s_browse_menu_input(
     browse_server_menu.refresh_button.color = pair.current_background;
 
     if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_refresh) {
-        printf("Pressed refresh\n");
+        submit_event(ET_REQUEST_REFRESH_SERVER_PAGE, NULL, events);
+    }
+
+    // SERVER SELECTION ///////////////////////////////////////////////////////
+    for (uint32_t i = 0; i < browse_server_menu.server_count; ++i) {
+        server_button_t *button = &browse_server_menu.servers[i];
+
+        if (i == browse_server_menu.selected_server) {
+            button->box.color = HOVERED_OVER_BACKGROUND_COLOR;
+        }
+        else {
+            bool hovered_over_server = s_hover_over_box(
+                &button->box,
+                input->cursor_pos_x,
+                input->cursor_pos_y);
+
+            pair = button->button_color.update(
+                HOVER_COLOR_FADE_SPEED,
+                hovered_over_server);
+
+            button->box.color = pair.current_background;
+
+            if (hovered_over_server && input->buttons[BT_MOUSE_LEFT].instant) {
+                browse_server_menu.selected_server = i;
+            }
+        }
     }
 }
 
@@ -535,4 +583,10 @@ void u_main_menu_input(
     s_widgets_input(events, input);
 
     s_open_menu_input(events, input);
+}
+
+void u_clear_main_menu() {
+    browse_server_menu.selected_server = 0xFFFF;
+    current_button = B_INVALID_MENU_BUTTON;
+    current_open_menu = B_INVALID_MENU_BUTTON;
 }

@@ -50,9 +50,9 @@ static void s_game_event_listener(
     case ET_BEGIN_FADE: {
         event_begin_fade_effect_t *data = (event_begin_fade_effect_t *)event->data;
         
-        float duration = data->duration;
-        float dest = data->dest_value;
-        e_begin_fade_effect(duration, dest);
+        e_begin_fade_effect(data);
+
+        FL_FREE(data);
     } break;
 
     case ET_PRESSED_ESCAPE: {
@@ -421,10 +421,11 @@ static void s_windowed_game_main(
     e_fader_init();
 
     // Launch fade effect immediately
-    event_begin_fade_effect_t fade_info = {};
-    fade_info.dest_value = 1.0f;
-    fade_info.duration = 6.0f;
-    submit_event(ET_BEGIN_FADE, &fade_info, &events);
+    event_begin_fade_effect_t *fade_info = FL_MALLOC(event_begin_fade_effect_t, 1);
+    fade_info->dest_value = 1.0f;
+    fade_info->duration = 6.0f;
+    fade_info->trigger_another_event = 0;
+    submit_event(ET_BEGIN_FADE, fade_info, &events);
 
     ui_init(&events);
 
