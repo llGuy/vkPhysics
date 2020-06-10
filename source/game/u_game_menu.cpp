@@ -5,10 +5,17 @@
 
 enum button_t {
     B_SPAWN,
+    B_SELECT_TEAM,
+    // ...
+    B_INVALID_BUTTON
 };
 
 static ui_box_t main_box;
 static ui_box_t menu_box;
+
+static struct game_menu_button_t {
+    ui_box_t background_box;
+} game_menu_buttons[B_INVALID_BUTTON];
 
 void u_game_menu_init() {
     main_box.init(

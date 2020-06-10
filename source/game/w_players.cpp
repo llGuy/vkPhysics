@@ -3,6 +3,7 @@
 
 #include "engine.hpp"
 #include <common/log.hpp>
+#include "renderer/renderer.hpp"
 #include "w_internal.hpp"
 #include <common/math.hpp>
 #include <glm/gtx/projection.hpp>

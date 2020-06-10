@@ -42,6 +42,7 @@ static struct widget_t {
     bool hovered_on;
 } widgets[B_INVALID_MENU_BUTTON];
 
+//
 // This won't be visible
 static ui_box_t main_box;
 
