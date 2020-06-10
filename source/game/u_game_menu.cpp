@@ -17,6 +17,8 @@ static struct game_menu_button_t {
     ui_box_t background_box;
     ui_box_t inner_background;
     ui_text_t text;
+
+    widget_color_t color;
 } game_menu_buttons[B_INVALID_BUTTON];
 
 void u_game_menu_init() {
@@ -54,6 +56,12 @@ void u_game_menu_init() {
             ui_vector2_t(0.9f, 0.9f),
             &game_menu_buttons[i].background_box,
             0x04040436);
+
+        game_menu_buttons[i].color.init(
+            0x04040436,
+            0x36363636,
+            0xFFFFFFFF,
+            0xFFFFFFFF);
     }
 
     game_menu_buttons[B_SPAWN].text.init(
@@ -99,5 +107,11 @@ void u_submit_game_menu() {
 void u_game_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
-    
+    for (uint32_t i = 0; i < (uint32_t)B_INVALID_BUTTON; ++i) {
+        bool hovered_over = u_hover_over_box(&game_menu_buttons[i].inner_background, input->cursor_pos_x, input->cursor_pos_y);
+
+        color_pair_t pair = game_menu_buttons[i].color.update(0.3f, hovered_over);
+
+        game_menu_buttons[i].inner_background.color = pair.current_background;
+    }
 }

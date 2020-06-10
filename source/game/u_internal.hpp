@@ -54,3 +54,8 @@ struct widget_color_t {
         float interpolation_speed,
         bool hovered_on);
 };
+
+bool u_hover_over_box(
+    struct ui_box_t *box,
+    float cursor_x,
+    float cursor_y);

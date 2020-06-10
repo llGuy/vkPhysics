@@ -240,3 +240,26 @@ color_pair_t widget_color_t::update(
 
     return result;
 }
+
+bool u_hover_over_box(
+    ui_box_t *box,
+    float cursor_x,
+    float cursor_y) {
+    vector2_t cursor = convert_pixel_to_ndc(vector2_t(cursor_x, cursor_y));
+
+    vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
+    vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
+
+    float x_min = normalized_base_position.x,
+        x_max = normalized_base_position.x + normalized_size.x,
+        y_min = normalized_base_position.y,
+        y_max = normalized_base_position.y + normalized_size.y;
+
+    if (x_min < cursor.x && x_max > cursor.x
+        && y_min < cursor.y && y_max > cursor.y) {
+        return(true);
+    }
+    else {
+        return(false);
+    }
+}

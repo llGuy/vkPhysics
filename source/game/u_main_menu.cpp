@@ -352,34 +352,11 @@ void u_submit_main_menu() {
     }
 }
     
-static bool s_hover_over_box(
-    ui_box_t *box,
-    float cursor_x,
-    float cursor_y) {
-    vector2_t cursor = convert_pixel_to_ndc(vector2_t(cursor_x, cursor_y));
-
-    vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
-    vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
-
-    float x_min = normalized_base_position.x,
-        x_max = normalized_base_position.x + normalized_size.x,
-        y_min = normalized_base_position.y,
-        y_max = normalized_base_position.y + normalized_size.y;
-
-    if (x_min < cursor.x && x_max > cursor.x
-        && y_min < cursor.y && y_max > cursor.y) {
-        return(true);
-    }
-    else {
-        return(false);
-    }
-}
-
 static bool s_hover_over_button(
     button_t button,
     float cursor_x,
     float cursor_y) {
-    return s_hover_over_box(
+    return u_hover_over_box(
         &widgets[button].box,
         cursor_x,
         cursor_y);
@@ -480,7 +457,7 @@ static void s_browse_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
     // CONNECT BUTTON /////////////////////////////////////////////////////////
-    bool hovered_over_connect = s_hover_over_box(
+    bool hovered_over_connect = u_hover_over_box(
         &browse_server_menu.connect_button,
         input->cursor_pos_x,
         input->cursor_pos_y);
@@ -513,7 +490,7 @@ static void s_browse_menu_input(
     }
 
     // REFRESH BUTTON /////////////////////////////////////////////////////////
-    bool hovered_over_refresh = s_hover_over_box(
+    bool hovered_over_refresh = u_hover_over_box(
         &browse_server_menu.refresh_button,
         input->cursor_pos_x,
         input->cursor_pos_y);
@@ -536,7 +513,7 @@ static void s_browse_menu_input(
             button->box.color = HOVERED_OVER_BACKGROUND_COLOR;
         }
         else {
-            bool hovered_over_server = s_hover_over_box(
+            bool hovered_over_server = u_hover_over_box(
                 &button->box,
                 input->cursor_pos_x,
                 input->cursor_pos_y);
