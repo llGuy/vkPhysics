@@ -1,4 +1,6 @@
+#include "common/socket.hpp"
 #include "net.hpp"
+#include "renderer/renderer.hpp"
 #include "world.hpp"
 #include "engine.hpp"
 #include "n_internal.hpp"
@@ -8,6 +10,7 @@
 #include <common/hub_packet.hpp>
 #include <common/containers.hpp>
 #include <common/allocators.hpp>
+#include <cstring>
 #include <glm/gtx/string_cast.hpp>
 
 struct client_info_t {

@@ -74,6 +74,7 @@ void w_write_startup_screen(
     }
 
     serialiser_t serialiser = {};
+
     // File has spectator position and view direction and visible vertices
     serialiser.init(
         sizeof(vector3_t) * 2 +

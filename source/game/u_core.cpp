@@ -124,6 +124,9 @@ void tick_ui(
         case USI_GAME_MENU: {
             u_submit_game_menu();
         } break;
+
+        default: {
+        } break;
         }
     }
 }
