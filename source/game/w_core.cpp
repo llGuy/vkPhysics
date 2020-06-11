@@ -14,11 +14,14 @@ static world_t world;
 // If it's gameplay, we properly render chunks and stuff
 // If it's none, (for some reason), we don't render the world at all
 // (maybe for some special menu)
-static enum world_present_mode_t {
-    WPM_STARTUP,
-    WPM_GAMEPLAY,
-    WPM_NONE
-} current_world_present_mode;
+enum world_present_mode_t : int32_t {
+    WPM_STARTUP = 1 << 0,
+    WPM_GAMEPLAY = 1 << 1,
+    WPM_SPECTATING = 1 << 2,
+    WPM_NONE = 1 << 3
+};
+
+static int32_t current_world_present_mode;
 
 static void s_add_player_from_info(
     player_init_info_t *init_info) {
@@ -109,7 +112,7 @@ static void s_world_event_listener(
         FL_FREE(data->infos);
         FL_FREE(event->data);
 
-        current_world_present_mode = WPM_GAMEPLAY;
+        current_world_present_mode = WPM_GAMEPLAY | WPM_SPECTATING;
     } break;
 
     case ET_LEAVE_SERVER: {
@@ -142,6 +145,8 @@ static void s_world_event_listener(
             p->camera_fov.set(1, 90.0f, 60.0f);
             p->current_camera_up = p->ws_up_vector;
         }
+
+        current_world_present_mode = WPM_GAMEPLAY;
     } break;
         
     case ET_NEW_PLAYER: {
@@ -202,7 +207,7 @@ static void s_world_event_listener(
     } break;
 
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
-        current_world_present_mode = WPM_STARTUP;
+        current_world_present_mode = WPM_STARTUP | WPM_SPECTATING;
 
         if (!w_get_startup_screen_data()->initialised) {
             w_read_startup_screen(&world);
@@ -267,20 +272,21 @@ void gpu_sync_world(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
-    switch (current_world_present_mode) {
-    case WPM_STARTUP: {
+    if (current_world_present_mode & WPM_SPECTATING) {
         // Update spectator view direction with mouse movement
         world.spectator->ws_view_direction = w_update_spectator_view_direction(
             world.spectator->ws_view_direction);
+    }
 
+    if (current_world_present_mode & WPM_STARTUP) {
         w_render_startup_world(render_command_buffer);
 
         if (render_command_buffer != VK_NULL_HANDLE) {
             render_environment(render_command_buffer);
         }
-    } break;
+    }
 
-    case WPM_GAMEPLAY: {
+    if (current_world_present_mode & WPM_GAMEPLAY) {
         w_players_gpu_sync_and_render(
             render_command_buffer,
             render_shadow_command_buffer,
@@ -295,11 +301,6 @@ void gpu_sync_world(
         if (render_command_buffer != VK_NULL_HANDLE) {
             render_environment(render_command_buffer);
         }
-    } break;
-
-    case WPM_NONE: {
-        // Do nothing
-    } break;
     }
 }
 
