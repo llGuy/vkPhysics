@@ -3,16 +3,17 @@
 #include "u_internal.hpp"
 #include <common/math.hpp>
 #include <common/event.hpp>
+#include <cstddef>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 
-static enum button_t {
+enum button_t {
     B_BROWSE_SERVER,
     B_BUILD_MAP,
     B_SETTINGS,
     B_QUIT,
     B_INVALID_MENU_BUTTON
-} current_button, current_open_menu;
+};
 
 static const char *button_names[5] = {
     "BROWSE_SERVER",
@@ -22,103 +23,7 @@ static const char *button_names[5] = {
     "INVALID"
 };
 
-#define NOT_HOVERED_OVER_ICON_COLOR 0xFFFFFF36
-#define NOT_HOVERED_OVER_BACKGROUND_COLOR 0x16161636
-// #define HOVERED_OVER_ICON_COLOR 0x46464636
-#define HOVERED_OVER_ICON_COLOR NOT_HOVERED_OVER_ICON_COLOR
-#define HOVERED_OVER_BACKGROUND_COLOR 0x76767636
-#define CURRENT_MENU_BACKGROUND 0x13131336
-#define HOVER_COLOR_FADE_SPEED 0.3f
-
-static struct widget_t {
-    texture_t texture;
-    // Outline of where the texture will be (to add some padding)
-    ui_box_t box;
-    // Box where the image will be rendered to
-    ui_box_t image_box;
-
-    widget_color_t color;
-
-    bool hovered_on;
-} widgets[B_INVALID_MENU_BUTTON];
-
-//
-// This won't be visible
-static ui_box_t main_box;
-
-static ui_box_t current_menu; // Menu that sliddes
-static smooth_linear_interpolation_t menu_slider;
-static bool menu_in_out_transition;
-static float menu_slider_x_max_size, menu_slider_y_max_size;
-
-static void s_widget_init(
-    button_t button,
-    const char *image_path,
-    float current_button_y,
-    float button_size) {
-    widgets[button].box.init(
-        RT_RIGHT_UP,
-        1.0f,
-        ui_vector2_t(0.0f, current_button_y),
-        ui_vector2_t(button_size, button_size),
-        &main_box,
-        NOT_HOVERED_OVER_BACKGROUND_COLOR);
-
-    widgets[button].image_box.init(
-        RT_RELATIVE_CENTER,
-        1.0f,
-        ui_vector2_t(0.0f, 0.0f),
-        ui_vector2_t(0.8f, 0.8f),
-        &widgets[button].box,
-        NOT_HOVERED_OVER_ICON_COLOR);
-    
-    widgets[button].texture = create_texture(
-        image_path,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        NULL,
-        0,
-        0,
-        VK_FILTER_LINEAR);
-
-    widgets[button].color.init(
-        NOT_HOVERED_OVER_BACKGROUND_COLOR,
-        HOVERED_OVER_BACKGROUND_COLOR,
-        NOT_HOVERED_OVER_ICON_COLOR,
-        HOVERED_OVER_ICON_COLOR);
-}
-
-static void s_widgets_init() {
-    float button_size = 0.25f;
-    float current_button_y = 0.0f;
-
-    s_widget_init(
-        B_BROWSE_SERVER,
-        "assets/textures/gui/play_icon.png",
-        current_button_y,
-        button_size);
-    current_button_y -= button_size;
-    
-    s_widget_init(
-        B_BUILD_MAP,
-        "assets/textures/gui/build_icon.png",
-        current_button_y,
-        button_size);
-    current_button_y -= button_size;
-
-    s_widget_init(
-        B_SETTINGS,
-        "assets/textures/gui/settings_icon.png",
-        current_button_y,
-        button_size);
-    current_button_y -= button_size;
-
-    s_widget_init(
-        B_QUIT,
-        "assets/textures/gui/quit_icon.png",
-        current_button_y,
-        button_size);
-    current_button_y -= button_size;
-}
+static menu_layout_t main_menu_layout;
 
 struct server_button_t {
     ui_box_t box;
@@ -149,24 +54,18 @@ static struct {
     uint32_t selected_server = 0xFFFF;
 } browse_server_menu;
 
-static void s_refresh_browse_server_list() {
-    game_server_t srv_array[4] = {
-        { "Yoshi's Island", 0 },
-        { "Bowser's Castle", 0 },
-        { "Super Mario Land", 0 },
-        { "Super Mario Galaxy", 0 },
-    };
+void u_refresh_main_menu_server_page() {
+    available_servers_t *servers = get_available_servers();
 
-    available_servers_t servers;
-    servers.server_count = 4;
-    servers.servers = srv_array;
-    // available_servers_t *servers = get_available_servers();
-
-    browse_server_menu.server_count = servers.server_count;
+    browse_server_menu.server_count = servers->server_count;
 
     float server_button_height = 0.1f;
 
     if (browse_server_menu.server_count) {
+        if (browse_server_menu.servers) {
+            FL_FREE(browse_server_menu.servers);
+        }
+
         browse_server_menu.servers = FL_MALLOC(server_button_t, browse_server_menu.server_count);
 
         for (uint32_t i = 0; i < browse_server_menu.server_count; ++i) {
@@ -189,14 +88,14 @@ static void s_refresh_browse_server_list() {
                 1.8f);
 
             current_button->server_name.draw_string(
-                srv_array[i].server_name,
+                servers->servers[i].server_name,
                 0xFFFFFFFF);
 
             current_button->server_name.null_terminate();
 
             current_button->button_color.init(
                 0x05050536,
-                HOVERED_OVER_BACKGROUND_COLOR,
+                MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR,
                 0xFFFFFFFF,
                 0xFFFFFFFF);
         }
@@ -208,7 +107,7 @@ static void s_browse_server_menu_init() {
         RT_RIGHT_DOWN,
         2.1f,
         ui_vector2_t(-0.02f, 0.15f),
-        ui_vector2_t(0.95f, 0.95f), &current_menu, 0x09090936);
+        ui_vector2_t(0.95f, 0.95f), &main_menu_layout.current_menu, 0x09090936);
 
     // CONNECT_BUTTON ////////////////////////////////////////////////////////
     browse_server_menu.connect_button.init(
@@ -216,7 +115,7 @@ static void s_browse_server_menu_init() {
         4.0f,
         ui_vector2_t(-0.02f, 0.03f),
         ui_vector2_t(0.2f, 0.2f),
-        &current_menu,
+        &main_menu_layout.current_menu,
         0x09090936);
 
     browse_server_menu.connect_text.init(
@@ -232,7 +131,7 @@ static void s_browse_server_menu_init() {
 
     browse_server_menu.connect_color.init(
         0x09090936,
-        HOVERED_OVER_BACKGROUND_COLOR,
+        MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR,
         0xFFFFFFFF,
         0xFFFFFFFF);
 
@@ -244,7 +143,7 @@ static void s_browse_server_menu_init() {
         4.0f,
         ui_vector2_t(-0.25f, 0.03f),
         ui_vector2_t(0.2f, 0.2f),
-        &current_menu,
+        &main_menu_layout.current_menu,
         0x09090936);
 
     browse_server_menu.refresh_text.init(
@@ -260,68 +159,53 @@ static void s_browse_server_menu_init() {
 
     browse_server_menu.refresh_color.init(
         0x09090936,
-        HOVERED_OVER_BACKGROUND_COLOR,
+        MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR,
         0xFFFFFFFF,
         0xFFFFFFFF);
 
     browse_server_menu.refresh_text.null_terminate();
 
     // SERVERS ////////////////////////////////////////////////////////////////
-    s_refresh_browse_server_list();
+    u_refresh_main_menu_server_page();
 }
 
 static void s_menus_init() {
-    current_menu.init(
-        RT_RIGHT_UP,
-        1.75f,
-        ui_vector2_t(-0.125f, 0.0f),
-        ui_vector2_t(1.0f, 1.0f),
-        &main_box,
-        CURRENT_MENU_BACKGROUND);
-
     // Here initialise all the different menus (browse server, build map, settings, etc...)
     s_browse_server_menu_init();
+}
 
-    menu_slider_x_max_size = current_menu.gls_current_size.to_fvec2().x;
-    menu_slider_y_max_size = current_menu.gls_current_size.to_fvec2().y;
-
-    current_menu.gls_current_size.fx = 0.0f;
-
-    menu_in_out_transition = 0;
-
-    current_open_menu = B_INVALID_MENU_BUTTON;
+static void s_menu_layout_quit_proc(
+    event_submissions_t *events) {
+    submit_event(ET_CLOSED_WINDOW, NULL, events);
 }
 
 void u_main_menu_init() {
-    current_button = B_INVALID_MENU_BUTTON;
-    memset(widgets, sizeof(widgets), 0);
+    const char *widget_icon_paths[] = { NULL, NULL, NULL, NULL };
 
-    main_box.init(
-        RT_CENTER,
-        2.0f,
-        ui_vector2_t(0.0f, 0.0f),
-        ui_vector2_t(0.8f, 0.8f),
+    VkDescriptorSet sets[] = {
+        u_texture(UT_PLAY_ICON),
+        u_texture(UT_BUILD_ICON),
+        u_texture(UT_SETTINGS_ICON),
+        u_texture(UT_QUIT_ICON),
+    };
+
+    menu_click_handler_t procs[] = {
         NULL,
-        0x46464646);
+        NULL,
+        NULL,
+        &s_menu_layout_quit_proc
+    };
 
-    s_widgets_init();
+    main_menu_layout.init(procs, widget_icon_paths, sets, B_INVALID_MENU_BUTTON);
+
     s_menus_init();
 }
 
 void u_submit_main_menu() {
-    for (uint32_t i = 0; i < B_INVALID_MENU_BUTTON; ++i) {
-        mark_ui_textured_section(widgets[i].texture.descriptor);
-        push_textured_ui_box(&widgets[i].image_box);
+    main_menu_layout.submit();
 
-        push_colored_ui_box(&widgets[i].box);
-    }
-
-    push_reversed_colored_ui_box(
-        &current_menu,
-        vector2_t(menu_slider_x_max_size, menu_slider_y_max_size) * 2.0f);
-
-    if (current_open_menu != B_INVALID_MENU_BUTTON && !menu_slider.in_animation) {
-        switch(current_open_menu) {
+    if (main_menu_layout.menu_opened()) {
+        switch(main_menu_layout.current_open_menu) {
         case B_BROWSE_SERVER: {
             mark_ui_textured_section(u_game_font()->font_img.descriptor);
     
@@ -352,107 +236,6 @@ void u_submit_main_menu() {
     }
 }
     
-static bool s_hover_over_button(
-    button_t button,
-    float cursor_x,
-    float cursor_y) {
-    return u_hover_over_box(
-        &widgets[button].box,
-        cursor_x,
-        cursor_y);
-}
-
-static void s_widgets_mouse_hover_detection(
-    raw_input_t *input) {
-    float cursor_x = input->cursor_pos_x, cursor_y = input->cursor_pos_y;
-    // Check if user is hovering over any buttons
-    bool hovered_over_button = 0;
-
-    for (uint32_t i = 0; i < (uint32_t)B_INVALID_MENU_BUTTON; ++i) {
-        bool hovered_over = s_hover_over_button((button_t)i, cursor_x, cursor_y);
-
-        color_pair_t pair = widgets[i].color.update(
-            HOVER_COLOR_FADE_SPEED,
-            hovered_over);
-
-        if (hovered_over) {
-            current_button = (button_t)i;
-            hovered_over_button = 1;
-            widgets[i].hovered_on = 1;
-        }
-        else {
-            widgets[i].hovered_on = 0;
-        }
-
-        widgets[i].image_box.color = pair.current_foreground;
-        widgets[i].box.color = pair.current_background;
-    }
-
-    if (!hovered_over_button) {
-        current_button = B_INVALID_MENU_BUTTON;
-    }
-}
-
-#define MENU_SLIDER_SPEED 0.3f
-
-static void s_open_menu(
-    button_t button) {
-    if (button != current_open_menu) {
-        if (current_open_menu == B_INVALID_MENU_BUTTON) {
-            current_open_menu = button;
-
-            menu_slider.set(
-                1,
-                menu_slider.current,
-                menu_slider_x_max_size,
-                MENU_SLIDER_SPEED);
-        }
-        else {
-            current_open_menu = button;
-
-            menu_slider.set(
-                1,
-                menu_slider.current,
-                0.0f,
-                MENU_SLIDER_SPEED);
-
-            menu_in_out_transition = 1;
-        }
-    }
-    else {
-        current_open_menu = B_INVALID_MENU_BUTTON;
-
-        menu_slider.set(
-            1,
-            menu_slider.current,
-            0.0f,
-            MENU_SLIDER_SPEED);
-    }
-}
-
-static void s_widgets_input(
-    event_submissions_t *events,
-    raw_input_t *input) {
-    if (input->buttons[BT_MOUSE_LEFT].instant) {
-        switch (current_button) {
-            // Launch / unlaunch menus
-
-        case B_BROWSE_SERVER: case B_BUILD_MAP: case B_SETTINGS: {
-            s_open_menu(
-                current_button);
-        } break;
-
-        case B_QUIT: {
-            submit_event(ET_CLOSED_WINDOW, NULL, events);
-        } break;
-
-        case B_INVALID_MENU_BUTTON: {
-            // Don't do anything
-        } break;
-        }
-    }
-}
-
 static void s_browse_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
@@ -463,18 +246,18 @@ static void s_browse_menu_input(
         input->cursor_pos_y);
 
     color_pair_t pair = browse_server_menu.connect_color.update(
-        HOVER_COLOR_FADE_SPEED,
+        MENU_WIDGET_HOVER_COLOR_FADE_SPEED,
         hovered_over_connect);
 
     browse_server_menu.connect_button.color = pair.current_background;
 
     if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_connect) {
         if (browse_server_menu.selected_server != 0xFFFF) {
-            // event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
-            // game_server_t *server = browse_server_menu.servers[browse_server_menu.selected_server].server;
+            event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
+            game_server_t *server = browse_server_menu.servers[browse_server_menu.selected_server].server;
 
-            // data->server_name = server->server_name;
-            // submit_event(ET_REQUEST_TO_JOIN_SERVER, data, events);
+            data->server_name = server->server_name;
+            submit_event(ET_REQUEST_TO_JOIN_SERVER, data, events);
             // Need to close the main menu, and start a fade effect
             submit_event(ET_CLEAR_MENUS, NULL, events);
 
@@ -496,7 +279,7 @@ static void s_browse_menu_input(
         input->cursor_pos_y);
 
     pair = browse_server_menu.refresh_color.update(
-        HOVER_COLOR_FADE_SPEED,
+        MENU_WIDGET_HOVER_COLOR_FADE_SPEED,
         hovered_over_refresh);
 
     browse_server_menu.refresh_button.color = pair.current_background;
@@ -510,7 +293,7 @@ static void s_browse_menu_input(
         server_button_t *button = &browse_server_menu.servers[i];
 
         if (i == browse_server_menu.selected_server) {
-            button->box.color = HOVERED_OVER_BACKGROUND_COLOR;
+            button->box.color = MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR;
         }
         else {
             bool hovered_over_server = u_hover_over_box(
@@ -519,7 +302,7 @@ static void s_browse_menu_input(
                 input->cursor_pos_y);
 
             pair = button->button_color.update(
-                HOVER_COLOR_FADE_SPEED,
+                MENU_WIDGET_HOVER_COLOR_FADE_SPEED,
                 hovered_over_server);
 
             button->box.color = pair.current_background;
@@ -531,23 +314,12 @@ static void s_browse_menu_input(
     }
 }
 
-static void s_open_menu_input(
+
+void u_main_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
-    menu_slider.animate(surface_delta_time());
-    current_menu.gls_current_size.fx = menu_slider.current;
-
-    if (menu_in_out_transition && !menu_slider.in_animation) {
-        menu_in_out_transition = 0;
-        
-        menu_slider.set(
-            1,
-            menu_slider.current,
-            menu_slider_x_max_size,
-            MENU_SLIDER_SPEED);
-    }
-    else if (current_open_menu != B_INVALID_MENU_BUTTON && !menu_slider.in_animation) {
-        switch (current_open_menu) {
+    if (main_menu_layout.input(events, input)) {
+        switch (main_menu_layout.current_open_menu) {
         case B_BROWSE_SERVER: {
             s_browse_menu_input(
                 events,
@@ -557,17 +329,8 @@ static void s_open_menu_input(
     }
 }
 
-void u_main_menu_input(
-    event_submissions_t *events,
-    raw_input_t *input) {
-    s_widgets_mouse_hover_detection(input);
-    s_widgets_input(events, input);
-
-    s_open_menu_input(events, input);
-}
-
 void u_clear_main_menu() {
     browse_server_menu.selected_server = 0xFFFF;
-    current_button = B_INVALID_MENU_BUTTON;
-    current_open_menu = B_INVALID_MENU_BUTTON;
+    main_menu_layout.current_button = B_INVALID_MENU_BUTTON;
+    main_menu_layout.current_open_menu = B_INVALID_MENU_BUTTON;
 }

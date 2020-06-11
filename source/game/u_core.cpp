@@ -1,8 +1,10 @@
 #include "ui.hpp"
 #include "u_internal.hpp"
 #include <common/event.hpp>
+#include <cstddef>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
+#include <vulkan/vulkan_core.h>
 
 enum ui_stack_item_t {
     USI_MAIN_MENU,
@@ -38,6 +40,10 @@ static void s_ui_event_listener(
         u_clear_main_menu();
     } break;
 
+    case ET_RECEIVED_AVAILABLE_SERVERS: {
+        u_refresh_main_menu_server_page();
+    } break;
+
     case ET_RESIZE_SURFACE: {
         // Need to reinitialise UI system
     } break;
@@ -51,9 +57,22 @@ static void s_ui_event_listener(
 static listener_t ui_listener;
 
 static struct font_t *global_font;
+static texture_t ui_textures[UT_INVALID_TEXTURE];
 
 struct font_t *u_game_font() {
     return global_font;
+}
+
+VkDescriptorSet u_texture(
+    ui_texture_t type) {
+    return ui_textures[type].descriptor;
+}
+
+static void s_ui_textures_init() {
+    ui_textures[UT_PLAY_ICON] = create_texture("assets/textures/gui/play_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_BUILD_ICON] = create_texture("assets/textures/gui/build_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_SETTINGS_ICON] = create_texture("assets/textures/gui/settings_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_QUIT_ICON] = create_texture("assets/textures/gui/quit_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
 void ui_init(
@@ -82,10 +101,10 @@ void ui_init(
         "assets/font/fixedsys.fnt",
         "assets/font/fixedsys.png");
 
+    // Initialise some textures
+    s_ui_textures_init();
     u_main_menu_init();
-
     u_hud_init();
-
     u_game_menu_init();
 }
 

@@ -24,6 +24,7 @@ enum event_type_t {
     ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA,
     ET_SET_CHUNK_HISTORY_TRACKER,
     ET_REQUEST_REFRESH_SERVER_PAGE,
+    ET_RECEIVED_AVAILABLE_SERVERS,
     ET_BEGIN_FADE, // With data, can be in / out
     ET_FADE_FINISHED, // Just so that game can know when to do some sort of transition or something...
 

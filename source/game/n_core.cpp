@@ -10,6 +10,7 @@
 #include <common/hub_packet.hpp>
 #include <common/containers.hpp>
 #include <common/allocators.hpp>
+#include <cstddef>
 #include <cstring>
 #include <glm/gtx/string_cast.hpp>
 
@@ -1155,6 +1156,8 @@ static void s_process_available_servers_response(
         
         available_servers.name_to_server.insert(simple_string_hash(dst->server_name), i);
     }
+
+    submit_event(ET_RECEIVED_AVAILABLE_SERVERS, NULL, submission);
 }
 
 static void s_check_incoming_hub_server_packets(
