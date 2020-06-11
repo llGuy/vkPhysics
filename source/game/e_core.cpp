@@ -433,6 +433,12 @@ static void s_windowed_game_main(
 
     net_init(&events);
 
+    if (game_init_data->flags & GIF_CLIENT) {
+        event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
+        start_client_data->client_name = "Some shit";
+        submit_event(ET_START_CLIENT, start_client_data, &events);
+    }
+
 #if LINK_AGAINST_RENDERER
     // TODO: If debugging
     add_debug_ui_proc(s_world_ui_proc);

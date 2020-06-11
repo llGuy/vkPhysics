@@ -70,6 +70,9 @@ void u_refresh_main_menu_server_page() {
 
         for (uint32_t i = 0; i < browse_server_menu.server_count; ++i) {
             server_button_t *current_button = &browse_server_menu.servers[i];
+
+            current_button->server = &servers->servers[i];
+
             current_button->box.init(
                 RT_LEFT_UP,
                 20.8f,

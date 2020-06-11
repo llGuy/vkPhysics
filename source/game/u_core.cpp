@@ -96,6 +96,10 @@ void ui_init(
         ET_LAUNCH_GAME_MENU_SCREEN,
         ui_listener,
         events);
+    subscribe_to_event(
+        ET_RECEIVED_AVAILABLE_SERVERS,
+        ui_listener,
+        events);
 
     global_font = load_font(
         "assets/font/fixedsys.fnt",
