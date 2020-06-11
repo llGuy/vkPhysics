@@ -223,11 +223,20 @@ vector3_t w_get_player_scale();
 
 // STARTUP SCREEN /////////////////////////////////////////////////////////////
 struct startup_screen_t {
+    struct {
+        uint32_t flags;
+        union {
+            uint32_t initialised: 1;
+        };
+    };
+
     mesh_t world_mesh;
     mesh_render_data_t world_render_data;
 };
 
-startup_screen_t *get_startup_screen_data();
+void w_startup_init();
+
+startup_screen_t *w_get_startup_screen_data();
 
 void w_render_startup_world(
     VkCommandBuffer render_command_buffer);

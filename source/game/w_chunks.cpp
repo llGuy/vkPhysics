@@ -526,7 +526,7 @@ void w_chunk_gpu_sync_and_render(
 
 void w_render_startup_world(
     VkCommandBuffer render_command_buffer) {
-    startup_screen_t *startup_data = get_startup_screen_data();
+    startup_screen_t *startup_data = w_get_startup_screen_data();
 
     submit_mesh(
         render_command_buffer,

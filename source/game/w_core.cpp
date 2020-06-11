@@ -203,6 +203,10 @@ static void s_world_event_listener(
 
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
         current_world_present_mode = WPM_STARTUP;
+
+        if (!w_get_startup_screen_data()->initialised) {
+            w_read_startup_screen(&world);
+        }
     } break;
 
     default: {
@@ -238,7 +242,7 @@ void world_init(
     w_chunk_world_init(&world, 4);
 
     current_world_present_mode = WPM_NONE;
-    w_read_startup_screen(&world);
+    w_startup_init();
 }
 
 void destroy_world() {

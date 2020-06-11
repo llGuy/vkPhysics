@@ -6,12 +6,18 @@
 // At the startup screen, we render a sort of world
 static startup_screen_t startup_screen;
 
-startup_screen_t *get_startup_screen_data() {
+startup_screen_t *w_get_startup_screen_data() {
     return &startup_screen;
+}
+
+void w_startup_init() {
+    startup_screen.initialised = 0;
 }
 
 void w_read_startup_screen(
     world_t *world) {
+    startup_screen.initialised = 1;
+
     file_handle_t input = create_file(
         "assets/misc/startup/default.startup",
         FLF_BINARY);
