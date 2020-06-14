@@ -321,7 +321,6 @@ static void s_browse_menu_input(
     }
 }
 
-
 void u_main_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
@@ -340,4 +339,5 @@ void u_clear_main_menu() {
     browse_server_menu.selected_server = 0xFFFF;
     main_menu_layout.current_button = B_INVALID_MENU_BUTTON;
     main_menu_layout.current_open_menu = B_INVALID_MENU_BUTTON;
+    main_menu_layout.current_menu.gls_current_size.fx = 0.0f;
 }

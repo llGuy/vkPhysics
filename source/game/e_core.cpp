@@ -32,12 +32,13 @@ static frame_info_t frame_info;
 
 static void s_game_event_listener(
     void *object,
-    event_t *event) {
+    event_t *event,
+    event_submissions_t *events) {
     switch(event->type) {
         
     case ET_CLOSED_WINDOW: {
         running = 0;
-        submit_event(ET_LEAVE_SERVER, NULL, &events);
+        submit_event(ET_LEAVE_SERVER, NULL, events);
     } break;
 
     case ET_RESIZE_SURFACE: {
@@ -79,9 +80,7 @@ static void s_game_event_listener(
         focus = HF_UI;
         frame_info.blurred = 1;
         frame_info.ssao = 0;
-
         enable_cursor_display();
-
         // When entering gameplay mode, enable ssao and disable blur
     } break;
 
@@ -92,8 +91,14 @@ static void s_game_event_listener(
 
     case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
         focus = HF_WORLD;
-
         disable_cursor_display();
+
+        LOG_INFO("CLEARED MENUS\n");
+    } break;
+
+    case ET_LAUNCH_INGAME_MENU: {
+        focus = HF_UI;
+        enable_cursor_display();
     } break;
         
     }
@@ -426,6 +431,7 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, game_core_listener, &events);
     subscribe_to_event(ET_EXIT_MAIN_MENU_SCREEN, game_core_listener, &events);
     subscribe_to_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, game_core_listener, &events);
+    subscribe_to_event(ET_LAUNCH_INGAME_MENU, game_core_listener, &events);
 
     focus = HF_UI;
 

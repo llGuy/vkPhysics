@@ -20,7 +20,8 @@ static int32_t stack_item_count;
 
 static void s_ui_event_listener(
     void *object,
-    event_t *event) {
+    event_t *event,
+    event_submissions_t *events) {
     // ...
     switch(event->type) {
 
@@ -51,6 +52,25 @@ static void s_ui_event_listener(
 
     case ET_RESIZE_SURFACE: {
         // Need to reinitialise UI system
+    } break;
+
+    case ET_LAUNCH_INGAME_MENU: {
+        stack_items[stack_item_count++] = USI_GAME_MENU;
+    } break;
+
+        // Very important!
+    case ET_PRESSED_ESCAPE: {
+        // For the moment, this only really has an effect if we are in gameplay
+        if (stack_items[stack_item_count - 1] == USI_HUD) {
+            submit_event(ET_LAUNCH_INGAME_MENU, NULL, events);
+        }
+        else if (stack_item_count > 1) {
+            stack_item_count--;
+
+            if (stack_items[stack_item_count - 1] == USI_HUD) {
+                submit_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, NULL, events);
+            }
+        }
     } break;
 
     default: {
@@ -108,6 +128,14 @@ void ui_init(
         events);
     subscribe_to_event(
         ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY,
+        ui_listener,
+        events);
+    subscribe_to_event(
+        ET_PRESSED_ESCAPE,
+        ui_listener,
+        events);
+    subscribe_to_event(
+        ET_LAUNCH_INGAME_MENU,
         ui_listener,
         events);
 

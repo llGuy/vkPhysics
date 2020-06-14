@@ -35,7 +35,7 @@ void dispatch_events(
             listener_callback_t callback = events->callbacks[subscription->listeners[event_listener]];
             void *object = events->listener_objects[event_listener];
 
-            (*callback)(object, current_event);
+            (*callback)(object, current_event, events);
         }
     }
 

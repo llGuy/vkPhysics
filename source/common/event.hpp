@@ -28,12 +28,13 @@ enum event_type_t {
     ET_BEGIN_FADE, // With data, can be in / out
     ET_FADE_FINISHED, // Just so that game can know when to do some sort of transition or something...
 
-    ET_LAUNCH_MAIN_MENU_SCREEN,
     ET_EXIT_MAIN_MENU_SCREEN,
     ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY,
     ET_CLEAR_MENUS,
     // All the other modes (launch server loading screen, etc...
     ET_LAUNCH_GAME_MENU_SCREEN,
+    ET_LAUNCH_MAIN_MENU_SCREEN,
+    ET_LAUNCH_INGAME_MENU,
 
     ET_BEGIN_RENDERING_SERVER_WORLD,
 
@@ -129,7 +130,8 @@ struct event_t {
 
 typedef void(*listener_callback_t)(
     void *object,
-    event_t *);
+    event_t *,
+    struct event_submissions_t *event_system);
 
 struct listener_subscriptions_t {
     uint32_t count = 0;

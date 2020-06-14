@@ -2075,7 +2075,8 @@ static listener_t net_listener_id;
 
 static void s_net_event_listener(
     void *object,
-    event_t *event) {
+    event_t *event,
+    event_submissions_t *events) {
     switch (event->type) {
 
     case ET_START_CLIENT: {

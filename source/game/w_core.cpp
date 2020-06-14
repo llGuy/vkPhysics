@@ -92,7 +92,8 @@ static void s_add_player_from_info(
 
 static void s_world_event_listener(
     void *,
-    event_t *event) {
+    event_t *event,
+    event_submissions_t *events) {
     switch(event->type) {
 
     case ET_ENTER_SERVER: {
