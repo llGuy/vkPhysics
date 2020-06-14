@@ -80,7 +80,20 @@ static void s_game_event_listener(
         frame_info.blurred = 1;
         frame_info.ssao = 0;
 
+        enable_cursor_display();
+
         // When entering gameplay mode, enable ssao and disable blur
+    } break;
+
+    case ET_EXIT_MAIN_MENU_SCREEN: {
+        frame_info.blurred = 0;
+        frame_info.ssao = 1;
+    } break;
+
+    case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
+        focus = HF_WORLD;
+
+        disable_cursor_display();
     } break;
         
     }
@@ -411,6 +424,8 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_BEGIN_FADE, game_core_listener, &events);
     subscribe_to_event(ET_FADE_FINISHED, game_core_listener, &events);
     subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, game_core_listener, &events);
+    subscribe_to_event(ET_EXIT_MAIN_MENU_SCREEN, game_core_listener, &events);
+    subscribe_to_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, game_core_listener, &events);
 
     focus = HF_UI;
 
@@ -424,7 +439,7 @@ static void s_windowed_game_main(
     event_begin_fade_effect_t *fade_info = FL_MALLOC(event_begin_fade_effect_t, 1);
     fade_info->dest_value = 1.0f;
     fade_info->duration = 6.0f;
-    fade_info->trigger_another_event = 0;
+    fade_info->trigger_count = 0;
     submit_event(ET_BEGIN_FADE, fade_info, &events);
 
     ui_init(&events);

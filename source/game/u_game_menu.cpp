@@ -1,5 +1,7 @@
+#include "game/net.hpp"
 #include "u_internal.hpp"
 #include <common/event.hpp>
+#include <cstddef>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 #include <common/allocators.hpp>
@@ -25,15 +27,23 @@ static void s_menu_layout_disconnect_proc(
     effect_data->dest_value = 0.0f;
     effect_data->duration = 2.5f;
     effect_data->fade_back = 1;
-    effect_data->trigger_another_event = 1;
-    effect_data->to_trigger = ET_LAUNCH_MAIN_MENU_SCREEN;
-    effect_data->next_event_data = NULL;
+    effect_data->trigger_count = 1;
+    effect_data->triggers[0].trigger_type = ET_LAUNCH_MAIN_MENU_SCREEN;
+    effect_data->triggers[0].next_event_data = NULL;
     submit_event(ET_BEGIN_FADE, effect_data, events);
+}
+
+static void s_menu_layout_spawn_proc(
+    event_submissions_t *events) {
+    event_spawn_t *spawn = FL_MALLOC(event_spawn_t, 1);
+    spawn->client_id = get_local_client_index();
+    submit_event(ET_SPAWN, spawn, events);
+    submit_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, NULL, events);
 }
 
 void u_game_menu_init() {
     menu_click_handler_t procs[] = {
-        NULL,
+        &s_menu_layout_spawn_proc,
         NULL,
         NULL,
         &s_menu_layout_disconnect_proc
@@ -42,7 +52,7 @@ void u_game_menu_init() {
     const char *widget_icon_paths[] = { NULL, NULL, NULL, NULL };
 
     VkDescriptorSet sets[] = {
-        u_texture(UT_PLAY_ICON),
+        u_texture(UT_SPAWN_ICON),
         u_texture(UT_BUILD_ICON),
         u_texture(UT_SETTINGS_ICON),
         u_texture(UT_QUIT_ICON),

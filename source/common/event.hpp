@@ -29,9 +29,13 @@ enum event_type_t {
     ET_FADE_FINISHED, // Just so that game can know when to do some sort of transition or something...
 
     ET_LAUNCH_MAIN_MENU_SCREEN,
+    ET_EXIT_MAIN_MENU_SCREEN,
+    ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY,
     ET_CLEAR_MENUS,
     // All the other modes (launch server loading screen, etc...
     ET_LAUNCH_GAME_MENU_SCREEN,
+
+    ET_BEGIN_RENDERING_SERVER_WORLD,
 
     ET_INVALID_EVENT_TYPE
 };
@@ -100,15 +104,19 @@ struct event_set_chunk_history_tracker_t {
     bool value;
 };
 
+struct fade_trigger_t {
+    event_type_t trigger_type;
+    void *next_event_data;
+};
+
 struct event_begin_fade_effect_t {
     float dest_value;
     float duration;
 
     // Can make the fade effect trigger another event (like opening a menu or something)
-    bool trigger_another_event;
-    event_type_t to_trigger;
-    void *next_event_data;
-
+    uint32_t trigger_count = 0;
+    fade_trigger_t triggers[5];
+    
     bool fade_back;
 };
 

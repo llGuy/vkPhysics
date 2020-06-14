@@ -1,3 +1,4 @@
+#include "common/event.hpp"
 #include "net.hpp"
 #include "world.hpp"
 #include "engine.hpp"
@@ -111,7 +112,9 @@ static void s_world_event_listener(
 
         FL_FREE(data->infos);
         FL_FREE(event->data);
+    } break;
 
+    case ET_BEGIN_RENDERING_SERVER_WORLD: {
         current_world_present_mode = WPM_GAMEPLAY | WPM_SPECTATING;
     } break;
 
@@ -237,6 +240,7 @@ void world_init(
     subscribe_to_event(ET_SET_CHUNK_HISTORY_TRACKER, world_listener, events);
     subscribe_to_event(ET_SPAWN, world_listener, events);
     subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, world_listener, events);
+    subscribe_to_event(ET_BEGIN_RENDERING_SERVER_WORLD, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 

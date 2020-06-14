@@ -268,9 +268,13 @@ static void s_browse_menu_input(
             effect_data->dest_value = 0.0f;
             effect_data->duration = 2.5f;
             effect_data->fade_back = 1;
-            effect_data->trigger_another_event = 1;
-            effect_data->to_trigger = ET_LAUNCH_GAME_MENU_SCREEN;
-            effect_data->next_event_data = NULL;
+            effect_data->trigger_count = 3;
+            effect_data->triggers[0].trigger_type = ET_LAUNCH_GAME_MENU_SCREEN;
+            effect_data->triggers[0].next_event_data = NULL;
+            effect_data->triggers[1].trigger_type = ET_BEGIN_RENDERING_SERVER_WORLD;
+            effect_data->triggers[1].next_event_data = NULL;
+            effect_data->triggers[2].trigger_type = ET_EXIT_MAIN_MENU_SCREEN;
+            effect_data->triggers[2].next_event_data = NULL;
             submit_event(ET_BEGIN_FADE, effect_data, events);
         }
     }

@@ -7,10 +7,7 @@
 
 static smooth_linear_interpolation_t current_screen_brightness;
 
-static bool trigger_another_event = 0;
-static event_type_t to_trigger = ET_INVALID_EVENT_TYPE;
-static void *next_event_data = NULL;
-static bool fade_back = 0;
+static event_begin_fade_effect_t data;
 
 void e_fader_init() {
     current_screen_brightness.in_animation = 0;
@@ -20,31 +17,18 @@ void e_fader_init() {
     current_screen_brightness.current_time = 0.0f;
     current_screen_brightness.in_animation = 0;
 
-    trigger_another_event = 0;
-    to_trigger = ET_INVALID_EVENT_TYPE;
-    next_event_data = NULL;
-    fade_back = 0;
+    data = {};
 }
 
 void e_begin_fade_effect(
-    event_begin_fade_effect_t *data) {
+    event_begin_fade_effect_t *idata) {
     current_screen_brightness.set(
         1,
         current_screen_brightness.current,
-        data->dest_value,
-        data->duration);
+        idata->dest_value,
+        idata->duration);
 
-    trigger_another_event = data->trigger_another_event;
-    if (trigger_another_event) {
-        to_trigger = data->to_trigger;
-        next_event_data = data->next_event_data;
-    }
-    else {
-        to_trigger = ET_INVALID_EVENT_TYPE;
-        next_event_data = NULL;
-    }
-
-    fade_back = data->fade_back;
+    data = *idata;
 }
 
 void e_tick_fade_effect(
@@ -61,19 +45,19 @@ void e_tick_fade_effect(
                 NULL,
                 events);
 
-            if (trigger_another_event) {
+            for (uint32_t i = 0; i < data.trigger_count; ++i) {
                 submit_event(
-                    to_trigger,
-                    next_event_data,
+                    data.triggers[i].trigger_type,
+                    data.triggers[i].next_event_data,
                     events);
             }
 
-            if (fade_back) {
+            if (data.fade_back) {
                 // Fade back in
                 event_begin_fade_effect_t *fade_back_data = FL_MALLOC(event_begin_fade_effect_t, 1);
                 fade_back_data->dest_value = 1.0f;
                 fade_back_data->duration = duration;
-                fade_back_data->trigger_another_event = 0;
+                fade_back_data->trigger_count = 0;
                 fade_back_data->fade_back = 0;
 
                 submit_event(

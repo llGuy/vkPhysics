@@ -34,6 +34,11 @@ static void s_ui_event_listener(
         stack_item_count = 1;
     } break;
 
+    case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
+        stack_items[0] = USI_HUD;
+        stack_item_count = 1;
+    } break;
+
     case ET_CLEAR_MENUS: {
         stack_item_count = 0;
 
@@ -73,6 +78,7 @@ static void s_ui_textures_init() {
     ui_textures[UT_BUILD_ICON] = create_texture("assets/textures/gui/build_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     ui_textures[UT_SETTINGS_ICON] = create_texture("assets/textures/gui/settings_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     ui_textures[UT_QUIT_ICON] = create_texture("assets/textures/gui/quit_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_SPAWN_ICON] = create_texture("assets/textures/gui/spawn_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
 void ui_init(
@@ -98,6 +104,10 @@ void ui_init(
         events);
     subscribe_to_event(
         ET_RECEIVED_AVAILABLE_SERVERS,
+        ui_listener,
+        events);
+    subscribe_to_event(
+        ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY,
         ui_listener,
         events);
 

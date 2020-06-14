@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <cstring>
 #include <glm/gtx/string_cast.hpp>
+#include <sys/socket.h>
 
 struct client_info_t {
     const char *client_name;
