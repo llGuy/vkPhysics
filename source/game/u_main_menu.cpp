@@ -128,9 +128,11 @@ static void s_browse_server_menu_init() {
         0.8f, 0.9f,
         10, 1.8f);
 
-    browse_server_menu.connect_text.draw_string(
-        "Connect",
-        0xFFFFFFFF);
+    if (!browse_server_menu.connect_text.char_count) {
+        browse_server_menu.connect_text.draw_string(
+            "Connect",
+            0xFFFFFFFF);
+    }
 
     browse_server_menu.connect_color.init(
         0x09090936,
@@ -156,9 +158,11 @@ static void s_browse_server_menu_init() {
         0.8f, 0.9f,
         10, 1.8f);
 
-    browse_server_menu.refresh_text.draw_string(
-        "Refresh",
-        0xFFFFFFFF);
+    if (!browse_server_menu.refresh_text.char_count) {
+        browse_server_menu.refresh_text.draw_string(
+            "Refresh",
+            0xFFFFFFFF);
+    }
 
     browse_server_menu.refresh_color.init(
         0x09090936,

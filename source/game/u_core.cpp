@@ -52,6 +52,9 @@ static void s_ui_event_listener(
 
     case ET_RESIZE_SURFACE: {
         // Need to reinitialise UI system
+        u_main_menu_init();
+        u_game_menu_init();
+        u_hud_init();
     } break;
 
     case ET_LAUNCH_INGAME_MENU: {
@@ -99,6 +102,7 @@ static void s_ui_textures_init() {
     ui_textures[UT_SETTINGS_ICON] = create_texture("assets/textures/gui/settings_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     ui_textures[UT_QUIT_ICON] = create_texture("assets/textures/gui/quit_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     ui_textures[UT_SPAWN_ICON] = create_texture("assets/textures/gui/spawn_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_CROSSHAIRS] = create_texture("assets/textures/gui/crosshair.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
 void ui_init(
@@ -110,34 +114,14 @@ void ui_init(
         NULL,
         events);
 
-    subscribe_to_event(
-        ET_LAUNCH_MAIN_MENU_SCREEN,
-        ui_listener,
-        events);
-    subscribe_to_event(
-        ET_CLEAR_MENUS,
-        ui_listener,
-        events);
-    subscribe_to_event(
-        ET_LAUNCH_GAME_MENU_SCREEN,
-        ui_listener,
-        events);
-    subscribe_to_event(
-        ET_RECEIVED_AVAILABLE_SERVERS,
-        ui_listener,
-        events);
-    subscribe_to_event(
-        ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY,
-        ui_listener,
-        events);
-    subscribe_to_event(
-        ET_PRESSED_ESCAPE,
-        ui_listener,
-        events);
-    subscribe_to_event(
-        ET_LAUNCH_INGAME_MENU,
-        ui_listener,
-        events);
+    subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, ui_listener, events);
+    subscribe_to_event(ET_CLEAR_MENUS, ui_listener, events);
+    subscribe_to_event(ET_LAUNCH_GAME_MENU_SCREEN, ui_listener, events);
+    subscribe_to_event(ET_RECEIVED_AVAILABLE_SERVERS, ui_listener, events);
+    subscribe_to_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, ui_listener, events);
+    subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
+    subscribe_to_event(ET_LAUNCH_INGAME_MENU, ui_listener, events);
+    subscribe_to_event(ET_RESIZE_SURFACE, ui_listener, events);
 
     global_font = load_font(
         "assets/font/fixedsys.fnt",

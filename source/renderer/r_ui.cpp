@@ -183,6 +183,8 @@ void ui_box_t::init(
     ui_box_t *in_parent,
     uint32_t in_color,
     VkExtent2D backbuffer_resolution) {
+    parent = NULL;
+
     VkExtent2D dst_resolution;
     if (backbuffer_resolution.width == UI_BOX_SPECIAL_RESOLUTION &&
         backbuffer_resolution.height == UI_BOX_SPECIAL_RESOLUTION) {
