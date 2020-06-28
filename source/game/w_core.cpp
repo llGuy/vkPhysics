@@ -225,8 +225,8 @@ static void s_world_event_listener(
         w_clear_players(&world);
         w_clear_chunk_world(&world);
 
-        w_begin_ai_training_players(data->session_type);
-        w_begin_ai_training_chunks(data->session_type);
+        w_begin_ai_training_players(&world, data->session_type);
+        w_begin_ai_training_chunks(&world, data->session_type);
     } break;
 
     default: {

@@ -205,6 +205,7 @@ struct player_t {
 player_t *get_player(
     uint16_t client_id);
 
+// TODO: Replace this with the a function taking the player id instead of a pointer
 // Just calls w_push_player_actions()
 void push_player_actions(
     player_t *player,
