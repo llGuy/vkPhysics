@@ -1,4 +1,5 @@
 #include <math.h>
+#include "common/event.hpp"
 #include "net.hpp"
 
 #include "engine.hpp"
@@ -901,5 +902,20 @@ void w_clear_players(
 
     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
         world->local_id_from_client_id[i] = -1;
+    }
+}
+
+void w_begin_ai_training_players(
+    world_t *world,
+    ai_training_session_t type) {
+    switch (type) {
+
+    case ATS_WALKING: {
+        player_t *p = w_add_player(world);
+
+        p->name = "AI";
+        p->ws_position = vector3_t();
+    } break;
+
     }
 }

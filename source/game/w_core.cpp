@@ -5,6 +5,7 @@
 #include "w_internal.hpp"
 #include <common/log.hpp>
 #include <common/files.hpp>
+#include <cstddef>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 #include <common/serialiser.hpp>
@@ -216,6 +217,16 @@ static void s_world_event_listener(
         if (!w_get_startup_screen_data()->initialised) {
             w_read_startup_screen(&world);
         }
+    } break;
+
+    case ET_BEGIN_AI_TRAINING: {
+        event_begin_ai_training_t *data = (event_begin_ai_training_t *)event->data;
+
+        w_clear_players(&world);
+        w_clear_chunk_world(&world);
+
+        w_begin_ai_training_players(data->session_type);
+        w_begin_ai_training_chunks(data->session_type);
     } break;
 
     default: {

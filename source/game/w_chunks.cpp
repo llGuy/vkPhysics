@@ -1161,3 +1161,9 @@ void activate_chunk_history(
     chunk->history.modification_count = 0;
     memset(chunk->history.modification_pool, SPECIAL_VALUE, CHUNK_VOXEL_COUNT);
 }
+
+void w_begin_ai_training_chunks(
+    world_t *world,
+    ai_training_session_t type) {
+    
+}

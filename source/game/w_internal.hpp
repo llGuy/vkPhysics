@@ -2,6 +2,7 @@
 
 #include "world.hpp"
 #include <common/tools.hpp>
+#include <common/event.hpp>
 #include <renderer/input.hpp>
 #include <common/containers.hpp>
 #include <renderer/renderer.hpp>
@@ -284,3 +285,11 @@ struct world_t {
     // Used for terrain pointer
     terraform_package_t local_current_terraform_package;
 };
+
+void w_begin_ai_training_players(
+    world_t *world,
+    ai_training_session_t type);
+
+void w_begin_ai_training_chunks(
+    world_t *world,
+    ai_training_session_t type);

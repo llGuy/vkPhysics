@@ -3,7 +3,7 @@
 #include "tools.hpp"
 
 // Engine events
-#define MAX_EVENTS 40
+#define MAX_EVENTS 60
 #define MAX_LISTENERS 20
 
 typedef uint32_t listener_t;
@@ -37,6 +37,8 @@ enum event_type_t {
     ET_LAUNCH_INGAME_MENU,
 
     ET_BEGIN_RENDERING_SERVER_WORLD,
+
+    ET_BEGIN_AI_TRAINING,
 
     ET_INVALID_EVENT_TYPE
 };
@@ -119,6 +121,15 @@ struct event_begin_fade_effect_t {
     fade_trigger_t triggers[5];
     
     bool fade_back;
+};
+
+enum ai_training_session_t {
+    ATS_WALKING,
+    ATS_ROLLING,
+};
+
+struct event_begin_ai_training_t {
+    ai_training_session_t session_type;
 };
 
 struct event_t {
