@@ -30,3 +30,24 @@ float logic_delta_time();
 uint64_t &get_current_tick();
 
 game_init_flags_t get_game_init_flags();
+
+// Engine settings:
+enum graphics_quality_t {
+    GQ_FANCY, // Only support fancy for now
+    GQ_LOW
+};
+
+struct settings_t {
+    // Graphics
+    float max_frame_rate;
+    graphics_quality_t graphics_quality;
+
+    // Controls
+    float mouse_sensitivity;
+
+    // Startup
+    bool start_fullscreen;
+
+    // Misc
+    bool show_debug_window;
+};

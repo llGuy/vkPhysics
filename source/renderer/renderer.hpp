@@ -713,6 +713,11 @@ DECLARE_VOID_RENDERER_PROC(void, push_reversed_colored_ui_box,
 
 DECLARE_VOID_RENDERER_PROC(void, push_ui_text,
     struct ui_text_t *text);
+
+DECLARE_VOID_RENDERER_PROC(void, push_ui_input_text,
+    bool render_cursor,
+    uint32_t cursor_color,
+    struct ui_input_text_t *text);
     
 DECLARE_VOID_RENDERER_PROC(void, clear_ui_color_containers,
     void);
@@ -783,6 +788,22 @@ struct ui_text_t {
         uint32_t color);
 
     DECLARE_VOID_RENDERER_PROC(void, null_terminate,
+        void);
+};
+
+struct ui_input_text_t {
+    uint32_t cursor_position;
+    ui_text_t text;
+
+    uint32_t cursor_fade;
+
+    uint32_t text_color;
+    bool fade_in_or_out = 0;
+
+    DECLARE_VOID_RENDERER_PROC(void, input,
+        struct raw_input_t *raw_input);
+
+    DECLARE_POINTER_RENDERER_PROC(const char *, get_string,
         void);
 };
 

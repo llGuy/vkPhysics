@@ -494,7 +494,7 @@ static void s_windowed_game_main(
 
     frame_info.blurred = 0; 
     frame_info.ssao = 0;
-    frame_info.debug_window = 1;
+    frame_info.debug_window = 0;
 
     s_run_windowed_game();
 

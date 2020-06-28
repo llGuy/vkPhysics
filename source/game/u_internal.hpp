@@ -134,3 +134,38 @@ struct menu_layout_t {
     void open_menu(
         uint32_t button);
 };
+
+#if 0                           // Need to do this later
+struct widget_list_item_t {
+    ui_box_t box;
+    ui_text_t text;
+
+    widget_color_t button_color;
+};
+
+struct widget_list_t {
+    ui_box_t primary_button;
+    ui_text_t primary_text;
+
+    ui_box_t secondary_button;
+    ui_text_t secondary_text;
+
+    ui_box_t list_box;
+
+    uint32_t item_count;
+    widget_list_item_t *items;
+
+    // 0xFFFF is unselected
+    uint32_t selected_button;
+
+    bool typing;
+    ui_box_t typing_box;
+    ui_input_text_t typing_text;
+    widget_color_t typing_box_color;
+
+    DECLARE_VOID_RENDERER_PROC(void, begin_filling_list,
+        uint32_t item_count);
+
+    
+};
+#endif

@@ -78,7 +78,7 @@ endif()
 add_executable(vkPhysics_server "${GAME_SOURCES}")
 target_include_directories(vkPhysics_server PUBLIC "${CMAKE_SOURCE_DIR}/source")
 target_link_libraries(vkPhysics_server PUBLIC "common")
-
+ 
 if(WIN32)
 target_link_libraries(vkPhysics_server PUBLIC "winmm.lib")
 endif()

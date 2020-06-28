@@ -256,6 +256,7 @@ void poll_input_events(event_submissions_t *submissions) {
     }
 
     raw_input.instant_count = 0;
+    raw_input.char_count = 0;
 
     raw_input.previous_cursor_pos_x = raw_input.cursor_pos_x;
     raw_input.previous_cursor_pos_y = raw_input.cursor_pos_y;

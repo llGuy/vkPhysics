@@ -1,3 +1,4 @@
+#include "input.hpp"
 #include "renderer.hpp"
 #include <common/files.hpp>
 #include <common/allocators.hpp>
@@ -224,22 +225,27 @@ void ui_text_t::null_terminate() {
     characters[char_count] = 0;
 }
 
-// void ui_input_text_t::input(raw_input_t *raw_input) {
-//     for (uint32_t i = 0; i < raw_input->char_count; ++i) {
-//         char character[2] = {raw_input->char_stack[i], 0};
-//         if (character[0]) {
-//             text.colors[cursor_position] = text_color;
-//             text.characters[cursor_position++] = raw_input->char_stack[i];
-//             ++text.char_count;
-//             raw_input->char_stack[i] = 0;
-//         }
-//     }
+void ui_input_text_t::input(
+    raw_input_t *raw_input) {
+    for (uint32_t i = 0; i < raw_input->char_count; ++i) {
+        char character[2] = {raw_input->char_stack[i], 0};
+        if (character[0]) {
+            text.colors[cursor_position] = text_color;
+            text.characters[cursor_position++] = raw_input->char_stack[i];
+            ++text.char_count;
+            raw_input->char_stack[i] = 0;
+        }
+    }
 
-//     if (raw_input->buttons[button_type_t::BACKSPACE].state) {
-//         if (text.char_count && cursor_position) {
-//             --cursor_position;
-//             --text.char_count;
-//         }
-//     }
-// }
+    if (raw_input->buttons[BT_BACKSPACE].instant) {
+        if (text.char_count && cursor_position) {
+            --cursor_position;
+            --text.char_count;
+        }
+    }
+}
 
+const char *ui_input_text_t::get_string() {
+    text.null_terminate();
+    return text.characters;
+}

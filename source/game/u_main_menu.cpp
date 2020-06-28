@@ -52,7 +52,17 @@ static struct {
     server_button_t *servers;
 
     uint32_t selected_server = 0xFFFF;
+
+    bool typing_ip_address;
+    ui_box_t ip_address_box;
+    ui_input_text_t ip_address;
+    widget_color_t ip_address_color;
 } browse_server_menu;
+
+static struct {
+    ui_box_t edit_button;
+    ui_text_t edit_text;
+} build_map_menu;
 
 void u_refresh_main_menu_server_page() {
     available_servers_t *servers = get_available_servers();
@@ -174,6 +184,35 @@ static void s_browse_server_menu_init() {
 
     // SERVERS ////////////////////////////////////////////////////////////////
     u_refresh_main_menu_server_page();
+
+    browse_server_menu.ip_address_box.init(
+        RT_LEFT_DOWN,
+        6.0f,
+        ui_vector2_t(0.02f, 0.03f),
+        ui_vector2_t(0.28f, 0.2f),
+        &main_menu_layout.current_menu,
+        0x09090936);
+
+    browse_server_menu.ip_address.text.init(
+        &browse_server_menu.ip_address_box,
+        u_game_font(),
+        ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+        0.8f,
+        0.9f,
+        18,
+        1.8f);
+
+    browse_server_menu.ip_address_color.init(
+        0x09090936,
+        MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR,
+        0xFFFFFFFF,
+        0xFFFFFFFF);
+
+    browse_server_menu.ip_address.text_color = 0xFFFFFFFF;
+
+    browse_server_menu.ip_address.cursor_position = 0;
+
+    browse_server_menu.typing_ip_address = 0;
 }
 
 static void s_menus_init() {
@@ -231,6 +270,11 @@ void u_submit_main_menu() {
             push_colored_ui_box(
                 &browse_server_menu.refresh_button);
 
+            push_ui_input_text(1, 0xFFFFFFFF, &browse_server_menu.ip_address);
+
+            push_colored_ui_box(
+                &browse_server_menu.ip_address_box);
+
             for (uint32_t i = 0; i < browse_server_menu.server_count; ++i) {
                 server_button_t *button = &browse_server_menu.servers[i];
                 push_colored_ui_box(
@@ -246,13 +290,36 @@ void u_submit_main_menu() {
 static void s_browse_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
+    // IP ADDRESS TYPING //////////////////////////////////////////////////////
+    bool hovered_over_ip_address = u_hover_over_box(
+        &browse_server_menu.ip_address_box,
+        input->cursor_pos_x,
+        input->cursor_pos_y);
+
+    color_pair_t pair = browse_server_menu.ip_address_color.update(
+        MENU_WIDGET_HOVER_COLOR_FADE_SPEED,
+        hovered_over_ip_address);
+
+    browse_server_menu.ip_address_box.color = pair.current_background;
+
+    if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_ip_address) {
+        browse_server_menu.typing_ip_address = 1;
+
+        browse_server_menu.selected_server = 0xFFFF;
+    }
+
+    if (browse_server_menu.typing_ip_address) {
+        browse_server_menu.ip_address.input(
+            input);
+    }
+
     // CONNECT BUTTON /////////////////////////////////////////////////////////
     bool hovered_over_connect = u_hover_over_box(
         &browse_server_menu.connect_button,
         input->cursor_pos_x,
         input->cursor_pos_y);
 
-    color_pair_t pair = browse_server_menu.connect_color.update(
+    pair = browse_server_menu.connect_color.update(
         MENU_WIDGET_HOVER_COLOR_FADE_SPEED,
         hovered_over_connect);
 
@@ -281,6 +348,30 @@ static void s_browse_menu_input(
             effect_data->triggers[2].next_event_data = NULL;
             submit_event(ET_BEGIN_FADE, effect_data, events);
         }
+        else if (browse_server_menu.typing_ip_address) {
+            event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
+
+            memset(data, 0, sizeof(event_data_request_to_join_server_t));
+            data->ip_address = browse_server_menu.ip_address.get_string();
+            submit_event(ET_REQUEST_TO_JOIN_SERVER, data, events);
+            // Need to close the main menu, and start a fade effect
+            submit_event(ET_CLEAR_MENUS, NULL, events);
+
+            event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
+            effect_data->dest_value = 0.0f;
+            effect_data->duration = 2.5f;
+            effect_data->fade_back = 1;
+            effect_data->trigger_count = 3;
+            effect_data->triggers[0].trigger_type = ET_LAUNCH_GAME_MENU_SCREEN;
+            effect_data->triggers[0].next_event_data = NULL;
+            effect_data->triggers[1].trigger_type = ET_BEGIN_RENDERING_SERVER_WORLD;
+            effect_data->triggers[1].next_event_data = NULL;
+            effect_data->triggers[2].trigger_type = ET_EXIT_MAIN_MENU_SCREEN;
+            effect_data->triggers[2].next_event_data = NULL;
+            submit_event(ET_BEGIN_FADE, effect_data, events);
+        }
+
+        browse_server_menu.typing_ip_address = 0;
     }
 
     // REFRESH BUTTON /////////////////////////////////////////////////////////
@@ -297,6 +388,8 @@ static void s_browse_menu_input(
 
     if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_refresh) {
         submit_event(ET_REQUEST_REFRESH_SERVER_PAGE, NULL, events);
+
+        browse_server_menu.typing_ip_address = 0;
     }
 
     // SERVER SELECTION ///////////////////////////////////////////////////////
@@ -320,6 +413,8 @@ static void s_browse_menu_input(
 
             if (hovered_over_server && input->buttons[BT_MOUSE_LEFT].instant) {
                 browse_server_menu.selected_server = i;
+
+                browse_server_menu.typing_ip_address = 0;
             }
         }
     }

@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 #include "r_internal.hpp"
+#include "renderer/input.hpp"
 #include <common/allocators.hpp>
 
 vector2_t convert_glsl_to_normalized(
@@ -592,6 +593,73 @@ void push_ui_text(
             px_cursor_position.y -= px_char_height;
             px_cursor_position.x = (uint32_t)(text->x_start + box->px_position.ix);
         }
+    }
+}
+
+#define BLINK_SPEED 2.0f 
+
+void push_ui_input_text(
+    bool render_cursor,
+    uint32_t cursor_color,
+    struct ui_input_text_t *input) {
+    VkExtent2D resolution = r_swapchain_extent();
+    
+    if (input->fade_in_or_out) {
+        input->cursor_fade -= (int32_t)(BLINK_SPEED * surface_delta_time() * 1000.0f);
+        if (input->cursor_fade < 0.0f) {
+            input->cursor_fade = 0;
+            input->fade_in_or_out ^= 1;
+        }
+        //cursor_color >>= 8;
+        //cursor_color <<= 8;
+        uint32_t cursor_alpha = cursor_color & 0xFF;
+        uint32_t alpha = uint32_t(((float)input->cursor_fade / 255.0f) * ((float)(cursor_alpha)));
+        cursor_color |= alpha;
+    }
+    else {
+        input->cursor_fade += (int32_t)(BLINK_SPEED * surface_delta_time() * 1000.0f);
+        if (input->cursor_fade > 1.0f) {
+            input->cursor_fade = 1;
+            input->fade_in_or_out ^= 1;
+        }
+        
+        //cursor_color >>= 8;
+        //cursor_color <<= 8;
+        uint32_t cursor_alpha = cursor_color & 0xFF;
+        uint32_t alpha = uint32_t(((float)input->cursor_fade) * ((float)(cursor_alpha)));
+        cursor_color |= alpha;
+    }
+    
+    // Push input text
+    push_ui_text(&input->text);
+    // Push cursor quad
+    if (render_cursor) {
+        ui_box_t *box = input->text.dst_box;
+        ui_text_t *text = &input->text;
+
+        float magic = 1.0f;
+        uint32_t px_char_width = (box->px_current_size.ix) / text->chars_per_line;
+        uint32_t x_start = (uint32_t)((float)px_char_width * text->x_start);
+        px_char_width = (box->px_current_size.ix - 2 * x_start) / text->chars_per_line;
+        uint32_t px_char_height = (uint32_t)((text->line_height * (float)px_char_width) * magic);
+        ivector2_t px_cursor_start = get_px_cursor_position(box, &input->text, resolution);
+        ivector2_t px_cursor_position = px_cursor_start + ivector2_t(px_char_width, 0.0f) * (int32_t)input->cursor_position;
+        
+        vector2_t px_cursor_size = vector2_t((float)px_char_width, (float)px_char_height);
+        vector2_t px_cursor_base_position =  vector2_t(px_cursor_position) + vector2_t(vector2_t(0.0f, 0.0f));
+        vector2_t normalized_cursor_position = px_cursor_base_position;
+        normalized_cursor_position /= vector2_t((float)resolution.width, (float)resolution.height);
+        normalized_cursor_position *= 2.0f;
+        normalized_cursor_position -= vector2_t(1.0f);
+        vector2_t normalized_size = (px_cursor_size / vector2_t((float)resolution.width, (float)resolution.height)) * 2.0f;
+        vector2_t adjust = vector2_t(0.0f, -normalized_size.y);
+
+        push_colored_vertex({normalized_cursor_position + adjust, cursor_color});
+        push_colored_vertex({normalized_cursor_position + adjust + vector2_t(0.0f, normalized_size.y), cursor_color});
+        push_colored_vertex({normalized_cursor_position + adjust + vector2_t(normalized_size.x, 0.0f), cursor_color});
+        push_colored_vertex({normalized_cursor_position + adjust + vector2_t(0.0f, normalized_size.y), cursor_color});
+        push_colored_vertex({normalized_cursor_position + adjust + vector2_t(normalized_size.x, 0.0f), cursor_color});
+        push_colored_vertex({normalized_cursor_position + adjust + normalized_size, cursor_color});
     }
 }
 
