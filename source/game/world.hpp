@@ -202,8 +202,12 @@ struct player_t {
     player_animated_state_t animated_state;
 };
 
-player_t *get_player(
+// Rewrite this crap
+player_t *get_player_from_client_id(
     uint16_t client_id);
+
+player_t *get_player_from_player_id(
+    uint32_t player_id);
 
 // TODO: Replace this with the a function taking the player id instead of a pointer
 // Just calls w_push_player_actions()

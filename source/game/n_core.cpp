@@ -448,7 +448,7 @@ static accumulated_predicted_modification_t *s_accumulate_history() {
 }
 
 static void s_send_commands_to_server() {
-    player_t *p = get_player(current_client_id);
+    player_t *p = get_player_from_client_id(current_client_id);
 
     // DEAD by default
     static player_alive_state_t previous_alive_state = PAS_DEAD;
@@ -933,7 +933,7 @@ static void s_process_game_state_snapshot(
 
         if (snapshot->client_id == current_client_id) {
             client_t *c = &clients[snapshot->client_id];
-            player_t *p = get_player(snapshot->client_id);
+            player_t *p = get_player_from_client_id(snapshot->client_id);
             s_handle_local_player_snapshot(
                 c,
                 p,
@@ -942,7 +942,7 @@ static void s_process_game_state_snapshot(
                 serialiser);
         }
         else {
-            player_t *p = get_player(snapshot->client_id);
+            player_t *p = get_player_from_client_id(snapshot->client_id);
 
             if (p) {
                 p->remote_snapshots.push_item(snapshot);
@@ -1339,7 +1339,7 @@ static bool s_send_handshake(
                 info->flags = flags;
             }
             else {
-                player_t *p = get_player(i);
+                player_t *p = get_player_from_client_id(i);
                 info->name = client->name;
                 info->client_id = client->client_id;
                 info->ws_position = p->ws_position;
@@ -1649,7 +1649,7 @@ static void s_process_client_commands(
     uint16_t client_id,
     uint64_t tick,
     event_submissions_t *events) {
-    player_t *p = get_player(client_id);
+    player_t *p = get_player_from_client_id(client_id);
 
     if (p) {
         client_t *c = &clients[p->client_id];
@@ -1853,7 +1853,7 @@ static void s_dispatch_game_state_snapshot() {
             player_snapshot_t *snapshot = &packet.player_snapshots[packet.player_data_count];
             snapshot->flags = 0;
 
-            player_t *p = get_player(c->client_id);
+            player_t *p = get_player_from_client_id(c->client_id);
 
             // Check if 
             bool has_to_correct_state = s_check_if_client_has_to_correct_state(p, c);

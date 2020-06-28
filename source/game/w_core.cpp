@@ -132,7 +132,7 @@ static void s_world_event_listener(
 
         LOG_INFOV("Client %i spawned\n", data->client_id);
 
-        player_t *p = get_player(id);
+        player_t *p = get_player_from_client_id(id);
         p->ws_position = p->next_random_spawn_position;
         p->ws_view_direction = glm::normalize(-p->ws_position);
         // Calculate up vector
@@ -387,9 +387,14 @@ lighting_info_t create_lighting_info() {
     return info;
 }
 
-player_t *get_player(
+player_t *get_player_from_client_id(
     uint16_t client_id) {
     return w_get_player_from_client_id(client_id, &world);
+}
+
+player_t *get_player_from_player_id(
+    uint32_t player_id) {
+    return world.players[player_id];
 }
 
 chunk_t *get_chunk(
