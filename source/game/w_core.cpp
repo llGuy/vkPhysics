@@ -1,11 +1,12 @@
-#include "common/event.hpp"
+#include "ai.hpp"
+#include <cstddef>
 #include "net.hpp"
 #include "world.hpp"
 #include "engine.hpp"
 #include "w_internal.hpp"
 #include <common/log.hpp>
+#include "common/event.hpp"
 #include <common/files.hpp>
-#include <cstddef>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 #include <common/serialiser.hpp>
@@ -217,10 +218,18 @@ static void s_world_event_listener(
         if (!w_get_startup_screen_data()->initialised) {
             w_read_startup_screen(&world);
         }
+
+        world.spectator->ws_position = w_get_startup_screen_data()->position;
+        world.spectator->ws_view_direction = w_get_startup_screen_data()->view_direction;
+        world.spectator->ws_up_vector = w_get_startup_screen_data()->up_vector;
     } break;
 
     case ET_BEGIN_AI_TRAINING: {
         event_begin_ai_training_t *data = (event_begin_ai_training_t *)event->data;
+
+        current_world_present_mode = WPM_GAMEPLAY;
+
+        begin_ai_training_population(150);
 
         w_clear_players(&world);
         w_clear_chunk_world(&world);
@@ -253,6 +262,7 @@ void world_init(
     subscribe_to_event(ET_SPAWN, world_listener, events);
     subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, world_listener, events);
     subscribe_to_event(ET_BEGIN_RENDERING_SERVER_WORLD, world_listener, events);
+    subscribe_to_event(ET_BEGIN_AI_TRAINING, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 

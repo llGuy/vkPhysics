@@ -61,8 +61,9 @@ void w_read_startup_screen(
     startup_screen.world_render_data.pbr_info.y = 0.1f;
     startup_screen.world_render_data.color = vector4_t(0.0f);
 
-    world->spectator->ws_position = ws_position;
-    world->spectator->ws_view_direction = ws_view_direction;
+    startup_screen.position = world->spectator->ws_position = ws_position;
+    startup_screen.view_direction = world->spectator->ws_view_direction = ws_view_direction;
+    startup_screen.up_vector = vector3_t(0.0f, 1.0f, 0.0f);
 }
 
 void w_write_startup_screen(

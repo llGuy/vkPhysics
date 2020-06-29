@@ -1165,5 +1165,19 @@ void activate_chunk_history(
 void w_begin_ai_training_chunks(
     world_t *world,
     ai_training_session_t type) {
-    
+    switch (type) {
+    case ATS_WALKING: {
+        for (int32_t z = -32; z < 32; ++z) {
+            for (int32_t x = -32; x < 32; ++x) {
+                ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
+                ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel_coord);
+                chunk_t *chunk = w_get_chunk(chunk_coord, world);
+                chunk->flags.has_to_update_vertices = 1;
+                ivector3_t local_coord = w_convert_voxel_to_local_chunk(voxel_coord);
+                uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
+                chunk->voxels[index] = 80;
+            }
+        }
+    } break;
+    }
 }

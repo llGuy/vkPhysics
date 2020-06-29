@@ -19,7 +19,7 @@ void ai_init() {
     a_neat_module_init();
 }
 
-void begin_ai_population(
+void begin_ai_training_population(
     uint32_t population_size) {
     a_universe_init(
         &universe,

@@ -233,6 +233,8 @@ struct startup_screen_t {
 
     mesh_t world_mesh;
     mesh_render_data_t world_render_data;
+
+    vector3_t position, view_direction, up_vector;
 };
 
 void w_startup_init();

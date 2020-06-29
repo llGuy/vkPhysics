@@ -1,5 +1,7 @@
 // Engine core
+#include "ai.hpp"
 #include "ui.hpp"
+#include <cstddef>
 #include <time.h>
 #include "net.hpp"
 #include <stdio.h>
@@ -89,6 +91,11 @@ static void s_game_event_listener(
         frame_info.ssao = 1;
     } break;
 
+    case ET_BEGIN_AI_TRAINING: {
+        frame_info.blurred = 0;
+        frame_info.ssao = 1;
+    } break;
+
     case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
         focus = HF_WORLD;
         disable_cursor_display();
@@ -140,6 +147,8 @@ static void s_tick(
 
     tick_net(
         &events);
+
+    tick_ai();
 
     tick_world(
         &events);
@@ -418,6 +427,32 @@ static void s_world_ui_proc() {
     if (write_startup) {
         write_startup_screen();
     }
+
+    // AI stuff
+    ImGui::Separator();
+    ImGui::Text("-- AI --");
+
+    bool start_training_walking = ImGui::Button("Train walking");
+
+    if (start_training_walking) {
+        event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
+
+        effect_data->dest_value = 0.0f;
+        effect_data->duration = 2.5f;
+        effect_data->fade_back = 1;
+        effect_data->trigger_count = 2;
+        effect_data->triggers[0].trigger_type = ET_BEGIN_AI_TRAINING;
+
+        event_begin_ai_training_t *training_data = FL_MALLOC(event_begin_ai_training_t, 1);
+        training_data->session_type = ATS_WALKING;
+
+        effect_data->triggers[0].next_event_data = training_data;
+
+        effect_data->triggers[1].trigger_type = ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY;
+        effect_data->triggers[1].next_event_data = NULL;
+
+        submit_event(ET_BEGIN_FADE, effect_data, &events);
+    }
 }
 #endif
 
@@ -432,6 +467,7 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_EXIT_MAIN_MENU_SCREEN, game_core_listener, &events);
     subscribe_to_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, game_core_listener, &events);
     subscribe_to_event(ET_LAUNCH_INGAME_MENU, game_core_listener, &events);
+    subscribe_to_event(ET_BEGIN_AI_TRAINING, game_core_listener, &events);
 
     focus = HF_UI;
 
@@ -453,6 +489,8 @@ static void s_windowed_game_main(
     submit_event(ET_LAUNCH_MAIN_MENU_SCREEN, NULL, &events);
 
     net_init(&events);
+
+    ai_init();
 
     if (game_init_data->flags & GIF_CLIENT) {
         event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
@@ -494,7 +532,7 @@ static void s_windowed_game_main(
 
     frame_info.blurred = 0; 
     frame_info.ssao = 0;
-    frame_info.debug_window = 0;
+    frame_info.debug_window = 1;
 
     s_run_windowed_game();
 
@@ -548,6 +586,7 @@ static void s_not_windowed_game_main(
     game_init_data_t *game_init_data) {
     world_init(&events);
     net_init(&events);
+    ai_init();
 
     if (game_init_data->argc >= 2) {
         event_start_server_t *data = FL_MALLOC(event_start_server_t, 1);

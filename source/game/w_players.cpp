@@ -1,5 +1,6 @@
 #include <math.h>
 #include "common/event.hpp"
+#include "game/world.hpp"
 #include "net.hpp"
 
 #include "engine.hpp"
@@ -908,13 +909,20 @@ void w_clear_players(
 void w_begin_ai_training_players(
     world_t *world,
     ai_training_session_t type) {
+    world->spectator->ws_position = vector3_t(0.0f, -4.0f, 0.0f);
+
     switch (type) {
 
     case ATS_WALKING: {
         player_t *p = w_add_player(world);
 
         p->name = "AI";
-        p->ws_position = vector3_t();
+        p->ws_position = vector3_t(0.0f, 0.0f, 0.0f);
+        p->ws_view_direction = vector3_t(0.0f, 0.0f, -1.0f);
+        p->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+
+        p->flags.alive_state = PAS_ALIVE;
+        p->flags.interaction_mode = PIM_STANDING;
     } break;
 
     }
