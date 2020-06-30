@@ -847,6 +847,8 @@ void w_players_gpu_sync_and_render(
                     } 
                 }
                 else {
+                    p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
+
                     submit_mesh(
                         render_command_buffer,
                         &player_ball_mesh,
@@ -906,6 +908,73 @@ void w_clear_players(
     }
 }
 
+void w_add_player_from_info(
+    player_init_info_t *init_info,
+    world_t *world) {
+    player_t *p = w_add_player(world);
+        
+    if (init_info->client_data) {
+        p->name = init_info->client_data->name;
+        p->client_id = init_info->client_data->client_id;
+        // Now the network module can use w_get_player_from_client_id to get access to player directly
+        w_link_client_id_to_local_id(p->client_id, p->local_id, world);
+    }
+
+    p->ws_position = init_info->ws_position;
+    p->ws_view_direction = init_info->ws_view_direction;
+    p->ws_up_vector = init_info->ws_up_vector;
+    p->player_action_count = 0;
+    p->default_speed = init_info->default_speed;
+    p->next_random_spawn_position = init_info->next_random_spawn_position;
+    p->ball_speed = 0.0f;
+    p->ws_velocity = vector3_t(0.0f);
+    memset(p->player_actions, 0, sizeof(p->player_actions));
+
+    p->accumulated_dt = 0.0f;
+
+    p->flags.u32 = init_info->flags;
+
+    // If offline
+    if (!init_info->client_data) {
+        p->flags.alive_state = PAS_ALIVE;
+        p->flags.interaction_mode = PIM_FLOATING;
+    }
+    
+    if (p->flags.is_local) {
+        LOG_INFOV("%s is local\n", p->name);
+
+        // If this is the local player (controlled by mouse and keyboard, need to cache all player actions to send to the server)
+        // Only bind camera if player is alive
+        if (p->flags.alive_state == PAS_ALIVE) {
+            // This binds the camera
+            w_set_local_player(p->local_id, world);
+        }
+        else {
+            w_set_local_player(-1, world);
+        }
+        
+        p->cached_player_action_count = 0;
+        p->cached_player_actions = FL_MALLOC(player_actions_t, MAX_PLAYER_ACTIONS * 2);
+
+        p->flags.is_remote = 0;
+        p->flags.is_local = 1;
+    }
+    else {
+        p->flags.is_remote = 1;
+        p->flags.is_local = 0;
+
+        // Initialise remote snapshots
+        p->remote_snapshots.init();
+        p->elapsed = 0.0f;
+    }
+
+    if (get_game_init_flags() | GIF_WINDOWED) {
+        w_player_animation_init(p);
+    }
+
+    LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
+}
+
 void w_begin_ai_training_players(
     world_t *world,
     ai_training_session_t type) {
@@ -914,15 +983,20 @@ void w_begin_ai_training_players(
     switch (type) {
 
     case ATS_WALKING: {
-        player_t *p = w_add_player(world);
+        player_init_info_t info = {};
+        info.ws_position = vector3_t(0.0f);
+        info.ws_view_direction = vector3_t(0.0f, 0.0f, -1.0f);
+        info.ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+        info.default_speed = 10.0f;
 
-        p->name = "AI";
-        p->ws_position = vector3_t(0.0f, 0.0f, 0.0f);
-        p->ws_view_direction = vector3_t(0.0f, 0.0f, -1.0f);
-        p->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+        player_flags_t flags = {};
+        flags.u32 = 0;
+        flags.alive_state = PAS_ALIVE;
+        flags.interaction_mode = PIM_STANDING;
 
-        p->flags.alive_state = PAS_ALIVE;
-        p->flags.interaction_mode = PIM_STANDING;
+        w_add_player_from_info(
+            &info,
+            world);
     } break;
 
     }
