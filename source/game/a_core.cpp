@@ -24,7 +24,7 @@ void begin_ai_training_population(
     a_universe_init(
         &universe,
         population_size,
-        35,
+        29,
         9);
 
     current_in_training = 0;
@@ -92,12 +92,10 @@ void tick_ai() {
         inputs[0] = p->ws_position.x;
         inputs[1] = p->ws_position.y;
         inputs[2] = p->ws_position.z;
-        inputs[3] = p->ws_view_direction.x;
-        inputs[4] = p->ws_view_direction.y;
-        inputs[5] = p->ws_view_direction.z;
-        inputs[6] = p->ws_up_vector.x;
-        inputs[7] = p->ws_up_vector.y;
-        inputs[8] = p->ws_up_vector.z;
+
+        sensors_t sensors = {};
+        sensors.s = &inputs[3];
+        cast_ray_sensors(&sensors, p->ws_position, p->ws_view_direction, p->ws_up_vector);
         // Cast the rays to get the 26 sensors
 
         a_run_genome(&universe.neat, &n_ent->genome, inputs, outputs);

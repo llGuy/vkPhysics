@@ -461,3 +461,16 @@ void set_chunk_history_tracker_value(
 void write_startup_screen() {
     w_write_startup_screen(&world);
 }
+
+void cast_ray_sensors(
+    sensors_t *sensors,
+    const vector3_t &ws_position,
+    const vector3_t &ws_view_direction,
+    const vector3_t &ws_up_vector) {
+    w_cast_ray_sensors(
+        &world,
+        sensors,
+        ws_position,
+        ws_view_direction,
+        ws_up_vector);
+}

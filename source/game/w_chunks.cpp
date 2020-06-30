@@ -838,6 +838,80 @@ chunk_t *w_get_chunk(
     }
 }
 
+void w_cast_ray_sensors(
+    world_t *world,
+    sensors_t *sensors,
+    const vector3_t &ws_position,
+    const vector3_t &ws_view_direction,
+    const vector3_t &ws_up_vector) {
+    const vector3_t ws_right_vector = glm::normalize(glm::cross(ws_view_direction, ws_up_vector));
+
+    // Need to cast 26 rays
+    vector3_t rays[AI_SENSOR_COUNT] = {
+        ws_view_direction, 
+        glm::normalize(ws_view_direction - ws_up_vector - ws_right_vector),
+        glm::normalize(ws_view_direction - ws_right_vector),
+        glm::normalize(ws_view_direction + ws_up_vector - ws_right_vector),
+        glm::normalize(ws_view_direction + ws_up_vector),
+        glm::normalize(ws_view_direction + ws_up_vector + ws_right_vector),
+        glm::normalize(ws_view_direction + ws_right_vector),
+        glm::normalize(ws_view_direction - ws_up_vector + ws_right_vector),
+        glm::normalize(ws_view_direction - ws_up_vector),
+        
+        -ws_view_direction, 
+        glm::normalize(-ws_view_direction - ws_up_vector - ws_right_vector),
+        glm::normalize(-ws_view_direction - ws_right_vector),
+        glm::normalize(-ws_view_direction + ws_up_vector - ws_right_vector),
+        glm::normalize(-ws_view_direction + ws_up_vector),
+        glm::normalize(-ws_view_direction + ws_up_vector + ws_right_vector),
+        glm::normalize(-ws_view_direction + ws_right_vector),
+        glm::normalize(-ws_view_direction - ws_up_vector + ws_right_vector),
+        glm::normalize(-ws_view_direction - ws_up_vector),
+
+        glm::normalize(-ws_up_vector),
+        glm::normalize(-ws_up_vector - ws_right_vector),
+        glm::normalize(-ws_right_vector),
+        glm::normalize(ws_up_vector - ws_right_vector),
+        glm::normalize(ws_up_vector),
+        glm::normalize(ws_up_vector + ws_right_vector),
+        glm::normalize(ws_right_vector),
+        glm::normalize(-ws_up_vector + ws_right_vector),
+    };
+
+    static const float PRECISION = 1.0f / 10.0f;
+    float max_reach = 10.0f;
+    float max_reach_squared = max_reach * max_reach;
+
+    for (uint32_t i = 0; i < AI_SENSOR_COUNT; ++i) {
+        vector3_t step = rays[i] * max_reach * PRECISION;
+
+        vector3_t current_ray_position = ws_position;
+
+        float length_step = max_reach * PRECISION;
+        float length = 0.0f;
+
+        bool hit = 0;
+
+        for (; glm::dot(current_ray_position - ws_position, current_ray_position - ws_position) < max_reach_squared; current_ray_position += step) {
+            ivector3_t voxel = w_convert_world_to_voxel(current_ray_position);
+            ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
+            chunk_t *chunk = w_access_chunk(chunk_coord, world);
+
+            length += length_step;
+
+            if (chunk) {
+                ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
+                if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > surface_level) {
+
+                    break;
+                }
+            }
+        }
+
+        sensors->s[i] = length;
+    }
+}
+
 terraform_package_t w_cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,

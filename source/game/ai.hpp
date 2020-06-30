@@ -4,8 +4,6 @@
 
 // The inputs to the neural network are:
 // - 3 floats for the position of the player
-// - 3 floats for the view direction of the player
-// - 3 floats for the up vector of the player
 // - 26 floats for each ray that is cast from the player's position
 // - need to figure out how we are going to handle the different players in the world
 

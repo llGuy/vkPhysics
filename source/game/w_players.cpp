@@ -757,6 +757,53 @@ void w_set_local_player(
     world->local_player = local_id;
 }
 
+static void s_render_person(
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer,
+    player_t *p) {
+    if (p->animations.next_bound_cycle != p->animated_state) {
+        switch_to_cycle(
+            &p->animations,
+            p->animated_state,
+            0);
+    }
+
+    interpolate_joints(&p->animations, logic_delta_time());
+    sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
+
+    // This has to be a bit different
+    movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
+    matrix3_t normal_rotation_matrix3 = (matrix3_t(glm::normalize(axes.right), glm::normalize(axes.up), glm::normalize(-axes.forward)));
+    matrix4_t normal_rotation_matrix = matrix4_t(normal_rotation_matrix3);
+    normal_rotation_matrix[3][3] = 1.0f;
+
+    vector3_t view_dir = glm::normalize(p->ws_view_direction);
+    float dir_x = view_dir.x;
+    float dir_z = view_dir.z;
+    float rotation_angle = atan2(dir_z, dir_x);
+
+    matrix4_t rot_matrix = glm::rotate(-rotation_angle, vector3_t(0.0f, 1.0f, 0.0f));
+
+    p->render->render_data.model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(player_scale);
+    submit_skeletal_mesh(
+        render_command_buffer,
+        &player_mesh,
+        &player_shader,
+        &p->render->render_data,
+        &p->animations);
+}
+
+static void s_render_ball(
+    VkCommandBuffer render_command_buffer,
+    player_t *p) {
+    p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
+    submit_mesh(
+        render_command_buffer,
+        &player_ball_mesh,
+        &player_ball_shader,
+        &p->render->render_data);
+}
+
 // When skeletal animation is implemented, this function will do stuff like handle that
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
@@ -805,55 +852,20 @@ void w_players_gpu_sync_and_render(
 
                 if ((int32_t)i == (int32_t)world->local_player) {
                     if (p->flags.interaction_mode == PIM_STANDING) {
-                        if (p->animations.next_bound_cycle != p->animated_state) {
-                            switch_to_cycle(
-                                &p->animations,
-                                p->animated_state,
-                                0);
-                        }
-
-                        interpolate_joints(&p->animations, logic_delta_time());
-                        sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
-
-                        // This has to be a bit different
-                        movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
-                        matrix3_t normal_rotation_matrix3 = (matrix3_t(glm::normalize(axes.right), glm::normalize(axes.up), glm::normalize(-axes.forward)));
-                        matrix4_t normal_rotation_matrix = matrix4_t(normal_rotation_matrix3);
-                        normal_rotation_matrix[3][3] = 1.0f;
-
-                        vector3_t view_dir = glm::normalize(p->ws_view_direction);
-                        float dir_x = view_dir.x;
-                        float dir_z = view_dir.z;
-                        float rotation_angle = atan2(dir_z, dir_x);
-
-                        matrix4_t rot_matrix = glm::rotate(-rotation_angle, vector3_t(0.0f, 1.0f, 0.0f));
-
-                        p->render->render_data.model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(player_scale);
-                        submit_skeletal_mesh(
-                            render_command_buffer,
-                            &player_mesh,
-                            &player_shader,
-                            &p->render->render_data,
-                            &p->animations);
+                        s_render_person(render_command_buffer, transfer_command_buffer, p);
                     }
                     else {
-                        p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
-                        submit_mesh(
-                            render_command_buffer,
-                            &player_ball_mesh,
-                            &player_ball_shader,
-                            &p->render->render_data);
-                        
+                        s_render_ball(render_command_buffer, p);
                     } 
+                    // TODO: Special handling for first person mode
                 }
                 else {
-                    p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
-
-                    submit_mesh(
-                        render_command_buffer,
-                        &player_ball_mesh,
-                        &player_ball_shader,
-                        &p->render->render_data);
+                    if (p->flags.interaction_mode == PIM_STANDING) {
+                        s_render_person(render_command_buffer, transfer_command_buffer, p);
+                    }
+                    else {
+                        s_render_ball(render_command_buffer, p);
+                    } 
                 }
             }
         }
@@ -937,7 +949,6 @@ void w_add_player_from_info(
     // If offline
     if (!init_info->client_data) {
         p->flags.alive_state = PAS_ALIVE;
-        p->flags.interaction_mode = PIM_FLOATING;
     }
     
     if (p->flags.is_local) {
@@ -993,6 +1004,8 @@ void w_begin_ai_training_players(
         flags.u32 = 0;
         flags.alive_state = PAS_ALIVE;
         flags.interaction_mode = PIM_STANDING;
+
+        info.flags = flags.u32;
 
         w_add_player_from_info(
             &info,

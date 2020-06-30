@@ -299,3 +299,10 @@ void w_begin_ai_training_players(
 void w_begin_ai_training_chunks(
     world_t *world,
     ai_training_session_t type);
+
+void w_cast_ray_sensors(
+    world_t *world,
+    sensors_t *sensors,
+    const vector3_t &ws_position,
+    const vector3_t &ws_view_direction,
+    const vector3_t &ws_up_vector);

@@ -297,6 +297,18 @@ struct chunks_to_interpolate_t {
 
 chunks_to_interpolate_t *get_chunks_to_interpolate();
 
+// For AI
+#define AI_SENSOR_COUNT 26
+struct sensors_t {
+    float *s;
+};
+
+void cast_ray_sensors(
+    sensors_t *sensors,
+    const vector3_t &ws_position,
+    const vector3_t &ws_view_direction,
+    const vector3_t &ws_up_vector);
+
 // For debugging only
 stack_container_t<player_t *> &DEBUG_get_players();
 player_t *DEBUG_get_spectator();
