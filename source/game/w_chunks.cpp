@@ -1239,6 +1239,11 @@ void activate_chunk_history(
 void w_begin_ai_training_chunks(
     world_t *world,
     ai_training_session_t type) {
+    for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
+        chunk_t *c = world->chunks[i];
+        memset(c->voxels, 0, sizeof(uint8_t) * CHUNK_VOXEL_COUNT);
+    }
+
     switch (type) {
     case ATS_WALKING: {
         for (int32_t z = -32; z < 32; ++z) {

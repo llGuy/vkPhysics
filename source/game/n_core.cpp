@@ -657,6 +657,7 @@ static void s_handle_incorrect_state(
     p->next_random_spawn_position = snapshot->ws_next_random_spawn;
     p->ws_velocity = snapshot->ws_velocity;
     p->flags.interaction_mode = snapshot->interaction_mode;
+    p->flags.alive_state = snapshot->alive_state;
 
     // Revert voxel modifications up from tick that server processed
     if (snapshot->terraformed) {
@@ -1696,6 +1697,10 @@ static void s_process_client_commands(
             c->ws_predicted_up_vector = commands.ws_final_up_vector;
             c->ws_predicted_velocity = commands.ws_final_velocity;
             c->predicted_player_flags.u32 = commands.player_flags;
+
+            if (c->predicted_player_flags.alive_state == PAS_DEAD) {
+                // LOG_INFO("Player is now dead!\n");
+            }
             
             // Process terraforming stuff
             if (commands.modified_chunk_count) {
@@ -1770,7 +1775,18 @@ static bool s_check_if_client_has_to_correct_state(
         incorrect_interaction_mode = 1;
     }
 
-    return incorrect_position || incorrect_direction || incorrect_up || incorrect_velocity || incorrect_interaction_mode;
+    bool incorrect_alive_state = 0;
+    if (p->flags.alive_state != c->predicted_player_flags.alive_state) {
+        LOG_INFO("Need to correct alive state\n");
+        incorrect_alive_state = 1;
+    }
+
+    return incorrect_position ||
+        incorrect_direction ||
+        incorrect_up ||
+        incorrect_velocity ||
+        incorrect_interaction_mode ||
+        incorrect_alive_state;
 }
 
 static bool s_check_if_client_has_to_correct_terrain(

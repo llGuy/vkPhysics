@@ -86,6 +86,12 @@ static void s_game_event_listener(
         // When entering gameplay mode, enable ssao and disable blur
     } break;
 
+    case ET_LAUNCH_GAME_MENU_SCREEN: {
+        focus = HF_UI;
+        frame_info.ssao = 0;
+        enable_cursor_display();
+    } break;
+
     case ET_EXIT_MAIN_MENU_SCREEN: {
         frame_info.blurred = 0;
         frame_info.ssao = 1;
@@ -467,6 +473,7 @@ static void s_windowed_game_main(
     subscribe_to_event(ET_EXIT_MAIN_MENU_SCREEN, game_core_listener, &events);
     subscribe_to_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, game_core_listener, &events);
     subscribe_to_event(ET_LAUNCH_INGAME_MENU, game_core_listener, &events);
+    subscribe_to_event(ET_LAUNCH_GAME_MENU_SCREEN, game_core_listener, &events);
     subscribe_to_event(ET_BEGIN_AI_TRAINING, game_core_listener, &events);
 
     focus = HF_UI;

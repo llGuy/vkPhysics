@@ -44,7 +44,7 @@ void w_link_client_id_to_local_id(
     uint32_t local_id,
     struct world_t *world);
 
-void w_add_player_from_info(
+player_t *w_add_player_from_info(
     player_init_info_t *info,
     world_t *world);
 
@@ -55,7 +55,8 @@ void w_player_world_init(
     struct world_t *world);
 
 void w_tick_players(
-    struct world_t *world);
+    struct world_t *world,
+    event_submissions_t *events);
 
 void w_set_local_player(
     int32_t local_id,
@@ -286,7 +287,10 @@ struct world_t {
         uint8_t wait_mesh_update: 1;
         uint8_t track_history: 1;
         uint8_t in_server: 1;
+        uint8_t in_training: 1;
     };
+
+    ai_training_session_t training_type;
 
     // Used for terrain pointer
     terraform_package_t local_current_terraform_package;

@@ -1,4 +1,4 @@
-#include "ai.hpp"
+# include "ai.hpp"
 #include <cstddef>
 #include "net.hpp"
 #include "world.hpp"
@@ -229,6 +229,7 @@ static void s_world_event_listener(
 
         current_world_present_mode = WPM_GAMEPLAY;
 
+        world.training_type = data->session_type;
         begin_ai_training_population(150);
 
         w_clear_players(&world);
@@ -236,6 +237,18 @@ static void s_world_event_listener(
 
         w_begin_ai_training_players(&world, data->session_type);
         w_begin_ai_training_chunks(&world, data->session_type);
+    } break;
+
+    case ET_RESET_AI_ARENA: {
+        switch (world.training_type) {
+        case ATS_WALKING: {
+            w_begin_ai_training_chunks(&world, ATS_WALKING);
+        } break;
+
+        case ATS_ROLLING: {
+            
+        } break;
+        }
     } break;
 
     default: {
@@ -263,6 +276,7 @@ void world_init(
     subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, world_listener, events);
     subscribe_to_event(ET_BEGIN_RENDERING_SERVER_WORLD, world_listener, events);
     subscribe_to_event(ET_BEGIN_AI_TRAINING, world_listener, events);
+    subscribe_to_event(ET_RESET_AI_ARENA, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 
@@ -287,11 +301,26 @@ void handle_world_input() {
     w_handle_input(game_input, surface_delta_time(), &world);
 }
 
+static void s_check_training_ai() {
+    switch (world.training_type) {
+    case ATS_ROLLING: {
+        
+    } break;
+    case ATS_WALKING: {
+        vector3_t pos = world.players[0]->ws_position;
+    } break;
+    }
+}
+
 void tick_world(
     event_submissions_t *events) {
     (void)events;
     w_tick_chunks(logic_delta_time());
-    w_tick_players(&world);
+    w_tick_players(&world, events);
+
+    // if (world.in_training) {
+    //     s_check_training_ai();
+    // }
 }
 
 void gpu_sync_world(

@@ -51,3 +51,5 @@ void end_ai_population();
 
 // Pushes actions to the entities that have had ai attached to them
 void tick_ai();
+
+bool is_in_training();

@@ -1,7 +1,9 @@
+#include <cstddef>
 #include <math.h>
 #include "common/event.hpp"
 #include "game/world.hpp"
 #include "net.hpp"
+#include "ai.hpp"
 
 #include "engine.hpp"
 #include <common/log.hpp>
@@ -609,10 +611,61 @@ static void s_accelerate_meteorite_player(
     }
 }
 
+static void s_check_player_dead(
+    player_actions_t *actions,
+    world_t *world,
+    player_t *player,
+    event_submissions_t *events) {
+    // Start checking for death, if the velocity vector
+    // is pretty aligned with the up vector (but down) of the player
+    // because if it is, that means that the velocity vector won't be able to change too much.
+    // (gravity has already pulled the player out of any sort of movement range)
+    if (player->flags.contact == PCS_IN_AIR) {
+        vector3_t normalized_velocity = glm::normalize(player->ws_velocity);
+
+        float vdu = glm::dot(normalized_velocity, glm::normalize(-player->ws_up_vector));
+
+        if (vdu > 0.9f) {
+            // Do ray cast to check if there are chunks underneath the player
+            uint32_t ray_step_count = 10;
+            vector3_t current_ray_position = player->ws_position;
+            current_ray_position += 16.0f * normalized_velocity;
+            for (uint32_t i = 0; i < ray_step_count; ++i) {
+                ivector3_t chunk_coord = w_convert_voxel_to_chunk(w_convert_world_to_voxel(current_ray_position));
+
+                chunk_t *c = w_access_chunk(chunk_coord, world);
+                if (c) {
+                    // Might not die, reset timer
+                    player->death_checker = 0.0f;
+
+                    break;
+                }
+
+                current_ray_position += 16.0f * normalized_velocity;
+            }
+
+            player->death_checker += actions->dt;
+
+            if (player->death_checker > 5.0f) {
+                // The player is dead
+                LOG_INFO("Player has just died\n");
+
+                player->flags.alive_state = PAS_DEAD;
+
+                submit_event(ET_LAUNCH_GAME_MENU_SCREEN, NULL, events);
+                submit_event(ET_BEGIN_RENDERING_SERVER_WORLD, NULL, events);
+            }
+        }
+    }
+    else {
+        player->death_checker = 0.0f;
+    }
+}
+
 static void s_execute_player_actions(
     player_t *player,
-    world_t *world) {
-
+    world_t *world,
+    event_submissions_t *events) {
     for (uint32_t i = 0; i < player->player_action_count; ++i) {
         player_actions_t *actions = &player->player_actions[i];
 
@@ -639,11 +692,15 @@ static void s_execute_player_actions(
             s_execute_player_triggers(player, actions, world);
             s_execute_player_direction_change(player, actions);
             s_execute_standing_player_movement(player, actions);
+
+            s_check_player_dead(actions, world, player, events);
         } break;
 
         case PIM_BALL: {
             s_execute_player_direction_change(player, actions);
             s_execute_ball_player_movement(player, actions);
+
+            s_check_player_dead(actions, world, player, events);
         } break;
 
         case PIM_FLOATING: {
@@ -680,6 +737,10 @@ static void s_execute_player_actions(
                     LOG_WARNING("Too many cached player actions\n");
                 }
             }
+        }
+
+        if (player->flags.alive_state == PAS_DEAD) {
+            break;
         }
     }
 
@@ -734,13 +795,16 @@ static void s_interpolate_remote_player_snapshots(
 }
 
 void w_tick_players(
-    world_t *world) {
+    world_t *world,
+    event_submissions_t *events) {
     // Handle networking stuff
     for (uint32_t i = 0; i < world->players.data_count; ++i) {
         player_t *p = world->players[i];
         if (p) {
-            // Will be 0 for remote players
-            s_execute_player_actions(p, world);
+            if (p->flags.alive_state == PAS_ALIVE) {
+                // Will be 0 for remote players
+                s_execute_player_actions(p, world, events);
+            }
 
             if (p->flags.is_remote) {
                 s_interpolate_remote_player_snapshots(p);
@@ -748,7 +812,7 @@ void w_tick_players(
         }
     }
 
-    s_execute_player_actions(world->spectator, world);
+    s_execute_player_actions(world->spectator, world, events);
 }
 
 void w_set_local_player(
@@ -920,7 +984,7 @@ void w_clear_players(
     }
 }
 
-void w_add_player_from_info(
+player_t *w_add_player_from_info(
     player_init_info_t *init_info,
     world_t *world) {
     player_t *p = w_add_player(world);
@@ -984,6 +1048,7 @@ void w_add_player_from_info(
     }
 
     LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
+    return p;
 }
 
 void w_begin_ai_training_players(
@@ -1007,9 +1072,11 @@ void w_begin_ai_training_players(
 
         info.flags = flags.u32;
 
-        w_add_player_from_info(
+        player_t *p = w_add_player_from_info(
             &info,
             world);
+
+        uint32_t ai_id = attach_ai(p->local_id, 0);
     } break;
 
     }

@@ -1,22 +1,28 @@
 #include "ai.hpp"
-#include "game/engine.hpp"
 #include "world.hpp"
 #include "a_internal.hpp"
+#include "game/engine.hpp"
+#include <common/time.hpp>
 #include "common/allocators.hpp"
 
 struct ai_t {
     uint32_t player_id;
     uint32_t ai_id;
+
+    time_stamp_t spawn_time;
 };
 
 static uint32_t current_in_training;
 static neat_universe_t universe;
 static uint32_t attached_ai_count;
 static ai_t *attached_ais;
+static bool in_training;
 
 void ai_init() {
     // Initialises any sort of memory allocations, etc...
     a_neat_module_init();
+
+    in_training = 0;
 }
 
 void begin_ai_training_population(
@@ -30,6 +36,12 @@ void begin_ai_training_population(
     current_in_training = 0;
 
     attached_ais = FL_MALLOC(ai_t, population_size);
+
+    in_training = 1;
+}
+
+bool is_in_training() {
+    return in_training;
 }
 
 void assign_ai_score(
@@ -48,6 +60,7 @@ uint32_t attach_ai(
     ai_t *ai = &attached_ais[ai_index];
     ai->player_id = player_id;
     ai->ai_id = ai_id;
+    ai->spawn_time = current_time();
 
     return ai_index;
 }
@@ -85,6 +98,10 @@ void tick_ai() {
     // Loop through all attached AIs
     for (uint32_t i = 0; i < attached_ai_count; ++i) {
         ai_t *ai = &attached_ais[i];
+
+        if (time_difference(current_time(), ai->spawn_time) > 10.0f) {
+            uint32_t next_ai = train_next_ai(1, ai->ai_id);
+        }
 
         neat_entity_t *n_ent = &universe.entities[ai->ai_id];
         player_t *p = get_player_from_player_id(ai->player_id);

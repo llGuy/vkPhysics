@@ -44,6 +44,7 @@ struct player_actions_t {
             // Switch between player mode and ball mode
             uint16_t switch_shapes: 1;
             uint16_t flashlight: 1;
+            uint16_t dead: 1;
         };
 
         uint16_t bytes;
@@ -200,6 +201,13 @@ struct player_t {
     terraform_package_t terraform_package;
 
     player_animated_state_t animated_state;
+
+    // Basically a timer (death checking for falling down forever)
+    float death_checker;
+
+    // For AI
+    bool ai;
+    uint32_t ai_id;
 };
 
 // Rewrite this crap
