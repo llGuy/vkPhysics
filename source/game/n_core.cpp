@@ -646,7 +646,8 @@ static void s_handle_incorrect_state(
     player_t *p,
     player_snapshot_t *snapshot,
     packet_game_state_snapshot_t *packet,
-    serialiser_t *serialiser) {
+    serialiser_t *serialiser,
+    event_submissions_t *events) {
     // Do correction!
     p->ws_position = snapshot->ws_position;
     p->ws_view_direction = snapshot->ws_view_direction;
@@ -657,6 +658,14 @@ static void s_handle_incorrect_state(
     p->next_random_spawn_position = snapshot->ws_next_random_spawn;
     p->ws_velocity = snapshot->ws_velocity;
     p->flags.interaction_mode = snapshot->interaction_mode;
+
+    if (p->flags.alive_state == PAS_ALIVE && snapshot->alive_state == PAS_DEAD) {
+        // Handle death
+        LOG_INFO("Player has just died\n");
+        submit_event(ET_LAUNCH_GAME_MENU_SCREEN, NULL, events);
+        submit_event(ET_BEGIN_RENDERING_SERVER_WORLD, NULL, events);
+    }
+
     p->flags.alive_state = snapshot->alive_state;
 
     // Revert voxel modifications up from tick that server processed
@@ -896,7 +905,8 @@ static void s_handle_local_player_snapshot(
     player_t *p,
     player_snapshot_t *snapshot,
     packet_game_state_snapshot_t *packet,
-    serialiser_t *serialiser) {
+    serialiser_t *serialiser,
+    event_submissions_t *events) {
     // TODO: Watch out for this:
     if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
         s_handle_incorrect_state(
@@ -904,7 +914,8 @@ static void s_handle_local_player_snapshot(
             p,
             snapshot,
             packet,
-            serialiser);
+            serialiser,
+            events);
     }
     else {
         s_handle_correct_state(
@@ -939,7 +950,8 @@ static void s_process_game_state_snapshot(
                 p,
                 snapshot,
                 &packet,
-                serialiser);
+                serialiser,
+                events);
         }
         else {
             player_t *p = get_player_from_client_id(snapshot->client_id);
@@ -1766,7 +1778,14 @@ static bool s_check_if_client_has_to_correct_state(
     bool incorrect_velocity = 0;
     if (dvelocity.x >= precision || dvelocity.y >= precision || dvelocity.z >= precision) {
         incorrect_velocity = 1;
-        LOG_INFO("Need to correct meteorite speed\n");
+        LOG_INFOV(
+            "Need to correct meteorite speed: %f %f %f <- %f %f %f\n",
+            p->ws_velocity.x,
+            p->ws_velocity.y,
+            p->ws_velocity.z,
+            c->ws_predicted_velocity.x,
+            c->ws_predicted_velocity.y,
+            c->ws_predicted_velocity.z);
     }
 
     bool incorrect_interaction_mode = 0;
@@ -1982,6 +2001,8 @@ static void s_send_pending_chunks() {
     for (uint32_t i = 0; i < clients_to_send_chunks_to.data_count; ++i) {
         uint32_t client_id = clients_to_send_chunks_to[i];
         client_t *c_ptr = &clients[client_id];
+
+        LOG_INFOV("Need to send %d chunks\n", c_ptr->chunk_packet_count);
         if (c_ptr->current_chunk_sending < c_ptr->chunk_packet_count) {
             client_chunk_packet_t *packet = &c_ptr->chunk_packets[c_ptr->current_chunk_sending];
             serialiser_t serialiser = {};

@@ -142,6 +142,7 @@ static void s_world_event_listener(
         p->flags.alive_state = PAS_ALIVE;
         // Meteorite when player spawns
         p->flags.interaction_mode = PIM_METEORITE;
+        p->ws_velocity = vector3_t(0.0f);
 
         if (p->flags.is_local) {
             w_set_local_player(p->local_id, &world);
@@ -214,7 +215,6 @@ static void s_world_event_listener(
 
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
         current_world_present_mode = WPM_STARTUP | WPM_SPECTATING;
-
         if (!w_get_startup_screen_data()->initialised) {
             w_read_startup_screen(&world);
         }
@@ -251,6 +251,16 @@ static void s_world_event_listener(
         }
     } break;
 
+    case ET_LAUNCH_GAME_MENU_SCREEN: {
+        LOG_INFO("Resetting spectator's positions / view direction\n");
+
+        world.spectator->ws_position = w_get_startup_screen_data()->position;
+        world.spectator->ws_view_direction = w_get_startup_screen_data()->view_direction;
+        world.spectator->ws_up_vector = w_get_startup_screen_data()->up_vector;
+
+        current_world_present_mode = WPM_GAMEPLAY | WPM_SPECTATING;
+    } break;
+
     default: {
     } break;
 
@@ -277,6 +287,7 @@ void world_init(
     subscribe_to_event(ET_BEGIN_RENDERING_SERVER_WORLD, world_listener, events);
     subscribe_to_event(ET_BEGIN_AI_TRAINING, world_listener, events);
     subscribe_to_event(ET_RESET_AI_ARENA, world_listener, events);
+    subscribe_to_event(ET_LAUNCH_GAME_MENU_SCREEN, world_listener, events);
 
     memset(&world, 0, sizeof(world_t));
 
@@ -365,6 +376,9 @@ eye_3d_info_t create_eye_info() {
     player_t *player = w_get_local_player(&world);
 
     if (!player) {
+        player = w_get_spectator(&world);
+    }
+    else if (player->flags.alive_state != PAS_ALIVE) {
         player = w_get_spectator(&world);
     }
 

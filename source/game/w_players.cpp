@@ -340,23 +340,18 @@ static void s_execute_player_floating_movement(
 
     if (actions->move_forward) {
         player->ws_position += forward * actions->dt * player->default_speed;
-            
     }
     if (actions->move_left) {
         player->ws_position -= right * actions->dt * player->default_speed;
-            
     }
     if (actions->move_back) {
         player->ws_position -= forward * actions->dt * player->default_speed;
-            
     }
     if (actions->move_right) {
         player->ws_position += right * actions->dt * player->default_speed;
-            
     }
     if (actions->jump) {
         player->ws_position += player->ws_up_vector * actions->dt * player->default_speed;
-            
     }
     if (actions->crouch) {
         player->ws_position -= player->ws_up_vector * actions->dt * player->default_speed;
@@ -466,6 +461,7 @@ static terrain_collision_t s_resolve_player_movement(
     else {
         player->flags.moving = 0;
     }
+
     if (!made_movement && player->flags.contact == PCS_ON_GROUND && flags & MRF_ABRUPT_STOP) {
         //player->ws_velocity = vector3_t(0.0f);
     }
@@ -482,10 +478,8 @@ static terrain_collision_t s_resolve_player_movement(
     vector3_t ws_new_position = w_collide_and_slide(&collision) * player_scale;
 
     player->ws_position = ws_new_position;
-    //player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {
-        //LOG_INFO("Collision detected\n");
         vector3_t normal = glm::normalize(collision.es_surface_normal * player_scale);
         player->ws_surface_normal = normal;
 
@@ -496,10 +490,6 @@ static terrain_collision_t s_resolve_player_movement(
                 player->ws_velocity = glm::normalize(glm::proj(player->ws_velocity, new_axes.forward)) * previous_velocity_length * 0.2f;
             }
         }
-        else {
-            //player->ws_velocity = (player->ws_position - previous_position) / actions->dt;
-        }
-
 
         if (flags & MRF_ADOPT_GRAVITY) {
             player->ws_up_vector = normal;
@@ -517,10 +507,7 @@ static terrain_collision_t s_resolve_player_movement(
         player->flags.contact = PCS_ON_GROUND;
     }
     else {
-        //LOG_INFO("No collision detected\n");
         player->flags.contact = PCS_IN_AIR;
-
-        // LOG_INFO("In air\n");
     }
 }
 

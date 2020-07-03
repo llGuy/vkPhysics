@@ -88,7 +88,8 @@ static void s_game_event_listener(
 
     case ET_LAUNCH_GAME_MENU_SCREEN: {
         focus = HF_UI;
-        frame_info.ssao = 0;
+        frame_info.blurred = 0;
+        frame_info.ssao = 1;
         enable_cursor_display();
     } break;
 
