@@ -28,13 +28,13 @@ static int32_t current_world_present_mode;
 
 static void s_add_player_from_info(
     player_init_info_t *init_info) {
-    player_t *p = w_add_player(&world);
+    player_t *p = w_add_player();
         
     if (init_info->client_data) {
         p->name = init_info->client_data->name;
         p->client_id = init_info->client_data->client_id;
         // Now the network module can use w_get_player_from_client_id to get access to player directly
-        w_link_client_id_to_local_id(p->client_id, p->local_id, &world);
+        w_link_client_id_to_local_id(p->client_id, p->local_id);
     }
 
     p->ws_position = init_info->ws_position;
@@ -64,10 +64,10 @@ static void s_add_player_from_info(
         // Only bind camera if player is alive
         if (p->flags.alive_state == PAS_ALIVE) {
             // This binds the camera
-            w_set_local_player(p->local_id, &world);
+            w_set_local_player(p->local_id);
         }
         else {
-            w_set_local_player(-1, &world);
+            w_set_local_player(-1);
         }
         
         p->cached_player_action_count = 0;
@@ -104,8 +104,8 @@ static void s_world_event_listener(
         world.in_server = 1;
 
         // Reinitialise chunks / players
-        w_clear_players(&world);
-        w_clear_chunk_world(&world);
+        w_clear_players();
+        w_clear_chunk_world();
 
         event_enter_server_t *data = (event_enter_server_t *)event->data;
 
@@ -123,8 +123,8 @@ static void s_world_event_listener(
 
     case ET_LEAVE_SERVER: {
         world.in_server = 0;
-        w_clear_players(&world);
-        w_clear_chunk_world(&world);
+        w_clear_players();
+        w_clear_chunk_world();
     } break;
 
     case ET_SPAWN: {
@@ -145,7 +145,7 @@ static void s_world_event_listener(
         p->ws_velocity = vector3_t(0.0f);
 
         if (p->flags.is_local) {
-            w_set_local_player(p->local_id, &world);
+            w_set_local_player(p->local_id);
             p->flags.camera_type = CT_THIRD_PERSON;
 
             p->camera_distance.set(1, 12.0f, 10.0f, 1.0f);
@@ -172,7 +172,7 @@ static void s_world_event_listener(
         for (uint32_t i = 0; i < packet->chunk_in_packet_count; ++i) {
             voxel_chunk_values_t *c_values = &packet->values[i];
             ivector3_t coord = ivector3_t(c_values->x, c_values->y, c_values->z);
-            chunk_t *c = w_get_chunk(coord, &world);
+            chunk_t *c = w_get_chunk(coord);
 
             memcpy(c->voxels, c_values->voxel_values, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
             c->flags.has_to_update_vertices = 1;
@@ -188,10 +188,10 @@ static void s_world_event_listener(
         if (world.in_server) {
             event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
-            player_t *p = w_get_player_from_client_id(data->client_id, &world);
+            player_t *p = w_get_player_from_client_id(data->client_id);
             
             if (p) {
-                w_destroy_player(p->local_id, &world);
+                w_destroy_player(p->local_id);
             }
 
             FL_FREE(event->data);
@@ -199,16 +199,17 @@ static void s_world_event_listener(
     } break;
 
     case ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA: {
-        w_toggle_mesh_update_wait(1, &world);
+        w_toggle_mesh_update_wait(1);
     } break;
 
     case ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA: {
-        w_toggle_mesh_update_wait(0, &world);
+        w_toggle_mesh_update_wait(0);
     } break;
 
     case ET_SET_CHUNK_HISTORY_TRACKER: {
         event_set_chunk_history_tracker_t *data = (event_set_chunk_history_tracker_t *)event->data;
-        world.track_history = data->value;
+        assert(0);
+        // world.track_history = data->value;
 
         FL_FREE(data);
     } break;
@@ -216,12 +217,10 @@ static void s_world_event_listener(
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
         current_world_present_mode = WPM_STARTUP | WPM_SPECTATING;
         if (!w_get_startup_screen_data()->initialised) {
-            w_read_startup_screen(&world);
+            w_read_startup_screen();
         }
 
-        world.spectator->ws_position = w_get_startup_screen_data()->position;
-        world.spectator->ws_view_direction = w_get_startup_screen_data()->view_direction;
-        world.spectator->ws_up_vector = w_get_startup_screen_data()->up_vector;
+        w_reposition_spectator();
     } break;
 
     case ET_BEGIN_AI_TRAINING: {
@@ -232,17 +231,17 @@ static void s_world_event_listener(
         world.training_type = data->session_type;
         begin_ai_training_population(150);
 
-        w_clear_players(&world);
-        w_clear_chunk_world(&world);
+        w_clear_players();
+        w_clear_chunk_world();
 
-        w_begin_ai_training_players(&world, data->session_type);
-        w_begin_ai_training_chunks(&world, data->session_type);
+        w_begin_ai_training_players(data->session_type);
+        w_begin_ai_training_chunks(data->session_type);
     } break;
 
     case ET_RESET_AI_ARENA: {
         switch (world.training_type) {
         case ATS_WALKING: {
-            w_begin_ai_training_chunks(&world, ATS_WALKING);
+            w_begin_ai_training_chunks(ATS_WALKING);
         } break;
 
         case ATS_ROLLING: {
@@ -254,9 +253,7 @@ static void s_world_event_listener(
     case ET_LAUNCH_GAME_MENU_SCREEN: {
         LOG_INFO("Resetting spectator's positions / view direction\n");
 
-        world.spectator->ws_position = w_get_startup_screen_data()->position;
-        world.spectator->ws_view_direction = w_get_startup_screen_data()->view_direction;
-        world.spectator->ws_up_vector = w_get_startup_screen_data()->up_vector;
+        w_reposition_spectator();
 
         current_world_present_mode = WPM_GAMEPLAY | WPM_SPECTATING;
     } break;
@@ -292,42 +289,42 @@ void world_init(
     memset(&world, 0, sizeof(world_t));
 
     w_players_data_init();
-    w_player_world_init(&world);
+    w_player_world_init();
 
     w_chunks_data_init();
-    w_chunk_world_init(&world, 4);
+    w_chunk_world_init(4);
 
     current_world_present_mode = WPM_NONE;
     w_startup_init();
 }
 
 void destroy_world() {
-    w_clear_chunk_world(&world);
+    w_clear_chunk_world();
     w_destroy_chunk_data();
 }
 
 void handle_world_input() {
     game_input_t *game_input = get_game_input();
     
-    w_handle_input(game_input, surface_delta_time(), &world);
+    w_handle_input(game_input, surface_delta_time());
 }
 
 static void s_check_training_ai() {
-    switch (world.training_type) {
-    case ATS_ROLLING: {
+    // switch (world.training_type) {
+    // case ATS_ROLLING: {
         
-    } break;
-    case ATS_WALKING: {
-        vector3_t pos = world.players[0]->ws_position;
-    } break;
-    }
+    // } break;
+    // case ATS_WALKING: {
+    //     vector3_t pos = world.players[0]->ws_position;
+    // } break;
+    // }
 }
 
 void tick_world(
     event_submissions_t *events) {
     (void)events;
     w_tick_chunks(logic_delta_time());
-    w_tick_players(&world, events);
+    w_tick_players(events);
 
     // if (world.in_training) {
     //     s_check_training_ai();
@@ -340,8 +337,7 @@ void gpu_sync_world(
     VkCommandBuffer transfer_command_buffer) {
     if (current_world_present_mode & WPM_SPECTATING) {
         // Update spectator view direction with mouse movement
-        world.spectator->ws_view_direction = w_update_spectator_view_direction(
-            world.spectator->ws_view_direction);
+        w_handle_spectator_mouse_movement();
     }
 
     if (current_world_present_mode & WPM_STARTUP) {
@@ -356,13 +352,11 @@ void gpu_sync_world(
         w_players_gpu_sync_and_render(
             render_command_buffer,
             render_shadow_command_buffer,
-            transfer_command_buffer,
-            &world);
+            transfer_command_buffer);
 
         w_chunk_gpu_sync_and_render(
             render_command_buffer,
-            transfer_command_buffer,
-            &world);
+            transfer_command_buffer);
     
         if (render_command_buffer != VK_NULL_HANDLE) {
             render_environment(render_command_buffer);
@@ -373,13 +367,13 @@ void gpu_sync_world(
 eye_3d_info_t create_eye_info() {
     eye_3d_info_t info = {};
 
-    player_t *player = w_get_local_player(&world);
+    player_t *player = w_get_local_player();
 
     if (!player) {
-        player = w_get_spectator(&world);
+        player = w_get_spectator();
     }
     else if (player->flags.alive_state != PAS_ALIVE) {
-        player = w_get_spectator(&world);
+        player = w_get_spectator();
     }
 
     vector3_t view_direction = player->ws_view_direction;
@@ -440,69 +434,19 @@ lighting_info_t create_lighting_info() {
     return info;
 }
 
-player_t *get_player_from_client_id(
-    uint16_t client_id) {
-    return w_get_player_from_client_id(client_id, &world);
-}
-
-player_t *get_player_from_player_id(
-    uint32_t player_id) {
-    return world.players[player_id];
-}
 
 chunk_t *get_chunk(
     ivector3_t coord) {
-    return w_get_chunk(coord, &world);
+    return w_get_chunk(coord);
 }
 
 chunk_t *access_chunk(
     ivector3_t coord) {
-    return w_access_chunk(coord, &world);
-}
-
-chunk_t **get_active_chunks(
-    uint32_t *count) {
-    *count = world.chunks.data_count;
-    return world.chunks.data;
-}
-
-stack_container_t<player_t *> &DEBUG_get_players() {
-    return world.players;
-}
-
-player_t *DEBUG_get_spectator() {
-    return world.spectator;
-}
-
-chunk_t **get_modified_chunks(
-    uint32_t *count) {
-    *count = world.modified_chunk_count;
-    return world.modified_chunks;
-}
-
-void reset_modification_tracker() {
-    for (uint32_t i = 0; i < world.modified_chunk_count; ++i) {
-        chunk_t *c = world.modified_chunks[i];
-
-        c->flags.made_modification = 0;
-
-        for (int32_t v = 0; v < c->history.modification_count; ++v) {
-            c->history.modification_pool[c->history.modification_stack[v]] = SPECIAL_VALUE;
-        }
-
-        c->history.modification_count = 0;
-    }
-
-    world.modified_chunk_count = 0;
-}
-
-void set_chunk_history_tracker_value(
-    bool value) {
-    world.track_history = value;
+    return w_access_chunk(coord);
 }
 
 void write_startup_screen() {
-    w_write_startup_screen(&world);
+    // w_write_startup_screen();
 }
 
 void cast_ray_sensors(
@@ -511,7 +455,6 @@ void cast_ray_sensors(
     const vector3_t &ws_view_direction,
     const vector3_t &ws_up_vector) {
     w_cast_ray_sensors(
-        &world,
         sensors,
         ws_position,
         ws_view_direction,

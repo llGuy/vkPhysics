@@ -1,3 +1,4 @@
+#include <bits/stdint-intn.h>
 #include <cstddef>
 #include <math.h>
 #include "common/event.hpp"
@@ -11,8 +12,32 @@
 #include "w_internal.hpp"
 #include <common/math.hpp>
 #include <glm/gtx/projection.hpp>
+#include <vulkan/vulkan_core.h>
+
+#include <vector>
+
+
+struct players_t {
+    int32_t local_player;
+    player_t *spectator;
+    stack_container_t<player_t *> players;
+    // From client id, get player
+    int16_t local_id_from_client_id[MAX_PLAYERS];
+};
+
+static players_t players;
 
 static vector3_t player_scale;
+
+// For rendering
+static mesh_t player_mesh;
+static skeleton_t player_skeleton;
+static animation_cycles_t player_cycles;
+static shader_t player_shader;
+static shader_t player_shadow_shader;
+static mesh_t player_ball_mesh;
+static shader_t player_ball_shader;
+static shader_t player_ball_shadow_shader;
 
 vector3_t w_get_player_scale() {
     return player_scale;
@@ -21,39 +46,29 @@ vector3_t w_get_player_scale() {
 // DEBUGGING
 static animated_instance_t test_instance0;
 
-void w_player_world_init(
-    world_t *world) {
+void w_player_world_init() {
     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
-        world->local_id_from_client_id[i] = -1;
+        players.local_id_from_client_id[i] = -1;
     }
 
-    world->local_player = -1;
+    players.local_player = -1;
 
-    world->players.init(MAX_PLAYERS);
+    players.players.init(MAX_PLAYERS);
     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
-        world->players.data[i] = NULL;
+        players.players.data[i] = NULL;
     }
 
-    world->spectator = FL_MALLOC(player_t, 1);
-    memset(world->spectator, 0, sizeof(player_t));
-    world->spectator->default_speed = 20.0f;
-    world->spectator->ws_position = vector3_t(3.7f, -136.0f, -184.0f);
-    world->spectator->ws_view_direction = vector3_t(0.063291, 0.438437, 0.896531);
-    world->spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
-    world->spectator->flags.interaction_mode = PIM_FLOATING;
-    world->spectator->camera_fov.current = 60.0f;
-    world->spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
+    players.spectator = FL_MALLOC(player_t, 1);
+    memset(players.spectator, 0, sizeof(player_t));
+    players.spectator->default_speed = 20.0f;
+    players.spectator->ws_position = vector3_t(3.7f, -136.0f, -184.0f);
+    players.spectator->ws_view_direction = vector3_t(0.063291, 0.438437, 0.896531);
+    players.spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+    players.spectator->flags.interaction_mode = PIM_FLOATING;
+    players.spectator->camera_fov.current = 60.0f;
+    players.spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
 }
 
-static mesh_t player_mesh;
-static skeleton_t player_skeleton;
-static animation_cycles_t player_cycles;
-static shader_t player_shader;
-static shader_t player_shadow_shader;
-
-static mesh_t player_ball_mesh;
-static shader_t player_ball_shader;
-static shader_t player_ball_shadow_shader;
 
 void w_player_animation_init(
     player_t *player) {
@@ -125,11 +140,10 @@ void w_player_render_init(
     player->render = FL_MALLOC(player_render_t, 1);
 }
 
-player_t *w_add_player(
-    world_t *world) {
-    uint32_t player_index = world->players.add();
-    world->players[player_index] = FL_MALLOC(player_t, 1);
-    player_t *p = world->players[player_index];
+player_t *w_add_player() {
+    uint32_t player_index = players.players.add();
+    players.players[player_index] = FL_MALLOC(player_t, 1);
+    player_t *p = players.players[player_index];
     memset(p, 0, sizeof(player_t));
     p->local_id = player_index;
 
@@ -138,11 +152,10 @@ player_t *w_add_player(
 
 // TODO: May need to remove check in future, when it is sure that a player has a client id
 player_t *w_get_player_from_client_id(
-    uint16_t client_id,
-    world_t *world) {
-    int16_t id = world->local_id_from_client_id[client_id];
+    uint16_t client_id) {
+    int16_t id = players.local_id_from_client_id[client_id];
     if (id >= 0) {
-        return world->players[id];
+        return players.players[id];
     }
     else {
         LOG_ERROR("Client ID not yet registered to local ID\n");
@@ -152,15 +165,13 @@ player_t *w_get_player_from_client_id(
 
 void w_link_client_id_to_local_id(
     uint16_t client_id,
-    uint32_t local_id,
-    world_t *world) {
-    world->local_id_from_client_id[client_id] = local_id;
+    uint32_t local_id ) {
+    players.local_id_from_client_id[client_id] = local_id;
 }
 
 void w_handle_input(
     game_input_t *game_input,
-    float dt,
-    world_t *world) {
+    float dt) {
     player_actions_t actions;
 
     actions.bytes = 0;
@@ -213,13 +224,13 @@ void w_handle_input(
 
     actions.tick = get_current_tick();
     
-    player_t *local_player = w_get_local_player(world);
+    player_t *local_player = w_get_local_player();
 
     if (local_player) {
         w_push_player_actions(local_player, &actions, 0);
     }
     else {
-        w_push_player_actions(world->spectator, &actions, 0);
+        w_push_player_actions(players.spectator, &actions, 0);
     }
 }
 
@@ -270,13 +281,11 @@ void push_player_actions(
 
 static void s_execute_player_triggers(
     player_t *player,
-    player_actions_t *player_actions,
-    world_t *world) {
+    player_actions_t *player_actions) {
     player->terraform_package = w_cast_terrain_ray(
         player->ws_position,
         player->ws_view_direction,
-        10.0f,
-        world);
+        10.0f);
 
     if (player_actions->trigger_left) {
 #if NET_DEBUG
@@ -292,8 +301,7 @@ static void s_execute_player_triggers(
             player->terraform_package,
             TERRAFORMING_RADIUS,
             TERRAFORMING_SPEED,
-            player_actions->accumulated_dt,
-            world);
+            player_actions->accumulated_dt);
     }
     if (player_actions->trigger_right) {
         w_terraform(
@@ -301,8 +309,7 @@ static void s_execute_player_triggers(
             player->terraform_package,
             TERRAFORMING_RADIUS,
             TERRAFORMING_SPEED,
-            player_actions->accumulated_dt,
-            world);
+            player_actions->accumulated_dt);
     }
 
     if (player_actions->flashlight) {
@@ -600,7 +607,6 @@ static void s_accelerate_meteorite_player(
 
 static void s_check_player_dead(
     player_actions_t *actions,
-    world_t *world,
     player_t *player,
     event_submissions_t *events) {
     // Start checking for death, if the velocity vector
@@ -620,7 +626,7 @@ static void s_check_player_dead(
             for (uint32_t i = 0; i < ray_step_count; ++i) {
                 ivector3_t chunk_coord = w_convert_voxel_to_chunk(w_convert_world_to_voxel(current_ray_position));
 
-                chunk_t *c = w_access_chunk(chunk_coord, world);
+                chunk_t *c = w_access_chunk(chunk_coord);
                 if (c) {
                     // Might not die, reset timer
                     player->death_checker = 0.0f;
@@ -651,7 +657,6 @@ static void s_check_player_dead(
 
 static void s_execute_player_actions(
     player_t *player,
-    world_t *world,
     event_submissions_t *events) {
     for (uint32_t i = 0; i < player->player_action_count; ++i) {
         player_actions_t *actions = &player->player_actions[i];
@@ -676,22 +681,22 @@ static void s_execute_player_actions(
 
             // FOR NOW STANDING AND BALL ARE EQUIVALENT ///////////////////////
         case PIM_STANDING: {
-            s_execute_player_triggers(player, actions, world);
+            s_execute_player_triggers(player, actions);
             s_execute_player_direction_change(player, actions);
             s_execute_standing_player_movement(player, actions);
 
-            s_check_player_dead(actions, world, player, events);
+            s_check_player_dead(actions, player, events);
         } break;
 
         case PIM_BALL: {
             s_execute_player_direction_change(player, actions);
             s_execute_ball_player_movement(player, actions);
 
-            s_check_player_dead(actions, world, player, events);
+            s_check_player_dead(actions, player, events);
         } break;
 
         case PIM_FLOATING: {
-            s_execute_player_triggers(player, actions, world);
+            s_execute_player_triggers(player, actions);
             s_execute_player_direction_change(player, actions);
             s_execute_player_floating_movement(player, actions);
         } break;
@@ -702,13 +707,13 @@ static void s_execute_player_actions(
         }
 
         // If this is local player, need to cache these commands to later send to server
-        if ((int32_t)player->local_id == world->local_player && connected_to_server()) {
+        if ((int32_t)player->local_id == players.local_player && connected_to_server()) {
             player->camera_distance.animate(actions->dt);
             player->camera_fov.animate(actions->dt);
 
-            world->local_current_terraform_package = player->terraform_package;
+            *w_get_local_current_terraform_package() = player->terraform_package;
             if (player->flags.interaction_mode != PIM_STANDING) {
-                world->local_current_terraform_package.ray_hit_terrain = 0;
+                w_get_local_current_terraform_package()->ray_hit_terrain = 0;
             }
 
             vector3_t up_diff = player->next_camera_up - player->current_camera_up;
@@ -782,15 +787,14 @@ static void s_interpolate_remote_player_snapshots(
 }
 
 void w_tick_players(
-    world_t *world,
     event_submissions_t *events) {
     // Handle networking stuff
-    for (uint32_t i = 0; i < world->players.data_count; ++i) {
-        player_t *p = world->players[i];
+    for (uint32_t i = 0; i < players.players.data_count; ++i) {
+        player_t *p = players.players[i];
         if (p) {
             if (p->flags.alive_state == PAS_ALIVE) {
                 // Will be 0 for remote players
-                s_execute_player_actions(p, world, events);
+                s_execute_player_actions(p, events);
             }
 
             if (p->flags.is_remote) {
@@ -799,13 +803,12 @@ void w_tick_players(
         }
     }
 
-    s_execute_player_actions(world->spectator, world, events);
+    s_execute_player_actions(players.spectator, events);
 }
 
 void w_set_local_player(
-    int32_t local_id,
-    world_t *world) {
-    world->local_player = local_id;
+    int32_t local_id) {
+    players.local_player = local_id;
 }
 
 static void s_render_person(
@@ -859,8 +862,7 @@ static void s_render_ball(
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
-    VkCommandBuffer transfer_command_buffer,
-    struct world_t *world) {
+    VkCommandBuffer transfer_command_buffer) {
     (void)transfer_command_buffer;
     
 #if 0
@@ -889,8 +891,8 @@ void w_players_gpu_sync_and_render(
 #endif
 
 #if 1
-    for (uint32_t i = 0; i < world->players.data_count; ++i) {
-        player_t *p = world->players[i];
+    for (uint32_t i = 0; i < players.players.data_count; ++i) {
+        player_t *p = players.players[i];
         if (p) {
             if (p->flags.alive_state == PAS_ALIVE) {
                 if (!p->render) {
@@ -901,7 +903,7 @@ void w_players_gpu_sync_and_render(
                 p->render->render_data.pbr_info.x = 0.1f;
                 p->render->render_data.pbr_info.y = 0.1f;
 
-                if ((int32_t)i == (int32_t)world->local_player) {
+                if ((int32_t)i == (int32_t)players.local_player) {
                     if (p->flags.interaction_mode == PIM_STANDING) {
                         s_render_person(render_command_buffer, transfer_command_buffer, p);
                     }
@@ -924,63 +926,58 @@ void w_players_gpu_sync_and_render(
 #endif
 }
 
-player_t *w_get_local_player(
-    world_t *world) {
-    if (world->local_player >= 0) {
-        return world->players[world->local_player];
+player_t *w_get_local_player() {
+    if (players.local_player >= 0) {
+        return players.players[players.local_player];
     }
     else {
         return NULL;
     }
 }
 
-player_t *w_get_spectator(
-    world_t *world) {
-    return world->spectator;
+player_t *w_get_spectator() {
+    return players.spectator;
 }
 
 void w_destroy_player(
-    uint32_t id,
-    world_t *world) {
-    player_t *p = world->players[id];
+    uint32_t id) {
+    player_t *p = players.players[id];
     if (p) {
         if (p->render) {
             FL_FREE(p->render);
         }
 
-        world->players[id] = NULL;
+        players.players[id] = NULL;
         // TODO: Free const char *name?
-        world->players.remove(id);
+        players.players.remove(id);
 
         FL_FREE(p);
     }
 }
 
-void w_clear_players(
-    world_t *world) {
-    world->local_player = -1;
+void w_clear_players() {
+    players.local_player = -1;
 
-    for (uint32_t i = 0; i < world->players.data_count; ++i) {
-        w_destroy_player(i, world);
+    for (uint32_t i = 0; i < players.players.data_count; ++i) {
+        w_destroy_player(i);
     }
 
-    world->players.clear();
+    players.players.clear();
 
     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
-        world->local_id_from_client_id[i] = -1;
+        players.local_id_from_client_id[i] = -1;
     }
 }
 
 player_t *w_add_player_from_info(
-    player_init_info_t *init_info,
-    world_t *world) {
-    player_t *p = w_add_player(world);
+    player_init_info_t *init_info) {
+    player_t *p = w_add_player();
         
     if (init_info->client_data) {
         p->name = init_info->client_data->name;
         p->client_id = init_info->client_data->client_id;
         // Now the network module can use w_get_player_from_client_id to get access to player directly
-        w_link_client_id_to_local_id(p->client_id, p->local_id, world);
+        w_link_client_id_to_local_id(p->client_id, p->local_id);
     }
 
     p->ws_position = init_info->ws_position;
@@ -1009,10 +1006,10 @@ player_t *w_add_player_from_info(
         // Only bind camera if player is alive
         if (p->flags.alive_state == PAS_ALIVE) {
             // This binds the camera
-            w_set_local_player(p->local_id, world);
+            w_set_local_player(p->local_id);
         }
         else {
-            w_set_local_player(-1, world);
+            w_set_local_player(-1);
         }
         
         p->cached_player_action_count = 0;
@@ -1039,9 +1036,8 @@ player_t *w_add_player_from_info(
 }
 
 void w_begin_ai_training_players(
-    world_t *world,
     ai_training_session_t type) {
-    world->spectator->ws_position = vector3_t(0.0f, -4.0f, 0.0f);
+    players.spectator->ws_position = vector3_t(0.0f, -4.0f, 0.0f);
 
     switch (type) {
 
@@ -1060,11 +1056,39 @@ void w_begin_ai_training_players(
         info.flags = flags.u32;
 
         player_t *p = w_add_player_from_info(
-            &info,
-            world);
+            &info);
 
         uint32_t ai_id = attach_ai(p->local_id, 0);
     } break;
 
     }
+}
+
+void w_reposition_spectator() {
+    players.spectator->ws_position = w_get_startup_screen_data()->position;
+    players.spectator->ws_view_direction = w_get_startup_screen_data()->view_direction;
+    players.spectator->ws_up_vector = w_get_startup_screen_data()->up_vector;
+}
+
+void w_handle_spectator_mouse_movement() {
+    players.spectator->ws_view_direction = w_update_spectator_view_direction(
+        players.spectator->ws_view_direction);
+}
+
+player_t *get_player_from_client_id(
+    uint16_t client_id) {
+    return w_get_player_from_client_id(client_id);
+}
+
+player_t *get_player_from_player_id(
+    uint32_t player_id) {
+    return players.players[player_id];
+}
+
+stack_container_t<player_t *> &DEBUG_get_players() {
+    return players.players;
+}
+
+player_t *DEBUG_get_spectator() {
+    return players.spectator;
 }

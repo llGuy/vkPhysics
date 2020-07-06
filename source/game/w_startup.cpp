@@ -14,8 +14,7 @@ void w_startup_init() {
     startup_screen.initialised = 0;
 }
 
-void w_read_startup_screen(
-    world_t *world) {
+void w_read_startup_screen() {
     startup_screen.initialised = 1;
 
     file_handle_t input = create_file(
@@ -61,77 +60,78 @@ void w_read_startup_screen(
     startup_screen.world_render_data.pbr_info.y = 0.1f;
     startup_screen.world_render_data.color = vector4_t(0.0f);
 
-    startup_screen.position = world->spectator->ws_position = ws_position;
-    startup_screen.view_direction = world->spectator->ws_view_direction = ws_view_direction;
+    startup_screen.position = ws_position;
+    startup_screen.view_direction = ws_view_direction;
     startup_screen.up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+
+    w_reposition_spectator();
 }
 
-void w_write_startup_screen(
-    world_t *world) {
-    vector3_t *temp_vertices = LN_MALLOC(vector3_t, MAX_VERTICES_PER_CHUNK);
+// void w_write_startup_screen() {
+//     vector3_t *temp_vertices = LN_MALLOC(vector3_t, MAX_VERTICES_PER_CHUNK);
 
-    uint32_t vertex_count = 0;  // This is an estimate just to allocate enough memory in serialiser buffer
-    for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
-        chunk_t *c = world->chunks[i];
-        if (c) {
-            if (c->render) {
-                vertex_count += c->render->mesh.vertex_count;
-            }
-        }
-    }
+//     uint32_t vertex_count = 0;  // This is an estimate just to allocate enough memory in serialiser buffer
+//     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
+//         chunk_t *c = world->chunks[i];
+//         if (c) {
+//             if (c->render) {
+//                 vertex_count += c->render->mesh.vertex_count;
+//             }
+//         }
+//     }
 
-    serialiser_t serialiser = {};
+//     serialiser_t serialiser = {};
 
-    // File has spectator position and view direction and visible vertices
-    serialiser.init(
-        sizeof(vector3_t) * 2 +
-        sizeof(uint32_t) +
-        vertex_count * sizeof(vector3_t));
+//     // File has spectator position and view direction and visible vertices
+//     serialiser.init(
+//         sizeof(vector3_t) * 2 +
+//         sizeof(uint32_t) +
+//         vertex_count * sizeof(vector3_t));
 
-    serialiser.serialise_vector3(world->spectator->ws_position);
-    serialiser.serialise_vector3(world->spectator->ws_view_direction);
+//     serialiser.serialise_vector3(world->spectator->ws_position);
+//     serialiser.serialise_vector3(world->spectator->ws_view_direction);
 
-    // Vertex count might change
-    uint8_t *vertex_count_ptr = &serialiser.data_buffer[serialiser.data_buffer_head];
-    serialiser.serialise_uint32(0);
-    vertex_count = 0;
+//     // Vertex count might change
+//     uint8_t *vertex_count_ptr = &serialiser.data_buffer[serialiser.data_buffer_head];
+//     serialiser.serialise_uint32(0);
+//     vertex_count = 0;
 
-    for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
-        chunk_t *c = world->chunks[i];
-        if (c) {
-            uint32_t current_vertex_count = w_create_chunk_vertices(
-                get_surface_level(),
-                temp_vertices,
-                c,
-                world);
+//     for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
+//         chunk_t *c = world->chunks[i];
+//         if (c) {
+//             uint32_t current_vertex_count = w_create_chunk_vertices(
+//                 get_surface_level(),
+//                 temp_vertices,
+//                 c,
+//                 world);
 
-            for (uint32_t v = 0; v < current_vertex_count; ++v) {
-                serialiser.serialise_vector3(
-                    vector3_t(c->render->render_data.model * vector4_t(temp_vertices[v], 1.0f)));
-            }
+//             for (uint32_t v = 0; v < current_vertex_count; ++v) {
+//                 serialiser.serialise_vector3(
+//                     vector3_t(c->render->render_data.model * vector4_t(temp_vertices[v], 1.0f)));
+//             }
 
-            vertex_count += current_vertex_count;
-        }
-    }
+//             vertex_count += current_vertex_count;
+//         }
+//     }
 
-    serialiser.serialise_uint32(
-        vertex_count,
-        vertex_count_ptr);
+//     serialiser.serialise_uint32(
+//         vertex_count,
+//         vertex_count_ptr);
 
-    printf("vertex count: %d\n", vertex_count);
+//     printf("vertex count: %d\n", vertex_count);
 
-    file_handle_t output = create_file(
-        "assets/misc/startup/default.startup",
-        (file_load_flags_t)(FLF_BINARY | FLF_WRITEABLE));
+//     file_handle_t output = create_file(
+//         "assets/misc/startup/default.startup",
+//         (file_load_flags_t)(FLF_BINARY | FLF_WRITEABLE));
 
-    write_file(
-        output,
-        serialiser.data_buffer,
-        serialiser.data_buffer_head);
+//     write_file(
+//         output,
+//         serialiser.data_buffer,
+//         serialiser.data_buffer_head);
 
-    free_file(
-        output);
-}
+//     free_file(
+//         output);
+// }
 
 vector3_t w_update_spectator_view_direction(
     const vector3_t &spectator_view_direction) {

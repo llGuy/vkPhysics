@@ -18,59 +18,46 @@ void w_players_data_init();
 void w_player_render_init(
     player_t *player);
 
-player_t *w_add_player(
-    struct world_t *world);
+player_t *w_add_player();
 
 void w_handle_input(
     game_input_t *input,
-    float dt,
-    struct world_t *world);
+    float dt);
 
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
-    VkCommandBuffer transfer_command_buffer,
-    struct world_t *world);
+    VkCommandBuffer transfer_command_buffer);
 
-player_t *w_get_local_player(
-    struct world_t *world);
+player_t *w_get_local_player();
 
 player_t *w_get_player_from_client_id(
-    uint16_t client_id,
-    struct world_t *world);
+    uint16_t client_id);
 
 void w_link_client_id_to_local_id(
     uint16_t client_id,
-    uint32_t local_id,
-    struct world_t *world);
+    uint32_t local_id);
 
 player_t *w_add_player_from_info(
-    player_init_info_t *info,
-    world_t *world);
+    player_init_info_t *info);
 
 void w_player_animation_init(
   player_t *player);
 
-void w_player_world_init(
-    struct world_t *world);
+void w_player_world_init();
 
 void w_tick_players(
-    struct world_t *world,
     event_submissions_t *events);
 
 void w_set_local_player(
-    int32_t local_id,
-    struct world_t *world);
+    int32_t local_id);
 
-player_t *w_get_spectator(
-    struct world_t *world);
+player_t *w_get_spectator();
 
 void w_destroy_player(
-    uint32_t id,
-    struct world_t *world);
+    uint32_t id);
 
-void w_clear_players(
-    struct world_t *world);
+void w_clear_players();
 
 // CHUNKS /////////////////////////////////////////////////////////////////////
 uint32_t w_get_voxel_index(
@@ -101,13 +88,11 @@ uint32_t w_hash_chunk_coord(
 
 void w_chunks_data_init();
 
-void w_clear_chunk_world(
-    struct world_t *world);
+void w_clear_chunk_world();
 
 void w_destroy_chunk_data();
 
 void w_chunk_world_init(
-    struct world_t *world,
     uint32_t loaded_radius);
 
 void w_tick_chunks(
@@ -115,14 +100,12 @@ void w_tick_chunks(
 
 void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
-    VkCommandBuffer transfer_command_buffer,
-    struct world_t *world);
+    VkCommandBuffer transfer_command_buffer);
 
 // Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpusync
 void w_add_sphere_m(
     const vector3_t &ws_center,
-    float ws_radius,
-    struct world_t *world);
+    float ws_radius);
 
 ivector3_t w_convert_world_to_voxel(
     const vector3_t &ws_position);
@@ -138,13 +121,11 @@ ivector3_t w_convert_voxel_to_local_chunk(
 
 // Does not create a chunk if it wasn't already created
 chunk_t *w_access_chunk(
-    const ivector3_t &coord,
-    struct world_t *world);
+    const ivector3_t &coord);
 
 // If chunk was not created, create it
 chunk_t *w_get_chunk(
-    const ivector3_t &coord,
-    struct world_t *world);
+    const ivector3_t &coord);
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
@@ -153,18 +134,15 @@ bool w_terraform(
     terraform_package_t package,
     float radius,
     float speed,
-    float dt,
-    struct world_t *world);
+    float dt);
 
 terraform_package_t w_cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
-    float max_reach,
-    struct world_t *world);
+    float max_reach);
 
 void w_toggle_mesh_update_wait(
-    bool value,
-    struct world_t *world);
+    bool value);
 
 uint8_t get_surface_level();
 
@@ -172,8 +150,7 @@ uint8_t get_surface_level();
 uint32_t w_create_chunk_vertices(
     uint8_t surface_level,
     vector3_t *mesh_vertices,
-    chunk_t *c,
-    struct world_t *world);
+    chunk_t *c);
 
 // COLLISION WITH TERRAIN /////////////////////////////////////////////////////
 enum collision_primitive_type_t { CPT_FACE, CPT_EDGE, CPT_VERTEX };
@@ -249,11 +226,9 @@ startup_screen_t *w_get_startup_screen_data();
 void w_render_startup_world(
     VkCommandBuffer render_command_buffer);
 
-void w_read_startup_screen(
-    struct world_t *world);
+void w_read_startup_screen();
 
-void w_write_startup_screen(
-    struct world_t *world);
+void w_write_startup_screen();
 
 vector3_t w_update_spectator_view_direction(
     const vector3_t &spectator_view_direction);
@@ -265,48 +240,28 @@ vector3_t w_update_spectator_view_direction(
 #define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
 
 struct world_t {
-    int32_t local_player;
-    player_t *spectator;
-    stack_container_t<player_t *> players;
-    // From client id, get player
-    int16_t local_id_from_client_id[MAX_PLAYERS];
-
-    uint32_t loaded_radius;
-    // List of chunks
-    // Works like a stack
-    stack_container_t<chunk_t *> chunks;
-    uint32_t render_count;
-    chunk_t **chunks_to_render;
-    hash_table_t<uint32_t, 300, 30, 10> chunk_indices;
-
-    uint32_t max_modified_chunks;
-    uint32_t modified_chunk_count;
-    chunk_t **modified_chunks;
-
     struct {
-        uint8_t wait_mesh_update: 1;
-        uint8_t track_history: 1;
         uint8_t in_server: 1;
         uint8_t in_training: 1;
     };
 
     ai_training_session_t training_type;
-
-    // Used for terrain pointer
-    terraform_package_t local_current_terraform_package;
 };
 
 void w_begin_ai_training_players(
-    world_t *world,
     ai_training_session_t type);
 
 void w_begin_ai_training_chunks(
-    world_t *world,
     ai_training_session_t type);
 
 void w_cast_ray_sensors(
-    world_t *world,
     sensors_t *sensors,
     const vector3_t &ws_position,
     const vector3_t &ws_view_direction,
     const vector3_t &ws_up_vector);
+
+void w_reposition_spectator();
+
+void w_handle_spectator_mouse_movement();
+
+terraform_package_t *w_get_local_current_terraform_package();

@@ -7,6 +7,30 @@
 #include <common/allocators.hpp>
 #include <renderer/renderer.hpp>
 
+struct chunks_t {
+    uint32_t loaded_radius;
+    // List of chunks
+    // Works like a stack
+    stack_container_t<chunk_t *> chunks;
+    uint32_t render_count;
+    chunk_t **chunks_to_render;
+    hash_table_t<uint32_t, 300, 30, 10> chunk_indices;
+
+    uint32_t max_modified_chunks;
+    uint32_t modified_chunk_count;
+    chunk_t **modified_chunks;
+
+    // Used for terrain pointer
+    terraform_package_t local_current_terraform_package;
+
+    struct {
+        uint8_t wait_mesh_update: 1;
+        uint8_t track_history: 1;
+    };
+};
+
+static chunks_t chunks;
+
 uint32_t get_voxel_index(
     uint32_t x,
     uint32_t y,
@@ -85,8 +109,7 @@ static uint8_t s_chunk_edge_voxel_value(
     int32_t y,
     int32_t z,
     bool *doesnt_exist,
-    ivector3_t chunk_coord,
-    world_t *world) {
+    ivector3_t chunk_coord) {
     int32_t chunk_coord_offset_x = 0, chunk_coord_offset_y = 0, chunk_coord_offset_z = 0;
     int32_t final_x = x, final_y = y, final_z = z;
 
@@ -106,8 +129,7 @@ static uint8_t s_chunk_edge_voxel_value(
     chunk_t *chunk_ptr = w_access_chunk(
         ivector3_t(chunk_coord.x + chunk_coord_offset_x,
                    chunk_coord.y + chunk_coord_offset_y,
-                   chunk_coord.z + chunk_coord_offset_z),
-        world);
+                   chunk_coord.z + chunk_coord_offset_z));
     
     *doesnt_exist = (bool)(chunk_ptr == nullptr);
     if (*doesnt_exist) {
@@ -225,13 +247,12 @@ static void s_update_chunk_mesh_voxel_pair(
 uint32_t w_create_chunk_vertices(
     uint8_t surface_level,
     vector3_t *mesh_vertices,
-    chunk_t *c,
-    world_t *world) {
+    chunk_t *c) {
     uint32_t vertex_count = 0;
 
-    chunk_t *x_superior = w_access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z), world);
-    chunk_t *y_superior = w_access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z), world);
-    chunk_t *z_superior = w_access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1), world);
+    chunk_t *x_superior = w_access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z));
+    chunk_t *y_superior = w_access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z));
+    chunk_t *z_superior = w_access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1));
     
     bool doesnt_exist = 0;
     if (x_superior) {
@@ -244,14 +265,14 @@ uint32_t w_create_chunk_vertices(
 
                 uint8_t voxel_values[8] = {
                     c->voxels[get_voxel_index(x, y, z)],
-                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
-                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
-                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x]    [y][z + 1],
                     
                     c->voxels[get_voxel_index(x, y + 1, z)],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z,&doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z + 1],
-                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, world) };//voxels[x]    [y + 1][z + 1] };
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z,&doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
 
                 if (!doesnt_exist) {
                     s_update_chunk_mesh_voxel_pair(
@@ -275,14 +296,14 @@ uint32_t w_create_chunk_vertices(
 
                 uint8_t voxel_values[8] = {
                     c->voxels[get_voxel_index(x, y, z)],
-                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
-                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
-                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x]    [y][z + 1],
                     
-                    s_chunk_edge_voxel_value(x, y + 1, z, &doesnt_exist, c->chunk_coord, world),
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z + 1],
-                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, world) };//voxels[x]    [y + 1][z + 1] };
+                    s_chunk_edge_voxel_value(x, y + 1, z, &doesnt_exist, c->chunk_coord),
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
 
                 if (!doesnt_exist) {
                     s_update_chunk_mesh_voxel_pair(
@@ -306,14 +327,14 @@ uint32_t w_create_chunk_vertices(
 
                 uint8_t voxel_values[8] = {
                     c->voxels[get_voxel_index(x, y, z)],
-                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z],
-                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y][z + 1],
-                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x]    [y][z + 1],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x]    [y][z + 1],
                     
                     c->voxels[get_voxel_index(x, y + 1, z)],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, world),//voxels[x + 1][y + 1][z + 1],
-                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, world) };//voxels[x]    [y + 1][z + 1] };
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
 
                 if (!doesnt_exist) {
                     s_update_chunk_mesh_voxel_pair(
@@ -358,13 +379,11 @@ static void s_update_chunk_mesh(
     VkCommandBuffer command_buffer,
     uint8_t surface_level,
     vector3_t *mesh_vertices,
-    chunk_t *c,
-    world_t *world) {
+    chunk_t *c) {
     uint32_t vertex_count = w_create_chunk_vertices(
         surface_level,
         mesh_vertices,
-        c,
-        world);
+        c);
 
     if (vertex_count) {
         c->flags.active_vertices = 1;
@@ -461,19 +480,18 @@ uint8_t get_surface_level() {
 
 void w_chunk_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
-    VkCommandBuffer transfer_command_buffer,
-    world_t *world) {
+    VkCommandBuffer transfer_command_buffer) {
     const uint32_t max_chunks_loaded_per_frame = 10;
     uint32_t chunks_loaded = 0;
 
-    if (world->local_current_terraform_package.ray_hit_terrain) {
+    if (chunks.local_current_terraform_package.ray_hit_terrain) {
         chunk_color_data.pointer_radius = 3.0f;
     }
     else {
         chunk_color_data.pointer_radius = 0.0f;
     }
 
-    chunk_color_data.pointer_position = vector4_t(world->local_current_terraform_package.position, 1.0f);
+    chunk_color_data.pointer_position = vector4_t(chunks.local_current_terraform_package.position, 1.0f);
     chunk_color_data.pointer_color = vector4_t(0.0f, 1.0f, 1.0f, 1.0f);
 
     update_gpu_buffer(
@@ -484,10 +502,10 @@ void w_chunk_gpu_sync_and_render(
         &chunk_color_data,
         &chunk_color_data_buffer);
 
-    for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
-        chunk_t *c = world->chunks[i];
+    for (uint32_t i = 0; i < chunks.chunks.data_count; ++i) {
+        chunk_t *c = chunks.chunks[i];
         if (c) {
-            if (c->flags.has_to_update_vertices && chunks_loaded < max_chunks_loaded_per_frame && !world->wait_mesh_update) {
+            if (c->flags.has_to_update_vertices && chunks_loaded < max_chunks_loaded_per_frame && !chunks.wait_mesh_update) {
                 c->flags.has_to_update_vertices = 0;
                 // Update chunk mesh and put on GPU + send to command buffer
                 // TODO:
@@ -495,8 +513,7 @@ void w_chunk_gpu_sync_and_render(
                     transfer_command_buffer,
                     surface_level,
                     temp_mesh_vertices,
-                    c,
-                    world);
+                    c);
 
                 ++chunks_loaded;
             }
@@ -513,11 +530,11 @@ void w_chunk_gpu_sync_and_render(
     }
 
 #if 0
-    if (world->modified_chunk_count > 0) {
+    if (chunks.modified_chunk_count > 0) {
         LOG_INFO("Modified some chunks\n");
 
-        for (uint32_t i = 0; i < world->modified_chunk_count; ++i) {
-            chunk_t *c = world->modified_chunks[i];
+        for (uint32_t i = 0; i < chunks.modified_chunk_count; ++i) {
+            chunk_t *c = chunks.modified_chunks[i];
             (void)c;
         }
     }
@@ -620,16 +637,15 @@ void w_chunks_data_init() {
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 }
 
-void w_clear_chunk_world(
-    world_t *world) {
-    if (world->chunks.data_count) {
-        for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
-            w_destroy_chunk(world->chunks[i]);
-            world->chunks[i] = NULL;
+void w_clear_chunk_world() {
+    if (chunks.chunks.data_count) {
+        for (uint32_t i = 0; i < chunks.chunks.data_count; ++i) {
+            w_destroy_chunk(chunks.chunks[i]);
+            chunks.chunks[i] = NULL;
         }
 
-        world->chunks.clear();
-        world->chunk_indices.clear();
+        chunks.chunks.clear();
+        chunks.chunk_indices.clear();
 
         LOG_INFO("Destroyed chunk world\n");
     }
@@ -644,21 +660,20 @@ chunks_to_interpolate_t *get_chunks_to_interpolate() {
 }
 
 void w_chunk_world_init(
-    world_t *world,
     uint32_t loaded_radius) {
-    world->chunk_indices.init();
+    chunks.chunk_indices.init();
 
-    world->loaded_radius = loaded_radius;
+    chunks.loaded_radius = loaded_radius;
 
-    world->chunks.init(MAX_LOADED_CHUNKS);
+    chunks.chunks.init(MAX_LOADED_CHUNKS);
 
-    world->max_modified_chunks = MAX_LOADED_CHUNKS / 2;
-    world->modified_chunks = FL_MALLOC(chunk_t *, world->max_modified_chunks);
-    world->modified_chunk_count = 0;
+    chunks.max_modified_chunks = MAX_LOADED_CHUNKS / 2;
+    chunks.modified_chunks = FL_MALLOC(chunk_t *, chunks.max_modified_chunks);
+    chunks.modified_chunk_count = 0;
 
-    world->track_history = 1;
+    chunks.track_history = 1;
 
-    world->wait_mesh_update = 0;
+    chunks.wait_mesh_update = 0;
 
     chunks_to_interpolate.max_modified = 40;
     chunks_to_interpolate.modification_count = 0;
@@ -666,9 +681,9 @@ void w_chunk_world_init(
     memset(chunks_to_interpolate.modifications, 0, sizeof(chunk_modifications_t) * chunks_to_interpolate.max_modified);
 
 #if 1
-    w_add_sphere_m(vector3_t(20.0f), 40.0f, world);
-    w_add_sphere_m(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f, world);
-    w_add_sphere_m(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f, world);
+    w_add_sphere_m(vector3_t(20.0f), 40.0f);
+    w_add_sphere_m(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f);
+    w_add_sphere_m(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f);
 #endif
 
 #if 0
@@ -676,7 +691,7 @@ void w_chunk_world_init(
         for (int32_t x = -32; x < 32; ++x) {
             ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
             ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel_coord);
-            chunk_t *chunk = w_get_chunk(chunk_coord, world);
+            chunk_t *chunk = w_get_chunk(chunk_coord);
             chunk->flags.has_to_update_vertices = 1;
             ivector3_t local_coord = w_convert_voxel_to_local_chunk(voxel_coord);
             uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
@@ -688,7 +703,7 @@ void w_chunk_world_init(
         for (uint32_t x = 0; x < 32; ++x) {
             ivector3_t voxel_coord = ivector3_t((float)x, 5.0f, (float)z);
             ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel_coord);
-            chunk_t *chunk = w_get_chunk(chunk_coord, world);
+            chunk_t *chunk = w_get_chunk(chunk_coord);
             chunk->flags.has_to_update_vertices = 1;
             ivector3_t local_coord = w_convert_voxel_to_local_chunk(voxel_coord);
             uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
@@ -700,16 +715,14 @@ void w_chunk_world_init(
 
 void w_add_sphere_m(
     const vector3_t &ws_center,
-    float ws_radius,
-    world_t *world) {
+    float ws_radius) {
     ivector3_t vs_center = w_convert_world_to_voxel(ws_center);
     vector3_t vs_float_center = (vector3_t)(vs_center);
 
     ivector3_t current_chunk_coord = w_convert_voxel_to_chunk(vs_center);
 
     chunk_t *current_chunk = w_get_chunk(
-        current_chunk_coord,
-        world);
+        current_chunk_coord);
 
     current_chunk->flags.has_to_update_vertices = 1;
 
@@ -755,7 +768,7 @@ void w_add_sphere_m(
                         ivector3_t c = w_convert_voxel_to_chunk(vs_position);
 
                         // In another chunk, need to switch current_chunk pointer
-                        current_chunk = w_get_chunk(c, world);
+                        current_chunk = w_get_chunk(c);
                         current_chunk_coord = c;
 
                         current_chunk->flags.has_to_update_vertices = 1;
@@ -802,14 +815,13 @@ ivector3_t w_convert_voxel_to_local_chunk(
 }
 
 chunk_t *w_access_chunk(
-    const ivector3_t &coord,
-    world_t *world) {
+    const ivector3_t &coord) {
     uint32_t hash = w_hash_chunk_coord(coord);
-    uint32_t *index = world->chunk_indices.get(hash);
+    uint32_t *index = chunks.chunk_indices.get(hash);
 
     if (index) {
         // Chunk was already added
-        return world->chunks[*index];
+        return chunks.chunks[*index];
     }
     else {
         return NULL;
@@ -817,29 +829,27 @@ chunk_t *w_access_chunk(
 }
 
 chunk_t *w_get_chunk(
-    const ivector3_t &coord,
-    world_t *world) {
+    const ivector3_t &coord) {
     uint32_t hash = w_hash_chunk_coord(coord);
-    uint32_t *index = world->chunk_indices.get(hash);
+    uint32_t *index = chunks.chunk_indices.get(hash);
     
     if (index) {
         // Chunk was already added
-        return world->chunks[*index];
+        return chunks.chunks[*index];
     }
     else {
-        uint32_t i = world->chunks.add();
-        chunk_t *&chunk = world->chunks[i];
+        uint32_t i = chunks.chunks.add();
+        chunk_t *&chunk = chunks.chunks[i];
         chunk = FL_MALLOC(chunk_t, 1);
         w_chunk_init(chunk, i, coord);
 
-        world->chunk_indices.insert(hash, i);
+        chunks.chunk_indices.insert(hash, i);
 
         return chunk;
     }
 }
 
 void w_cast_ray_sensors(
-    world_t *world,
     sensors_t *sensors,
     const vector3_t &ws_position,
     const vector3_t &ws_view_direction,
@@ -895,7 +905,7 @@ void w_cast_ray_sensors(
         for (; glm::dot(current_ray_position - ws_position, current_ray_position - ws_position) < max_reach_squared; current_ray_position += step) {
             ivector3_t voxel = w_convert_world_to_voxel(current_ray_position);
             ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-            chunk_t *chunk = w_access_chunk(chunk_coord, world);
+            chunk_t *chunk = w_access_chunk(chunk_coord);
 
             length += length_step;
 
@@ -915,8 +925,7 @@ void w_cast_ray_sensors(
 terraform_package_t w_cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
-    float max_reach,
-    world_t *world) {
+    float max_reach) {
     vector3_t vs_position = ws_ray_start;
     vector3_t vs_dir = ws_ray_direction;
 
@@ -932,7 +941,7 @@ terraform_package_t w_cast_terrain_ray(
     for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
         ivector3_t voxel = w_convert_world_to_voxel(vs_position);
         ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-        chunk_t *chunk = w_access_chunk(chunk_coord, world);
+        chunk_t *chunk = w_access_chunk(chunk_coord);
 
         if (chunk) {
             ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
@@ -952,16 +961,15 @@ static bool s_terraform_with_history(
     terraform_package_t package,
     float radius,
     float speed,
-    float dt,
-    world_t *world) {
+    float dt) {
     if (package.ray_hit_terrain) {
         ivector3_t voxel = w_convert_world_to_voxel(package.position);
         ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-        chunk_t *chunk = w_access_chunk(chunk_coord, world);
+        chunk_t *chunk = w_access_chunk(chunk_coord);
 
         if (!chunk->flags.made_modification) {
             // Push this chunk onto list of modified chunks
-            world->modified_chunks[world->modified_chunk_count++] = chunk;
+            chunks.modified_chunks[chunks.modified_chunk_count++] = chunk;
         }
                     
         chunk->flags.made_modification = 1;
@@ -1006,13 +1014,13 @@ static bool s_terraform_with_history(
                             current_local_coord.z < 0 || current_local_coord.z >= 16) {
                             // If the current voxel coord is out of bounds, switch chunks
                             ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
-                            chunk_t *new_chunk = w_get_chunk(chunk_coord, world);
+                            chunk_t *new_chunk = w_get_chunk(chunk_coord);
 
                             chunk = new_chunk;
 
                             if (!chunk->flags.made_modification) {
                                 // Push this chunk onto list of modified chunks
-                                world->modified_chunks[world->modified_chunk_count++] = chunk;
+                                chunks.modified_chunks[chunks.modified_chunk_count++] = chunk;
                             }
                                         
                             chunk->flags.made_modification = 1;
@@ -1071,12 +1079,11 @@ static bool s_terraform_without_history(
     terraform_package_t package,
     float radius,
     float speed,
-    float dt,
-    world_t *world) {
+    float dt) {
     if (package.ray_hit_terrain) {
         ivector3_t voxel = w_convert_world_to_voxel(package.position);
         ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-        chunk_t *chunk = w_access_chunk(chunk_coord, world);
+        chunk_t *chunk = w_access_chunk(chunk_coord);
 
         if (chunk) {
             ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
@@ -1119,7 +1126,7 @@ static bool s_terraform_without_history(
                                     current_local_coord.z < 0 || current_local_coord.z >= 16) {
                                     // If the current voxel coord is out of bounds, switch chunks
                                     ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
-                                    chunk_t *new_chunk = w_get_chunk(chunk_coord, world);
+                                    chunk_t *new_chunk = w_get_chunk(chunk_coord);
 
                                     chunk = new_chunk;
                                     chunk->flags.made_modification = 1;
@@ -1168,16 +1175,14 @@ bool w_terraform(
     terraform_package_t package,
     float radius,
     float speed,
-    float dt,
-    world_t *world) {
-    if (world->track_history) {
+    float dt) {
+    if (chunks.track_history) {
         return s_terraform_with_history(
             type,
             package,
             radius,
             speed,
-            dt,
-            world);
+            dt);
     }
     else {
         return s_terraform_without_history(
@@ -1185,8 +1190,7 @@ bool w_terraform(
             package,
             radius,
             speed,
-            dt,
-            world);
+            dt);
     }
 }
 
@@ -1199,7 +1203,7 @@ bool w_terraform(
 //     float speed,
 //     float dt,
 //     world_t *world) {
-//     if (world->track_history) {
+//     if (chunks.track_history) {
 //         return s_terraform_with_history(
 //             type,
 //             ws_ray_start,
@@ -1224,9 +1228,8 @@ bool w_terraform(
 // }
 
 void w_toggle_mesh_update_wait(
-    bool value,
-    world_t *world) {
-    world->wait_mesh_update = value;
+    bool value) {
+    chunks.wait_mesh_update = value;
 }
 
 void activate_chunk_history(
@@ -1237,10 +1240,9 @@ void activate_chunk_history(
 }
 
 void w_begin_ai_training_chunks(
-    world_t *world,
     ai_training_session_t type) {
-    for (uint32_t i = 0; i < world->chunks.data_count; ++i) {
-        chunk_t *c = world->chunks[i];
+    for (uint32_t i = 0; i < chunks.chunks.data_count; ++i) {
+        chunk_t *c = chunks.chunks[i];
         memset(c->voxels, 0, sizeof(uint8_t) * CHUNK_VOXEL_COUNT);
     }
 
@@ -1250,7 +1252,7 @@ void w_begin_ai_training_chunks(
             for (int32_t x = -32; x < 32; ++x) {
                 ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
                 ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel_coord);
-                chunk_t *chunk = w_get_chunk(chunk_coord, world);
+                chunk_t *chunk = w_get_chunk(chunk_coord);
                 chunk->flags.has_to_update_vertices = 1;
                 ivector3_t local_coord = w_convert_voxel_to_local_chunk(voxel_coord);
                 uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
@@ -1259,4 +1261,41 @@ void w_begin_ai_training_chunks(
         }
     } break;
     }
+}
+
+chunk_t **get_active_chunks(
+    uint32_t *count) {
+    *count = chunks.chunks.data_count;
+    return chunks.chunks.data;
+}
+
+chunk_t **get_modified_chunks(
+    uint32_t *count) {
+    *count = chunks.modified_chunk_count;
+    return chunks.modified_chunks;
+}
+
+void reset_modification_tracker() {
+    for (uint32_t i = 0; i < chunks.modified_chunk_count; ++i) {
+        chunk_t *c = chunks.modified_chunks[i];
+
+        c->flags.made_modification = 0;
+
+        for (int32_t v = 0; v < c->history.modification_count; ++v) {
+            c->history.modification_pool[c->history.modification_stack[v]] = SPECIAL_VALUE;
+        }
+
+        c->history.modification_count = 0;
+    }
+
+    chunks.modified_chunk_count = 0;
+}
+
+void set_chunk_history_tracker_value(
+    bool value) {
+    chunks.track_history = value;
+}
+
+terraform_package_t *w_get_local_current_terraform_package() {
+    return &chunks.local_current_terraform_package;
 }
