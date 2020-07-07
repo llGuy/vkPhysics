@@ -134,7 +134,8 @@ void ui_init(
     u_game_menu_init();
 }
 
-void tick_ui(
+void handle_ui_input(
+    highlevel_focus_t focus,
     event_submissions_t *events) {
     raw_input_t *raw_input = get_raw_input();
 
@@ -155,7 +156,10 @@ void tick_ui(
         } break;
         }
     }
+}
 
+void tick_ui(
+    event_submissions_t *events) {
     for (uint32_t i = 0; i < stack_item_count; ++i) {
         switch (stack_items[i]) {
         case USI_MAIN_MENU: {

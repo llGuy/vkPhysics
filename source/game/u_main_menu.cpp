@@ -342,7 +342,7 @@ static void s_browse_menu_input(
             effect_data->trigger_count = 3;
             effect_data->triggers[0].trigger_type = ET_LAUNCH_GAME_MENU_SCREEN;
             effect_data->triggers[0].next_event_data = NULL;
-            effect_data->triggers[1].trigger_type = ET_BEGIN_RENDERING_SERVER_WORLD;
+            effect_data->triggers[1].trigger_type = ET_ENTER_SERVER_META_MENU;
             effect_data->triggers[1].next_event_data = NULL;
             effect_data->triggers[2].trigger_type = ET_EXIT_MAIN_MENU_SCREEN;
             effect_data->triggers[2].next_event_data = NULL;
@@ -364,7 +364,7 @@ static void s_browse_menu_input(
             effect_data->trigger_count = 3;
             effect_data->triggers[0].trigger_type = ET_LAUNCH_GAME_MENU_SCREEN;
             effect_data->triggers[0].next_event_data = NULL;
-            effect_data->triggers[1].trigger_type = ET_BEGIN_RENDERING_SERVER_WORLD;
+            effect_data->triggers[1].trigger_type = ET_ENTER_SERVER_META_MENU;
             effect_data->triggers[1].next_event_data = NULL;
             effect_data->triggers[2].trigger_type = ET_EXIT_MAIN_MENU_SCREEN;
             effect_data->triggers[2].next_event_data = NULL;

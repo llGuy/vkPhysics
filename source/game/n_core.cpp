@@ -664,9 +664,7 @@ static void s_handle_incorrect_state(
 
     if (p->flags.alive_state == PAS_ALIVE && snapshot->alive_state == PAS_DEAD) {
         // Handle death
-        LOG_INFO("Player has just died\n");
-        submit_event(ET_LAUNCH_GAME_MENU_SCREEN, NULL, events);
-        submit_event(ET_BEGIN_RENDERING_SERVER_WORLD, NULL, events);
+        kill_local_player(events);
     }
 
     p->flags.alive_state = snapshot->alive_state;

@@ -26,11 +26,10 @@ static bool running;
 
 static event_submissions_t events = {};
 
-static enum highlevel_focus_t {
-    HF_WORLD, HF_UI
-} focus;
+static highlevel_focus_t focus;
 
 static frame_info_t frame_info;
+static game_flags_t master_flags;
 
 static void s_game_event_listener(
     void *object,
@@ -79,6 +78,7 @@ static void s_game_event_listener(
     } break;
 
     case ET_LAUNCH_MAIN_MENU_SCREEN: {
+        master_flags.startup = 1;
         focus = HF_UI;
         frame_info.blurred = 1;
         frame_info.ssao = 0;
@@ -87,6 +87,7 @@ static void s_game_event_listener(
     } break;
 
     case ET_LAUNCH_GAME_MENU_SCREEN: {
+        master_flags.startup = 0;
         focus = HF_UI;
         frame_info.blurred = 0;
         frame_info.ssao = 1;
@@ -94,6 +95,7 @@ static void s_game_event_listener(
     } break;
 
     case ET_EXIT_MAIN_MENU_SCREEN: {
+        master_flags.startup = 0;
         frame_info.blurred = 0;
         frame_info.ssao = 1;
     } break;
@@ -105,6 +107,7 @@ static void s_game_event_listener(
 
     case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
         focus = HF_WORLD;
+        master_flags.startup = 0;
         disable_cursor_display();
 
         LOG_INFO("CLEARED MENUS\n");
@@ -129,16 +132,8 @@ static VkCommandBuffer transfer_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 static VkCommandBuffer ui_command_buffers[MAX_SECONDARY_COMMAND_BUFFERS];
 
 static void s_handle_input() {
-    switch(focus) {
-
-    case HF_WORLD: {
-        handle_world_input();
-    } break;
-
-    case HF_UI: {
-    } break;
-
-    }
+    handle_world_input(focus);
+    handle_ui_input(focus, &events);
 }
 
 static uint64_t current_tick;
@@ -265,6 +260,7 @@ static void s_run_windowed_game() {
             transfer_command_buffer);
 
         gpu_sync_world(
+            master_flags.startup,
             render_command_buffer,
             render_shadow_command_buffer,
             transfer_command_buffer);

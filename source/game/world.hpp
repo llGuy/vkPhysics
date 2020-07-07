@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/engine.hpp"
 #include <common/math.hpp>
 #include <common/event.hpp>
 #include <renderer/renderer.hpp>
@@ -10,12 +11,14 @@ void world_init(
 
 void destory_world();
 
-void handle_world_input();
+void handle_world_input(
+    highlevel_focus_t focus);
 
 void tick_world(
     event_submissions_t *events);
 
 void gpu_sync_world(
+    bool in_startup,
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer);
@@ -323,3 +326,6 @@ player_t *DEBUG_get_spectator();
 
 void read_startup_screen();
 void write_startup_screen();
+
+void kill_local_player(
+    event_submissions_t *events);

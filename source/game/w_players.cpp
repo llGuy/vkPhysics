@@ -14,9 +14,6 @@
 #include <glm/gtx/projection.hpp>
 #include <vulkan/vulkan_core.h>
 
-#include <vector>
-
-
 struct players_t {
     int32_t local_player;
     player_t *spectator;
@@ -641,7 +638,7 @@ static void s_check_player_dead(
                 player->flags.alive_state = PAS_DEAD;
 
                 submit_event(ET_LAUNCH_GAME_MENU_SCREEN, NULL, events);
-                submit_event(ET_BEGIN_RENDERING_SERVER_WORLD, NULL, events);
+                submit_event(ET_ENTER_SERVER_META_MENU, NULL, events);
             }
         }
     }

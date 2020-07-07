@@ -1,4 +1,5 @@
 #pragma once
+    
 
 #include "tools.hpp"
 
@@ -36,7 +37,7 @@ enum event_type_t {
     ET_LAUNCH_MAIN_MENU_SCREEN,
     ET_LAUNCH_INGAME_MENU,
 
-    ET_BEGIN_RENDERING_SERVER_WORLD,
+    ET_ENTER_SERVER_META_MENU,
 
     ET_BEGIN_AI_TRAINING,
     ET_RESET_AI_ARENA,
