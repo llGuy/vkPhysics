@@ -8,11 +8,6 @@
 #include <renderer/renderer.hpp>
 
 // PLAYER STUFF ///////////////////////////////////////////////////////////////
-void w_push_player_actions(
-    player_t *player,
-    player_actions_t *action,
-    bool override_adt);
-
 void w_players_data_init();
 
 void w_player_render_init(
@@ -42,7 +37,7 @@ player_t *w_add_player_from_info(
     player_init_info_t *info);
 
 void w_player_animation_init(
-  player_t *player);
+    player_t *player);
 
 void w_player_world_init();
 
@@ -118,14 +113,6 @@ vector3_t w_convert_chunk_to_world(
 
 ivector3_t w_convert_voxel_to_local_chunk(
     const ivector3_t &vs_position);
-
-// Does not create a chunk if it wasn't already created
-chunk_t *w_access_chunk(
-    const ivector3_t &coord);
-
-// If chunk was not created, create it
-chunk_t *w_get_chunk(
-    const ivector3_t &coord);
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
@@ -233,32 +220,16 @@ void w_write_startup_screen();
 vector3_t w_update_spectator_view_direction(
     const vector3_t &spectator_view_direction);
 
-// WORLD STRUCTURE CONTAINING EVERYTHING //////////////////////////////////////
 #define MAX_LOADED_CHUNKS 1000
 #define MAX_PLAYERS 50
 #define MAX_VOXEL_VALUE_F 254.0f
 #define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
-
-struct world_t {
-    struct {
-        uint8_t in_server: 1;
-        uint8_t in_training: 1;
-    };
-
-    ai_training_session_t training_type;
-};
 
 void w_begin_ai_training_players(
     ai_training_session_t type);
 
 void w_begin_ai_training_chunks(
     ai_training_session_t type);
-
-void w_cast_ray_sensors(
-    sensors_t *sensors,
-    const vector3_t &ws_position,
-    const vector3_t &ws_view_direction,
-    const vector3_t &ws_up_vector);
 
 void w_reposition_spectator();
 

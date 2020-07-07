@@ -227,16 +227,21 @@ void w_handle_input(
     player_t *local_player = w_get_local_player();
 
     if (local_player) {
-        w_push_player_actions(local_player, &actions, 0);
+        if (local_player->flags.alive_state == PAS_ALIVE) {
+            push_player_actions(local_player, &actions, 0);
+        }
+        else {
+            push_player_actions(players.spectator, &actions, 0);
+        }
     }
     else {
-        w_push_player_actions(players.spectator, &actions, 0);
+        push_player_actions(players.spectator, &actions, 0);
     }
 }
 
 #define TERRAFORMING_SPEED 200.0f
 
-void w_push_player_actions(
+void push_player_actions(
     player_t *player,
     player_actions_t *action,
     bool override_adt) {
@@ -265,16 +270,6 @@ void w_push_player_actions(
         // ...
         LOG_WARNING("Too many player actions\n");
     }
-}
-
-void push_player_actions(
-    player_t *player,
-    player_actions_t *actions,
-    bool override_adt) {
-    w_push_player_actions(
-        player,
-        actions,
-        override_adt);
 }
 
 #define TERRAFORMING_RADIUS 3.0f
@@ -626,7 +621,7 @@ static void s_check_player_dead(
             for (uint32_t i = 0; i < ray_step_count; ++i) {
                 ivector3_t chunk_coord = w_convert_voxel_to_chunk(w_convert_world_to_voxel(current_ray_position));
 
-                chunk_t *c = w_access_chunk(chunk_coord);
+                chunk_t *c = access_chunk(chunk_coord);
                 if (c) {
                     // Might not die, reset timer
                     player->death_checker = 0.0f;

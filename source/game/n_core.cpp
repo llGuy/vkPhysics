@@ -205,7 +205,8 @@ static void s_start_client(
 
 static network_address_t bound_server_address = {};
 
-static void s_process_connection_handshake(
+// PT_CONNECTION_HANDSHAKE
+static void s_receive_packet_connection_handshake(
     serialiser_t *serialiser,
     event_submissions_t *events) {
     packet_connection_handshake_t handshake = {};
@@ -258,7 +259,8 @@ static void s_process_connection_handshake(
     }
 }
 
-static void s_process_player_joined(
+// PT_PLAYER_JOINED
+static void s_receive_packet_player_joined(
     serialiser_t *in_serialiser,
     event_submissions_t *events) {
     packet_player_joined_t packet = {};
@@ -285,7 +287,7 @@ static void s_process_player_joined(
     submit_event(ET_NEW_PLAYER, new_player, events);
 }
 
-static void s_process_player_left(
+static void s_receive_packet_player_left(
     serialiser_t *in_serialiser,
     event_submissions_t *events) {
     uint16_t disconnected_client = in_serialiser->deserialise_uint16();
@@ -446,7 +448,8 @@ static accumulated_predicted_modification_t *s_accumulate_history() {
     }
 }
 
-static void s_send_commands_to_server() {
+// PT_CLIENT_COMMANDS
+static void s_send_packet_client_commands() {
     player_t *p = get_player_from_client_id(current_client_id);
 
     // DEAD by default
@@ -461,7 +464,7 @@ static void s_send_commands_to_server() {
         else {
             client_t *c = &clients[p->client_id];
 
-            packet_player_commands_t packet = {};
+            packet_client_commands_t packet = {};
             packet.did_correction = c->waiting_on_correction;
 
             if (previous_alive_state == PAS_DEAD && p->flags.alive_state == PAS_ALIVE) {
@@ -927,7 +930,8 @@ static void s_handle_local_player_snapshot(
     }
 }
 
-static void s_process_game_state_snapshot(
+// PT_GAME_STATE_SNAPSHOT
+static void s_receive_packet_game_state_snapshot(
     serialiser_t *serialiser,
     uint64_t received_tick,
     event_submissions_t *events) {
@@ -963,7 +967,8 @@ static void s_process_game_state_snapshot(
     }
 }
 
-static void s_process_chunk_voxels(
+// PT_CHUNK_VOXELS
+static void s_receive_packet_chunk_voxels(
     serialiser_t *serialiser,
     event_submissions_t *events) {
     uint32_t loaded_chunk_count = serialiser->deserialise_uint32();
@@ -1046,7 +1051,7 @@ static void s_check_incoming_game_server_packets(
         elapsed += logic_delta_time();
         if (elapsed >= client_command_output_interval) {
             // Send commands to the server
-            s_send_commands_to_server();
+            s_send_packet_client_commands();
 
             elapsed = 0.0f;
         }
@@ -1073,33 +1078,33 @@ static void s_check_incoming_game_server_packets(
             switch(header.flags.packet_type) {
 
             case PT_CONNECTION_HANDSHAKE: {
-                s_process_connection_handshake(
+                s_receive_packet_connection_handshake(
                     &in_serialiser,
                     events);
                 return;
             } break;
 
             case PT_PLAYER_JOINED: {
-                s_process_player_joined(
+                s_receive_packet_player_joined(
                     &in_serialiser,
                     events);
             } break;
 
             case PT_PLAYER_LEFT: {
-                s_process_player_left(
+                s_receive_packet_player_left(
                     &in_serialiser,
                     events);
             } break;
 
             case PT_GAME_STATE_SNAPSHOT: {
-                s_process_game_state_snapshot(
+                s_receive_packet_game_state_snapshot(
                     &in_serialiser,
                     header.current_tick,
                     events);
             } break;
 
             case PT_CHUNK_VOXELS: {
-                s_process_chunk_voxels(
+                s_receive_packet_chunk_voxels(
                     &in_serialiser,
                     events);
             } break;
@@ -1145,7 +1150,8 @@ static void s_check_incoming_game_server_packets(
     }
 }
 
-static void s_process_available_servers_response(
+// HPT_RESPONSE_AVAILABLE_SERVERS
+static void s_receive_response_available_servers(
     serialiser_t *serialiser,
     event_submissions_t *submission) {
     available_servers.name_to_server.clear();
@@ -1194,10 +1200,11 @@ static void s_check_incoming_hub_server_packets(
 
         switch (header.type) {
         case HPT_RESPONSE_AVAILABLE_SERVERS: {
-            s_process_available_servers_response(&in_serialiser, events);
+            s_receive_response_available_servers(&in_serialiser, events);
             break;
         }
         case HPT_QUERY_RESPONSIVENESS: {
+            // HPT_QUERY_RESPONSIVENESS
             hub_packet_header_t new_header = {};
             new_header.type = HPT_RESPONSE_RESPONSIVENESS;
 
@@ -1234,7 +1241,8 @@ void tick_client(
     s_check_incoming_game_server_packets(events);
 }
 
-static void s_send_connect_request_to_server(
+// PT_CONNECTION_REQUEST
+static void s_send_packet_connection_request(
     uint32_t ip_address,
     local_client_info_t *info) {
     bound_server_address.port = host_to_network_byte_order(GAME_OUTPUT_PORT_SERVER);
@@ -1263,7 +1271,8 @@ static void s_send_connect_request_to_server(
     }
 }
 
-static void s_send_disconnect_to_server() {
+// PT_CLIENT_DISCONNECT
+static void s_send_packet_client_disconnect() {
     serialiser_t serialiser = {};
     serialiser.init(100);
 
@@ -1322,7 +1331,8 @@ static void s_start_server(
     send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
 }
 
-static bool s_send_handshake(
+// PT_CONNECTION_HANDSHAKE
+static bool s_send_packet_connection_handshake(
     uint16_t client_id,
     event_new_player_t *player_info,
     uint32_t loaded_chunk_count) {
@@ -1443,7 +1453,8 @@ static void s_serialise_chunk(
     *chunks_in_packet = *chunks_in_packet + 1;
 }
 
-static void s_serialise_voxel_chunks_and_send(
+// PT_CHUNK_VOXELS
+static void s_send_packet_chunk_voxels(
     client_t *client,
     voxel_chunk_values_t *values,
     uint32_t count) {
@@ -1491,13 +1502,14 @@ static void s_serialise_voxel_chunks_and_send(
     client->current_chunk_sending = 0;
 }
 
+// Sends handshake, and starts sending voxels
 static void s_send_game_state_to_new_client(
     uint16_t client_id,
     event_new_player_t *player_info) {
     uint32_t loaded_chunk_count = 0;
     chunk_t **chunks = get_active_chunks(&loaded_chunk_count);
 
-    if (s_send_handshake(
+    if (s_send_packet_connection_handshake(
         client_id,
         player_info,
         loaded_chunk_count)) {
@@ -1526,11 +1538,12 @@ static void s_send_game_state_to_new_client(
         loaded_chunk_count = count;
 
         // Cannot send all of these at the same bloody time
-        s_serialise_voxel_chunks_and_send(client, voxel_chunks, loaded_chunk_count);
+        s_send_packet_chunk_voxels(client, voxel_chunks, loaded_chunk_count);
     }
 }
 
-static void s_inform_all_players_on_newcomer(
+// PT_PLAYER_JOINED
+static void s_send_packet_player_joined(
     event_new_player_t *info) {
     packet_player_joined_t packet = {};
     packet.player_info.name = info->info.client_data->name;
@@ -1563,7 +1576,8 @@ static void s_inform_all_players_on_newcomer(
     }
 }
 
-static void s_process_connection_request(
+// PT_CONNECTION_REQUEST
+static void s_receive_packet_connection_request(
     serialiser_t *serialiser,
     network_address_t address,
     event_submissions_t *events) {
@@ -1610,10 +1624,11 @@ static void s_process_connection_request(
     // Send game state to new player
     s_send_game_state_to_new_client(client_id, event_data);
     // Dispatch to all players newly joined player information
-    s_inform_all_players_on_newcomer(event_data);
+    s_send_packet_player_joined(event_data);
 }
 
-static void s_process_client_disconnect(
+// PT_CLIENT_DISCONNECT
+static void s_receive_packet_client_disconnect(
     serialiser_t *serialiser,
     uint16_t client_id,
     event_submissions_t *events) {
@@ -1647,7 +1662,7 @@ static void s_process_client_disconnect(
 }
 
 static void s_handle_chunk_modifications(
-    packet_player_commands_t *commands,
+    packet_client_commands_t *commands,
     client_t *client) {
     s_merge_chunk_modifications(
         client->predicted_modifications,
@@ -1656,7 +1671,8 @@ static void s_handle_chunk_modifications(
         commands->modified_chunk_count);
 }
 
-static void s_process_client_commands(
+// PT_CLIENT_COMMANDS
+static void s_receive_packet_client_commands(
     serialiser_t *serialiser,
     uint16_t client_id,
     uint64_t tick,
@@ -1668,7 +1684,7 @@ static void s_process_client_commands(
 
         c->received_first_commands_packet = 1;
 
-        packet_player_commands_t commands = {};
+        packet_client_commands_t commands = {};
         n_deserialise_player_commands(&commands, serialiser);
 
         if (commands.requested_spawn) {
@@ -1865,7 +1881,8 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
     snapshot->chunk_modifications = modifications;
 }
 
-static void s_dispatch_game_state_snapshot() {
+// PT_GAME_STATE_SNAPSHOT
+static void s_send_packet_game_state_snapshot() {
 #if NET_DEBUG || NET_DEBUG_VOXEL_INTERPOLATION
     printf("\n\n GAME STATE DISPATCH\n");
 #endif
@@ -1995,6 +2012,7 @@ static void s_dispatch_game_state_snapshot() {
     //putchar('\n');
 }
 
+// PT_CHUNK_VOXELS
 static void s_send_pending_chunks() {
     uint32_t to_remove_count = 0;
     uint32_t *to_remove = LN_MALLOC(uint32_t, clients_to_send_chunks_to.data_count);
@@ -2035,7 +2053,7 @@ void tick_server(
     
     if (snapshot_elapsed >= server_snapshot_output_interval) {
         // Send commands to the server
-        s_dispatch_game_state_snapshot();
+        s_send_packet_game_state_snapshot();
 
         snapshot_elapsed = 0.0f;
     }
@@ -2069,21 +2087,21 @@ void tick_server(
             switch(header.flags.packet_type) {
 
             case PT_CONNECTION_REQUEST: {
-                s_process_connection_request(
+                s_receive_packet_connection_request(
                     &in_serialiser,
                     received_address,
                     events);
             } break;
 
             case PT_CLIENT_DISCONNECT: {
-                s_process_client_disconnect(
+                s_receive_packet_client_disconnect(
                     &in_serialiser,
                     header.client_id,
                     events);
             } break;
 
             case PT_CLIENT_COMMANDS: {
-                s_process_client_commands(
+                s_receive_packet_client_commands(
                     &in_serialiser,
                     header.client_id,
                     header.current_tick,
@@ -2142,7 +2160,7 @@ static void s_net_event_listener(
             if (game_server_index) {
                 uint32_t ip_address = available_servers.servers[*game_server_index].ipv4_address;
             
-                s_send_connect_request_to_server(ip_address, &client_info);
+                s_send_packet_connection_request(ip_address, &client_info);
 
                 FL_FREE((void *)data->server_name);
             }
@@ -2154,7 +2172,7 @@ static void s_net_event_listener(
         }
         else if (data->ip_address) {
             uint32_t ip_address = str_to_ipv4_int32(data->ip_address, GAME_OUTPUT_PORT_SERVER, SP_UDP);
-            s_send_connect_request_to_server(ip_address, &client_info);
+            s_send_packet_connection_request(ip_address, &client_info);
         }
         else {
             
@@ -2166,7 +2184,7 @@ static void s_net_event_listener(
     case ET_LEAVE_SERVER: {
         if (bound_server_address.ipv4_address > 0) {
             // Send to server message
-            s_send_disconnect_to_server();
+            s_send_packet_client_disconnect();
         
             memset(&bound_server_address, 0, sizeof(bound_server_address));
             memset(clients.data, 0, sizeof(client_t) * clients.max_size);

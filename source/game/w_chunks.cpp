@@ -126,7 +126,7 @@ static uint8_t s_chunk_edge_voxel_value(
         chunk_coord_offset_z = 1;
     }
 
-    chunk_t *chunk_ptr = w_access_chunk(
+    chunk_t *chunk_ptr = access_chunk(
         ivector3_t(chunk_coord.x + chunk_coord_offset_x,
                    chunk_coord.y + chunk_coord_offset_y,
                    chunk_coord.z + chunk_coord_offset_z));
@@ -250,9 +250,9 @@ uint32_t w_create_chunk_vertices(
     chunk_t *c) {
     uint32_t vertex_count = 0;
 
-    chunk_t *x_superior = w_access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z));
-    chunk_t *y_superior = w_access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z));
-    chunk_t *z_superior = w_access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1));
+    chunk_t *x_superior = access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z));
+    chunk_t *y_superior = access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z));
+    chunk_t *z_superior = access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1));
     
     bool doesnt_exist = 0;
     if (x_superior) {
@@ -721,7 +721,7 @@ void w_add_sphere_m(
 
     ivector3_t current_chunk_coord = w_convert_voxel_to_chunk(vs_center);
 
-    chunk_t *current_chunk = w_get_chunk(
+    chunk_t *current_chunk = get_chunk(
         current_chunk_coord);
 
     current_chunk->flags.has_to_update_vertices = 1;
@@ -768,7 +768,7 @@ void w_add_sphere_m(
                         ivector3_t c = w_convert_voxel_to_chunk(vs_position);
 
                         // In another chunk, need to switch current_chunk pointer
-                        current_chunk = w_get_chunk(c);
+                        current_chunk = get_chunk(c);
                         current_chunk_coord = c;
 
                         current_chunk->flags.has_to_update_vertices = 1;
@@ -814,7 +814,7 @@ ivector3_t w_convert_voxel_to_local_chunk(
     return (ivector3_t)(from_origin - xs_sized * (float)CHUNK_EDGE_LENGTH);
 }
 
-chunk_t *w_access_chunk(
+chunk_t *access_chunk(
     const ivector3_t &coord) {
     uint32_t hash = w_hash_chunk_coord(coord);
     uint32_t *index = chunks.chunk_indices.get(hash);
@@ -828,7 +828,7 @@ chunk_t *w_access_chunk(
     }
 }
 
-chunk_t *w_get_chunk(
+chunk_t *get_chunk(
     const ivector3_t &coord) {
     uint32_t hash = w_hash_chunk_coord(coord);
     uint32_t *index = chunks.chunk_indices.get(hash);
@@ -849,7 +849,7 @@ chunk_t *w_get_chunk(
     }
 }
 
-void w_cast_ray_sensors(
+void cast_ray_sensors(
     sensors_t *sensors,
     const vector3_t &ws_position,
     const vector3_t &ws_view_direction,
@@ -905,7 +905,7 @@ void w_cast_ray_sensors(
         for (; glm::dot(current_ray_position - ws_position, current_ray_position - ws_position) < max_reach_squared; current_ray_position += step) {
             ivector3_t voxel = w_convert_world_to_voxel(current_ray_position);
             ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-            chunk_t *chunk = w_access_chunk(chunk_coord);
+            chunk_t *chunk = access_chunk(chunk_coord);
 
             length += length_step;
 
@@ -941,7 +941,7 @@ terraform_package_t w_cast_terrain_ray(
     for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
         ivector3_t voxel = w_convert_world_to_voxel(vs_position);
         ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-        chunk_t *chunk = w_access_chunk(chunk_coord);
+        chunk_t *chunk = access_chunk(chunk_coord);
 
         if (chunk) {
             ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
@@ -965,7 +965,7 @@ static bool s_terraform_with_history(
     if (package.ray_hit_terrain) {
         ivector3_t voxel = w_convert_world_to_voxel(package.position);
         ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-        chunk_t *chunk = w_access_chunk(chunk_coord);
+        chunk_t *chunk = access_chunk(chunk_coord);
 
         if (!chunk->flags.made_modification) {
             // Push this chunk onto list of modified chunks
@@ -1014,7 +1014,7 @@ static bool s_terraform_with_history(
                             current_local_coord.z < 0 || current_local_coord.z >= 16) {
                             // If the current voxel coord is out of bounds, switch chunks
                             ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
-                            chunk_t *new_chunk = w_get_chunk(chunk_coord);
+                            chunk_t *new_chunk = get_chunk(chunk_coord);
 
                             chunk = new_chunk;
 
@@ -1083,7 +1083,7 @@ static bool s_terraform_without_history(
     if (package.ray_hit_terrain) {
         ivector3_t voxel = w_convert_world_to_voxel(package.position);
         ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel);
-        chunk_t *chunk = w_access_chunk(chunk_coord);
+        chunk_t *chunk = access_chunk(chunk_coord);
 
         if (chunk) {
             ivector3_t local_voxel_coord = w_convert_voxel_to_local_chunk(voxel);
@@ -1126,7 +1126,7 @@ static bool s_terraform_without_history(
                                     current_local_coord.z < 0 || current_local_coord.z >= 16) {
                                     // If the current voxel coord is out of bounds, switch chunks
                                     ivector3_t chunk_coord = w_convert_voxel_to_chunk(current_voxel);
-                                    chunk_t *new_chunk = w_get_chunk(chunk_coord);
+                                    chunk_t *new_chunk = get_chunk(chunk_coord);
 
                                     chunk = new_chunk;
                                     chunk->flags.made_modification = 1;
@@ -1252,7 +1252,7 @@ void w_begin_ai_training_chunks(
             for (int32_t x = -32; x < 32; ++x) {
                 ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
                 ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel_coord);
-                chunk_t *chunk = w_get_chunk(chunk_coord);
+                chunk_t *chunk = get_chunk(chunk_coord);
                 chunk->flags.has_to_update_vertices = 1;
                 ivector3_t local_coord = w_convert_voxel_to_local_chunk(voxel_coord);
                 uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);

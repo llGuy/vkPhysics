@@ -127,7 +127,7 @@ void n_deserialise_player_joined(
     packet_player_joined_t *packet,
     serialiser_t *serialiser);
 
-struct packet_player_commands_t {
+struct packet_client_commands_t {
     union {
         struct {
             uint8_t did_correction: 1;
@@ -155,14 +155,14 @@ struct packet_player_commands_t {
 };
 
 uint32_t n_packed_player_commands_size(
-    packet_player_commands_t *commands);
+    packet_client_commands_t *commands);
 
 void n_serialise_player_commands(
-    packet_player_commands_t *packet,
+    packet_client_commands_t *packet,
     serialiser_t *serialiser);
 
 void n_deserialise_player_commands(
-    packet_player_commands_t *packet,
+    packet_client_commands_t *packet,
     serialiser_t *serialiser);
 
 // Will use this during game play

@@ -130,9 +130,9 @@ void n_deserialise_player_joined(
 }
 
 uint32_t n_packed_player_commands_size(
-    packet_player_commands_t *commands) {
+    packet_client_commands_t *commands) {
     uint32_t final_size = 0;
-    final_size += sizeof(packet_player_commands_t::command_count);
+    final_size += sizeof(packet_client_commands_t::command_count);
 
     uint32_t command_size =
         sizeof(player_actions_t::bytes) +
@@ -143,13 +143,13 @@ uint32_t n_packed_player_commands_size(
 
     final_size += command_size * commands->command_count;
 
-    final_size += sizeof(packet_player_commands_t::player_flags);
-    final_size += sizeof(packet_player_commands_t::ws_final_position);
-    final_size += sizeof(packet_player_commands_t::ws_final_view_direction);
-    final_size += sizeof(packet_player_commands_t::ws_final_up_vector);
-    final_size += sizeof(packet_player_commands_t::ws_final_velocity);
+    final_size += sizeof(packet_client_commands_t::player_flags);
+    final_size += sizeof(packet_client_commands_t::ws_final_position);
+    final_size += sizeof(packet_client_commands_t::ws_final_view_direction);
+    final_size += sizeof(packet_client_commands_t::ws_final_up_vector);
+    final_size += sizeof(packet_client_commands_t::ws_final_velocity);
 
-    final_size += sizeof(packet_player_commands_t::modified_chunk_count);
+    final_size += sizeof(packet_client_commands_t::modified_chunk_count);
     for (uint32_t c = 0; c < commands->modified_chunk_count; ++c) {
         final_size += sizeof(chunk_modifications_t::modified_voxels_count) + sizeof(chunk_modifications_t::x) * 3;
 
@@ -160,7 +160,7 @@ uint32_t n_packed_player_commands_size(
 }
 
 void n_serialise_player_commands(
-    packet_player_commands_t *packet,
+    packet_client_commands_t *packet,
     serialiser_t *serialiser) {
     serialiser->serialise_uint8(packet->flags);
     serialiser->serialise_uint8(packet->command_count);
@@ -201,7 +201,7 @@ void n_serialise_player_commands(
 }
 
 void n_deserialise_player_commands(
-    packet_player_commands_t *packet,
+    packet_client_commands_t *packet,
     serialiser_t *serialiser) {
     packet->flags = serialiser->deserialise_uint8();
     packet->command_count = serialiser->deserialise_uint8();
