@@ -371,6 +371,11 @@ DECLARE_VOID_RENDERER_PROC(void, load_mesh_external,
     shader_binding_info_t *info,
     const char *path);
 
+DECLARE_VOID_RENDERER_PROC(void, create_player_merged_mesh,
+    mesh_t *dst_a,
+    mesh_t *dst_b,
+    mesh_t *dst_merged);
+
 #define MAX_CHILD_JOINTS 5
 
 struct joint_t {

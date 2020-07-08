@@ -9,11 +9,21 @@
 
 // PLAYER STUFF ///////////////////////////////////////////////////////////////
 void w_players_data_init();
+void w_player_world_init();
+
+// Just adds a player to the list of players
+player_t *w_add_player();
+
+// Adds a player to the list and initialises it
+player_t *w_add_player_from_info(
+    player_init_info_t *info);
 
 void w_player_render_init(
     player_t *player);
 
-player_t *w_add_player();
+void w_link_client_id_to_local_id(
+    uint16_t client_id,
+    uint32_t local_id);
 
 void w_handle_input(
     game_input_t *input,
@@ -24,30 +34,17 @@ void w_players_gpu_sync_and_render(
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer);
 
-player_t *w_get_local_player();
-
-player_t *w_get_player_from_client_id(
-    uint16_t client_id);
-
-void w_link_client_id_to_local_id(
-    uint16_t client_id,
-    uint32_t local_id);
-
-player_t *w_add_player_from_info(
-    player_init_info_t *info);
-
-void w_player_animation_init(
-    player_t *player);
-
-void w_player_world_init();
-
 void w_tick_players(
     event_submissions_t *events);
 
-void w_set_local_player(
-    int32_t local_id);
+player_t *w_get_local_player();
 
 player_t *w_get_spectator();
+
+vector3_t w_get_player_scale();
+
+void w_set_local_player(
+    int32_t local_id);
 
 void w_destroy_player(
     uint32_t id);
@@ -55,10 +52,9 @@ void w_destroy_player(
 void w_clear_players();
 
 // CHUNKS /////////////////////////////////////////////////////////////////////
-uint32_t w_get_voxel_index(
-    uint32_t x,
-    uint32_t y,
-    uint32_t z);
+void w_chunks_data_init();
+void w_chunk_world_init(
+    uint32_t loaded_radius);
 
 void w_chunk_init(
     chunk_t *chunk,
@@ -69,6 +65,13 @@ void w_chunk_render_init(
     chunk_t *chunk,
     const vector3_t &ws_position);
 
+void w_tick_chunks(
+    float dt);
+
+void w_chunk_gpu_sync_and_render(
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer);
+
 // Would call this at end of game or when chunk is out of chunk load radius.
 void w_destroy_chunk_render(
     chunk_t *chunk);
@@ -78,39 +81,28 @@ void w_destroy_chunk_render(
 chunk_t *w_destroy_chunk(
     chunk_t *chunk);
 
-uint32_t w_hash_chunk_coord(
-    const ivector3_t &coord);
-
-void w_chunks_data_init();
-
 void w_clear_chunk_world();
 
 void w_destroy_chunk_data();
 
-void w_chunk_world_init(
-    uint32_t loaded_radius);
-
-void w_tick_chunks(
-    float dt);
-
-void w_chunk_gpu_sync_and_render(
-    VkCommandBuffer render_command_buffer,
-    VkCommandBuffer transfer_command_buffer);
-
-// Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpusync
+// Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpu sync
 void w_add_sphere_m(
     const vector3_t &ws_center,
     float ws_radius);
 
+// Pretty useless, as world and voxel coordinates are basically the same
 ivector3_t w_convert_world_to_voxel(
     const vector3_t &ws_position);
 
+// Gets the coordinate of the chunk which contains the voxel
 ivector3_t w_convert_voxel_to_chunk(
     const ivector3_t &vs_position);
 
+// Converts from the bottom xyz corner of a chunk to world coordinates (given a chunk coordinate)
 vector3_t w_convert_chunk_to_world(
     const ivector3_t &chunk_coord);
 
+// Converts from "world" coordinates to the voxel 16x16x16 coordinate of the voxel that the coordinate is in
 ivector3_t w_convert_voxel_to_local_chunk(
     const ivector3_t &vs_position);
 
@@ -131,7 +123,7 @@ terraform_package_t w_cast_terrain_ray(
 void w_toggle_mesh_update_wait(
     bool value);
 
-uint8_t get_surface_level();
+uint8_t w_get_surface_level();
 
 // Returns vertex count
 uint32_t w_create_chunk_vertices(
@@ -188,8 +180,6 @@ vector3_t w_collide_and_slide(
 vector3_t w_test_collision(
     terrain_collision_t *collision,
     collision_triangle_t *triangle);
-
-vector3_t w_get_player_scale();
 
 // STARTUP SCREEN /////////////////////////////////////////////////////////////
 struct startup_screen_t {

@@ -64,10 +64,12 @@ void w_player_world_init() {
     players.spectator->flags.interaction_mode = PIM_FLOATING;
     players.spectator->camera_fov.current = 60.0f;
     players.spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
+
+    player_scale = vector3_t(0.5f);
 }
 
 
-void w_player_animation_init(
+static void s_player_animation_init(
     player_t *player) {
     animated_instance_init(&player->animations, &player_skeleton, &player_cycles);
 }
@@ -127,8 +129,6 @@ void w_players_data_init() {
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
         MT_STATIC);
 
-    player_scale = vector3_t(0.5f);
-
     animated_instance_init(&test_instance0, &player_skeleton, &player_cycles);
 }
 
@@ -148,18 +148,6 @@ player_t *w_add_player() {
 }
 
 // TODO: May need to remove check in future, when it is sure that a player has a client id
-player_t *w_get_player_from_client_id(
-    uint16_t client_id) {
-    int16_t id = players.local_id_from_client_id[client_id];
-    if (id >= 0) {
-        return players.players[id];
-    }
-    else {
-        LOG_ERROR("Client ID not yet registered to local ID\n");
-        return NULL;
-    }
-}
-
 void w_link_client_id_to_local_id(
     uint16_t client_id,
     uint32_t local_id ) {
@@ -1020,7 +1008,7 @@ player_t *w_add_player_from_info(
     }
 
     if (get_game_init_flags() | GIF_WINDOWED) {
-        w_player_animation_init(p);
+        s_player_animation_init(p);
     }
 
     LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
@@ -1069,7 +1057,14 @@ void w_handle_spectator_mouse_movement() {
 
 player_t *get_player_from_client_id(
     uint16_t client_id) {
-    return w_get_player_from_client_id(client_id);
+    int16_t id = players.local_id_from_client_id[client_id];
+    if (id >= 0) {
+        return players.players[id];
+    }
+    else {
+        LOG_ERROR("Client ID not yet registered to local ID\n");
+        return NULL;
+    }
 }
 
 player_t *get_player_from_player_id(

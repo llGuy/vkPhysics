@@ -474,7 +474,7 @@ void w_tick_chunks(
 
 static uint8_t surface_level = 70;
 
-uint8_t get_surface_level() {
+uint8_t w_get_surface_level() {
     return surface_level;
 }
 
@@ -572,7 +572,7 @@ chunk_t *w_destroy_chunk(
     return NULL;
 }
 
-uint32_t w_hash_chunk_coord(
+static uint32_t s_hash_chunk_coord(
     const ivector3_t &coord) {
     // static std::hash<glm::ivec3> hasher;
 
@@ -816,7 +816,7 @@ ivector3_t w_convert_voxel_to_local_chunk(
 
 chunk_t *access_chunk(
     const ivector3_t &coord) {
-    uint32_t hash = w_hash_chunk_coord(coord);
+    uint32_t hash = s_hash_chunk_coord(coord);
     uint32_t *index = chunks.chunk_indices.get(hash);
 
     if (index) {
@@ -830,7 +830,7 @@ chunk_t *access_chunk(
 
 chunk_t *get_chunk(
     const ivector3_t &coord) {
-    uint32_t hash = w_hash_chunk_coord(coord);
+    uint32_t hash = s_hash_chunk_coord(coord);
     uint32_t *index = chunks.chunk_indices.get(hash);
     
     if (index) {

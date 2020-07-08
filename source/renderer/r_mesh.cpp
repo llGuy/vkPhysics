@@ -376,6 +376,88 @@ struct header_t {
     uint32_t indices_count;
 };
 
+static vector3_t *s_get_vertices(
+    uint32_t vertices_count,
+    serialiser_t *serialiser) {
+    vector3_t *vertices = LN_MALLOC(vector3_t, vertices_count);
+
+    for (uint32_t i = 0; i < vertices_count; ++i) {
+        vertices[i] = serialiser->deserialise_vector3();
+    }
+
+    return vertices;
+}
+
+static vector3_t *s_get_normals(
+    uint32_t normals_count,
+    serialiser_t *serialiser) {
+    vector3_t *normals = LN_MALLOC(vector3_t, normals_count);
+
+    for (uint32_t i = 0; i < normals_count; ++i) {
+        normals[i] = serialiser->deserialise_vector3();
+    }
+
+    return normals;
+}
+
+static vector2_t *s_get_tcoords(
+    uint32_t tcoords_count,
+    serialiser_t *serialiser) {
+    vector2_t *tcoords = LN_MALLOC(vector2_t, tcoords_count);
+
+    for (uint32_t i = 0; i < tcoords_count; ++i) {
+        tcoords[i].x = serialiser->deserialise_float32();
+        tcoords[i].y = serialiser->deserialise_float32();
+    }
+
+    return tcoords;
+}
+
+static vector4_t *s_get_joint_weights(
+    uint32_t joint_weights_count,
+    serialiser_t *serialiser) {
+    vector4_t *joint_weights = LN_MALLOC(vector4_t, joint_weights_count);
+
+    for (uint32_t i = 0; i < joint_weights_count; ++i) {
+        joint_weights[i].x = serialiser->deserialise_float32();
+        joint_weights[i].y = serialiser->deserialise_float32();
+        joint_weights[i].z = serialiser->deserialise_float32();
+        joint_weights[i].w = serialiser->deserialise_float32();
+        float sum = joint_weights[i].x + joint_weights[i].y + joint_weights[i].z + joint_weights[i].w;
+        float q = 1.0f / sum;
+        joint_weights[i] *= q;
+    }
+
+    return joint_weights;
+}
+
+static ivector4_t *s_get_joint_ids(
+    uint32_t joint_ids_count,
+    serialiser_t *serialiser) {
+    ivector4_t *joint_ids = LN_MALLOC(ivector4_t, joint_ids_count);
+
+    for (uint32_t i = 0; i < joint_ids_count; ++i) {
+        joint_ids[i].x = (int32_t)serialiser->deserialise_uint32();
+        joint_ids[i].y = (int32_t)serialiser->deserialise_uint32();
+        joint_ids[i].z = (int32_t)serialiser->deserialise_uint32();
+        joint_ids[i].w = (int32_t)serialiser->deserialise_uint32();
+    }
+
+    return joint_ids;
+}
+
+static uint32_t *s_get_indices(
+    uint32_t indices_count,
+    serialiser_t *serialiser) {
+    uint32_t *indices = LN_MALLOC(uint32_t, indices_count);
+
+    for (uint32_t i = 0; i < indices_count; ++i) {
+        indices[i] = serialiser->deserialise_uint32();
+    }
+
+    return indices;
+}
+
 void load_mesh_external(
     mesh_t *mesh,
     shader_binding_info_t *binding_info,
@@ -396,46 +478,12 @@ void load_mesh_external(
     file_header.joint_ids_count = serialiser.deserialise_uint32();
     file_header.indices_count = serialiser.deserialise_uint32();
 
-    vector3_t *vertices = LN_MALLOC(vector3_t, file_header.vertices_count);
-    vector3_t *normals = LN_MALLOC(vector3_t, file_header.normals_count);
-    vector2_t *tcoords = LN_MALLOC(vector2_t, file_header.tcoords_count);
-    vector4_t *joint_weights = LN_MALLOC(vector4_t, file_header.joint_weights_count);
-    ivector4_t *joint_ids = LN_MALLOC(ivector4_t, file_header.joint_ids_count);
-    uint32_t *indices = LN_MALLOC(uint32_t, file_header.indices_count);
-
-    for (uint32_t i = 0; i < file_header.vertices_count; ++i) {
-        vertices[i] = serialiser.deserialise_vector3();
-    }
-
-    for (uint32_t i = 0; i < file_header.normals_count; ++i) {
-        normals[i] = serialiser.deserialise_vector3();
-    }
-
-    for (uint32_t i = 0; i < file_header.tcoords_count; ++i) {
-        tcoords[i].x = serialiser.deserialise_float32();
-        tcoords[i].y = serialiser.deserialise_float32();
-    }
-
-    for (uint32_t i = 0; i < file_header.joint_weights_count; ++i) {
-        joint_weights[i].x = serialiser.deserialise_float32();
-        joint_weights[i].y = serialiser.deserialise_float32();
-        joint_weights[i].z = serialiser.deserialise_float32();
-        joint_weights[i].w = serialiser.deserialise_float32();
-        float sum = joint_weights[i].x + joint_weights[i].y + joint_weights[i].z + joint_weights[i].w;
-        float q = 1.0f / sum;
-        joint_weights[i] *= q;
-    }
-
-    for (uint32_t i = 0; i < file_header.joint_ids_count; ++i) {
-        joint_ids[i].x = (int32_t)serialiser.deserialise_uint32();
-        joint_ids[i].y = (int32_t)serialiser.deserialise_uint32();
-        joint_ids[i].z = (int32_t)serialiser.deserialise_uint32();
-        joint_ids[i].w = (int32_t)serialiser.deserialise_uint32();
-    }
-
-    for (uint32_t i = 0; i < file_header.indices_count; ++i) {
-        indices[i] = serialiser.deserialise_uint32();
-    }
+    vector3_t *vertices = s_get_vertices(file_header.vertices_count, &serialiser);
+    vector3_t *normals = s_get_normals(file_header.normals_count, &serialiser);
+    vector2_t *tcoords = s_get_tcoords(file_header.tcoords_count, &serialiser);
+    vector4_t *joint_weights = s_get_joint_weights(file_header.joint_weights_count, &serialiser);
+    ivector4_t *joint_ids = s_get_joint_ids(file_header.joint_ids_count, &serialiser);
+    uint32_t *indices = s_get_indices(file_header.indices_count, &serialiser);
 
     push_buffer_to_mesh(BT_INDICES, mesh);
     mesh_buffer_t *indices_gpu_buffer = get_mesh_buffer(BT_INDICES, mesh);
@@ -488,6 +536,15 @@ void load_mesh_external(
     mesh->index_type = VK_INDEX_TYPE_UINT32;
 
     create_mesh_vbo_final_list(mesh);
+}
+
+void create_player_merged_mesh(
+    mesh_t *dst_a,
+    mesh_t *dst_b,
+    mesh_t *dst_merged) {
+    const char *dude_mesh_path = "assets/models/player.mesh";
+
+
 }
 
 void load_skeleton(
@@ -960,6 +1017,8 @@ void sync_gpu_with_animated_transforms(
         &instance->interpolated_transforms_ubo);
 }
 
+// This is retarted
+// TODO: Make sure to not have to set the viewport and bind pipelines for each mesh ASAP
 void submit_mesh(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,

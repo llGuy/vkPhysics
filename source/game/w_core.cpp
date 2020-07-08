@@ -99,7 +99,7 @@ static void s_handle_event_player_disconnected(
     if (world.in_server) {
         event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
-        player_t *p = w_get_player_from_client_id(data->client_id);
+        player_t *p = get_player_from_client_id(data->client_id);
             
         if (p) {
             w_destroy_player(p->local_id);
@@ -301,6 +301,10 @@ void tick_world(
     (void)events;
     w_tick_chunks(logic_delta_time());
     w_tick_players(events);
+
+#if 1
+    // AI training stuff
+#endif
 }
 
 void gpu_sync_world(

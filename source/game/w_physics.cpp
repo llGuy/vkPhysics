@@ -204,7 +204,7 @@ static collision_triangle_t *s_get_collision_triangles(
                         x,
                         y,
                         z,
-                        get_surface_level(),
+                        w_get_surface_level(),
                         triangles,
                         &collision_vertex_count,
                         max_vertices);
