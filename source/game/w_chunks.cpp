@@ -615,11 +615,11 @@ void w_chunks_data_init() {
         "shaders/SPV/chunk_mesh.frag.spv" };
     
     chunk_shader = create_mesh_shader_color(
-
         &binding_info,
         shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_FRONT_BIT,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         MT_STATIC | MT_PASS_EXTRA_UNIFORM_BUFFER);
 
     chunk_color_data.pointer_position = vector4_t(0.0f);

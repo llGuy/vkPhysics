@@ -15,6 +15,7 @@
 #include <imgui_impl_vulkan.h>
 #include <common/allocators.hpp>
 #include <common/containers.hpp>
+#include <vulkan/vulkan_core.h>
 
 static VkInstance instance;
 static int32_t enable_validation_layers;
@@ -2159,6 +2160,7 @@ static shader_t s_create_3d_shader(
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
     rpipeline_stage_t *stage,
+    VkPrimitiveTopology topology,
     VkCullModeFlags cull_mode) {
     VkPipelineLayout layout = r_create_pipeline_layout(
         shader_flags,
@@ -2181,7 +2183,7 @@ static shader_t s_create_3d_shader(
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
     input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly_info.topology = topology;
 
     VkViewport viewport = {};
     viewport.width = (float)r_swapchain_extent().width;
@@ -2270,6 +2272,7 @@ shader_t create_3d_shader_color(
     uint32_t descriptor_layout_count,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
+    VkPrimitiveTopology topology,
     VkCullModeFlags culling) {
     return s_create_3d_shader(
         binding_info,
@@ -2279,6 +2282,7 @@ shader_t create_3d_shader_color(
         shader_paths,
         shader_flags,
         r_deferred_stage(),
+        topology,
         culling);
 }
 
@@ -2297,6 +2301,7 @@ shader_t create_3d_shader_shadow(
         shader_paths,
         shader_flags,
         r_shadow_stage(),
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         VK_CULL_MODE_FRONT_BIT);
 }
 

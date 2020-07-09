@@ -8,6 +8,7 @@
 
 #include "engine.hpp"
 #include <common/log.hpp>
+#include "renderer/input.hpp"
 #include "renderer/renderer.hpp"
 #include "w_internal.hpp"
 #include <common/math.hpp>
@@ -74,6 +75,49 @@ static void s_player_animation_init(
     animated_instance_init(&player->animations, &player_skeleton, &player_cycles);
 }
 
+struct {
+    mesh_t merged_mesh;
+    mesh_t player_mesh;
+    mesh_t ball_mesh;
+    shader_binding_info_t merged_sbi = {};
+    shader_binding_info_t player_sbi = {};
+    shader_binding_info_t ball_sbi = {};
+
+    shader_t merged_shader_ball;
+    shader_t merged_shader_dude;
+} new_rendering_test;
+
+static void s_rendering_test_init() {
+    create_player_merged_mesh(
+        &new_rendering_test.player_mesh, &new_rendering_test.player_sbi,
+        &new_rendering_test.ball_mesh, &new_rendering_test.ball_sbi,
+        &new_rendering_test.merged_mesh, &new_rendering_test.merged_sbi);
+
+    const char *shader_paths[] = {
+        "shaders/SPV/morph.vert.spv",
+        "shaders/SPV/morph_ball.geom.spv",
+        "shaders/SPV/morph.frag.spv",
+    };
+
+    new_rendering_test.merged_shader_ball = create_mesh_shader_color(
+        &new_rendering_test.merged_sbi,
+        shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE, 
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
+        MT_ANIMATED | MT_MERGED_MESH);
+
+    shader_paths[1] = "shaders/SPV/morph_dude.geom.spv";
+
+    new_rendering_test.merged_shader_dude = create_mesh_shader_color(
+        &new_rendering_test.merged_sbi,
+        shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE, 
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
+        MT_ANIMATED | MT_MERGED_MESH);
+}
+
 void w_players_data_init() {
     shader_binding_info_t mesh_info = {};
     load_mesh_external(&player_mesh, &mesh_info, "assets/models/player.mesh");
@@ -91,6 +135,7 @@ void w_players_data_init() {
         shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE, 
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         MT_ANIMATED);
 
     const char *shadow_shader_paths[] = {
@@ -106,6 +151,7 @@ void w_players_data_init() {
 
     const char *static_shader_paths[] = {
         "shaders/SPV/mesh.vert.spv",
+        "shaders/SPV/mesh.geom.spv",
         "shaders/SPV/mesh.frag.spv"
     };
 
@@ -114,8 +160,9 @@ void w_players_data_init() {
     player_ball_shader = create_mesh_shader_color(
         &ball_mesh_info,
         static_shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         MT_STATIC);
 
     const char *static_shadow_shader_path[] = {
@@ -130,6 +177,10 @@ void w_players_data_init() {
         MT_STATIC);
 
     animated_instance_init(&test_instance0, &player_skeleton, &player_cycles);
+
+    s_rendering_test_init();
+
+    switch_to_cycle(&test_instance0, 2, 0);
 }
 
 void w_player_render_init(
@@ -845,32 +896,72 @@ void w_players_gpu_sync_and_render(
     VkCommandBuffer transfer_command_buffer) {
     (void)transfer_command_buffer;
     
-#if 0
+#if 1
+    static shader_t *current = &new_rendering_test.merged_shader_ball;
+
     interpolate_joints(&test_instance0, logic_delta_time());
     sync_gpu_with_animated_transforms(&test_instance0, transfer_command_buffer);
 
-    mesh_render_data_t render_data = {};
+    static bool start_animation = 0;
+    static float animation_time = 0.0f;
+    static float total_animation_time = 1.0f;
+
+    raw_input_t *raw_input = get_raw_input();
+    if (raw_input->buttons[BT_E].instant) {
+        // Begin animation
+        start_animation = 1;
+        animation_time = 0.0f;
+    }
+
+    if (animation_time > total_animation_time) {
+        start_animation = 0;
+        animation_time = 0.0f;
+
+        if (current == &new_rendering_test.merged_shader_ball) {
+            current = &new_rendering_test.merged_shader_dude;
+        }
+        else {
+            current = &new_rendering_test.merged_shader_ball;
+        }
+    }
+
+    if (start_animation) {
+        animation_time += logic_delta_time();
+    }
+
+    struct {
+        matrix4_t model;
+        matrix4_t second_model;
+
+        vector4_t color;
+
+        // .x = roughness
+        // .y = metallic
+        vector4_t pbr_info;
+    
+        // To add later with texture stuff
+        int32_t texture_index;
+
+        float progression;
+        
+    } render_data;
+
     render_data.model = glm::translate(glm::vec3(0.0f)) * glm::scale(player_scale);
+    render_data.second_model = glm::translate(glm::vec3(0.0f)) * glm::scale(player_scale);
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.1f;
     render_data.pbr_info.y = 0.1f;
+    render_data.progression = animation_time / total_animation_time;
     submit_skeletal_mesh(
         render_command_buffer,
-        &player_mesh,
-        &player_shader,
+        &new_rendering_test.merged_mesh,
+        current,
         &render_data,
+        sizeof(render_data),
         &test_instance0);
-
-    render_data.model = glm::translate(glm::vec3(5.0f, 0.0f, 0.0f)) * glm::scale(player_scale);
-    
-    submit_mesh(
-        render_command_buffer,
-        &player_ball_mesh,
-        &player_ball_shader,
-        &render_data);
 #endif
 
-#if 1
+#if 0
     for (uint32_t i = 0; i < players.players.data_count; ++i) {
         player_t *p = players.players[i];
         if (p) {

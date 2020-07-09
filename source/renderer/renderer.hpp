@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <vulkan/vulkan.h>
 #include <common/tools.hpp>
+#include <vulkan/vulkan_core.h>
 
 typedef int32_t result_t;
 typedef void(*surface_proc_t)(struct VkInstance_T *instance, struct VkSurfaceKHR_T **surface, void *window);
@@ -186,6 +187,7 @@ DECLARE_RENDERER_PROC(shader_t, create_3d_shader_color,
     uint32_t descriptor_layout_count,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
+    VkPrimitiveTopology topology,
     VkCullModeFlags culling);
 
 /* Descriptor set */
@@ -372,9 +374,9 @@ DECLARE_VOID_RENDERER_PROC(void, load_mesh_external,
     const char *path);
 
 DECLARE_VOID_RENDERER_PROC(void, create_player_merged_mesh,
-    mesh_t *dst_a,
-    mesh_t *dst_b,
-    mesh_t *dst_merged);
+    mesh_t *dst_a, shader_binding_info_t *sbi_a,
+    mesh_t *dst_b, shader_binding_info_t *sbi_b,
+    mesh_t *dst_merged, shader_binding_info_t *sbi_merged);
 
 #define MAX_CHILD_JOINTS 5
 
@@ -506,7 +508,8 @@ struct mesh_render_data_t {
 enum mesh_type_t {
     MT_STATIC = 1 << 0,
     MT_ANIMATED = 1 << 1,
-    MT_PASS_EXTRA_UNIFORM_BUFFER = 1 << 2
+    MT_PASS_EXTRA_UNIFORM_BUFFER = 1 << 2,
+    MT_MERGED_MESH = 1 << 3
 };
 
 typedef int32_t mesh_type_flags_t;
@@ -516,6 +519,7 @@ DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_color,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
     VkCullModeFlags culling,
+    VkPrimitiveTopology topology,
     mesh_type_flags_t type);
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
@@ -555,6 +559,14 @@ DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh,
     mesh_t *mesh,
     shader_t *shader,
     mesh_render_data_t *render_data,
+    animated_instance_t *instance);
+
+DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh,
+    VkCommandBuffer command_buffer,
+    mesh_t *mesh,
+    shader_t *shader,
+    void *render_data,
+    uint32_t render_data_size,
     animated_instance_t *instance);
 
 DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh_shadow,

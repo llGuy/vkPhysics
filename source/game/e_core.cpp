@@ -90,7 +90,9 @@ static void s_game_event_listener(
         master_flags.startup = 0;
         focus = HF_UI;
         frame_info.blurred = 0;
+
         frame_info.ssao = 1;
+        // frame_info.ssao = 0;
         enable_cursor_display();
     } break;
 
@@ -98,11 +100,13 @@ static void s_game_event_listener(
         master_flags.startup = 0;
         frame_info.blurred = 0;
         frame_info.ssao = 1;
+        // frame_info.ssao = 0;
     } break;
 
     case ET_BEGIN_AI_TRAINING: {
         frame_info.blurred = 0;
         frame_info.ssao = 1;
+        // frame_info.ssao = 0;
     } break;
 
     case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
@@ -150,7 +154,7 @@ static void s_tick(
     tick_net(
         &events);
 
-    tick_ai();
+    // tick_ai();
 
     tick_world(
         &events);
