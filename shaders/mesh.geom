@@ -51,7 +51,7 @@ void main() {
 
     for (int i = 0; i < 3; ++i) {
         out_gs.vs_position = in_gs[i].vs_position;
-        out_gs.vs_normal = in_gs[i].vs_normal;
+        out_gs.vs_normal = normal;
         out_gs.uvs = in_gs[i].uvs;
 
         /* gl_Position = u_camera_transforms.projection * vec4(in_gs[i].vs_position + outer_vector, 1.0f); */

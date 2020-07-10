@@ -116,6 +116,20 @@ static void s_rendering_test_init() {
         VK_CULL_MODE_NONE, 
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
         MT_ANIMATED | MT_MERGED_MESH);
+
+    const char *player_shader_paths[] = {
+        "shaders/SPV/skeletal.vert.spv",
+        "shaders/SPV/skeletal.geom.spv",
+        "shaders/SPV/skeletal.frag.spv"
+    };
+
+    player_shader = create_mesh_shader_color(
+        &new_rendering_test.player_sbi,
+        player_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE, 
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        MT_ANIMATED);
 }
 
 void w_players_data_init() {
@@ -124,19 +138,6 @@ void w_players_data_init() {
     load_skeleton(&player_skeleton, "assets/models/player.skeleton");
     load_animation_cycles(&player_cycles, "assets/models/player.animations.link", "assets/models/player.animations");
 
-    const char *shader_paths[] = {
-        "shaders/SPV/skeletal.vert.spv",
-        "shaders/SPV/skeletal.geom.spv",
-        "shaders/SPV/skeletal.frag.spv"
-    };
-
-    player_shader = create_mesh_shader_color(
-        &mesh_info,
-        shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        VK_CULL_MODE_NONE, 
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        MT_ANIMATED);
 
     const char *shadow_shader_paths[] = {
         "shaders/SPV/skeletal_shadow.vert.spv",

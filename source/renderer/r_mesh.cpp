@@ -629,10 +629,13 @@ void create_player_merged_mesh(
 
     vector4_t *joint_weights = LN_MALLOC(vector4_t, file_header.joint_weights_count + sphere_vertex_count);
     ivector4_t *joint_ids = LN_MALLOC(ivector4_t, file_header.joint_ids_count + sphere_vertex_count);
-    uint32_t *indices = LN_MALLOC(uint32_t, file_header.indices_count + sphere_index_count);
+
+    uint32_t total_indices_count = MAX(file_header.indices_count, sphere_index_count) * 2;
+
+    uint32_t *indices = LN_MALLOC(uint32_t, total_indices_count);
 
     uint32_t *dude_indices = NULL;
-    uint32_t *sphere_indices = LN_MALLOC(uint32_t, sphere_index_count);
+    uint32_t *sphere_indices = LN_MALLOC(uint32_t, sphere_index_count * 2);
 
     s_get_vertices(file_header.vertices_count, &serialiser, vertices);
     s_get_normals(file_header.normals_count, &serialiser, normals);
@@ -691,7 +694,6 @@ void create_player_merged_mesh(
     sphere_index_count = counter;
 
     // Now, alternate every 3 indices for the final buffer
-    uint32_t total_indices_count = MAX(file_header.indices_count, sphere_index_count) * 2;
     for (uint32_t i = 0; i < total_indices_count; i += 6) {
         uint32_t dude_src_index_start = i / 2;
         uint32_t sphere_src_index_start = i / 2;
@@ -768,7 +770,6 @@ void create_player_merged_mesh(
     *sbi_merged = create_mesh_binding_info(dst_merged);
     create_mesh_vbo_final_list(dst_merged);
 
-#if 1
     // Create player mesh
     push_buffer_to_mesh(BT_INDICES, dst_a);
     mesh_buffer_t *a_indices_buffer = get_mesh_buffer(BT_INDICES, dst_a);
@@ -824,7 +825,6 @@ void create_player_merged_mesh(
 
     *sbi_b = create_mesh_binding_info(dst_b);
     create_mesh_vbo_final_list(dst_b);
-#endif
 }
 
 void load_skeleton(
