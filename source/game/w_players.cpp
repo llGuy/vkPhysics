@@ -180,7 +180,7 @@ void w_players_data_init() {
 
     s_rendering_test_init();
 
-    switch_to_cycle(&test_instance0, 2, 0);
+    switch_to_cycle(&test_instance0, 1, 0);
 }
 
 void w_player_render_init(
@@ -897,7 +897,7 @@ void w_players_gpu_sync_and_render(
     (void)transfer_command_buffer;
     
 #if 1
-    static shader_t *current = &new_rendering_test.merged_shader_ball;
+    static shader_t *current = &new_rendering_test.merged_shader_dude;
 
     interpolate_joints(&test_instance0, logic_delta_time());
     sync_gpu_with_animated_transforms(&test_instance0, transfer_command_buffer);
@@ -905,6 +905,9 @@ void w_players_gpu_sync_and_render(
     static bool start_animation = 0;
     static float animation_time = 0.0f;
     static float total_animation_time = 1.0f;
+    static float current_rotation_angle = 0.0f;
+
+    current_rotation_angle = fmod(current_rotation_angle + logic_delta_time() * 200.0f, 360.0f);
 
     raw_input_t *raw_input = get_raw_input();
     if (raw_input->buttons[BT_E].instant) {
@@ -947,8 +950,8 @@ void w_players_gpu_sync_and_render(
     } render_data;
 
     render_data.model = glm::translate(glm::vec3(0.0f)) * glm::scale(player_scale);
-    render_data.second_model = glm::translate(glm::vec3(0.0f)) * glm::scale(player_scale);
-    render_data.color = vector4_t(1.0f);
+    render_data.second_model = glm::translate(glm::vec3(0.0f)) * glm::rotate(glm::radians(current_rotation_angle), vector3_t(1.0f, 0.0f, 0.0f)) * glm::scale(player_scale * 2.0f);
+    render_data.color = vector4_t(0.0f);
     render_data.pbr_info.x = 0.1f;
     render_data.pbr_info.y = 0.1f;
     render_data.progression = animation_time / total_animation_time;
@@ -959,6 +962,27 @@ void w_players_gpu_sync_and_render(
         &render_data,
         sizeof(render_data),
         &test_instance0);
+
+    mesh_render_data_t data = {};
+    data.model = glm::translate(glm::vec3(3.0f, 0, 0)) * glm::scale(player_scale);
+    data.color = vector4_t(0.0f);
+    data.pbr_info.x = 0.1f;
+    data.pbr_info.y = 0.1f;
+
+    submit_skeletal_mesh(
+        render_command_buffer,
+        &new_rendering_test.player_mesh,
+        &player_shader,
+        &data,
+        &test_instance0);
+
+    data.model = glm::translate(glm::vec3(-3.0f, 0, 0)) * glm::scale(player_scale);
+
+    submit_mesh(
+        render_command_buffer,
+        &new_rendering_test.ball_mesh,
+        &player_ball_shader,
+        &data);
 #endif
 
 #if 0

@@ -80,6 +80,11 @@ void main() {
     rotate_only_model[3][1] = 0.0f;
     rotate_only_model[3][2] = 0.0f;
 
+    mat4 rotate_only_model2 = u_push_constant.model2;
+    rotate_only_model2[3][0] = 0.0f;
+    rotate_only_model2[3][1] = 0.0f;
+    rotate_only_model2[3][2] = 0.0f;
+
     // Calculate the vertices for the dude (in model space)
     vec4 dude_ms_positions[3];
     vec4 dude_ms_normals[3];
@@ -124,48 +129,50 @@ void main() {
     vec4 ball_vs_positions[3];
     vec4 ball_vs_normals[3];
 
-    vec3 ball_normal = vec3(vec4(get_normal(in_gs[3].position, in_gs[4].position, in_gs[5].position), 0.0));
+    vec3 ball_normal = get_normal(in_gs[3].position, in_gs[4].position, in_gs[5].position);
 
     for (int i = 0; i < 3; ++i) {
-        ball_ms_positions[i] = vec4(in_gs[i + 3].position, 1.0f);
-        ball_ms_normals[i] = vec4(ball_normal, 0.0f);
+        ball_ms_positions[i] = rotate_only_model2 * vec4(in_gs[i + 3].position, 1.0f);
+        ball_ms_normals[i] = rotate_only_model2 * vec4(ball_normal, 0.0f);
 
         ball_vs_positions[i] = u_camera_transforms.view * ball_ms_positions[i];
         ball_vs_normals[i] = u_camera_transforms.view * ball_ms_normals[i];
     }
 
-    float dude_triangle_final_distance = 0.7f;
-    float ball_triangle_final_distance = 1.5f;
-    const float extrude_time = 0.25f;
-    const float displacement_time = 0.5f;
-    const float fallback_time = 0.25f;
+    /* float dude_triangle_final_distance = 0.7f; */
+    /* float ball_triangle_final_distance = 1.0f; */
+    float dude_triangle_final_distance = 0.0f;
+    float ball_triangle_final_distance = 0.0f;
+    // const float extrude_time = 0.00001f;
+    // const float displacement_time = 0.999f;
+    // const float fallback_time = 0.00099f;
 
-    if (u_push_constant.progression < extrude_time) {
-        vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model1[3][0], u_push_constant.model1[3][1], u_push_constant.model1[3][2], 1.0f)).xyz;
+    /* if (u_push_constant.progression < extrude_time) { */
+    /*     vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model1[3][0], u_push_constant.model1[3][1], u_push_constant.model1[3][2], 1.0f)).xyz; */
 
-        vec3 a_to_b = dude_vs_positions[1].xyz - dude_vs_positions[0].xyz;
-        a_to_b /= 2.0f;
-        vec3 c_to_center = (a_to_b + dude_vs_positions[0].xyz) - dude_vs_positions[2].xyz;
-        vec3 center = dude_vs_positions[2].xyz + c_to_center / 2.0f;
-        vec3 outer_vector = normalize(center - vec3(model_center)) * 0.5;
+    /*     vec3 a_to_b = dude_vs_positions[1].xyz - dude_vs_positions[0].xyz; */
+    /*     a_to_b /= 2.0f; */
+    /*     vec3 c_to_center = (a_to_b + dude_vs_positions[0].xyz) - dude_vs_positions[2].xyz; */
+    /*     vec3 center = dude_vs_positions[2].xyz + c_to_center / 2.0f; */
+    /*     vec3 outer_vector = normalize(center - vec3(model_center)) * 0.5; */
 
-        // Get triangles out of the model
-        for (int i = 0; i < 3; ++i) {
-            vec3 normal = normalize(dude_vs_normals[i].xyz);
+    /*     // Get triangles out of the model */
+    /*     for (int i = 0; i < 3; ++i) { */
+    /*         vec3 normal = normalize(dude_vs_normals[i].xyz); */
 
-            vec4 final_vs_position = dude_vs_positions[i] + vec4(outer_vector, 0.0f) * dude_triangle_final_distance * u_push_constant.progression / extrude_time;
-            gl_Position = u_camera_transforms.projection * final_vs_position;
+    /*         vec4 final_vs_position = dude_vs_positions[i] + vec4(outer_vector, 0.0f) * dude_triangle_final_distance * u_push_constant.progression / extrude_time; */
+    /*         gl_Position = u_camera_transforms.projection * final_vs_position; */
 
-            out_gs.position = final_vs_position.xyz;
-            // out_gs.normal = dude_vs_normals[i].xyz;
-            out_gs.normal = normal;
+    /*         out_gs.position = final_vs_position.xyz; */
+    /*         // out_gs.normal = dude_vs_normals[i].xyz; */
+    /*         out_gs.normal = normal; */
 
-            EmitVertex();
-        }
-    }
-    else if (u_push_constant.progression < displacement_time + extrude_time) {
-        float progress = u_push_constant.progression - extrude_time;
-        progress /= displacement_time;
+    /*         EmitVertex(); */
+    /*     } */
+    /* } */
+    if (u_push_constant.progression > 0.0000001f) {
+        float progress = u_push_constant.progression;
+        // progress /= displacement_time;
 
         vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model1[3][0], u_push_constant.model1[3][1], u_push_constant.model1[3][2], 1.0f)).xyz;
 
@@ -204,33 +211,33 @@ void main() {
             EmitVertex();
         }
     }
-    else if (u_push_constant.progression < 1.0f) {
-        float progress = u_push_constant.progression - (extrude_time + displacement_time);
-        progress /= fallback_time;
+    /* else if (u_push_constant.progression < 1.0f) { */
+    /*     float progress = u_push_constant.progression - (extrude_time + displacement_time); */
+    /*     progress /= fallback_time; */
 
-        vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model1[3][0], u_push_constant.model1[3][1], u_push_constant.model1[3][2], 1.0f)).xyz;
+    /*     vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model1[3][0], u_push_constant.model1[3][1], u_push_constant.model1[3][2], 1.0f)).xyz; */
 
-        vec3 a_to_b = ball_vs_positions[1].xyz - ball_vs_positions[0].xyz;
-        a_to_b /= 2.0f;
-        vec3 c_to_center = (a_to_b + ball_vs_positions[0].xyz) - ball_vs_positions[2].xyz;
-        vec3 center = ball_vs_positions[2].xyz + c_to_center / 2.0f;
-        vec3 outer_vector = normalize(center - vec3(model_center)) * 0.5;
+    /*     vec3 a_to_b = ball_vs_positions[1].xyz - ball_vs_positions[0].xyz; */
+    /*     a_to_b /= 2.0f; */
+    /*     vec3 c_to_center = (a_to_b + ball_vs_positions[0].xyz) - ball_vs_positions[2].xyz; */
+    /*     vec3 center = ball_vs_positions[2].xyz + c_to_center / 2.0f; */
+    /*     vec3 outer_vector = normalize(center - vec3(model_center)) * 0.5; */
 
-        // Get triangles out of the model
-        for (int i = 0; i < 3; ++i) {
-            vec3 normal = normalize(ball_vs_normals[i].xyz);
+    /*     // Get triangles out of the model */
+    /*     for (int i = 0; i < 3; ++i) { */
+    /*         vec3 normal = normalize(ball_vs_normals[i].xyz); */
 
-            vec3 final_vs_position = ball_vs_positions[i].xyz + outer_vector * ball_triangle_final_distance;
-            final_vs_position += (ball_vs_positions[i].xyz - final_vs_position) * progress;
-            gl_Position = u_camera_transforms.projection * vec4(final_vs_position, 1.0f);
+    /*         vec3 final_vs_position = ball_vs_positions[i].xyz + outer_vector * ball_triangle_final_distance; */
+    /*         final_vs_position += (ball_vs_positions[i].xyz - final_vs_position) * progress; */
+    /*         gl_Position = u_camera_transforms.projection * vec4(final_vs_position, 1.0f); */
 
-            out_gs.position = final_vs_position.xyz;
-            // out_gs.normal = ball_vs_normals[i].xyz;
-            out_gs.normal = normal;
+    /*         out_gs.position = final_vs_position.xyz; */
+    /*         // out_gs.normal = ball_vs_normals[i].xyz; */
+    /*         out_gs.normal = normal; */
 
-            EmitVertex();
-        }
-    }
+    /*         EmitVertex(); */
+    /*     } */
+    /* } */
     else {
 #if 1
         for (int i = 0; i < 3; ++i) {

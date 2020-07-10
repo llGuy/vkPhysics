@@ -54,7 +54,7 @@ void main() {
 
         // Depends on pixel distance to camera
         float pixel_distance = abs(vs_position.z);
-        float kernel_size = mix(0.5f, 3.0f, pixel_distance * div_fade_distance_cap);
+        float kernel_size = mix(0.1f, 0.2f, pixel_distance * div_fade_distance_cap);
         float bias = mix(0.02f, 0.2f, pixel_distance * div_fade_distance_cap);
         
         for (int i = 0; i < 40; ++i) {

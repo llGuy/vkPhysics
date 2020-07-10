@@ -615,8 +615,8 @@ void create_player_merged_mesh(
     file_header.joint_ids_count = serialiser.deserialise_uint32();
     file_header.indices_count = serialiser.deserialise_uint32();
 
-    int32_t sector_count = 16;
-    int32_t stack_count = 16;
+    int32_t sector_count = 8;
+    int32_t stack_count = 8;
     
     uint32_t sphere_vertex_count = (sector_count + 1) * (stack_count + 1);
     uint32_t sphere_index_count = sector_count * stack_count * 6;
@@ -700,6 +700,9 @@ void create_player_merged_mesh(
             indices[i + 3] = dude_indices[0];
             indices[i + 4] = dude_indices[1];
             indices[i + 5] = dude_indices[2];
+            // indices[i + 3] = sphere_indices[0] + file_header.vertices_count;
+            // indices[i + 4] = sphere_indices[0 + 1] + file_header.vertices_count;
+            // indices[i + 5] = sphere_indices[0 + 2] + file_header.vertices_count;
         }
         else {
             indices[i + 3] = sphere_indices[sphere_src_index_start] + file_header.vertices_count;
@@ -765,7 +768,7 @@ void create_player_merged_mesh(
     *sbi_merged = create_mesh_binding_info(dst_merged);
     create_mesh_vbo_final_list(dst_merged);
 
-#if 0
+#if 1
     // Create player mesh
     push_buffer_to_mesh(BT_INDICES, dst_a);
     mesh_buffer_t *a_indices_buffer = get_mesh_buffer(BT_INDICES, dst_a);
@@ -1334,7 +1337,7 @@ void submit_mesh(
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
         vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);
 
-        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, mesh->vertex_offset, 0);
+        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, 0, 0);
     }
     else {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -1423,7 +1426,7 @@ void submit_skeletal_mesh(
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
         vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);
 
-        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, mesh->vertex_offset, 0);
+        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, 0, 0);
     }
     else {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -1469,7 +1472,7 @@ void submit_skeletal_mesh(
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
         vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);
 
-        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, mesh->vertex_offset, 0);
+        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, 0, 0);
     }
     else {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
