@@ -905,7 +905,10 @@ static void s_render_person(
 static void s_render_ball(
     VkCommandBuffer render_command_buffer,
     player_t *p) {
+    begin_mesh_submission(render_command_buffer, &player_ball_shader);
+
     p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(player_scale);
+
     submit_mesh(
         render_command_buffer,
         &player_ball_mesh,

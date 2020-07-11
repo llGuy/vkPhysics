@@ -540,13 +540,17 @@ DECLARE_RENDERER_PROC(shader_binding_info_t, create_mesh_binding_info,
 DECLARE_VOID_RENDERER_PROC(void, free_mesh_binding_info,
     shader_binding_info_t *);
 
+DECLARE_VOID_RENDERER_PROC(void, begin_mesh_submission,
+    VkCommandBuffer command_buffer,
+    shader_t *shader,
+    VkDescriptorSet extra_set = VK_NULL_HANDLE);
+
 // Submits only one mesh
 DECLARE_VOID_RENDERER_PROC(void, submit_mesh,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data,
-    VkDescriptorSet set = VK_NULL_HANDLE);
+    mesh_render_data_t *render_data);
 
 DECLARE_VOID_RENDERER_PROC(void, submit_mesh_shadow,
     VkCommandBuffer command_buffer,

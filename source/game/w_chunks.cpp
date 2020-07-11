@@ -502,6 +502,11 @@ void w_chunk_gpu_sync_and_render(
         &chunk_color_data,
         &chunk_color_data_buffer);
 
+    begin_mesh_submission(
+        render_command_buffer,
+        &chunk_shader,
+        chunk_color_data_buffer_set);
+
     for (uint32_t i = 0; i < chunks.chunks.data_count; ++i) {
         chunk_t *c = chunks.chunks[i];
         if (c) {
@@ -523,8 +528,7 @@ void w_chunk_gpu_sync_and_render(
                     render_command_buffer,
                     &c->render->mesh,
                     &chunk_shader,
-                    &c->render->render_data,
-                    chunk_color_data_buffer_set);
+                    &c->render->render_data);
             }
         }
     }
@@ -545,12 +549,16 @@ void w_render_startup_world(
     VkCommandBuffer render_command_buffer) {
     startup_screen_t *startup_data = w_get_startup_screen_data();
 
+    begin_mesh_submission(
+        render_command_buffer,
+        &chunk_shader,
+        chunk_color_data_buffer_set);
+
     submit_mesh(
         render_command_buffer,
         &startup_data->world_mesh,
         &chunk_shader,
-        &startup_data->world_render_data,
-        chunk_color_data_buffer_set);
+        &startup_data->world_render_data);
 }
 
 void w_destroy_chunk_render(

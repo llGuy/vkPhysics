@@ -1303,35 +1303,8 @@ void submit_mesh(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data,
-    VkDescriptorSet extra_set) {
-    VkViewport viewport = {};
-    viewport.width = (float)r_swapchain_extent().width;
-    viewport.height = (float)r_swapchain_extent().height;
-    viewport.maxDepth = 1;
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-
-    VkRect2D rect = {};
-    rect.extent = r_swapchain_extent();
-    vkCmdSetScissor(command_buffer, 0, 1, &rect);
-    
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline);
-
-    VkDescriptorSet sets[] = {r_camera_transforms_uniform(), extra_set};
-    uint32_t count = (extra_set == VK_NULL_HANDLE) ? 1 : 2;
-
-    vkCmdBindDescriptorSets(
-        command_buffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        shader->layout,
-        0,
-        count,
-        sets,
-        0,
-        NULL);
-
+    mesh_render_data_t *render_data) {
     vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
-
     
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -1523,4 +1496,34 @@ void submit_skeletal_mesh_shadow(
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
         vkCmdDraw(command_buffer, mesh->vertex_count, 1, mesh->vertex_offset, 0);
     }
+}
+
+void begin_mesh_submission(
+    VkCommandBuffer command_buffer,
+    shader_t *shader,
+    VkDescriptorSet extra_set) {
+    VkViewport viewport = {};
+    viewport.width = (float)r_swapchain_extent().width;
+    viewport.height = (float)r_swapchain_extent().height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent = r_swapchain_extent();
+    vkCmdSetScissor(command_buffer, 0, 1, &rect);
+    
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline);
+
+    VkDescriptorSet sets[] = {r_camera_transforms_uniform(), extra_set};
+    uint32_t count = (extra_set == VK_NULL_HANDLE) ? 1 : 2;
+
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        shader->layout,
+        0,
+        count,
+        sets,
+        0,
+        NULL);
 }
