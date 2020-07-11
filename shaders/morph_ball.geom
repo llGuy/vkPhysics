@@ -76,14 +76,14 @@ vec3 get_normal(vec3 a, vec3 b, vec3 c) {
 
 void main() {
     mat4 rotate_only_model = u_push_constant.model1;
-    rotate_only_model[3][0] = 0.0f;
-    rotate_only_model[3][1] = 0.0f;
-    rotate_only_model[3][2] = 0.0f;
+    /* rotate_only_model[3][0] = 0.0f; */
+    /* rotate_only_model[3][1] = 0.0f; */
+    /* rotate_only_model[3][2] = 0.0f; */
 
     mat4 rotate_only_model2 = u_push_constant.model2;
-    rotate_only_model2[3][0] = 0.0f;
-    rotate_only_model2[3][1] = 0.0f;
-    rotate_only_model2[3][2] = 0.0f;
+    /* rotate_only_model2[3][0] = 0.0f; */
+    /* rotate_only_model2[3][1] = 0.0f; */
+    /* rotate_only_model2[3][2] = 0.0f; */
 
     // Calculate the vertices for the dude (in model space)
     vec4 dude_ms_positions[3];
@@ -150,53 +150,14 @@ void main() {
     /* const float displacement_time = 0.999f; */
     /* const float fallback_time = 0.00099f; */
 
-    /* if (u_push_constant.progression < extrude_time) { */
-    /*     vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model1[3][0], u_push_constant.model1[3][1], u_push_constant.model1[3][2], 1.0f)).xyz; */
-
-    /*     vec3 a_to_b = ball_vs_positions[1].xyz - ball_vs_positions[0].xyz; */
-    /*     a_to_b /= 2.0f; */
-    /*     vec3 c_to_center = (a_to_b + ball_vs_positions[0].xyz) - ball_vs_positions[2].xyz; */
-    /*     vec3 center = ball_vs_positions[2].xyz + c_to_center / 2.0f; */
-    /*     vec3 outer_vector = normalize(center - vec3(model_center)) * 0.5; */
-
-    /*     // Get triangles out of the model */
-    /*     for (int i = 0; i < 3; ++i) { */
-    /*         vec3 normal = normalize(ball_vs_normals[i].xyz); */
-
-    /*         vec3 final_vs_position = ball_vs_positions[i].xyz + outer_vector * ball_triangle_final_distance * u_push_constant.progression / extrude_time; */
-    /*         gl_Position = u_camera_transforms.projection * vec4(final_vs_position, 1.0f); */
-
-    /*         out_gs.position = final_vs_position.xyz; */
-    /*         // out_gs.normal = ball_vs_normals[i].xyz; */
-    /*         out_gs.normal = normal; */
-
-    /*         EmitVertex(); */
-    /*     } */
-    /* } */
     if (u_push_constant.progression > 0.00001f) {
         float progress = u_push_constant.progression;
-
-        vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model2[3][0], u_push_constant.model2[3][1], u_push_constant.model2[3][2], 1.0f)).xyz;
-
-        vec3 a_to_b = ball_vs_positions[1].xyz - ball_vs_positions[0].xyz;
-        a_to_b /= 2.0f;
-        vec3 c_to_center = (a_to_b + ball_vs_positions[0].xyz) - ball_vs_positions[2].xyz;
-        vec3 center = ball_vs_positions[2].xyz + c_to_center / 2.0f;
-        vec3 outer_vector = normalize(center - vec3(model_center)) * 0.5;
-
-        vec3 model_center2 = (u_camera_transforms.view * vec4(u_push_constant.model1[3][0], u_push_constant.model1[3][1], u_push_constant.model1[3][2], 1.0f)).xyz;
-
-        vec3 a_to_b2 = dude_vs_positions[1].xyz - dude_vs_positions[0].xyz;
-        a_to_b2 /= 2.0f;
-        vec3 c_to_center2 = (a_to_b2 + dude_vs_positions[0].xyz) - dude_vs_positions[2].xyz;
-        vec3 center2 = dude_vs_positions[2].xyz + c_to_center2 / 2.0f;
-        vec3 outer_vector2 = normalize(center2 - vec3(model_center2)) * 0.5;
 
         for (int i = 0; i < 3; ++i) {
             vec3 normal = normalize(ball_vs_normals[i].xyz);
 
-            vec3 previous_vs_position = ball_vs_positions[i].xyz + outer_vector * ball_triangle_final_distance;
-            vec3 next_position = dude_vs_positions[i].xyz + outer_vector2 *dude_triangle_final_distance;
+            vec3 previous_vs_position = ball_vs_positions[i].xyz;
+            vec3 next_position = dude_vs_positions[i].xyz;
 
             vec3 final_position = previous_vs_position + (next_position - previous_vs_position) * progress;
 
@@ -213,33 +174,6 @@ void main() {
             EmitVertex();
         }
     }
-    /* else if (u_push_constant.progression < 1.0f) { */
-    /*     float progress = u_push_constant.progression - (extrude_time + displacement_time); */
-    /*     progress /= fallback_time; */
-
-    /*     vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model1[3][0], u_push_constant.model1[3][1], u_push_constant.model1[3][2], 1.0f)).xyz; */
-
-    /*     vec3 a_to_b = dude_vs_positions[1].xyz - dude_vs_positions[0].xyz; */
-    /*     a_to_b /= 2.0f; */
-    /*     vec3 c_to_center = (a_to_b + dude_vs_positions[0].xyz) - dude_vs_positions[2].xyz; */
-    /*     vec3 center = dude_vs_positions[2].xyz + c_to_center / 2.0f; */
-    /*     vec3 outer_vector = normalize(center - vec3(model_center)) * 0.5; */
-
-    /*     // Get triangles out of the model */
-    /*     for (int i = 0; i < 3; ++i) { */
-    /*         vec3 normal = normalize(dude_vs_normals[i].xyz); */
-
-    /*         vec3 final_vs_position = dude_vs_positions[i].xyz + outer_vector * dude_triangle_final_distance; */
-    /*         final_vs_position += (dude_vs_positions[i].xyz - final_vs_position) * progress; */
-    /*         gl_Position = u_camera_transforms.projection * vec4(final_vs_position, 1.0f); */
-
-    /*         out_gs.position = final_vs_position.xyz; */
-    /*         // out_gs.normal = ball_vs_normals[i].xyz; */
-    /*         out_gs.normal = normal; */
-
-    /*         EmitVertex(); */
-    /*     } */
-    /* } */
     else {
 #if 1
         for (int i = 0; i < 3; ++i) {

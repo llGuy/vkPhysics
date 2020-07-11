@@ -36,6 +36,9 @@ static shader_t player_shadow_shader;
 static mesh_t player_ball_mesh;
 static shader_t player_ball_shader;
 static shader_t player_ball_shadow_shader;
+static mesh_t merged_mesh;
+static shader_t merged_shader_ball; // Go from ball to person
+static shader_t merged_shader_player; // Go from person to ball
 
 vector3_t w_get_player_scale() {
     return player_scale;
@@ -75,18 +78,7 @@ static void s_player_animation_init(
     animated_instance_init(&player->animations, &player_skeleton, &player_cycles);
 }
 
-struct {
-    mesh_t merged_mesh;
-    mesh_t player_mesh;
-    mesh_t ball_mesh;
-    shader_binding_info_t merged_sbi = {};
-    shader_binding_info_t player_sbi = {};
-    shader_binding_info_t ball_sbi = {};
-
-    shader_t merged_shader_ball;
-    shader_t merged_shader_dude;
-} new_rendering_test;
-
+#if 0
 static void s_rendering_test_init() {
     create_player_merged_mesh(
         &new_rendering_test.player_mesh, &new_rendering_test.player_sbi,
@@ -131,24 +123,19 @@ static void s_rendering_test_init() {
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         MT_ANIMATED);
 }
+#endif
 
 void w_players_data_init() {
-    shader_binding_info_t mesh_info = {};
-    load_mesh_external(&player_mesh, &mesh_info, "assets/models/player.mesh");
     load_skeleton(&player_skeleton, "assets/models/player.skeleton");
     load_animation_cycles(&player_cycles, "assets/models/player.animations.link", "assets/models/player.animations");
 
+    shader_binding_info_t player_sbi, ball_sbi, merged_sbi;
 
-    const char *shadow_shader_paths[] = {
-        "shaders/SPV/skeletal_shadow.vert.spv",
-        "shaders/SPV/shadow.frag.spv"
-    };
-
-    player_shadow_shader = create_mesh_shader_shadow(
-        &mesh_info,
-        shadow_shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        MT_ANIMATED);
+    // Creates meshes also for transition effect between both models
+    create_player_merged_mesh(
+        &player_mesh, &player_sbi,
+        &player_ball_mesh, &ball_sbi,
+        &merged_mesh, &merged_sbi);
 
     const char *static_shader_paths[] = {
         "shaders/SPV/mesh.vert.spv",
@@ -156,32 +143,51 @@ void w_players_data_init() {
         "shaders/SPV/mesh.frag.spv"
     };
 
-    shader_binding_info_t ball_mesh_info = {};
-    load_mesh_internal(IM_SPHERE, &player_ball_mesh, &ball_mesh_info);
     player_ball_shader = create_mesh_shader_color(
-        &ball_mesh_info,
+        &ball_sbi,
         static_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         MT_STATIC);
 
-    const char *static_shadow_shader_path[] = {
-        "shaders/SPV/mesh_shadow.vert.spv",
-        "shaders/SPV/shadow.frag.spv"
+    const char *player_shader_paths[] = {
+        "shaders/SPV/skeletal.vert.spv",
+        "shaders/SPV/skeletal.geom.spv",
+        "shaders/SPV/skeletal.frag.spv"
     };
 
-    player_ball_shadow_shader = create_mesh_shader_shadow(
-        &ball_mesh_info,
-        static_shadow_shader_path,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
-        MT_STATIC);
+    player_shader = create_mesh_shader_color(
+        &player_sbi,
+        player_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE, 
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        MT_ANIMATED);
 
-    animated_instance_init(&test_instance0, &player_skeleton, &player_cycles);
+    const char *merged_shader_paths[] = {
+        "shaders/SPV/morph.vert.spv",
+        "shaders/SPV/morph_ball.geom.spv",
+        "shaders/SPV/morph.frag.spv",
+    };
 
-    s_rendering_test_init();
+    merged_shader_ball = create_mesh_shader_color(
+        &merged_sbi,
+        merged_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE, 
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
+        MT_ANIMATED | MT_MERGED_MESH);
 
-    switch_to_cycle(&test_instance0, 1, 0);
+    merged_shader_paths[1] = "shaders/SPV/morph_dude.geom.spv";
+
+    merged_shader_player = create_mesh_shader_color(
+        &merged_sbi,
+        merged_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_CULL_MODE_NONE, 
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
+        MT_ANIMATED | MT_MERGED_MESH);
 }
 
 void w_player_render_init(
@@ -694,14 +700,31 @@ static void s_execute_player_actions(
         player_actions_t *actions = &player->player_actions[i];
 
         if (actions->switch_shapes) {
+            // If already switching shapes
+            if (player->switching_shapes) {
+                player->shape_animation_time = SHAPE_SWITCH_ANIMATION_TIME - player->shape_animation_time;
+            }
+            else {
+                player->shape_animation_time = 0.0f;
+            }
+
             if (player->flags.interaction_mode == PIM_STANDING) {
                 player->flags.interaction_mode = PIM_BALL;
-                //player->camera_distance.set(1, 10.0f, player->camera_distance.current, 7.0f);
+                player->switching_shapes = 1;
             }
             else if (player->flags.interaction_mode == PIM_BALL) {
                 player->flags.interaction_mode = PIM_STANDING;
-                //player->camera_distance.set(1, 0.0f, player->camera_distance.current, 7.0f);
+                player->switching_shapes = 1;
             }
+        }
+
+        if (player->switching_shapes) {
+            player->shape_animation_time += logic_delta_time();
+        }
+
+        if (player->shape_animation_time > SHAPE_SWITCH_ANIMATION_TIME) {
+            player->shape_animation_time = 0.0f;
+            player->switching_shapes = 0;
         }
 
         switch (player->flags.interaction_mode) {
@@ -890,6 +913,76 @@ static void s_render_ball(
         &p->render->render_data);
 }
 
+static void s_render_transition(
+    VkCommandBuffer render_command_buffer,
+    VkCommandBuffer transfer_command_buffer,
+    player_t *p) {
+    struct {
+        matrix4_t first_model;
+        matrix4_t second_model;
+
+        vector4_t color;
+        vector4_t pbr_info;
+    
+        // To add later with texture stuff
+        int32_t texture_index;
+
+        float progression;
+        
+    } render_data;
+
+    if (p->animations.next_bound_cycle != p->animated_state) {
+        switch_to_cycle(
+            &p->animations,
+            p->animated_state,
+            0);
+    }
+
+    interpolate_joints(&p->animations, logic_delta_time());
+    sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
+
+    // This has to be a bit different
+    movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
+    matrix3_t normal_rotation_matrix3 = (matrix3_t(glm::normalize(axes.right), glm::normalize(axes.up), glm::normalize(-axes.forward)));
+    matrix4_t normal_rotation_matrix = matrix4_t(normal_rotation_matrix3);
+    normal_rotation_matrix[3][3] = 1.0f;
+
+    vector3_t view_dir = glm::normalize(p->ws_view_direction);
+    float dir_x = view_dir.x;
+    float dir_z = view_dir.z;
+    float rotation_angle = atan2(dir_z, dir_x);
+
+    matrix4_t rot_matrix = glm::rotate(-rotation_angle, vector3_t(0.0f, 1.0f, 0.0f));
+    render_data.first_model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(player_scale);
+    render_data.second_model = glm::translate(p->ws_position) * glm::scale(player_scale);
+
+    render_data.color = vector4_t(1.0f);
+    render_data.pbr_info.x = 0.1f;
+    render_data.pbr_info.y = 0.1f;
+    render_data.progression = p->shape_animation_time / SHAPE_SWITCH_ANIMATION_TIME;
+
+    if (p->flags.interaction_mode == PIM_STANDING) {
+        // Need to render transition from ball to person
+        submit_skeletal_mesh(
+            render_command_buffer,
+            &merged_mesh,
+            &merged_shader_ball,
+            &render_data,
+            sizeof(render_data),
+            &p->animations);
+    }
+    else {
+        // Need to render transition from person to ball
+        submit_skeletal_mesh(
+            render_command_buffer,
+            &merged_mesh,
+            &merged_shader_player,
+            &render_data,
+            sizeof(render_data),
+            &p->animations);
+    }
+}
+
 // When skeletal animation is implemented, this function will do stuff like handle that
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
@@ -897,7 +990,7 @@ void w_players_gpu_sync_and_render(
     VkCommandBuffer transfer_command_buffer) {
     (void)transfer_command_buffer;
     
-#if 1
+#if 0
     static shader_t *current = &new_rendering_test.merged_shader_dude;
 
     interpolate_joints(&test_instance0, logic_delta_time());
@@ -905,7 +998,7 @@ void w_players_gpu_sync_and_render(
 
     static bool start_animation = 0;
     static float animation_time = 0.0f;
-    static float total_animation_time = 1.0f;
+    static float total_animation_time = 0.5f;
     static float current_rotation_angle = 0.0f;
 
     current_rotation_angle = fmod(current_rotation_angle + logic_delta_time() * 200.0f, 360.0f);
@@ -986,7 +1079,7 @@ void w_players_gpu_sync_and_render(
         &data);
 #endif
 
-#if 0
+#if 1
     for (uint32_t i = 0; i < players.players.data_count; ++i) {
         player_t *p = players.players[i];
         if (p) {
@@ -1000,7 +1093,11 @@ void w_players_gpu_sync_and_render(
                 p->render->render_data.pbr_info.y = 0.1f;
 
                 if ((int32_t)i == (int32_t)players.local_player) {
-                    if (p->flags.interaction_mode == PIM_STANDING) {
+                    if (p->switching_shapes) {
+                        // Render transition
+                        s_render_transition(render_command_buffer, transfer_command_buffer, p);
+                    }
+                    else if (p->flags.interaction_mode == PIM_STANDING) {
                         s_render_person(render_command_buffer, transfer_command_buffer, p);
                     }
                     else {
@@ -1009,7 +1106,11 @@ void w_players_gpu_sync_and_render(
                     // TODO: Special handling for first person mode
                 }
                 else {
-                    if (p->flags.interaction_mode == PIM_STANDING) {
+                    if (p->switching_shapes) {
+                        // Render transition
+                        s_render_transition(render_command_buffer, transfer_command_buffer, p);
+                    }
+                    else if (p->flags.interaction_mode == PIM_STANDING) {
                         s_render_person(render_command_buffer, transfer_command_buffer, p);
                     }
                     else {

@@ -151,6 +151,8 @@ enum player_animated_state_t {
     PAS_RUNNING
 };
 
+#define SHAPE_SWITCH_ANIMATION_TIME 0.3f
+
 // TODO: Make sure to only allocate camera stuff for local player
 struct player_t {
     player_flags_t flags;
@@ -211,6 +213,10 @@ struct player_t {
     // For AI
     bool ai;
     uint32_t ai_id;
+
+    // Switch shapes animation
+    bool switching_shapes;
+    float shape_animation_time;
 };
 
 // Rewrite this crap
