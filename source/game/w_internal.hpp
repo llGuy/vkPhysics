@@ -46,6 +46,10 @@ void w_players_gpu_sync_and_render(
 void w_tick_players(
     event_submissions_t *events);
 
+void w_execute_player_actions(
+    player_t *player,
+    event_submissions_t *events);
+
 int32_t w_local_player_index();
 player_t *w_get_local_player();
 player_t *w_get_spectator();
@@ -114,6 +118,9 @@ vector3_t w_convert_chunk_to_world(
 // Converts from "world" coordinates to the voxel 16x16x16 coordinate of the voxel that the coordinate is in
 ivector3_t w_convert_voxel_to_local_chunk(
     const ivector3_t &vs_position);
+
+#define TERRAFORMING_RADIUS 3.0f
+#define TERRAFORMING_SPEED 200.0f
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
