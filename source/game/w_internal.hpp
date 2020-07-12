@@ -8,7 +8,16 @@
 #include <renderer/renderer.hpp>
 
 // PLAYER STUFF ///////////////////////////////////////////////////////////////
-void w_players_data_init();
+#define MAX_PLAYERS 50
+
+struct players_t {
+    int32_t local_player;
+    player_t *spectator;
+    stack_container_t<player_t *> players;
+    // From client id, get player
+    int16_t local_id_from_client_id[MAX_PLAYERS];
+};
+
 void w_player_world_init();
 
 // Just adds a player to the list of players
@@ -37,11 +46,11 @@ void w_players_gpu_sync_and_render(
 void w_tick_players(
     event_submissions_t *events);
 
+int32_t w_local_player_index();
 player_t *w_get_local_player();
-
 player_t *w_get_spectator();
-
 vector3_t w_get_player_scale();
+stack_container_t<player_t *> &w_get_players();
 
 void w_set_local_player(
     int32_t local_id);
@@ -125,11 +134,22 @@ void w_toggle_mesh_update_wait(
 
 uint8_t w_get_surface_level();
 
+stack_container_t<chunk_t *> &w_get_chunks();
+
 // Returns vertex count
 uint32_t w_create_chunk_vertices(
     uint8_t surface_level,
-    vector3_t *mesh_vertices,
-    chunk_t *c);
+    chunk_t *c,
+    vector3_t *mesh_vertices = NULL);
+
+void w_update_chunk_mesh(
+    VkCommandBuffer command_buffer,
+    uint8_t surface_level,
+    chunk_t *c,
+    vector3_t *mesh_vertices = NULL);
+
+void w_allocate_temp_vertices_for_chunk_mesh_creation();
+void w_free_temp_vertices_for_chunk_mesh_creation();
 
 // COLLISION WITH TERRAIN /////////////////////////////////////////////////////
 enum collision_primitive_type_t { CPT_FACE, CPT_EDGE, CPT_VERTEX };
@@ -211,7 +231,6 @@ vector3_t w_update_spectator_view_direction(
     const vector3_t &spectator_view_direction);
 
 #define MAX_LOADED_CHUNKS 1000
-#define MAX_PLAYERS 50
 #define MAX_VOXEL_VALUE_F 254.0f
 #define MAX_VERTICES_PER_CHUNK 5 * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1) * (CHUNK_EDGE_LENGTH - 1)
 
@@ -226,3 +245,60 @@ void w_reposition_spectator();
 void w_handle_spectator_mouse_movement();
 
 terraform_package_t *w_get_local_current_terraform_package();
+
+struct context_t {
+    struct {
+        uint8_t in_server: 1;
+        uint8_t in_training: 1;
+        // Are you in a menu where you aren't occupying a player
+        uint8_t in_meta_menu: 1;
+        uint8_t in_gameplay: 1;
+    };
+
+    ai_training_session_t training_type;
+
+    listener_t world_listener;
+};
+
+void w_subscribe_to_events(
+    context_t *context,
+    listener_t listener,
+    event_submissions_t *events);
+
+void w_world_event_listener(
+    void *object,
+    event_t *event,
+    event_submissions_t *events);
+
+struct chunk_color_data_t {
+    vector4_t pointer_position;
+    vector4_t pointer_color;
+    float pointer_radius;
+};
+
+struct scene_rendering_t {
+    mesh_t player_mesh;
+    mesh_t player_ball_mesh;
+    mesh_t merged_mesh;
+
+    skeleton_t player_skeleton;
+    animation_cycles_t player_cycles;
+
+    shader_t player_shadow_shader;
+    shader_t player_shader;
+    shader_t player_ball_shader;
+    shader_t player_ball_shadow_shader;
+    shader_t merged_shader_ball; // Go from ball to person
+    shader_t merged_shader_player; // Go from person to ball
+    shader_t chunk_shader;
+
+    gpu_buffer_t chunk_color_data_buffer;
+    VkDescriptorSet chunk_color_data_buffer_set;
+
+    chunk_color_data_t chunk_color_data;
+};
+
+void w_create_shaders_and_meshes();
+
+void w_player_animated_instance_init(
+    animated_instance_t *instance);
