@@ -1604,7 +1604,7 @@ static void s_receive_packet_connection_request(
     event_data->info.ws_position = vector3_t(0.0f);
     event_data->info.ws_view_direction = vector3_t(1.0f, 0.0f, 0.0f);
     event_data->info.ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
-    event_data->info.default_speed = 10.0f;
+    event_data->info.default_speed = PLAYER_WALKING_SPEED;
 
     event_data->info.flags = 0;
     // Player starts of as dead

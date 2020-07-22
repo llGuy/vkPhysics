@@ -7,6 +7,8 @@
 #include <renderer/renderer.hpp>
 #include <common/containers.hpp>
 
+#define PLAYER_WALKING_SPEED 20.0f
+
 void world_init(
     event_submissions_t *events);
 

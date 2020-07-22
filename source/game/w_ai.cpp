@@ -30,7 +30,7 @@ static bool s_reset_arena(
         info.ws_position = vector3_t(0.0f, 1.0f, 0.0f);
         info.ws_view_direction = vector3_t(0.0f, 0.0f, -1.0f);
         info.ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
-        info.default_speed = 10.0f;
+        info.default_speed = 15.0f;
 
         player_flags_t flags = {};
         flags.u32 = 0;
