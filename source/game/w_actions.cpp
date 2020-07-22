@@ -201,6 +201,10 @@ static terrain_collision_t s_resolve_player_movement(
 
     vector3_t ws_new_position = w_collide_and_slide(&collision) * w_get_player_scale();
 
+    if (player->flags.contact != PCS_IN_AIR) {
+        player->frame_displacement = glm::length(ws_new_position - player->ws_position);
+    }
+
     player->ws_position = ws_new_position;
 
     if (collision.detected) {

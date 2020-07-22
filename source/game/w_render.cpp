@@ -165,7 +165,19 @@ static void s_render_person(
 static void s_render_ball(
     VkCommandBuffer render_command_buffer,
     player_t *p) {
-    p->render->render_data.model = glm::translate(p->ws_position) * glm::scale(w_get_player_scale());
+    p->rotation_speed = p->frame_displacement / calculate_sphere_circumference(w_get_player_scale().x) * 360.0f;
+    p->rotation_angle += p->rotation_speed;
+
+    if (p->rotation_angle > 360.0f) {
+        p->rotation_angle -= 360.0f;
+    }
+
+    vector3_t cross = glm::cross(glm::normalize(p->ws_velocity), p->ws_up_vector);
+    vector3_t right = glm::normalize(cross);
+
+    matrix4_t rolling_rotation = glm::rotate(glm::radians(p->rotation_angle), -right);
+
+    p->render->render_data.model = glm::translate(p->ws_position) * rolling_rotation * glm::scale(w_get_player_scale());
 
     begin_mesh_submission(render_command_buffer, &scene_rendering.player_ball_shader);
     submit_mesh(

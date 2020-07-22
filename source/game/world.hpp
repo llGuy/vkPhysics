@@ -222,6 +222,10 @@ struct player_t {
     // Switch shapes animation
     bool switching_shapes;
     float shape_animation_time;
+
+    float frame_displacement;
+    float rotation_speed;
+    float rotation_angle;
 };
 
 // Rewrite this crap

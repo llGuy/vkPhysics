@@ -155,3 +155,8 @@ inline movement_axes_t compute_movement_axes(
     movement_axes_t axes = {right, up, forward};
     return axes;
 }
+
+inline float calculate_sphere_circumference(
+    float radius) {
+    return(2.0f * 3.1415f * radius);
+}

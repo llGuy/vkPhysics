@@ -263,6 +263,9 @@ player_t *w_add_player_from_info(
     p->next_random_spawn_position = init_info->next_random_spawn_position;
     p->ball_speed = 0.0f;
     p->ws_velocity = vector3_t(0.0f);
+    p->frame_displacement = 0.0f;
+    p->rotation_speed = 0.0f;
+    p->rotation_angle = 0.0f;
     memset(p->player_actions, 0, sizeof(p->player_actions));
 
     p->accumulated_dt = 0.0f;
