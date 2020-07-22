@@ -269,10 +269,12 @@ void poll_input_events(event_submissions_t *submissions) {
 
     const float MAX_FRAME_TIME = 1.0f / 60.0f;
 
+#if 0
     if (sdelta_time < MAX_FRAME_TIME) {
         sleep_seconds(MAX_FRAME_TIME - sdelta_time);
         sdelta_time = MAX_FRAME_TIME;
     }
+#endif
 
 #if 0
     if (sdelta_time > 1.0f / 100.0f) {
