@@ -44,7 +44,7 @@ void w_player_world_init() {
 
     players.spectator = FL_MALLOC(player_t, 1);
     memset(players.spectator, 0, sizeof(player_t));
-    players.spectator->default_speed = 20.0f;
+    players.spectator->default_speed = 40.0f;
     players.spectator->ws_position = vector3_t(3.7f, -136.0f, -184.0f);
     players.spectator->ws_view_direction = vector3_t(0.063291, 0.438437, 0.896531);
     players.spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
@@ -306,7 +306,7 @@ player_t *w_add_player_from_info(
         w_player_animated_instance_init(&p->animations);
     }
 
-    LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
+    // LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
     return p;
 }
 

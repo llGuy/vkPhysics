@@ -148,7 +148,12 @@ static void s_render_person(
 
     matrix4_t rot_matrix = glm::rotate(-rotation_angle, vector3_t(0.0f, 1.0f, 0.0f));
 
-    p->render->render_data.model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(w_get_player_scale());
+    p->render->render_data.model = glm::translate(p->ws_position) *
+        normal_rotation_matrix *
+        scene_rendering.player_cycles.rotation *
+        glm::scale(w_get_player_scale()) *
+        scene_rendering.player_cycles.scale;
+
     submit_skeletal_mesh(
         render_command_buffer,
         &scene_rendering.player_mesh,
@@ -210,7 +215,12 @@ static void s_render_transition(
     float rotation_angle = atan2(dir_z, dir_x);
 
     matrix4_t rot_matrix = glm::rotate(-rotation_angle, vector3_t(0.0f, 1.0f, 0.0f));
-    render_data.first_model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(w_get_player_scale());
+    // render_data.first_model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(w_get_player_scale());
+    render_data.first_model = glm::translate(p->ws_position) *
+        normal_rotation_matrix *
+        scene_rendering.player_cycles.rotation *
+        glm::scale(w_get_player_scale()) *
+        scene_rendering.player_cycles.scale;
     render_data.second_model = glm::translate(p->ws_position) * glm::scale(w_get_player_scale());
 
     render_data.color = vector4_t(1.0f);

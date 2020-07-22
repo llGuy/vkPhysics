@@ -27,6 +27,7 @@ void w_subscribe_to_events(
     subscribe_to_event(ET_BEGIN_AI_TRAINING, world_listener, events);
     subscribe_to_event(ET_RESET_AI_ARENA, world_listener, events);
     subscribe_to_event(ET_LAUNCH_GAME_MENU_SCREEN, world_listener, events);
+    subscribe_to_event(ET_FINISH_GENERATION, world_listener, events);
 }
 
 static void s_handle_event_enter_server(
@@ -145,26 +146,15 @@ static void s_handle_event_begin_ai_training(
 
     context_ptr->in_meta_menu = 0;
 
-    context_ptr->training_type = data->session_type;
-    begin_ai_training_population(150);
+    w_begin_ai_training(data->session_type);
+}
 
-    w_clear_players();
-    w_clear_chunk_world();
-
-    w_begin_ai_training_players(data->session_type);
-    w_begin_ai_training_chunks(data->session_type);
+static void s_handle_event_finish_generation() {
+    w_finish_generation();
 }
 
 static void s_handle_event_reset_ai_arena() {
-    switch (context_ptr->training_type) {
-    case ATS_WALKING: {
-        w_begin_ai_training_chunks(ATS_WALKING);
-    } break;
-
-    case ATS_ROLLING: {
-            
-    } break;
-    }
+    // w_begin_ai_training_chunks(context_ptr->training_type);
 }
 
 static void s_handle_event_launch_game_menu_screen() {
@@ -225,8 +215,12 @@ void w_world_event_listener(
         s_handle_event_begin_ai_training(event);
     } break;
 
+    case ET_FINISH_GENERATION: {
+        s_handle_event_finish_generation();
+    } break;
+
     case ET_RESET_AI_ARENA: {
-        s_handle_event_reset_ai_arena();
+        // s_handle_event_reset_ai_arena();
     } break;
 
     case ET_LAUNCH_GAME_MENU_SCREEN: {

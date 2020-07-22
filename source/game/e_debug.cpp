@@ -183,5 +183,11 @@ void e_debug_window() {
 
         submit_event(ET_BEGIN_FADE, effect_data, &engine_ptr->events);
     }
+
+    bool finish_generation = ImGui::Button("Finish generation");
+
+    if (finish_generation) {
+        submit_event(ET_FINISH_GENERATION, NULL, &engine_ptr->events);
+    }
 }
 #endif

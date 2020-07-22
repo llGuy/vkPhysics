@@ -1,6 +1,7 @@
 // Input core
 
 #include <stdio.h>
+#include "common/time.hpp"
 #include "input.hpp"
 #include <common/log.hpp>
 #include <common/tools.hpp>
@@ -265,6 +266,13 @@ void poll_input_events(event_submissions_t *submissions) {
     glfwPollEvents();
 
     sdelta_time = get_current_time() - current_time;
+
+    const float MAX_FRAME_TIME = 1.0f / 60.0f;
+
+    if (sdelta_time < MAX_FRAME_TIME) {
+        sleep_seconds(MAX_FRAME_TIME - sdelta_time);
+        sdelta_time = MAX_FRAME_TIME;
+    }
 
 #if 0
     if (sdelta_time > 1.0f / 100.0f) {

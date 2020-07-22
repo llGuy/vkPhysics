@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdlib>
+#include <string.h>
 #include "allocators.hpp"
 
 // Allocates a string on free list allocator
@@ -48,3 +50,8 @@ inline uint32_t str_to_int(const char *str, uint32_t length) {
     }
     return ret;
 }    
+
+inline float str_to_float(const char *str, uint32_t length) {
+    char *end = const_cast<char *>(str + length);
+    return strtof(str, &end);
+}

@@ -115,7 +115,9 @@ static VKAPI_ATTR VkBool32 VKAPI_PTR s_debug_messenger_callback(
     VkDebugUtilsMessageTypeFlagsEXT,
     const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
     void *) {
+#if 0
     LOG_ERRORV("Validation layer: %s\n\n", callback_data->pMessage);
+#endif
     return 0;
 }
 #endif

@@ -440,6 +440,10 @@ struct animation_cycle_t {
 struct animation_cycles_t {
     uint32_t cycle_count;
     animation_cycle_t *cycles;
+
+    // This also holds some information on how to render this thing
+    matrix4_t scale;
+    matrix4_t rotation;
 };
 
 DECLARE_VOID_RENDERER_PROC(void, load_animation_cycles,

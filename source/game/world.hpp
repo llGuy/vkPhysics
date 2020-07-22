@@ -2,6 +2,7 @@
 
 #include "game/engine.hpp"
 #include <common/math.hpp>
+#include <common/time.hpp>
 #include <common/event.hpp>
 #include <renderer/renderer.hpp>
 #include <common/containers.hpp>
@@ -211,8 +212,12 @@ struct player_t {
     float death_checker;
 
     // For AI
-    bool ai;
+    struct {
+        uint8_t ai: 1;
+        uint8_t calculated_score: 1;
+    };
     uint32_t ai_id;
+    float ai_start_time;
 
     // Switch shapes animation
     bool switching_shapes;

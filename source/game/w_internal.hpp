@@ -256,13 +256,10 @@ terraform_package_t *w_get_local_current_terraform_package();
 struct context_t {
     struct {
         uint8_t in_server: 1;
-        uint8_t in_training: 1;
         // Are you in a menu where you aren't occupying a player
         uint8_t in_meta_menu: 1;
         uint8_t in_gameplay: 1;
     };
-
-    ai_training_session_t training_type;
 
     listener_t world_listener;
 };
@@ -309,3 +306,24 @@ void w_create_shaders_and_meshes();
 
 void w_player_animated_instance_init(
     animated_instance_t *instance);
+
+// SOME AI STUFF //////////////////////////////////////////////////////////////
+struct world_ai_t {
+    struct {
+        uint8_t in_training: 1;
+        uint8_t first_iteration: 1;
+    };
+    ai_training_session_t training_type;
+
+    uint32_t iteration_count;
+    uint32_t ai_iteration_stride;
+
+    uint32_t population_count;
+};
+
+void w_begin_ai_training(
+    ai_training_session_t session_type);
+
+void w_finish_generation();
+
+bool w_check_ai_population(float dt);

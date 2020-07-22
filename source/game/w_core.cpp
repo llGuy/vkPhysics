@@ -64,6 +64,8 @@ void tick_world(
     w_tick_chunks(logic_delta_time());
     w_tick_players(events);
 
+    w_check_ai_population(logic_delta_time());
+
 #if 1
     // AI training stuff
 #endif

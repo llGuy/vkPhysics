@@ -364,8 +364,10 @@ static void s_check_player_dead(
 
                 player->flags.alive_state = PAS_DEAD;
 
-                submit_event(ET_LAUNCH_GAME_MENU_SCREEN, NULL, events);
-                submit_event(ET_ENTER_SERVER_META_MENU, NULL, events);
+                if (player->flags.is_local) {
+                    submit_event(ET_LAUNCH_GAME_MENU_SCREEN, NULL, events);
+                    submit_event(ET_ENTER_SERVER_META_MENU, NULL, events);
+                }
             }
         }
     }

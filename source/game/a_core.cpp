@@ -56,13 +56,30 @@ void assign_ai_score(
 uint32_t attach_ai(
     uint32_t player_id,
     uint32_t ai_id) {
-    uint32_t ai_index = attached_ai_count++;
-    ai_t *ai = &attached_ais[ai_index];
+    ai_t *ai = &attached_ais[ai_id];
     ai->player_id = player_id;
     ai->ai_id = ai_id;
     ai->spawn_time = current_time();
 
+    return ai_id;
+}
+
+uint32_t attach_ai(
+    uint32_t player_id) {
+    uint32_t ai_index = attached_ai_count++;
+    ai_t *ai = &attached_ais[ai_index];
+    ai->player_id = player_id;
+    ai->ai_id = ai_index;
+    ai->spawn_time = current_time();
+
     return ai_index;
+}
+
+void iterate_ai(
+    uint32_t ai_id,
+    uint32_t iteration_count) {
+    ai_t *ai = &attached_ais[ai_id];
+    ai->ai_id = iteration_count;
 }
 
 uint32_t train_next_ai(

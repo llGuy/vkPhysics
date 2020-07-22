@@ -1100,7 +1100,9 @@ bool add_entity(
 
     // Representative is just the first one
     if (do_check) {
-        if (a_genome_distance(&entity->genome, &species->entities[0]->genome) < 5.0f) {
+        if (a_genome_distance(&entity->genome, &species->entities[0]->genome) < 15.0f) {
+            printf(".");
+
             species->entities[species->entity_count++] = entity;
             entity->species = species;
             return true;

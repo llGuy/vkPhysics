@@ -37,6 +37,13 @@ uint32_t attach_ai(
     uint32_t player_id,
     uint32_t ai_id);
 
+uint32_t attach_ai(
+    uint32_t player_id);
+
+void iterate_ai(
+    uint32_t ai_id,
+    uint32_t iteration_count);
+
 #define INVALID_AI_ID 0xFFFFFFFF
 
 // If 0xFFFF is returned, we need to evolve

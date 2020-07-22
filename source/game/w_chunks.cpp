@@ -192,8 +192,6 @@ void w_clear_chunk_world() {
 
         chunks.chunks.clear();
         chunks.chunk_indices.clear();
-
-        LOG_INFO("Destroyed chunk world\n");
     }
 }
 

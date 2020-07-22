@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include "common/log.hpp"
 #include "renderer.hpp"
 #include "r_internal.hpp"
 #include <vulkan/vulkan.h>
@@ -877,29 +878,54 @@ static uint32_t s_skip_whitespaces(
     assert(0);
 }
 
-static uint32_t s_fill_animation_linker(
+struct animation_link_data_t {
+    uint32_t animation_count;
+    float scale;
+    vector3_t rotation;
+};
+
+static animation_link_data_t s_fill_animation_linker(
     const char *linker_path) {
-    uint32_t animation_count = 0;
+    animation_link_data_t data = {};
+
+    data.scale = 1.0f;
+    data.rotation = vector3_t(0.0f);
 
     animation_name_linker.clear();
     animation_name_linker.init();
 
     uint32_t keyword_ids[] = {
-        100
+        100,
+        101,
+        102,
+        103,
+        104,
+        105
     };
 
     const char *keywords[] = {
-        "link"
+        "link",
+        "scale",
+        "rotate",
+        "x",
+        "y",
+        "z"
     };
 
     enum {
-        KEYWORD_LINK
+        KEYWORD_LINK,
+        KEYWORD_SCALE,
+        KEYWORD_ROTATE,
+        X_COMPONENT,
+        Y_COMPONENT,
+        Z_COMPONENT,
+        INVALID_KEYWORD
     };
 
     tokeniser_init(
         keyword_ids,
         keywords,
-        1);
+        INVALID_KEYWORD);
 
     file_handle_t file_handle = create_file(linker_path, FLF_NONE);
     file_contents_t contents = read_file(file_handle);
@@ -912,9 +938,15 @@ static uint32_t s_fill_animation_linker(
         '#',
         &token_count);
 
-    struct {
-        uint32_t in_comment: 1;
-        uint32_t link: 1;
+    union {
+        struct {
+            uint32_t in_comment: 1;
+            uint32_t link: 1;
+            uint32_t scale: 1;
+            uint32_t rotate: 1;
+        };
+
+        uint32_t bits;
     } flags;
 
     for (uint32_t i = 0; i < token_count; ++i) {
@@ -928,6 +960,7 @@ static uint32_t s_fill_animation_linker(
             }
             else {
                 if (tokens[i].type == keyword_ids[KEYWORD_LINK]) {
+                    flags.bits = 0;
                     flags.link = 1;
 
                     ++i;
@@ -958,20 +991,66 @@ static uint32_t s_fill_animation_linker(
 
                     animation_name_linker.insert(simple_string_hash(name, name_length), animation_id);
 
-                    ++animation_count;
+                    ++data.animation_count;
+                }
+                else if (tokens[i].type == keyword_ids[KEYWORD_SCALE]) {
+                    flags.bits = 0;
+                    flags.scale = 1;
+
+                    ++i;
+
+                    i = s_skip_whitespaces(i, tokens);
+
+                    token_t *scale_value_s = &tokens[i];
+
+                    data.scale = str_to_float(tokens[i].at, tokens[i].length);
+
+                    ++i;
+
+                    i = s_skip_whitespaces(i, tokens);
+                }
+                else if (tokens[i].type == keyword_ids[KEYWORD_ROTATE]) {
+                    flags.bits = 0;
+                    flags.rotate = 1;
+
+                    ++i;
+
+                    i = s_skip_whitespaces(i, tokens);
+
+                    token_t *component = &tokens[i];
+
+                    // Get value
+                    ++i;
+                    i = s_skip_whitespaces(i, tokens);
+
+                    token_t *rotation_value_tk = &tokens[i];
+                    float rotation_value = str_to_float(rotation_value_tk->at, rotation_value_tk->length);
+
+                    if (component->type == keyword_ids[X_COMPONENT]) {
+                        data.rotation.x = rotation_value;
+                    }
+                    else if (component->type == keyword_ids[Y_COMPONENT]) {
+                        data.rotation.y = rotation_value;
+                    }
+                    else if (component->type == keyword_ids[Z_COMPONENT]) {
+                        data.rotation.z = rotation_value;
+                    }
+
+                    ++i;
+                    i = s_skip_whitespaces(i, tokens);
                 }
             }
         }
     }
 
-    return animation_count;
+    return data;
 }
 
 void load_animation_cycles(
     animation_cycles_t *cycles,
     const char *linker_path,
     const char *path) {
-    uint32_t linked_animations = s_fill_animation_linker(linker_path);
+    animation_link_data_t linked_animations = s_fill_animation_linker(linker_path);
 
     file_handle_t file_handle = create_file(path, FLF_BINARY);
     file_contents_t contents = read_file(file_handle);
@@ -982,7 +1061,7 @@ void load_animation_cycles(
     serialiser.data_buffer_size = contents.size;
 
     cycles->cycle_count = serialiser.deserialise_uint32();
-    cycles->cycle_count = MAX(linked_animations, cycles->cycle_count);
+    cycles->cycle_count = MAX(linked_animations.animation_count, cycles->cycle_count);
     cycles->cycles = FL_MALLOC(animation_cycle_t, cycles->cycle_count);
 
     for (uint32_t i = 0; i < cycles->cycle_count; ++i) {
@@ -1060,6 +1139,23 @@ void load_animation_cycles(
             }
         }
     }
+
+    // Create rotation and scale matrices
+    matrix4_t rotation_matrix = matrix4_t(1.0f);
+    if (linked_animations.rotation.x != 0.0f) {
+        rotation_matrix  = rotation_matrix * glm::rotate(glm::radians(linked_animations.rotation.x), vector3_t(1.0f, 0.0f, 0.0f));
+    }
+    if (linked_animations.rotation.y != 0.0f) {
+        rotation_matrix  = rotation_matrix * glm::rotate(glm::radians(linked_animations.rotation.y), vector3_t(0.0f, 1.0f, 0.0f));
+    }
+    if (linked_animations.rotation.z != 0.0f) {
+        rotation_matrix  = rotation_matrix * glm::rotate(glm::radians(linked_animations.rotation.z), vector3_t(0.0f, 1.0f, 0.0f));
+    }
+
+    matrix4_t scale_matrix = glm::scale(vector3_t(linked_animations.scale));
+
+    cycles->scale = scale_matrix;
+    cycles->rotation = rotation_matrix;
 }
 
 void animated_instance_init(

@@ -36,6 +36,8 @@ static void s_tick(
     tick_net(
         &engine.events);
 
+    tick_ai();
+
     tick_world(
         &engine.events);
 }
@@ -62,6 +64,7 @@ static void s_run_windowed_game() {
         e_finish_frame(
             &engine);
 
+        // Just for testing
         engine.ldelta_time = surface_delta_time();
     }
 }

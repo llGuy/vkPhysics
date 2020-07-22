@@ -11,5 +11,11 @@ link 2 "Armature|Running"
 link 3 "Armature|Jumping_Up"
 link 4 "Armature|Jumping_Down"
 
+# This will affect scale at the shader level
+scale 0.5
+
+# This will affect the rotation at the shader level as well
+rotate y 180
+
 # Also defines how bones interact
 # May also link bones to specific IDs
