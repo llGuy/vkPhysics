@@ -1316,13 +1316,17 @@ static void s_calculate_final_offset(
 
 void interpolate_joints(
     animated_instance_t *instance,
-    float dt) {
+    float dt,
+    bool repeat) {
     if (instance->is_interpolating_between_cycles) {
         animation_cycle_t *next_cycle = &instance->cycles->cycles[instance->next_bound_cycle];
 
         if (dt + instance->current_animation_time > instance->in_between_interpolation_time) {
             instance->is_interpolating_between_cycles = 0;
-            instance->current_animation_time = 0.0f;
+
+            if (repeat) {
+                instance->current_animation_time = 0.0f;
+            }
         }
         else {
             float current_time = fmod(instance->current_animation_time + dt, instance->in_between_interpolation_time);
@@ -1347,10 +1351,15 @@ void interpolate_joints(
         animation_cycle_t *bound_cycle = &instance->cycles->cycles[instance->next_bound_cycle];
 
         if (dt + instance->current_animation_time > bound_cycle->duration) {
-            for (uint32_t i = 0; i < instance->skeleton->joint_count; ++i) {
-                instance->current_position_indices[i] = 0;
-                instance->current_rotation_indices[i] = 0;
-                instance->current_scale_indices[i] = 0;
+            if (repeat) {
+                for (uint32_t i = 0; i < instance->skeleton->joint_count; ++i) {
+                    instance->current_position_indices[i] = 0;
+                    instance->current_rotation_indices[i] = 0;
+                    instance->current_scale_indices[i] = 0;
+                }
+            }
+            else {
+                dt = 0.0f;
             }
         }
 

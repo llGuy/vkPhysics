@@ -307,6 +307,9 @@ void w_create_shaders_and_meshes();
 void w_player_animated_instance_init(
     animated_instance_t *instance);
 
+bool w_animation_is_repeat(
+    player_animated_state_t state);
+
 // SOME AI STUFF //////////////////////////////////////////////////////////////
 struct world_ai_t {
     struct {

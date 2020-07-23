@@ -7,7 +7,7 @@
 #include <renderer/renderer.hpp>
 #include <common/containers.hpp>
 
-#define PLAYER_WALKING_SPEED 20.0f
+#define PLAYER_WALKING_SPEED 25.0f
 
 void world_init(
     event_submissions_t *events);
@@ -151,7 +151,9 @@ struct terraform_package_t {
 enum player_animated_state_t {
     PAS_IDLE,
     PAS_WALKING,
-    PAS_RUNNING
+    PAS_RUNNING,
+    PAS_JUMPING_UP,
+    PAS_JUMPING_DOWN
 };
 
 #define SHAPE_SWITCH_ANIMATION_TIME 0.3f
@@ -208,7 +210,10 @@ struct player_t {
 
     terraform_package_t terraform_package;
 
-    player_animated_state_t animated_state;
+    struct {
+        uint8_t animated_state: 7;
+        uint8_t repeat: 1;
+    };
 
     // Basically a timer (death checking for falling down forever)
     float death_checker;
@@ -228,6 +233,10 @@ struct player_t {
     float frame_displacement;
     float rotation_speed;
     float rotation_angle;
+
+    matrix4_t rolling_matrix;
+
+    vector3_t jump_vector;
 };
 
 // Rewrite this crap

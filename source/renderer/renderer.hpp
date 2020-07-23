@@ -481,7 +481,8 @@ DECLARE_VOID_RENDERER_PROC(void, animated_instance_init,
 
 DECLARE_VOID_RENDERER_PROC(void, interpolate_joints,
     animated_instance_t *instance,
-    float dt);
+    float dt,
+    bool repeat);
 
 DECLARE_VOID_RENDERER_PROC(void, switch_to_cycle,
     animated_instance_t *instance,

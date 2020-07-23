@@ -121,6 +121,13 @@ void w_player_animated_instance_init(
     animated_instance_init(instance, &scene_rendering.player_skeleton, &scene_rendering.player_cycles);
 }
 
+bool w_animation_is_repeat(
+    player_animated_state_t state) {
+    static const bool map[] = {1, 1, 1, 0, 0};
+    
+    return map[(uint32_t)state];
+}
+
 static void s_render_person(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,
@@ -132,7 +139,7 @@ static void s_render_person(
             0);
     }
 
-    interpolate_joints(&p->animations, logic_delta_time());
+    interpolate_joints(&p->animations, logic_delta_time(), w_animation_is_repeat((player_animated_state_t)p->animated_state));
     sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
 
     // This has to be a bit different
@@ -172,12 +179,16 @@ static void s_render_ball(
         p->rotation_angle -= 360.0f;
     }
 
-    vector3_t cross = glm::cross(glm::normalize(p->ws_velocity), p->ws_up_vector);
-    vector3_t right = glm::normalize(cross);
+    if (glm::dot(p->ws_velocity, p->ws_velocity) > 0.0001f) {
+        vector3_t cross = glm::cross(glm::normalize(p->ws_velocity), p->ws_up_vector);
+        vector3_t right = glm::normalize(cross);
 
-    matrix4_t rolling_rotation = glm::rotate(glm::radians(p->rotation_angle), -right);
+        matrix4_t rolling_rotation = glm::rotate(glm::radians(p->rotation_angle), -right);
 
-    p->render->render_data.model = glm::translate(p->ws_position) * rolling_rotation * glm::scale(w_get_player_scale());
+        p->rolling_matrix = rolling_rotation;
+    }
+
+    p->render->render_data.model = glm::translate(p->ws_position) * p->rolling_matrix * glm::scale(w_get_player_scale());
 
     begin_mesh_submission(render_command_buffer, &scene_rendering.player_ball_shader);
     submit_mesh(
@@ -212,7 +223,7 @@ static void s_render_transition(
             0);
     }
 
-    interpolate_joints(&p->animations, logic_delta_time());
+    interpolate_joints(&p->animations, logic_delta_time(), w_animation_is_repeat((player_animated_state_t)p->animated_state));
     sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
 
     // This has to be a bit different
@@ -233,7 +244,24 @@ static void s_render_transition(
         scene_rendering.player_cycles.rotation *
         glm::scale(w_get_player_scale()) *
         scene_rendering.player_cycles.scale;
-    render_data.second_model = glm::translate(p->ws_position) * glm::scale(w_get_player_scale());
+
+    p->rotation_speed = p->frame_displacement / calculate_sphere_circumference(w_get_player_scale().x) * 360.0f;
+    p->rotation_angle += p->rotation_speed;
+
+    if (p->rotation_angle > 360.0f) {
+        p->rotation_angle -= 360.0f;
+    }
+
+    if (glm::dot(p->ws_velocity, p->ws_velocity) > 0.0001f) {
+        vector3_t cross = glm::cross(glm::normalize(p->ws_velocity), p->ws_up_vector);
+        vector3_t right = glm::normalize(cross);
+
+        matrix4_t rolling_rotation = glm::rotate(glm::radians(p->rotation_angle), -right);
+
+        p->rolling_matrix = rolling_rotation;
+    }
+
+    render_data.second_model = glm::translate(p->ws_position) * p->rolling_matrix * glm::scale(w_get_player_scale());
 
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.1f;
