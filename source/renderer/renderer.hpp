@@ -479,6 +479,27 @@ DECLARE_VOID_RENDERER_PROC(void, animated_instance_init,
     skeleton_t *skeleton,
     animation_cycles_t *cycles);
 
+// TODO: Create new animation system with this instead of the is_interpolating_between_cycles thing
+struct joint_interpolation_t {
+    struct {
+        // If is_current is set, then this animation refers to the currently bound cycle
+        // If not, we need to choose the one at the specified index
+        uint8_t is_current: 1;
+        uint8_t index: 7;
+    };
+
+    float priority;
+};
+
+struct mixed_joint_interpolation_recipe_t {
+    uint32_t mixing_count;
+    joint_interpolation_t *mixing_list;
+};
+
+DECLARE_VOID_RENDERER_PROC(void, interpolate_joints_mixed,
+    animated_instance_t *instance,
+    float dt);
+
 DECLARE_VOID_RENDERER_PROC(void, interpolate_joints,
     animated_instance_t *instance,
     float dt,

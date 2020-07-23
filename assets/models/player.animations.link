@@ -10,6 +10,11 @@ link 1 "Armature|Walking"
 link 2 "Armature|Running"
 link 3 "Armature|Jumping_Up"
 link 4 "Armature|Jumping_Down"
+link 5 "Armature|Leftwalking"
+link 6 "Armature|Rightwalking"
+link 7 "Armature|Stop_Fast"
+link 8 "Armature|Backwalking"
+link 9 "Armature|Tripping"
 
 # This will affect scale at the shader level
 scale 0.5

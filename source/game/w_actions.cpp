@@ -1,3 +1,4 @@
+#include "game/world.hpp"
 #include "net.hpp"
 #include "w_internal.hpp"
 #include <glm/gtx/projection.hpp>
@@ -249,8 +250,20 @@ static void s_execute_standing_player_movement(
     player_t *player,
     player_actions_t *actions) {
     if (player->flags.contact == PCS_ON_GROUND) {
-        if (actions->move_forward) {
+        if (player->animated_state == PAS_TRIPPING && player->frame_displacement / actions->dt > 0.5f) {
+            // Need to slow down
+        }
+        else if (actions->move_forward) {
             player->animated_state = PAS_RUNNING;
+        }
+        else if (actions->move_back) {
+            player->animated_state = PAS_BACKWALKING;
+        }
+        else if (actions->move_left) {
+            player->animated_state = PAS_LEFT_WALKING;
+        }
+        else if (actions->move_right) {
+            player->animated_state = PAS_RIGHT_WALKING;
         }
         else {
             player->animated_state = PAS_IDLE;
@@ -413,6 +426,13 @@ static void s_handle_shape_switch(
         else if (player->flags.interaction_mode == PIM_BALL) {
             player->flags.interaction_mode = PIM_STANDING;
             player->switching_shapes = 1;
+
+            // Need to set animation to the "STOP" animation if the velocity exceeds a certain value
+            if (player->frame_displacement / actions->dt > 8.0f) {
+                LOG_INFOV("Frame displacement at: %f\n", player->frame_displacement / actions->dt);
+
+                player->animated_state = PAS_TRIPPING;
+            }
         }
     }
 

@@ -123,7 +123,7 @@ void w_player_animated_instance_init(
 
 bool w_animation_is_repeat(
     player_animated_state_t state) {
-    static const bool map[] = {1, 1, 1, 0, 0};
+    static const bool map[] = {1, 1, 1, 0, 0, 1, 1, 0, 1, 1};
     
     return map[(uint32_t)state];
 }
