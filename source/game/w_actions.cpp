@@ -250,8 +250,13 @@ static void s_execute_standing_player_movement(
     player_t *player,
     player_actions_t *actions) {
     if (player->flags.contact == PCS_ON_GROUND) {
-        if (player->animated_state == PAS_TRIPPING && player->frame_displacement / actions->dt > 0.5f) {
+        if (player->animated_state == PAS_STOP_FAST && player->frame_displacement / actions->dt > 0.002f) {
             // Need to slow down
+            actions->move_back = 0;
+            actions->move_forward = 0;
+            actions->move_left = 0;
+            actions->move_right = 0;
+            actions->jump = 0;
         }
         else if (actions->move_forward) {
             player->animated_state = PAS_RUNNING;
@@ -428,10 +433,8 @@ static void s_handle_shape_switch(
             player->switching_shapes = 1;
 
             // Need to set animation to the "STOP" animation if the velocity exceeds a certain value
-            if (player->frame_displacement / actions->dt > 8.0f) {
-                LOG_INFOV("Frame displacement at: %f\n", player->frame_displacement / actions->dt);
-
-                player->animated_state = PAS_TRIPPING;
+            if (player->frame_displacement / actions->dt > 4.0f) {
+                player->animated_state = PAS_STOP_FAST;
             }
         }
     }
