@@ -200,7 +200,6 @@ void w_set_local_player(
     players.local_player = local_id;
 }
 
-
 player_t *w_get_local_player() {
     if (players.local_player >= 0) {
         return players.players[players.local_player];
@@ -244,6 +243,39 @@ void w_clear_players() {
     }
 }
 
+static void s_weapons_init(
+    player_t *player) {
+    // No reloading for terraforming
+    player->weapons[WT_TERRAFORMER].type = WT_TERRAFORMER;
+    player->weapons[WT_TERRAFORMER].max_ammunition = 1000;
+    player->weapons[WT_TERRAFORMER].ammunition = 1000;
+    player->weapons[WT_TERRAFORMER].clip_max_size = 1000;
+    player->weapons[WT_TERRAFORMER].clip_size = 1000;
+
+    player->weapons[WT_ROCKS].type = WT_ROCKS;
+    player->weapons[WT_ROCKS].max_ammunition = 50;
+    player->weapons[WT_ROCKS].ammunition = 50;
+    player->weapons[WT_ROCKS].clip_max_size = 10;
+    player->weapons[WT_ROCKS].clip_size = 10;
+}
+
+static void s_set_default_values(
+    player_init_info_t *init_info,
+    player_t *player) {
+    player->ws_position = init_info->ws_position;
+    player->ws_view_direction = init_info->ws_view_direction;
+    player->ws_up_vector = init_info->ws_up_vector;
+    player->player_action_count = 0;
+    player->default_speed = init_info->default_speed;
+    player->next_random_spawn_position = init_info->next_random_spawn_position;
+    player->ball_speed = 0.0f;
+    player->ws_velocity = vector3_t(0.0f);
+    player->frame_displacement = 0.0f;
+    player->rotation_speed = 0.0f;
+    player->rotation_angle = 0.0f;
+    player->selected_weapon = WT_TERRAFORMER;
+}
+
 player_t *w_add_player_from_info(
     player_init_info_t *init_info) {
     player_t *p = w_add_player();
@@ -255,19 +287,10 @@ player_t *w_add_player_from_info(
         w_link_client_id_to_local_id(p->client_id, p->local_id);
     }
 
-    p->ws_position = init_info->ws_position;
-    p->ws_view_direction = init_info->ws_view_direction;
-    p->ws_up_vector = init_info->ws_up_vector;
-    p->player_action_count = 0;
-    p->default_speed = init_info->default_speed;
-    p->next_random_spawn_position = init_info->next_random_spawn_position;
-    p->ball_speed = 0.0f;
-    p->ws_velocity = vector3_t(0.0f);
-    p->frame_displacement = 0.0f;
-    p->rotation_speed = 0.0f;
-    p->rotation_angle = 0.0f;
-    memset(p->player_actions, 0, sizeof(p->player_actions));
+    s_weapons_init(p);
+    s_set_default_values(init_info, p);
 
+    memset(p->player_actions, 0, sizeof(p->player_actions));
     p->accumulated_dt = 0.0f;
 
     p->flags.u32 = init_info->flags;

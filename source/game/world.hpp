@@ -163,6 +163,21 @@ enum player_animated_state_t {
 
 #define SHAPE_SWITCH_ANIMATION_TIME 0.3f
 
+enum weapon_type_t {
+    WT_TERRAFORMER,
+    WT_ROCKS,
+    WT_INVALID_WEAPON
+};
+
+struct weapon_t {
+    weapon_type_t type;
+
+    uint32_t clip_max_size;
+    uint32_t clip_size;
+    uint32_t max_ammunition;
+    uint32_t ammunition;
+};
+
 // TODO: Make sure to only allocate camera stuff for local player
 struct player_t {
     player_flags_t flags;
@@ -242,6 +257,9 @@ struct player_t {
     matrix4_t rolling_matrix;
 
     vector3_t jump_vector;
+
+    uint32_t selected_weapon;
+    weapon_t weapons[WT_INVALID_WEAPON];
 };
 
 // Rewrite this crap
