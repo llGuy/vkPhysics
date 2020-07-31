@@ -24,6 +24,16 @@ include_directories("${CMAKE_SOURCE_DIR}/dependencies/imgui/include")
 
 find_package(Vulkan)
 
+# set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/modules")
+find_package(OpenAL)
+
+if (OpenAL_FOUND)
+  message("${OpenAL_LIBRARY}")
+  message("${Vulkan_LIBRARY}")
+# else()
+#   message("Did not find OpenAL")
+endif()
+
 # Only build renderer target if Vulkan was found
 set(BUILD_GRAPHICAL_APPLICATION false)
 
@@ -45,12 +55,21 @@ else(NOT Vulkan_FOUND)
   message("Using preinstalled Vulkan")
 endif()
 
+if(NOT OpenAL_FOUND)
+  message("Didn't find OpenAL, there is a problem!")
+else(NOT OpenAL_FOUND)
+  message("${OpenAL_LIBRARY}")
+  message("Using preinstalled OpenAL")
+  # include_directories("${OpenAL_INCLUDE_DIR}")
+endif()
+
 if(BUILD_GRAPHICAL_APPLICATION)
   file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
   add_library(renderer STATIC "${RENDERER_SOURCES}")
   target_include_directories(renderer PUBLIC "${CMAKE_SOURCE_DIR}/source" "${CMAKE_SOURCE_DIR}/dependencies/stb" "${CMAKE_SOURCE_DIR}/imgui/include")
   set_target_properties(renderer PROPERTIES PREFIX "")
   target_link_libraries(renderer PUBLIC "${Vulkan_LIBRARY}" "common")
+  target_link_libraries(renderer PUBLIC "${OpenAL_LIBRARY}")
   target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
 
   if(WIN32)
@@ -69,7 +88,7 @@ file(GLOB_RECURSE GAME_SOURCES "source/game/*.cpp" "source/game/*.hpp")
 if(BUILD_GRAPHICAL_APPLICATION)
   add_executable(vkPhysics_client "${GAME_SOURCES}")
   target_include_directories(vkPhysics_client PUBLIC "${CMAKE_SOURCE_DIR}/source")
-  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common")
+  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "${OpenAL_LIBRARY}")
   target_compile_definitions(vkPhysics_client PUBLIC "LINK_AGAINST_RENDERER")
   target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
 endif()

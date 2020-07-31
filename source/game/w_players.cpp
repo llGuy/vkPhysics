@@ -14,67 +14,38 @@
 #include <common/math.hpp>
 #include <vulkan/vulkan_core.h>
 
-static players_t players;
-
-stack_container_t<player_t *> &w_get_players() {
-    return players.players;
-}
-
 int32_t w_local_player_index() {
     return players.local_player;
 }
 
-static vector3_t player_scale;
+// void w_player_world_init() {
+//     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
+//         players.local_id_from_client_id[i] = -1;
+//     }
 
-vector3_t w_get_player_scale() {
-    return player_scale;
-}
+//     players.local_player = -1;
 
-void w_player_world_init() {
-    for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
-        players.local_id_from_client_id[i] = -1;
-    }
+//     players.players.init(MAX_PLAYERS);
+//     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
+//         players.players.data[i] = NULL;
+//     }
 
-    players.local_player = -1;
+//     players.spectator = FL_MALLOC(player_t, 1);
+//     memset(players.spectator, 0, sizeof(player_t));
+//     players.spectator->default_speed = 40.0f;
+//     players.spectator->ws_position = vector3_t(3.7f, -136.0f, -184.0f);
+//     players.spectator->ws_view_direction = vector3_t(0.063291, 0.438437, 0.896531);
+//     players.spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+//     players.spectator->flags.interaction_mode = PIM_FLOATING;
+//     players.spectator->camera_fov.current = 60.0f;
+//     players.spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
 
-    players.players.init(MAX_PLAYERS);
-    for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
-        players.players.data[i] = NULL;
-    }
-
-    players.spectator = FL_MALLOC(player_t, 1);
-    memset(players.spectator, 0, sizeof(player_t));
-    players.spectator->default_speed = 40.0f;
-    players.spectator->ws_position = vector3_t(3.7f, -136.0f, -184.0f);
-    players.spectator->ws_view_direction = vector3_t(0.063291, 0.438437, 0.896531);
-    players.spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
-    players.spectator->flags.interaction_mode = PIM_FLOATING;
-    players.spectator->camera_fov.current = 60.0f;
-    players.spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
-
-    player_scale = vector3_t(0.5f);
-}
+//     player_scale = vector3_t(0.5f);
+// }
 
 void w_player_render_init(
     player_t *player) {
     player->render = FL_MALLOC(player_render_t, 1);
-}
-
-player_t *w_add_player() {
-    uint32_t player_index = players.players.add();
-    players.players[player_index] = FL_MALLOC(player_t, 1);
-    player_t *p = players.players[player_index];
-    memset(p, 0, sizeof(player_t));
-    p->local_id = player_index;
-
-    return p;
-}
-
-// TODO: May need to remove check in future, when it is sure that a player has a client id
-void w_link_client_id_to_local_id(
-    uint16_t client_id,
-    uint32_t local_id ) {
-    players.local_id_from_client_id[client_id] = local_id;
 }
 
 void w_handle_input(
@@ -200,7 +171,6 @@ void w_set_local_player(
     players.local_player = local_id;
 }
 
-
 player_t *w_get_local_player() {
     if (players.local_player >= 0) {
         return players.players[players.local_player];
@@ -214,36 +184,6 @@ player_t *w_get_spectator() {
     return players.spectator;
 }
 
-void w_destroy_player(
-    uint32_t id) {
-    player_t *p = players.players[id];
-    if (p) {
-        if (p->render) {
-            FL_FREE(p->render);
-        }
-
-        players.players[id] = NULL;
-        // TODO: Free const char *name?
-        players.players.remove(id);
-
-        FL_FREE(p);
-    }
-}
-
-void w_clear_players() {
-    players.local_player = -1;
-
-    for (uint32_t i = 0; i < players.players.data_count; ++i) {
-        w_destroy_player(i);
-    }
-
-    players.players.clear();
-
-    for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
-        players.local_id_from_client_id[i] = -1;
-    }
-}
-
 player_t *w_add_player_from_info(
     player_init_info_t *init_info) {
     player_t *p = w_add_player();
@@ -255,19 +195,10 @@ player_t *w_add_player_from_info(
         w_link_client_id_to_local_id(p->client_id, p->local_id);
     }
 
-    p->ws_position = init_info->ws_position;
-    p->ws_view_direction = init_info->ws_view_direction;
-    p->ws_up_vector = init_info->ws_up_vector;
-    p->player_action_count = 0;
-    p->default_speed = init_info->default_speed;
-    p->next_random_spawn_position = init_info->next_random_spawn_position;
-    p->ball_speed = 0.0f;
-    p->ws_velocity = vector3_t(0.0f);
-    p->frame_displacement = 0.0f;
-    p->rotation_speed = 0.0f;
-    p->rotation_angle = 0.0f;
-    memset(p->player_actions, 0, sizeof(p->player_actions));
+    s_weapons_init(p);
+    s_set_default_values(init_info, p);
 
+    memset(p->player_actions, 0, sizeof(p->player_actions));
     p->accumulated_dt = 0.0f;
 
     p->flags.u32 = init_info->flags;
@@ -313,35 +244,6 @@ player_t *w_add_player_from_info(
     return p;
 }
 
-void w_begin_ai_training_players(
-    ai_training_session_t type) {
-    players.spectator->ws_position = vector3_t(0.0f, -4.0f, 0.0f);
-
-    switch (type) {
-
-    case ATS_WALKING: {
-        player_init_info_t info = {};
-        info.ws_position = vector3_t(0.0f);
-        info.ws_view_direction = vector3_t(0.0f, 0.0f, -1.0f);
-        info.ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
-        info.default_speed = 15.0f;
-
-        player_flags_t flags = {};
-        flags.u32 = 0;
-        flags.alive_state = PAS_ALIVE;
-        flags.interaction_mode = PIM_STANDING;
-
-        info.flags = flags.u32;
-
-        player_t *p = w_add_player_from_info(
-            &info);
-
-        uint32_t ai_id = attach_ai(p->local_id, 0);
-    } break;
-
-    }
-}
-
 void w_reposition_spectator() {
     players.spectator->ws_position = w_get_startup_screen_data()->position;
     players.spectator->ws_view_direction = w_get_startup_screen_data()->view_direction;
@@ -351,23 +253,6 @@ void w_reposition_spectator() {
 void w_handle_spectator_mouse_movement() {
     players.spectator->ws_view_direction = w_update_spectator_view_direction(
         players.spectator->ws_view_direction);
-}
-
-player_t *get_player_from_client_id(
-    uint16_t client_id) {
-    int16_t id = players.local_id_from_client_id[client_id];
-    if (id >= 0) {
-        return players.players[id];
-    }
-    else {
-        LOG_ERROR("Client ID not yet registered to local ID\n");
-        return NULL;
-    }
-}
-
-player_t *get_player_from_player_id(
-    uint32_t player_id) {
-    return players.players[player_id];
 }
 
 stack_container_t<player_t *> &DEBUG_get_players() {

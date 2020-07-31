@@ -8,31 +8,10 @@
 #include <renderer/renderer.hpp>
 
 // PLAYER STUFF ///////////////////////////////////////////////////////////////
-#define MAX_PLAYERS 50
-
-struct players_t {
-    int32_t local_player;
-    player_t *spectator;
-    stack_container_t<player_t *> players;
-    // From client id, get player
-    int16_t local_id_from_client_id[MAX_PLAYERS];
-};
-
 void w_player_world_init();
-
-// Just adds a player to the list of players
-player_t *w_add_player();
-
-// Adds a player to the list and initialises it
-player_t *w_add_player_from_info(
-    player_init_info_t *info);
 
 void w_player_render_init(
     player_t *player);
-
-void w_link_client_id_to_local_id(
-    uint16_t client_id,
-    uint32_t local_id);
 
 void w_handle_input(
     game_input_t *input,
@@ -46,33 +25,18 @@ void w_players_gpu_sync_and_render(
 void w_tick_players(
     event_submissions_t *events);
 
-void w_execute_player_actions(
-    player_t *player,
-    event_submissions_t *events);
-
 int32_t w_local_player_index();
 player_t *w_get_local_player();
 player_t *w_get_spectator();
-vector3_t w_get_player_scale();
 stack_container_t<player_t *> &w_get_players();
 
 void w_set_local_player(
     int32_t local_id);
 
-void w_destroy_player(
-    uint32_t id);
-
-void w_clear_players();
-
 // CHUNKS /////////////////////////////////////////////////////////////////////
 void w_chunks_data_init();
 void w_chunk_world_init(
     uint32_t loaded_radius);
-
-void w_chunk_init(
-    chunk_t *chunk,
-    uint32_t chunk_stack_index,
-    const ivector3_t &chunk_coord);
 
 void w_chunk_render_init(
     chunk_t *chunk,
@@ -97,44 +61,6 @@ chunk_t *w_destroy_chunk(
 void w_clear_chunk_world();
 
 void w_destroy_chunk_data();
-
-// Any function suffixed with _m means that the function will cause chunks to be added to a list needing gpu sync
-void w_add_sphere_m(
-    const vector3_t &ws_center,
-    float ws_radius);
-
-// Pretty useless, as world and voxel coordinates are basically the same
-ivector3_t w_convert_world_to_voxel(
-    const vector3_t &ws_position);
-
-// Gets the coordinate of the chunk which contains the voxel
-ivector3_t w_convert_voxel_to_chunk(
-    const ivector3_t &vs_position);
-
-// Converts from the bottom xyz corner of a chunk to world coordinates (given a chunk coordinate)
-vector3_t w_convert_chunk_to_world(
-    const ivector3_t &chunk_coord);
-
-// Converts from "world" coordinates to the voxel 16x16x16 coordinate of the voxel that the coordinate is in
-ivector3_t w_convert_voxel_to_local_chunk(
-    const ivector3_t &vs_position);
-
-#define TERRAFORMING_RADIUS 3.0f
-#define TERRAFORMING_SPEED 200.0f
-
-enum terraform_type_t { TT_DESTROY, TT_BUILD };
-
-bool w_terraform(
-    terraform_type_t type,
-    terraform_package_t package,
-    float radius,
-    float speed,
-    float dt);
-
-terraform_package_t w_cast_terrain_ray(
-    const vector3_t &ws_ray_start,
-    const vector3_t &ws_ray_direction,
-    float max_reach);
 
 void w_toggle_mesh_update_wait(
     bool value);
@@ -161,35 +87,6 @@ void w_free_temp_vertices_for_chunk_mesh_creation();
 // COLLISION WITH TERRAIN /////////////////////////////////////////////////////
 enum collision_primitive_type_t { CPT_FACE, CPT_EDGE, CPT_VERTEX };
 
-struct terrain_collision_t {
-    // Flags
-    union {
-        struct {
-            uint32_t detected: 1;
-            uint32_t has_detected_previously: 1;
-            uint32_t under_terrain: 1;
-            uint32_t recurse: 4;
-        };
-        uint32_t flags;
-    };
-
-    // Data passed between recursive calls
-    // All these have to be filled in when calling collide_and_slide
-    vector3_t es_position;
-    vector3_t es_velocity;
-
-    vector3_t ws_size;
-    vector3_t ws_position;
-    vector3_t ws_velocity;
-    // -------------------------------------------------------------
-    
-    vector3_t es_normalised_velocity;
-    vector3_t es_surface_normal;
-
-    float es_nearest_distance;
-    vector3_t es_contact_point;
-};
-
 struct collision_triangle_t {
     union {
         struct {
@@ -201,12 +98,6 @@ struct collision_triangle_t {
     };
 };
 
-vector3_t w_collide_and_slide(
-    terrain_collision_t *collision);
-
-vector3_t w_test_collision(
-    terrain_collision_t *collision,
-    collision_triangle_t *triangle);
 
 // STARTUP SCREEN /////////////////////////////////////////////////////////////
 struct startup_screen_t {

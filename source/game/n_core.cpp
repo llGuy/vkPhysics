@@ -145,7 +145,7 @@ static void s_request_available_servers() {
 
     // Expect a packet to arrive
     send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
-
+    
     LOG_INFO("Sent available servers request to hub\n");
 }
 

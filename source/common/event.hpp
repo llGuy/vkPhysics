@@ -68,7 +68,8 @@ struct event_data_request_to_join_server_t {
 };
 
 struct player_init_info_t {
-    struct client_t *client_data;
+    const char *client_name;
+    uint16_t client_id;
     // A bunch of shit (more will come)
     // (name and client_id are already in client_data)
     vector3_t ws_position;

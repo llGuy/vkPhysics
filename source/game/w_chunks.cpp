@@ -31,37 +31,8 @@ struct chunks_t {
 
 static chunks_t chunks;
 
-uint32_t get_voxel_index(
-    uint32_t x,
-    uint32_t y,
-    uint32_t z) {
-    return z * (CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH) + y * CHUNK_EDGE_LENGTH + x;
-}
-
 stack_container_t<chunk_t *> &w_get_chunks() {
     return chunks.chunks;
-}
-
-void w_chunk_init(
-    chunk_t *chunk,
-    uint32_t chunk_stack_index,
-    const ivector3_t &chunk_coord) {
-    chunk->xs_bottom_corner = chunk_coord * CHUNK_EDGE_LENGTH;
-    chunk->chunk_coord = chunk_coord;
-    chunk->chunk_stack_index = chunk_stack_index;
-
-    chunk->flags.made_modification = 0;
-    chunk->flags.has_to_update_vertices = 0;
-    chunk->flags.active_vertices = 0;
-    chunk->flags.modified_marker = 0;
-    chunk->flags.index_of_modification_struct = 0;
-
-    memset(chunk->voxels, 0, sizeof(uint8_t) * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
-
-    chunk->history.modification_count = 0;
-    memset(chunk->history.modification_pool, SPECIAL_VALUE, CHUNK_VOXEL_COUNT);
-
-    chunk->render = NULL;
 }
 
 void w_chunk_render_init(
@@ -145,42 +116,6 @@ void w_destroy_chunk_render(
         FL_FREE(chunk->render);
         chunk->render = NULL;
     }
-}
-
-chunk_t *w_destroy_chunk(
-    chunk_t *chunk) {
-    w_destroy_chunk_render(
-        chunk);
-
-    FL_FREE(chunk);
-
-    return NULL;
-}
-
-static uint32_t s_hash_chunk_coord(
-    const ivector3_t &coord) {
-    // static std::hash<glm::ivec3> hasher;
-
-    // TODO: Investigate if this is portable to different systems (endianness??)
-    struct {
-        union {
-            struct {
-                uint32_t padding: 2;
-                uint32_t x: 10;
-                uint32_t y: 10;
-                uint32_t z: 10;
-            };
-            uint32_t value;
-        };
-    } hasher;
-
-    hasher.value = 0;
-
-    hasher.x = *(uint32_t *)(&coord.x);
-    hasher.y = *(uint32_t *)(&coord.y);
-    hasher.z = *(uint32_t *)(&coord.z);
-
-    return (uint32_t)hasher.value;
 }
 
 void w_clear_chunk_world() {
@@ -327,31 +262,6 @@ void w_add_sphere_m(
             }
         }
     }
-}
-
-ivector3_t w_convert_world_to_voxel(
-    const vector3_t &ws_position) {
-    return (ivector3_t)(glm::floor(ws_position));
-}
-
-ivector3_t w_convert_voxel_to_chunk(
-    const ivector3_t &vs_position) {
-    vector3_t from_origin = (vector3_t)vs_position;
-    vector3_t xs_sized = glm::floor(from_origin / (float)CHUNK_EDGE_LENGTH);
-    return (ivector3_t)xs_sized;
-}
-
-vector3_t w_convert_chunk_to_world(
-    const ivector3_t &chunk_coord) {
-    vector3_t ws_coord = (vector3_t)(chunk_coord);
-    return ws_coord * (float)CHUNK_EDGE_LENGTH;
-}
-
-ivector3_t w_convert_voxel_to_local_chunk(
-    const ivector3_t &vs_position) {
-    vector3_t from_origin = (vector3_t)vs_position;
-    vector3_t xs_sized = glm::floor(from_origin / (float)CHUNK_EDGE_LENGTH);
-    return (ivector3_t)(from_origin - xs_sized * (float)CHUNK_EDGE_LENGTH);
 }
 
 chunk_t *access_chunk(
@@ -777,42 +687,6 @@ void activate_chunk_history(
     //chunk->history = FL_MALLOC(chunk_history_t, 1);
     chunk->history.modification_count = 0;
     memset(chunk->history.modification_pool, SPECIAL_VALUE, CHUNK_VOXEL_COUNT);
-}
-
-void w_begin_ai_training_chunks(
-    ai_training_session_t type) {
-    for (uint32_t i = 0; i < chunks.chunks.data_count; ++i) {
-        chunk_t *c = chunks.chunks[i];
-        memset(c->voxels, 0, sizeof(uint8_t) * CHUNK_VOXEL_COUNT);
-    }
-
-    switch (type) {
-    case ATS_WALKING: {
-        for (int32_t z = -32; z < 32; ++z) {
-            for (int32_t x = -32; x < 32; ++x) {
-                ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
-                ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel_coord);
-                chunk_t *chunk = get_chunk(chunk_coord);
-                chunk->flags.has_to_update_vertices = 1;
-                ivector3_t local_coord = w_convert_voxel_to_local_chunk(voxel_coord);
-                uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
-                chunk->voxels[index] = 80;
-            }
-        }
-    } break;
-    }
-}
-
-chunk_t **get_active_chunks(
-    uint32_t *count) {
-    *count = chunks.chunks.data_count;
-    return chunks.chunks.data;
-}
-
-chunk_t **get_modified_chunks(
-    uint32_t *count) {
-    *count = chunks.modified_chunk_count;
-    return chunks.modified_chunks;
 }
 
 void reset_modification_tracker() {

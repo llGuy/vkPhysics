@@ -5,6 +5,7 @@
 #include <string.h>
 #include <assert.h>
 #include "input.hpp"
+#include "audio.hpp"
 #include "renderer.hpp"
 #include <GLFW/glfw3.h>
 #include "r_internal.hpp"
@@ -33,7 +34,7 @@ static void s_verify_layer_support(
 
     VkLayerProperties *supported_layers = ALLOCA(VkLayerProperties, supported_layer_count);
     vkEnumerateInstanceLayerProperties(&supported_layer_count, supported_layers);
-
+    
     uint32_t requested_verified_count = 0;
 
     for (uint32_t requested = 0; requested < count; ++requested) {
@@ -788,6 +789,8 @@ void renderer_init() {
     s_sensitive_buffer_deletion_init();
 
     ui_rendering_init();
+
+    audio_init();
 
     frame_id = 0;
 }
