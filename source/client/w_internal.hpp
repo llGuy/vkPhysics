@@ -10,6 +10,7 @@
 
 // PLAYER STUFF ///////////////////////////////////////////////////////////////
 void w_player_world_init();
+void w_create_spectator();
 void w_clear_players_and_render_rsc();
 
 void w_player_render_init(player_t *player);

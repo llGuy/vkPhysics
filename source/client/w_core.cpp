@@ -23,6 +23,7 @@ void world_init(
     w_create_shaders_and_meshes();
 
     player_memory_init();
+    w_create_spectator();
 
     w_allocate_temp_vertices_for_chunk_mesh_creation();
     w_chunk_world_init(4);
