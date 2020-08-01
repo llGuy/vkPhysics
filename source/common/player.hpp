@@ -2,6 +2,7 @@
 
 #include "math.hpp"
 #include "event.hpp"
+#include "chunk.hpp"
 #include "tools.hpp"
 #include "constant.hpp"
 #include "containers.hpp"
@@ -222,6 +223,7 @@ void remove_player(uint32_t local_id);
 void clear_players();
 int32_t translate_client_to_local_id(uint16_t client_id);
 player_t *get_player(uint32_t local_id);
+uint32_t get_player_count();
 void fill_player_info(player_t *player, player_init_info_t *info);
 void push_player_actions(player_t *player, player_action_t *action, bool override_adt);
 // If false was returned, the player died

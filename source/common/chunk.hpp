@@ -102,3 +102,7 @@ struct terrain_collision_t {
 
 // This will perform a collide and slide physics thingy
 vector3_t w_collide_and_slide(terrain_collision_t *collision);
+
+void track_modification_history();
+void stop_track_modification_history();
+void reset_modification_tracker();

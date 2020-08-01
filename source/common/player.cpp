@@ -64,6 +64,10 @@ player_t *get_player(uint32_t local_id) {
     return players[local_id];
 }
 
+uint32_t get_player_count() {
+    return players.data_count;
+}
+
 static void s_set_default_values(
     player_init_info_t *init_info,
     player_t *player) {
