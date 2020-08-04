@@ -30,8 +30,8 @@ void leave_game() {
     
 }
 
-void timestep_begin(float dt) {
-    dt = dt;
+void timestep_begin(float dt_in) {
+    dt = dt_in;
 }
 
 void timestep_end() {

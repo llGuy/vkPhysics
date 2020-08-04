@@ -116,6 +116,8 @@ void wd_execute_player_actions(player_t *player, event_submissions_t *events) {
         if (player->flags.alive_state == PAS_DEAD)
             break;
     }
+
+    player->player_action_count = 0;
 }
 
 void wd_predict_state(event_submissions_t *events) {

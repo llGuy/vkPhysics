@@ -94,8 +94,6 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     tick_ui(events);
     render_submitted_ui(transfer, ui);
 
-    // Increments the current tick number
-    timestep_end();
 
     eye_3d_info_t *eye_info = gm_get_eye_info();
     player_t *player = NULL;
@@ -130,6 +128,9 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     lighting_info_t *light_info = gm_get_lighting_info();
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
+
+    // Increments the current tick number
+    timestep_end();
 }
 
 void gm_handle_play_event(void *object, event_t *event, event_submissions_t *events) {
