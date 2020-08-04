@@ -18,6 +18,15 @@ int32_t wd_get_local_player() {
     return local_player;
 }
 
+static player_t *s_get_local_player() {
+    if (local_player >= 0) {
+        return get_player(local_player);
+    }
+    else {
+        return NULL;
+    }
+}
+
 void wd_handle_local_player_input(float dt) {
     game_input_t *game_input = get_game_input();
 
@@ -54,9 +63,9 @@ void wd_handle_local_player_input(float dt) {
 
     actions.tick = get_current_tick();
     
-    player_t *local_player_ptr = get_player(local_player);
+    player_t *local_player_ptr = s_get_local_player();
 
-    if (local_player) {
+    if (local_player_ptr) {
         if (local_player_ptr->flags.alive_state == PAS_ALIVE) {
             push_player_actions(local_player_ptr, &actions, 0);
         }
@@ -110,9 +119,11 @@ void wd_execute_player_actions(player_t *player, event_submissions_t *events) {
 }
 
 void wd_predict_state(event_submissions_t *events) {
-    player_t *player = get_player(local_player);
+    player_t *player = s_get_local_player();
     
-    wd_execute_player_actions(player, events);
+    if (player) {
+        wd_execute_player_actions(player, events);
+    }
 }
 
 void wd_kill_local_player(struct event_submissions_t *events) {
@@ -120,7 +131,7 @@ void wd_kill_local_player(struct event_submissions_t *events) {
 
     submit_event(ET_LOCAL_PLAYER_DIED, NULL, events);
 
-    player_t *local_player_ptr = get_player(local_player);
+    player_t *local_player_ptr = s_get_local_player();
     local_player_ptr->flags.alive_state = PAS_DEAD;
 }
 

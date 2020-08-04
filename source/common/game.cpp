@@ -35,7 +35,6 @@ void timestep_begin(float dt) {
 }
 
 void timestep_end() {
-    dt = 0.0f;
     ++current_tick;
 }
 

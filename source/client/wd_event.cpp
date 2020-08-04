@@ -1,8 +1,11 @@
+#include "dr_rsc.hpp"
 #include "wd_core.hpp"
 #include "wd_event.hpp"
+#include "dr_player.hpp"
 #include "wd_predict.hpp"
 #include <common/log.hpp>
 #include <common/player.hpp>
+#include <common/constant.hpp>
 #include <common/allocators.hpp>
 
 void wd_subscribe_to_events(listener_t world_listener, event_submissions_t *events) {
@@ -33,6 +36,25 @@ static void s_handle_event_enter_server(
     for (uint32_t i = 0; i < data->info_count; ++i) {
         player_t *player = add_player();
         fill_player_info(player, &data->infos[i]);
+
+        if (player->flags.is_local) {
+            player->cached_player_action_count = 0;
+            player->cached_player_actions = FL_MALLOC(player_action_t, PLAYER_MAX_ACTIONS_COUNT * 2);
+
+            player->flags.is_remote = 0;
+            player->flags.is_local = 1;
+        }
+        else {
+            player->flags.is_remote = 1;
+            player->flags.is_local = 0;
+
+            // Initialise remote snapshots
+            player->remote_snapshots.init();
+            player->elapsed = 0.0f;
+        }
+
+        player->render = dr_player_render_init();
+        dr_player_animated_instance_init(&player->render->animations);
     }
 
     FL_FREE(data->infos);
@@ -148,10 +170,7 @@ static void s_handle_event_reset_ai_arena() {
     // w_begin_ai_training_chunks(context_ptr->training_type);
 }
 
-void w_world_event_listener(
-    void *object,
-    event_t *event,
-    event_submissions_t *events) {
+void wd_world_event_listener(void *object, event_t *event, event_submissions_t *events) {
     switch(event->type) {
 
     case ET_ENTER_SERVER: {
@@ -202,8 +221,5 @@ void w_world_event_listener(
     } break;
 
     }
-}
-
-void wd_world_event_listener(void *object, event_t *event, event_submissions_t *events) {
     
 }

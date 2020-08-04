@@ -456,14 +456,16 @@ static accumulated_predicted_modification_t *s_accumulate_history() {
 // PT_CLIENT_COMMANDS
 static void s_send_packet_client_commands() {
     int32_t local_id = translate_client_to_local_id(current_client_id);
-    player_t *p = get_player(local_id);
-
+    int32_t p_index = wd_get_local_player();
+    
     // DEAD by default
     static player_alive_state_t previous_alive_state = PAS_DEAD;
 
     // Means that world hasn't been initialised yet (could be timing issues when submitting ENTER_SERVER
     // event and send commands interval, so just to make sure, check that player is not NULL)
-    if (p) {
+    if (p_index >= 0) {
+        player_t *p = get_player(p_index);
+                                               
         if (simulate_lag) {
             p->cached_player_action_count = 0;
         }

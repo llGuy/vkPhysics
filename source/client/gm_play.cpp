@@ -61,6 +61,7 @@ static void s_handle_input(event_submissions_t *events) {
 static void s_calculate_pos_and_dir(player_t *player, vector3_t *position, vector3_t *direction) {
     *position = player->ws_position - player->ws_view_direction * player->camera_distance.current * PLAYER_SCALE.x;
     *position += player->current_camera_up * PLAYER_SCALE * 2.0f;
+    *direction = player->ws_view_direction;
 
     if (player->flags.interaction_mode == PIM_STANDING && player->flags.moving) {
         // Add view bobbing
@@ -100,12 +101,24 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     player_t *player = NULL;
     int32_t local_id = wd_get_local_player();
 
-    if (local_id == -1)
-        player = wd_get_spectator();
-    else
-        player = get_player(local_id);
+    switch (submode) {
+    case S_IN_GAME: case S_PAUSE: {
+        if (local_id == -1)
+            player = wd_get_spectator();
+        else
+            player = get_player(local_id);
 
-    s_calculate_pos_and_dir(player, &eye_info->position, &eye_info->direction);
+        s_calculate_pos_and_dir(player, &eye_info->position, &eye_info->direction);
+    } break;
+
+    case S_MENU: {
+        player = wd_get_spectator();
+    } break;
+
+    default: {
+    } break;
+    }
+
 
     eye_info->up = player->current_camera_up;
 
