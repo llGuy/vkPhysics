@@ -2,8 +2,6 @@
 
 #include <common/tools.hpp>
 
-uint64_t &get_current_tick();
-
 // Engine settings:
 enum graphics_quality_t {
     GQ_FANCY,
@@ -25,10 +23,6 @@ struct settings_t {
     bool show_debug_window;
 };
 
-enum highlevel_focus_t {
-    HF_WORLD, HF_UI
-};
-
 struct game_flags_t {
     uint32_t running: 1;
     // Is it UI, or gameplay
@@ -39,3 +33,7 @@ struct game_flags_t {
     // If not, render the world that is currently loaded in
     uint32_t startup: 1;
 };
+
+void cl_terminate();
+
+float cl_delta_time();

@@ -1,24 +1,15 @@
-#include "ai.hpp"
+#include "wd_core.hpp"
+#include "wd_event.hpp"
+#include "wd_predict.hpp"
 #include <common/log.hpp>
-#include "common/player.hpp"
-#include "w_internal.hpp"
-#include <common/event.hpp>
+#include <common/player.hpp>
+#include <common/allocators.hpp>
 
-static context_t *context_ptr;
-
-void w_subscribe_to_events(
-    context_t *context,
-    listener_t world_listener,
-    event_submissions_t *events) {
-    context_ptr = context;
-
+void wd_subscribe_to_events(listener_t world_listener, event_submissions_t *events) {
     subscribe_to_event(ET_ENTER_SERVER, world_listener, events);
     subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
     subscribe_to_event(ET_LEAVE_SERVER, world_listener, events);
     subscribe_to_event(ET_PLAYER_DISCONNECTED, world_listener, events);
-#if 0
-    subscribe_to_event(ET_CHUNK_VOXEL_PACKET, world_listener, events);
-#endif
     subscribe_to_event(ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
     subscribe_to_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
     subscribe_to_event(ET_SET_CHUNK_HISTORY_TRACKER, world_listener, events);
@@ -35,11 +26,10 @@ static void s_handle_event_enter_server(
     event_t *event) {
     LOG_INFO("Entering server world\n");
 
-    context_ptr->in_server = 1;
+    wd_set_i_am_in_server(1);
 
     // Reinitialise chunks / players
-    w_clear_players_and_render_rsc();
-    w_clear_chunks_and_render_rsc();
+    wd_clear_world();
 
     event_enter_server_t *data = (event_enter_server_t *)event->data;
 
@@ -52,14 +42,14 @@ static void s_handle_event_enter_server(
     FL_FREE(event->data);
 }
 
-static void s_handle_event_enter_server_meta_menu() {
-    context_ptr->in_meta_menu = 1;
-}
+// static void s_handle_event_enter_server_meta_menu() {
+//     context_ptr->in_meta_menu = 1;
+// }
 
 static void s_handle_event_leave_server() {
-    context_ptr->in_server = 0;
-    w_clear_players_and_render_rsc();
-    w_clear_chunks_and_render_rsc();
+    wd_set_i_am_in_server(0);
+
+    wd_clear_world();
 }
 
 static void s_handle_event_spawn(
@@ -82,15 +72,13 @@ static void s_handle_event_spawn(
     p->ws_velocity = vector3_t(0.0f);
 
     if (p->flags.is_local) {
-        w_set_local_player(p->local_id);
+        wd_set_local_player(p->local_id);
         p->flags.camera_type = CT_THIRD_PERSON;
 
         p->camera_distance.set(1, 12.0f, 10.0f, 1.0f);
         p->camera_fov.set(1, 90.0f, 60.0f);
         p->current_camera_up = p->ws_up_vector;
     }
-
-    context_ptr->in_meta_menu = 0;
 }
 
 static void s_handle_event_new_player(
@@ -105,7 +93,7 @@ static void s_handle_event_new_player(
 
 static void s_handle_event_player_disconnected(
     event_t *event) {
-    if (context_ptr->in_server) {
+    if (wd_am_i_in_server()) {
         event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
         int32_t local_id = translate_client_to_local_id(data->client_id);
@@ -137,25 +125,26 @@ static void s_handle_event_set_chunk_history_tracker(
 }
 
 static void s_handle_event_launch_main_menu_screen() {
-    context_ptr->in_meta_menu = 1;
-    if (!w_get_startup_screen_data()->initialised) {
-        w_read_startup_screen();
-    }
+    // if (!w_get_startup_screen_data()->initialised) {
+    //     w_read_startup_screen();
+    // }
 
-    w_reposition_spectator();
+    // w_reposition_spectator();
 }
 
 static void s_handle_event_begin_ai_training(
     event_t *event) {
+#if 0
     event_begin_ai_training_t *data = (event_begin_ai_training_t *)event->data;
 
     context_ptr->in_meta_menu = 0;
 
     w_begin_ai_training(data->session_type);
+#endif
 }
 
 static void s_handle_event_finish_generation() {
-    w_finish_generation();
+    //     w_finish_generation();
 }
 
 static void s_handle_event_reset_ai_arena() {
@@ -165,9 +154,9 @@ static void s_handle_event_reset_ai_arena() {
 static void s_handle_event_launch_game_menu_screen() {
     LOG_INFO("Resetting spectator's positions / view direction\n");
 
-    w_reposition_spectator();
+    // w_reposition_spectator();
 
-    context_ptr->in_meta_menu = 1;
+    // context_ptr->in_meta_menu = 1;
 }
 
 void w_world_event_listener(
@@ -181,7 +170,7 @@ void w_world_event_listener(
     } break;
 
     case ET_ENTER_SERVER_META_MENU: {
-        s_handle_event_enter_server_meta_menu();
+        // s_handle_event_enter_server_meta_menu();
     } break;
 
     case ET_LEAVE_SERVER: {
@@ -236,4 +225,8 @@ void w_world_event_listener(
     } break;
 
     }
+}
+
+void wd_world_event_listener(void *object, event_t *event, event_submissions_t *events) {
+    
 }

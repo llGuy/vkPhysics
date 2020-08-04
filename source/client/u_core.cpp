@@ -135,7 +135,6 @@ void ui_init(
 }
 
 void handle_ui_input(
-    highlevel_focus_t focus,
     event_submissions_t *events) {
     raw_input_t *raw_input = get_raw_input();
 

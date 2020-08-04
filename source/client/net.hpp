@@ -1,9 +1,9 @@
 #pragma once
 
-#include "world.hpp"
 #include <common/tools.hpp>
 #include <common/event.hpp>
 #include <common/socket.hpp>
+#include <common/player.hpp>
 #include <common/containers.hpp>
 
 #define NET_DEBUG 0

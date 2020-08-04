@@ -71,6 +71,19 @@ terraform_package_t cast_terrain_ray(const vector3_t &ws_ray_start, const vector
 // Terraforms at a position that was specified in the terraform package
 bool terraform(terraform_type_t type, terraform_package_t package, float radius, float speed, float dt);
 
+enum collision_primitive_type_t { CPT_FACE, CPT_EDGE, CPT_VERTEX };
+
+struct collision_triangle_t {
+    union {
+        struct {
+            vector3_t a;
+            vector3_t b;
+            vector3_t c;
+        } v;
+        vector3_t vertices[3];
+    };
+};
+
 struct terrain_collision_t {
     // Flags
     union {
@@ -101,7 +114,7 @@ struct terrain_collision_t {
 };
 
 // This will perform a collide and slide physics thingy
-vector3_t w_collide_and_slide(terrain_collision_t *collision);
+vector3_t collide_and_slide(terrain_collision_t *collision);
 
 void track_modification_history();
 void stop_track_modification_history();

@@ -343,7 +343,7 @@ static void s_resolve_player_movement(
     collision.es_position = collision.ws_position / collision.ws_size;
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
-    vector3_t ws_new_position = w_collide_and_slide(&collision) * PLAYER_SCALE;
+    vector3_t ws_new_position = collide_and_slide(&collision) * PLAYER_SCALE;
 
     if (player->flags.contact != PCS_IN_AIR) {
         float len = glm::length(ws_new_position - player->ws_position);
@@ -393,34 +393,34 @@ static void s_execute_standing_player_movement(
     player_t *player,
     player_action_t *actions) {
     if (player->flags.contact == PCS_ON_GROUND) {
-        if (player->animated_state == PAS_STOP_FAST && player->frame_displacement / actions->dt > 0.002f) {
-            // Need to slow down
-            actions->move_back = 0;
-            actions->move_forward = 0;
-            actions->move_left = 0;
-            actions->move_right = 0;
-            actions->jump = 0;
-        }
-        else if (actions->move_forward) {
-            player->animated_state = PAS_RUNNING;
-        }
-        else if (actions->move_back) {
-            player->animated_state = PAS_BACKWALKING;
-        }
-        else if (actions->move_left) {
-            player->animated_state = PAS_LEFT_WALKING;
-        }
-        else if (actions->move_right) {
-            player->animated_state = PAS_RIGHT_WALKING;
-        }
-        else {
-            player->animated_state = PAS_IDLE;
-        }
+        // if (player->animated_state == PAS_STOP_FAST && player->frame_displacement / actions->dt > 0.002f) {
+        //     // Need to slow down
+        //     actions->move_back = 0;
+        //     actions->move_forward = 0;
+        //     actions->move_left = 0;
+        //     actions->move_right = 0;
+        //     actions->jump = 0;
+        // }
+        // else if (actions->move_forward) {
+        //     player->animated_state = PAS_RUNNING;
+        // }
+        // else if (actions->move_back) {
+        //     player->animated_state = PAS_BACKWALKING;
+        // }
+        // else if (actions->move_left) {
+        //     player->animated_state = PAS_LEFT_WALKING;
+        // }
+        // else if (actions->move_right) {
+        //     player->animated_state = PAS_RIGHT_WALKING;
+        // }
+        // else {
+        //     player->animated_state = PAS_IDLE;
+        // }
 
         if (actions->jump) {
             player->ws_velocity += player->ws_up_vector * 4.0f;
 
-            player->animated_state = PAS_JUMPING_UP;
+            // player->animated_state = PAS_JUMPING_UP;
 
             player->flags.contact = PCS_IN_AIR;
         }
@@ -476,7 +476,7 @@ static void s_accelerate_meteorite_player(
     collision.es_position = collision.ws_position / collision.ws_size;
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
-    player->ws_position = w_collide_and_slide(&collision) * player_scale;
+    player->ws_position = collide_and_slide(&collision) * player_scale;
     player->ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {

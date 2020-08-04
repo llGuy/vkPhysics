@@ -4,8 +4,11 @@
 #include "player.hpp"
 
 static float dt;
+static uint64_t current_tick;
 
 void game_memory_init() {
+    current_tick = 0;
+
     chunk_memory_init();
     player_memory_init();
 }
@@ -33,8 +36,13 @@ void timestep_begin(float dt) {
 
 void timestep_end() {
     dt = 0.0f;
+    ++current_tick;
 }
 
 float get_timestep_delta() {
     return dt;
+}
+
+uint64_t &get_current_tick() {
+    return current_tick;
 }

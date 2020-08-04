@@ -1,9 +1,11 @@
-#include "common/player.hpp"
-#include "common/socket.hpp"
+#include "cl_main.hpp"
+#include <common/game.hpp>
+#include "wd_interp.hpp"
+#include <common/player.hpp>
+#include <common/socket.hpp>
 #include "net.hpp"
-#include "renderer/renderer.hpp"
-#include "world.hpp"
-#include "engine.hpp"
+#include "wd_predict.hpp"
+#include <renderer/renderer.hpp>
 #include "n_internal.hpp"
 #include <common/log.hpp>
 #include <common/event.hpp>
@@ -668,7 +670,7 @@ static void s_handle_incorrect_state(
 
     if (p->flags.alive_state == PAS_ALIVE && snapshot->alive_state == PAS_DEAD) {
         // Handle death
-        kill_local_player(events);
+        wd_kill_local_player(events);
     }
 
     p->flags.alive_state = snapshot->alive_state;
@@ -706,7 +708,7 @@ static void s_handle_incorrect_state(
 }
 
 static void s_set_voxels_to_final_interpolated_values() {
-    chunks_to_interpolate_t *cti_ptr = get_chunks_to_interpolate();
+    chunks_to_interpolate_t *cti_ptr = wd_get_chunks_to_interpolate();
     for (uint32_t cm_index = 0; cm_index < cti_ptr->modification_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &cti_ptr->modifications[cm_index];
 
@@ -748,7 +750,7 @@ static void s_merge_all_recent_modifications(
 static void s_create_voxels_that_need_to_be_interpolated(
     uint32_t modified_chunk_count,
     chunk_modifications_t *chunk_modifications) {
-    chunks_to_interpolate_t *cti_ptr = get_chunks_to_interpolate();
+    chunks_to_interpolate_t *cti_ptr = wd_get_chunks_to_interpolate();
     for (uint32_t recv_cm_index = 0; recv_cm_index < modified_chunk_count; ++recv_cm_index) {
         chunk_modifications_t *recv_cm_ptr = &chunk_modifications[recv_cm_index];
         chunk_t *c_ptr = get_chunk(ivector3_t(recv_cm_ptr->x, recv_cm_ptr->y, recv_cm_ptr->z));
@@ -1052,7 +1054,7 @@ static void s_check_incoming_game_server_packets(
     // Check packets from game server that we are connected to
     if (client_check_incoming_packets) {
         static float elapsed = 0.0f;
-        elapsed += logic_delta_time();
+        elapsed += cl_delta_time();
         if (elapsed >= client_command_output_interval) {
             // Send commands to the server
             s_send_packet_client_commands();
@@ -2057,7 +2059,7 @@ static void s_send_pending_chunks() {
 void tick_server(
     event_submissions_t *events) {
     static float snapshot_elapsed = 0.0f;
-    snapshot_elapsed += logic_delta_time();
+    snapshot_elapsed += cl_delta_time();
     
     if (snapshot_elapsed >= server_snapshot_output_interval) {
         // Send commands to the server
@@ -2068,7 +2070,7 @@ void tick_server(
 
     // For sending chunks to new players
     static float world_elapsed = 0.0f;
-    world_elapsed += logic_delta_time();
+    world_elapsed += cl_delta_time();
 
     if (world_elapsed >= server_chunk_world_output_interval) {
         s_send_pending_chunks();

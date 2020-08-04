@@ -99,19 +99,6 @@ enum camera_type_t {
     CT_FIRST_PERSON = 0, CT_THIRD_PERSON = 1
 };
 
-enum player_animated_state_t {
-    PAS_IDLE,
-    PAS_WALKING,
-    PAS_RUNNING,
-    PAS_JUMPING_UP,
-    PAS_JUMPING_DOWN,
-    PAS_LEFT_WALKING,
-    PAS_RIGHT_WALKING,
-    PAS_STOP_FAST,
-    PAS_BACKWALKING,
-    PAS_TRIPPING
-};
-
 #define SHAPE_SWITCH_ANIMATION_TIME 0.3f
 
 enum weapon_type_t {
@@ -194,11 +181,6 @@ struct player_t {
     vector3_t next_camera_up;
 
     terraform_package_t terraform_package;
-
-    struct {
-        uint8_t animated_state: 7;
-        uint8_t repeat: 1;
-    };
 
     // Basically a timer (death checking for falling down forever)
     float death_checker;

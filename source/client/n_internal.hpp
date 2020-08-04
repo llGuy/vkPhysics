@@ -1,7 +1,6 @@
 #pragma once
 
 #include "net.hpp"
-#include "world.hpp"
 #include <common/tools.hpp>
 #include <common/serialiser.hpp>
 

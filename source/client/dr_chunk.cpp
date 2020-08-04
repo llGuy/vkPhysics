@@ -1,15 +1,48 @@
-#include "w_internal.hpp"
-#include "world.hpp"
+#include "dr_rsc.hpp"
+#include "dr_chunk.hpp"
+#include <common/log.hpp>
+#include <common/math.hpp>
+#include <common/chunk.hpp>
+#include <common/constant.hpp>
+#include <common/allocators.hpp>
 
-// Array will be used anytime we need to create mesh from voxels
-static vector3_t *temp_mesh_vertices;
+chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_position) {
+    chunk_render_t *chunk_render = FL_MALLOC(chunk_render_t, 1);
 
-void w_allocate_temp_vertices_for_chunk_mesh_creation() {
-    temp_mesh_vertices = FL_MALLOC(vector3_t, MAX_VERTICES_PER_CHUNK);
+    memset(chunk_render, 0, sizeof(chunk_render_t));
+
+    uint32_t buffer_size = sizeof(vector3_t) * CHUNK_MAX_VERTICES_PER_CHUNK;
+
+    push_buffer_to_mesh(BT_VERTEX, &chunk_render->mesh);
+    mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, &chunk_render->mesh);
+    vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
+        buffer_size,
+        NULL,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+
+    chunk_render->mesh.vertex_offset = 0;
+    chunk_render->mesh.vertex_count = 0;
+    chunk_render->mesh.first_index = 0;
+    chunk_render->mesh.index_offset = 0;
+    chunk_render->mesh.index_count = 0;
+    chunk_render->mesh.index_type = VK_INDEX_TYPE_UINT32;
+
+    create_mesh_vbo_final_list(&chunk_render->mesh);
+
+    chunk_render->render_data.model = glm::translate(ws_position);
+    chunk_render->render_data.pbr_info.x = 0.1f;
+    chunk_render->render_data.pbr_info.y = 0.1f;
+    chunk_render->render_data.color = vector4_t(0.0f);
+
+    return chunk_render;
 }
 
-void w_free_temp_vertices_for_chunk_mesh_creation() {
-    FL_FREE(temp_mesh_vertices);
+void dr_destroy_chunk_render(chunk_render_t *render) {
+    if (render) {
+        destroy_sensitive_gpu_buffer(get_mesh_buffer(BT_VERTEX, &render->mesh)->gpu_buffer);
+        FL_FREE(render);
+        render = NULL;
+    }
 }
 
 static uint8_t s_chunk_edge_voxel_value(
@@ -34,15 +67,17 @@ static uint8_t s_chunk_edge_voxel_value(
         chunk_coord_offset_z = 1;
     }
 
-    chunk_t *chunk_ptr = access_chunk(
-        ivector3_t(chunk_coord.x + chunk_coord_offset_x,
-                   chunk_coord.y + chunk_coord_offset_y,
-                   chunk_coord.z + chunk_coord_offset_z));
+    ivector3_t coord = ivector3_t(
+        chunk_coord.x + chunk_coord_offset_x,
+        chunk_coord.y + chunk_coord_offset_y,
+        chunk_coord.z + chunk_coord_offset_z);
+
+    chunk_t *chunk_ptr = access_chunk(coord);
     
     *doesnt_exist = (bool)(chunk_ptr == nullptr);
-    if (*doesnt_exist) {
+
+    if (*doesnt_exist)
         return 0;
-    }
     
     return chunk_ptr->voxels[get_voxel_index(final_x, final_y, final_z)];
 }
@@ -55,7 +90,8 @@ static const vector3_t NORMALIZED_CUBE_VERTICES[8] = {
     vector3_t(-0.5f, +0.5f, -0.5f),
     vector3_t(+0.5f, +0.5f, -0.5f),
     vector3_t(+0.5f, +0.5f, +0.5f),
-    vector3_t(-0.5f, +0.5f, +0.5f) };
+    vector3_t(-0.5f, +0.5f, +0.5f)
+};
 
 static const ivector3_t NORMALIZED_CUBE_VERTEX_INDICES[8] = {
     ivector3_t(0, 0, 0),
@@ -65,7 +101,8 @@ static const ivector3_t NORMALIZED_CUBE_VERTEX_INDICES[8] = {
     ivector3_t(0, 1, 0),
     ivector3_t(1, 1, 0),
     ivector3_t(1, 1, 1),
-    ivector3_t(0, 1, 1) };
+    ivector3_t(0, 1, 1)
+};
 
 static void s_push_vertex_to_triangle_array(
     uint8_t v0,
@@ -98,7 +135,7 @@ static void s_push_vertex_to_triangle_array(
     ++(*vertex_count);
 }
 
-#include "triangle_table.inc"
+#include <common/triangle_table.inc>
 
 static void s_update_chunk_mesh_voxel_pair(
     uint8_t *voxel_values,
@@ -152,13 +189,9 @@ static void s_update_chunk_mesh_voxel_pair(
     }
 }
 
-uint32_t w_create_chunk_vertices(
-    uint8_t surface_level,
-    chunk_t *c,
-    vector3_t *mesh_vertices) {
-    if (!mesh_vertices) {
-        mesh_vertices = temp_mesh_vertices;
-    }
+uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector3_t *mesh_vertices) {
+    if (!mesh_vertices)
+        mesh_vertices = dr_get_tmp_mesh_verts();
 
     uint32_t vertex_count = 0;
 
@@ -186,14 +219,8 @@ uint32_t w_create_chunk_vertices(
                     s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
                     s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
 
-                if (!doesnt_exist) {
-                    s_update_chunk_mesh_voxel_pair(
-                        voxel_values,
-                        x, y, z,
-                        surface_level,
-                        mesh_vertices,
-                        &vertex_count);
-                }
+                if (!doesnt_exist)
+                    s_update_chunk_mesh_voxel_pair(voxel_values, x, y, z, surface_level, mesh_vertices, &vertex_count);
             }
         }
     }
@@ -217,14 +244,9 @@ uint32_t w_create_chunk_vertices(
                     s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
                     s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
 
-                if (!doesnt_exist) {
-                    s_update_chunk_mesh_voxel_pair(
-                        voxel_values,
-                        x, y, z,
-                        surface_level,
-                        mesh_vertices,
-                        &vertex_count);
-                }
+                if (!doesnt_exist)
+                    s_update_chunk_mesh_voxel_pair(voxel_values, x, y, z, surface_level, mesh_vertices, &vertex_count);
+               
             }
         }
     }
@@ -248,14 +270,8 @@ uint32_t w_create_chunk_vertices(
                     s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
                     s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
 
-                if (!doesnt_exist) {
-                    s_update_chunk_mesh_voxel_pair(
-                        voxel_values,
-                        x, y, z,
-                        surface_level,
-                        mesh_vertices,
-                        &vertex_count);
-                }
+                if (!doesnt_exist)
+                    s_update_chunk_mesh_voxel_pair(voxel_values, x, y, z, surface_level, mesh_vertices, &vertex_count);
             }
         }
     }
@@ -274,12 +290,7 @@ uint32_t w_create_chunk_vertices(
                     c->voxels[get_voxel_index(x + 1, y + 1, z + 1)],
                     c->voxels[get_voxel_index(x, y + 1, z + 1)] };
 
-                s_update_chunk_mesh_voxel_pair(
-                    voxel_values,
-                    x, y, z,
-                    surface_level,
-                    mesh_vertices,
-                    &vertex_count);
+                s_update_chunk_mesh_voxel_pair(voxel_values, x, y, z, surface_level, mesh_vertices, &vertex_count);
             }
         }
     }
@@ -287,25 +298,17 @@ uint32_t w_create_chunk_vertices(
     return vertex_count;
 }
 
-void w_update_chunk_mesh(
-    VkCommandBuffer command_buffer,
-    uint8_t surface_level,
-    chunk_t *c,
-    vector3_t *mesh_vertices) {
+void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_level, chunk_t *c, vector3_t *mesh_vertices) {
     if (!mesh_vertices) {
-        mesh_vertices = temp_mesh_vertices;
+        mesh_vertices = dr_get_tmp_mesh_verts();
     }
 
-    uint32_t vertex_count = w_create_chunk_vertices(
-        surface_level,
-        c,
-        mesh_vertices);
-
+    uint32_t vertex_count = dr_generate_chunk_verts(surface_level, c, mesh_vertices);
     if (vertex_count) {
         c->flags.active_vertices = 1;
 
         if (!c->render) {
-            w_chunk_render_init(c, space_chunk_to_world(c->chunk_coord));
+            c->render = dr_chunk_render_init(c, space_chunk_to_world(c->chunk_coord));
         }
 
         static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
@@ -347,7 +350,7 @@ void w_update_chunk_mesh(
         c->flags.active_vertices = 0;
 
         if (c->render) {
-            w_destroy_chunk_render(c);
+            dr_destroy_chunk_render(c->render);
             LOG_INFO("Destroyed chunk data\n");
         }
     }

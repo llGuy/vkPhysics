@@ -1,6 +1,5 @@
 #include "ai.hpp"
 #include "common/player.hpp"
-#include "world.hpp"
 #include "a_internal.hpp"
 #include <common/time.hpp>
 #include "common/allocators.hpp"
@@ -106,6 +105,7 @@ void end_ai_population() {
 }
 
 void tick_ai() {
+#if 0
     float *inputs = LN_MALLOC(float, universe.neat.input_count);
     float *outputs = LN_MALLOC(float, universe.neat.output_count);
 
@@ -170,4 +170,5 @@ void tick_ai() {
 
         push_player_actions(p, &actions, 0);
     }
+#endif
 }
