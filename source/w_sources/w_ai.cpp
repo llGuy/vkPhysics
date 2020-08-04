@@ -1,4 +1,5 @@
 #include "ai.hpp"
+#include "common/player.hpp"
 #include "w_internal.hpp"
 #include <common/time.hpp>
 #include <common/event.hpp>
@@ -8,6 +9,7 @@ static world_ai_t ai;
 
 static bool s_reset_arena(
     ai_training_session_t session_type) {
+#if 0
     bool evolved = 0;
 
     if (ai.iteration_count == ai.population_count) {
@@ -19,8 +21,8 @@ static bool s_reset_arena(
         evolved = 1;
     }
 
-    w_clear_players();
-    w_clear_chunk_world();
+    w_clear_players_and_render_rsc();
+    w_clear_chunks_and_render_rsc();
 
     switch (session_type) {
 
@@ -39,8 +41,8 @@ static bool s_reset_arena(
 
         info.flags = flags.u32;
 
-        player_t *p = w_add_player_from_info(
-            &info);
+        player_t *p = add_player();
+        fill_player_info(p, &info);
 
         if (ai.first_iteration) {
             uint32_t ai_id = attach_ai(p->local_id);
@@ -92,6 +94,9 @@ static bool s_reset_arena(
     ai.first_iteration = 0;
 
     return evolved;
+#endif
+
+    return 0;
 }
 
 static float s_calculate_score(
@@ -118,6 +123,7 @@ static float s_calculate_score(
 
 bool w_check_ai_population(
     float dt) {
+#if 0
     if (ai.in_training) {
         stack_container_t<player_t *> &players = w_get_players();
 
@@ -169,6 +175,9 @@ bool w_check_ai_population(
             return s_reset_arena(ai.training_type);
         }
     }
+
+    return 0;
+#endif
 
     return 0;
 }

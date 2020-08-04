@@ -6,13 +6,6 @@
 #include <renderer/renderer.hpp>
 #include <vulkan/vulkan_core.h>
 
-enum ui_stack_item_t {
-    USI_MAIN_MENU,
-    USI_HUD,
-    USI_GAME_MENU,
-    USI_INVALID,
-};
-
 // Whenever a new menu gets opened, it gets added to this stack to which the mouse pointer will be
 // having effect (or just be rendered)
 static ui_stack_item_t stack_items[10];
@@ -25,27 +18,6 @@ static void s_ui_event_listener(
     // ...
     switch(event->type) {
 
-    case ET_LAUNCH_MAIN_MENU_SCREEN: {
-        stack_items[0] = USI_MAIN_MENU;
-        stack_item_count = 1;
-    } break;
-
-    case ET_LAUNCH_GAME_MENU_SCREEN: {
-        stack_items[0] = USI_GAME_MENU;
-        stack_item_count = 1;
-    } break;
-
-    case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
-        stack_items[0] = USI_HUD;
-        stack_item_count = 1;
-    } break;
-
-    case ET_CLEAR_MENUS: {
-        stack_item_count = 0;
-
-        u_clear_main_menu();
-    } break;
-
     case ET_RECEIVED_AVAILABLE_SERVERS: {
         u_refresh_main_menu_server_page();
     } break;
@@ -55,25 +27,6 @@ static void s_ui_event_listener(
         u_main_menu_init();
         u_game_menu_init();
         u_hud_init();
-    } break;
-
-    case ET_LAUNCH_INGAME_MENU: {
-        stack_items[stack_item_count++] = USI_GAME_MENU;
-    } break;
-
-        // Very important!
-    case ET_PRESSED_ESCAPE: {
-        // For the moment, this only really has an effect if we are in gameplay
-        if (stack_items[stack_item_count - 1] == USI_HUD) {
-            submit_event(ET_LAUNCH_INGAME_MENU, NULL, events);
-        }
-        else if (stack_item_count > 1) {
-            stack_item_count--;
-
-            if (stack_items[stack_item_count - 1] == USI_HUD) {
-                submit_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, NULL, events);
-            }
-        }
     } break;
 
     default: {
@@ -114,13 +67,8 @@ void ui_init(
         NULL,
         events);
 
-    subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, ui_listener, events);
-    subscribe_to_event(ET_CLEAR_MENUS, ui_listener, events);
-    subscribe_to_event(ET_LAUNCH_GAME_MENU_SCREEN, ui_listener, events);
     subscribe_to_event(ET_RECEIVED_AVAILABLE_SERVERS, ui_listener, events);
-    subscribe_to_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, ui_listener, events);
     subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
-    subscribe_to_event(ET_LAUNCH_INGAME_MENU, ui_listener, events);
     subscribe_to_event(ET_RESIZE_SURFACE, ui_listener, events);
 
     global_font = load_font(
@@ -310,4 +258,18 @@ bool u_hover_over_box(
     else {
         return(false);
     }
+}
+
+void push_ui_panel(ui_stack_item_t item) {
+    stack_items[stack_item_count++] = item;
+}
+
+void pop_ui_panel() {
+    if (stack_item_count > 0) {
+        stack_item_count--;
+    }
+}
+
+void clear_ui_panels() {
+    stack_item_count = 0;
 }

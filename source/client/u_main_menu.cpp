@@ -331,21 +331,15 @@ static void s_browse_menu_input(
             game_server_t *server = browse_server_menu.servers[browse_server_menu.selected_server].server;
 
             data->server_name = server->server_name;
-            submit_event(ET_REQUEST_TO_JOIN_SERVER, data, events);
-            // Need to close the main menu, and start a fade effect
-            submit_event(ET_CLEAR_MENUS, NULL, events);
 
+            // Need to close the main menu, and start a fade effect
             event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
             effect_data->dest_value = 0.0f;
             effect_data->duration = 2.5f;
             effect_data->fade_back = 1;
-            effect_data->trigger_count = 3;
-            effect_data->triggers[0].trigger_type = ET_LAUNCH_GAME_MENU_SCREEN;
-            effect_data->triggers[0].next_event_data = NULL;
-            effect_data->triggers[1].trigger_type = ET_ENTER_SERVER_META_MENU;
-            effect_data->triggers[1].next_event_data = NULL;
-            effect_data->triggers[2].trigger_type = ET_EXIT_MAIN_MENU_SCREEN;
-            effect_data->triggers[2].next_event_data = NULL;
+            effect_data->trigger_count = 1;
+            effect_data->triggers[0].trigger_type = ET_REQUEST_TO_JOIN_SERVER;
+            effect_data->triggers[0].next_event_data = data;
             submit_event(ET_BEGIN_FADE, effect_data, events);
         }
         else if (browse_server_menu.typing_ip_address) {
@@ -353,21 +347,15 @@ static void s_browse_menu_input(
 
             memset(data, 0, sizeof(event_data_request_to_join_server_t));
             data->ip_address = browse_server_menu.ip_address.get_string();
-            submit_event(ET_REQUEST_TO_JOIN_SERVER, data, events);
             // Need to close the main menu, and start a fade effect
-            submit_event(ET_CLEAR_MENUS, NULL, events);
 
             event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
             effect_data->dest_value = 0.0f;
             effect_data->duration = 2.5f;
             effect_data->fade_back = 1;
-            effect_data->trigger_count = 3;
-            effect_data->triggers[0].trigger_type = ET_LAUNCH_GAME_MENU_SCREEN;
-            effect_data->triggers[0].next_event_data = NULL;
-            effect_data->triggers[1].trigger_type = ET_ENTER_SERVER_META_MENU;
-            effect_data->triggers[1].next_event_data = NULL;
-            effect_data->triggers[2].trigger_type = ET_EXIT_MAIN_MENU_SCREEN;
-            effect_data->triggers[2].next_event_data = NULL;
+            effect_data->trigger_count = 1;
+            effect_data->triggers[0].trigger_type = ET_REQUEST_TO_JOIN_SERVER;
+            effect_data->triggers[0].next_event_data = data;
             submit_event(ET_BEGIN_FADE, effect_data, events);
         }
 

@@ -22,7 +22,8 @@ void world_init(
 
     w_create_shaders_and_meshes();
 
-    w_player_world_init();
+    player_memory_init();
+    w_create_spectator();
 
     w_allocate_temp_vertices_for_chunk_mesh_creation();
     w_chunk_world_init(4);
@@ -32,7 +33,7 @@ void world_init(
 }
 
 void destroy_world() {
-    w_clear_chunk_world();
+    w_clear_chunks_and_render_rsc();
     w_free_temp_vertices_for_chunk_mesh_creation();
 }
 
@@ -47,21 +48,10 @@ void handle_world_input(
     }
 }
 
-static void s_check_training_ai() {
-    // switch (world.training_type) {
-    // case ATS_ROLLING: {
-        
-    // } break;
-    // case ATS_WALKING: {
-    //     vector3_t pos = world.players[0]->ws_position;
-    // } break;
-    // }
-}
-
 void tick_world(
     event_submissions_t *events) {
     (void)events;
-    w_tick_chunks(logic_delta_time());
+    // w_tick_chunks(logic_delta_time());
     w_tick_players(events);
 
     w_check_ai_population(logic_delta_time());

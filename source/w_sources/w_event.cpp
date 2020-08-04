@@ -1,5 +1,6 @@
 #include "ai.hpp"
 #include <common/log.hpp>
+#include "common/player.hpp"
 #include "w_internal.hpp"
 #include <common/event.hpp>
 
@@ -37,13 +38,14 @@ static void s_handle_event_enter_server(
     context_ptr->in_server = 1;
 
     // Reinitialise chunks / players
-    w_clear_players();
-    w_clear_chunk_world();
+    w_clear_players_and_render_rsc();
+    w_clear_chunks_and_render_rsc();
 
     event_enter_server_t *data = (event_enter_server_t *)event->data;
 
     for (uint32_t i = 0; i < data->info_count; ++i) {
-        w_add_player_from_info(&data->infos[i]);
+        player_t *player = add_player();
+        fill_player_info(player, &data->infos[i]);
     }
 
     FL_FREE(data->infos);
@@ -56,8 +58,8 @@ static void s_handle_event_enter_server_meta_menu() {
 
 static void s_handle_event_leave_server() {
     context_ptr->in_server = 0;
-    w_clear_players();
-    w_clear_chunk_world();
+    w_clear_players_and_render_rsc();
+    w_clear_chunks_and_render_rsc();
 }
 
 static void s_handle_event_spawn(
@@ -67,7 +69,8 @@ static void s_handle_event_spawn(
 
     LOG_INFOV("Client %i spawned\n", data->client_id);
 
-    player_t *p = get_player_from_client_id(id);
+    int32_t local_id = translate_client_to_local_id(id);
+    player_t *p = get_player(local_id);
     p->ws_position = p->next_random_spawn_position;
     p->ws_view_direction = glm::normalize(-p->ws_position);
     // Calculate up vector
@@ -94,7 +97,8 @@ static void s_handle_event_new_player(
     event_t *event) {
     event_new_player_t *data = (event_new_player_t *)event->data;
 
-    w_add_player_from_info(&data->info);
+    player_t *player = add_player();
+    fill_player_info(player, &data->info);
 
     FL_FREE(event->data);
 }
@@ -104,10 +108,11 @@ static void s_handle_event_player_disconnected(
     if (context_ptr->in_server) {
         event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
-        player_t *p = get_player_from_client_id(data->client_id);
+        int32_t local_id = translate_client_to_local_id(data->client_id);
+        player_t *p = get_player(local_id);
             
         if (p) {
-            w_destroy_player(p->local_id);
+            remove_player(p->local_id);
         }
 
         FL_FREE(event->data);
@@ -115,11 +120,11 @@ static void s_handle_event_player_disconnected(
 }
 
 static void s_handle_event_started_receiving_initial_chunk_data() {
-    w_toggle_mesh_update_wait(1);
+    // w_toggle_mesh_update_wait(1);
 }
 
 static void s_handle_event_finished_receiving_initial_chunk_data() {
-    w_toggle_mesh_update_wait(0);
+    // w_toggle_mesh_update_wait(0);
 }
 
 static void s_handle_event_set_chunk_history_tracker(

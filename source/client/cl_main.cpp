@@ -1,6 +1,7 @@
 #include "ui.hpp"
 #include "net.hpp"
 #include "dr_rsc.hpp"
+#include "wd_core.hpp"
 #include "fx_fade.hpp"
 #include "gm_mode.hpp"
 #include "cl_event.hpp"
@@ -30,7 +31,8 @@ static void s_open() {
     fade_info->trigger_count = 0;
     submit_event(ET_BEGIN_FADE, fade_info, &events);
     
-    submit_event(ET_LAUNCH_MAIN_MENU_SCREEN, NULL, &events);
+    // submit_event(ET_LAUNCH_MAIN_MENU_SCREEN, NULL, &events);
+    submit_event(ET_ENTER_MAIN_MENU, NULL, &events);
 
     event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
     start_client_data->client_name = "Some shit";
@@ -84,10 +86,11 @@ int32_t main(
     s_open();
 
     cl_command_buffers_init();
+    wd_init(&events);
     dr_resources_init();
 
     // Initialise game modes
-    gm_modes_init();
+    gm_modes_init(&events);
     // Bind main menu
     gm_bind(GMT_MAIN_MENU);
 

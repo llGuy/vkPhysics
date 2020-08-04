@@ -1,24 +1,26 @@
+// TODO: NEED TO FREE ANIMATED INSTANCE RESOURCE WHEN DESTROYING PLAYER
+
+
 #pragma once
 
-#include "game/engine.hpp"
 #include <common/math.hpp>
 #include <common/time.hpp>
+#include <common/chunk.hpp>
 #include <common/event.hpp>
+#include "engine.hpp"
+#include <common/player.hpp>
 #include <renderer/renderer.hpp>
 #include <common/containers.hpp>
 
 #define PLAYER_WALKING_SPEED 25.0f
 
-void world_init(
-    event_submissions_t *events);
+void world_init(event_submissions_t *events);
 
 void destory_world();
 
-void handle_world_input(
-    highlevel_focus_t focus);
+void handle_world_input(highlevel_focus_t focus);
 
-void tick_world(
-    event_submissions_t *events);
+void tick_world(event_submissions_t *events);
 
 void gpu_sync_world(
     bool in_startup,
@@ -28,31 +30,6 @@ void gpu_sync_world(
 
 eye_3d_info_t create_eye_info();
 lighting_info_t create_lighting_info();
-
-// Push constant
-// chunk_render_data_t may become a different structure in the future.
-
-void activate_chunk_history(
-    chunk_t *chunk);
-
-void reset_modification_tracker();
-
-uint32_t get_voxel_index(
-    uint32_t x,
-    uint32_t y,
-    uint32_t z);
-
-void set_chunk_history_tracker_value(
-    bool value);
-
-struct chunks_to_interpolate_t {
-    float elapsed;
-    uint32_t max_modified;
-    uint32_t modification_count;
-    struct chunk_modifications_t *modifications;
-};
-
-chunks_to_interpolate_t *get_chunks_to_interpolate();
 
 // For AI
 #define AI_SENSOR_COUNT 26

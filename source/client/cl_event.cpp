@@ -14,11 +14,6 @@ void cl_subscribe_to_events(
     subscribe_to_event(ET_PRESSED_ESCAPE, game_core_listener, events);
     subscribe_to_event(ET_BEGIN_FADE, game_core_listener, events);
     subscribe_to_event(ET_FADE_FINISHED, game_core_listener, events);
-    subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, game_core_listener, events);
-    subscribe_to_event(ET_EXIT_MAIN_MENU_SCREEN, game_core_listener, events);
-    subscribe_to_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, game_core_listener, events);
-    subscribe_to_event(ET_LAUNCH_INGAME_MENU, game_core_listener, events);
-    subscribe_to_event(ET_LAUNCH_GAME_MENU_SCREEN, game_core_listener, events);
     subscribe_to_event(ET_BEGIN_AI_TRAINING, game_core_listener, events);
 }
 
@@ -51,13 +46,13 @@ void cl_game_event_listener(
     case ET_PRESSED_ESCAPE: {
     } break;
 
-    case ET_LAUNCH_MAIN_MENU_SCREEN: {
-        cl_change_view_type(GVT_MENU);
-    } break;
+    // case ET_LAUNCH_MAIN_MENU_SCREEN: {
+    //     cl_change_view_type(GVT_MENU);
+    // } break;
 
-    case ET_LAUNCH_GAME_MENU_SCREEN: {
-        cl_change_view_type(GVT_IN_GAME);
-    } break;
+    // case ET_LAUNCH_GAME_MENU_SCREEN: {
+    //     cl_change_view_type(GVT_IN_GAME);
+    // } break;
 
         // TODO: See how the game works with this
     // case ET_EXIT_MAIN_MENU_SCREEN: {
@@ -69,13 +64,13 @@ void cl_game_event_listener(
         // cl_begin_crisp_rendering();
     } break;
 
-    case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
-        cl_change_view_type(GVT_IN_GAME);
-    } break;
+    // case ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY: {
+    //     cl_change_view_type(GVT_IN_GAME);
+    // } break;
 
-    case ET_LAUNCH_INGAME_MENU: {
-        cl_change_view_type(GVT_MENU);
-    } break;
+    // case ET_LAUNCH_INGAME_MENU: {
+    //     cl_change_view_type(GVT_MENU);
+    // } break;
 
     default: {
     } break;

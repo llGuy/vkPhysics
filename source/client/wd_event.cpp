@@ -14,11 +14,8 @@ void wd_subscribe_to_events(listener_t world_listener, event_submissions_t *even
     subscribe_to_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
     subscribe_to_event(ET_SET_CHUNK_HISTORY_TRACKER, world_listener, events);
     subscribe_to_event(ET_SPAWN, world_listener, events);
-    subscribe_to_event(ET_LAUNCH_MAIN_MENU_SCREEN, world_listener, events);
-    subscribe_to_event(ET_ENTER_SERVER_META_MENU, world_listener, events);
     subscribe_to_event(ET_BEGIN_AI_TRAINING, world_listener, events);
     subscribe_to_event(ET_RESET_AI_ARENA, world_listener, events);
-    subscribe_to_event(ET_LAUNCH_GAME_MENU_SCREEN, world_listener, events);
     subscribe_to_event(ET_FINISH_GENERATION, world_listener, events);
 }
 
@@ -151,14 +148,6 @@ static void s_handle_event_reset_ai_arena() {
     // w_begin_ai_training_chunks(context_ptr->training_type);
 }
 
-static void s_handle_event_launch_game_menu_screen() {
-    LOG_INFO("Resetting spectator's positions / view direction\n");
-
-    // w_reposition_spectator();
-
-    // context_ptr->in_meta_menu = 1;
-}
-
 void w_world_event_listener(
     void *object,
     event_t *event,
@@ -167,10 +156,6 @@ void w_world_event_listener(
 
     case ET_ENTER_SERVER: {
         s_handle_event_enter_server(event);
-    } break;
-
-    case ET_ENTER_SERVER_META_MENU: {
-        // s_handle_event_enter_server_meta_menu();
     } break;
 
     case ET_LEAVE_SERVER: {
@@ -201,10 +186,6 @@ void w_world_event_listener(
         s_handle_event_set_chunk_history_tracker(event);
     } break;
 
-    case ET_LAUNCH_MAIN_MENU_SCREEN: {
-        s_handle_event_launch_main_menu_screen();
-    } break;
-
     case ET_BEGIN_AI_TRAINING: {
         s_handle_event_begin_ai_training(event);
     } break;
@@ -215,10 +196,6 @@ void w_world_event_listener(
 
     case ET_RESET_AI_ARENA: {
         // s_handle_event_reset_ai_arena();
-    } break;
-
-    case ET_LAUNCH_GAME_MENU_SCREEN: {
-        s_handle_event_launch_game_menu_screen();
     } break;
 
     default: {

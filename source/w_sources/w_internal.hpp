@@ -1,37 +1,35 @@
 #pragma once
 
-#include "world.hpp"
 #include <common/tools.hpp>
 #include <common/event.hpp>
+#include <common/chunk.hpp>
+#include <common/player.hpp>
 #include <renderer/input.hpp>
 #include <common/containers.hpp>
 #include <renderer/renderer.hpp>
 
 // PLAYER STUFF ///////////////////////////////////////////////////////////////
 void w_player_world_init();
+void w_create_spectator();
+void w_clear_players_and_render_rsc();
 
-void w_player_render_init(
-    player_t *player);
-
-void w_handle_input(
-    game_input_t *input,
-    float dt);
+void w_player_render_init(player_t *player);
+void w_handle_input(game_input_t *input, float dt);
 
 void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer);
 
-void w_tick_players(
-    event_submissions_t *events);
+void w_tick_players(event_submissions_t *events);
 
 int32_t w_local_player_index();
 player_t *w_get_local_player();
 player_t *w_get_spectator();
 stack_container_t<player_t *> &w_get_players();
 
-void w_set_local_player(
-    int32_t local_id);
+void w_set_local_player(int32_t local_id);
+void w_execute_player_actions(player_t *player, event_submissions_t *events);
 
 // CHUNKS /////////////////////////////////////////////////////////////////////
 void w_chunks_data_init();
@@ -58,7 +56,8 @@ void w_destroy_chunk_render(
 chunk_t *w_destroy_chunk(
     chunk_t *chunk);
 
-void w_clear_chunk_world();
+// Clear the chunks and the rendering resources
+void w_clear_chunks_and_render_rsc();
 
 void w_destroy_chunk_data();
 

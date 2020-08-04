@@ -2,7 +2,8 @@
 #include <cstddef>
 #include <math.h>
 #include "common/event.hpp"
-#include "game/world.hpp"
+#include "common/player.hpp"
+#include "world.hpp"
 #include "net.hpp"
 #include "ai.hpp"
 
@@ -14,44 +15,22 @@
 #include <common/math.hpp>
 #include <vulkan/vulkan_core.h>
 
+static int32_t local_player;
+static player_t *spectator;
+
 int32_t w_local_player_index() {
-    return players.local_player;
+    return local_player;
 }
 
-// void w_player_world_init() {
-//     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
-//         players.local_id_from_client_id[i] = -1;
-//     }
-
-//     players.local_player = -1;
-
-//     players.players.init(MAX_PLAYERS);
-//     for (uint32_t i = 0; i < MAX_PLAYERS; ++i) {
-//         players.players.data[i] = NULL;
-//     }
-
-//     players.spectator = FL_MALLOC(player_t, 1);
-//     memset(players.spectator, 0, sizeof(player_t));
-//     players.spectator->default_speed = 40.0f;
-//     players.spectator->ws_position = vector3_t(3.7f, -136.0f, -184.0f);
-//     players.spectator->ws_view_direction = vector3_t(0.063291, 0.438437, 0.896531);
-//     players.spectator->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
-//     players.spectator->flags.interaction_mode = PIM_FLOATING;
-//     players.spectator->camera_fov.current = 60.0f;
-//     players.spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
-
-//     player_scale = vector3_t(0.5f);
-// }
-
-void w_player_render_init(
-    player_t *player) {
-    player->render = FL_MALLOC(player_render_t, 1);
+void w_clear_players_and_render_rsc() {
+    // Clear rendering resources;
+    clear_players();
 }
 
 void w_handle_input(
     game_input_t *game_input,
     float dt) {
-    player_actions_t actions;
+    player_action_t actions;
 
     actions.bytes = 0;
 
@@ -91,11 +70,11 @@ void w_handle_input(
             push_player_actions(local_player, &actions, 0);
         }
         else {
-            push_player_actions(players.spectator, &actions, 0);
+            push_player_actions(spectator, &actions, 0);
         }
     }
     else {
-        push_player_actions(players.spectator, &actions, 0);
+        push_player_actions(spectator, &actions, 0);
     }
 }
 
@@ -149,8 +128,8 @@ static void s_interpolate_remote_player_snapshots(
 void w_tick_players(
     event_submissions_t *events) {
     // Handle networking stuff
-    for (uint32_t i = 0; i < players.players.data_count; ++i) {
-        player_t *p = players.players[i];
+    for (uint32_t i = 0; i < get_player_count(); ++i) {
+        player_t *p = get_player(i);
         if (p) {
             if (p->flags.alive_state == PAS_ALIVE) {
                 // Will be 0 for remote players
@@ -163,17 +142,17 @@ void w_tick_players(
         }
     }
 
-    w_execute_player_actions(players.spectator, events);
+    w_execute_player_actions(spectator, events);
 }
 
 void w_set_local_player(
     int32_t local_id) {
-    players.local_player = local_id;
+    local_player = local_id;
 }
 
 player_t *w_get_local_player() {
-    if (players.local_player >= 0) {
-        return players.players[players.local_player];
+    if (local_player >= 0) {
+        return get_player(local_player);
     }
     else {
         return NULL;
@@ -181,30 +160,16 @@ player_t *w_get_local_player() {
 }
 
 player_t *w_get_spectator() {
-    return players.spectator;
+    return spectator;
 }
 
 player_t *w_add_player_from_info(
     player_init_info_t *init_info) {
-    player_t *p = w_add_player();
+    player_t *p = add_player();
+    fill_player_info(p, init_info);
         
-    if (init_info->client_data) {
-        p->name = init_info->client_data->name;
-        p->client_id = init_info->client_data->client_id;
-        // Now the network module can use w_get_player_from_client_id to get access to player directly
-        w_link_client_id_to_local_id(p->client_id, p->local_id);
-    }
-
-    s_weapons_init(p);
-    s_set_default_values(init_info, p);
-
-    memset(p->player_actions, 0, sizeof(p->player_actions));
-    p->accumulated_dt = 0.0f;
-
-    p->flags.u32 = init_info->flags;
-
     // If offline
-    if (!init_info->client_data) {
+    if (!init_info->client_name) {
         p->flags.alive_state = PAS_ALIVE;
     }
     
@@ -222,7 +187,7 @@ player_t *w_add_player_from_info(
         }
         
         p->cached_player_action_count = 0;
-        p->cached_player_actions = FL_MALLOC(player_actions_t, MAX_PLAYER_ACTIONS * 2);
+        p->cached_player_actions = FL_MALLOC(player_action_t, PLAYER_MAX_ACTIONS_COUNT * 2);
 
         p->flags.is_remote = 0;
         p->flags.is_local = 1;
@@ -237,7 +202,7 @@ player_t *w_add_player_from_info(
     }
 
     if (get_game_init_flags() | GIF_WINDOWED) {
-        w_player_animated_instance_init(&p->animations);
+        w_player_animated_instance_init(&p->render->animations);
     }
 
     // LOG_INFOV("Added player %i: %s\n", p->local_id, p->name);
@@ -245,20 +210,12 @@ player_t *w_add_player_from_info(
 }
 
 void w_reposition_spectator() {
-    players.spectator->ws_position = w_get_startup_screen_data()->position;
-    players.spectator->ws_view_direction = w_get_startup_screen_data()->view_direction;
-    players.spectator->ws_up_vector = w_get_startup_screen_data()->up_vector;
+    spectator->ws_position = w_get_startup_screen_data()->position;
+    spectator->ws_view_direction = w_get_startup_screen_data()->view_direction;
+    spectator->ws_up_vector = w_get_startup_screen_data()->up_vector;
 }
 
 void w_handle_spectator_mouse_movement() {
-    players.spectator->ws_view_direction = w_update_spectator_view_direction(
-        players.spectator->ws_view_direction);
-}
-
-stack_container_t<player_t *> &DEBUG_get_players() {
-    return players.players;
-}
-
-player_t *DEBUG_get_spectator() {
-    return players.spectator;
+    spectator->ws_view_direction = w_update_spectator_view_direction(
+        spectator->ws_view_direction);
 }

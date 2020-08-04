@@ -148,8 +148,8 @@ static collision_triangle_t *s_get_collision_triangles(
     ivector3_t bounding_cube_range = bounding_cube_max - bounding_cube_min;
 
     bool is_between_chunks = 0;
-    ivector3_t min_local_coord = w_convert_voxel_to_local_chunk(bounding_cube_min);
-    ivector3_t max_local_coord = w_convert_voxel_to_local_chunk(bounding_cube_max);
+    ivector3_t min_local_coord = space_voxel_to_local_chunk(bounding_cube_min);
+    ivector3_t max_local_coord = space_voxel_to_local_chunk(bounding_cube_max);
 
     if (max_local_coord.x < min_local_coord.x ||
         max_local_coord.y < min_local_coord.y ||
@@ -166,7 +166,7 @@ static collision_triangle_t *s_get_collision_triangles(
         for (int32_t y = bounding_cube_min.y; y < bounding_cube_max.y; ++y) {
             for (int32_t x = bounding_cube_min.x; x < bounding_cube_max.x; ++x) {
                 ivector3_t voxel_coord = ivector3_t(x, y, z);
-                ivector3_t chunk_coord = w_convert_voxel_to_chunk(voxel_coord);
+                ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
                 chunk_t *chunk = access_chunk(chunk_coord);
 
                 if (chunk) {
@@ -174,7 +174,7 @@ static collision_triangle_t *s_get_collision_triangles(
                 
                     uint8_t voxel_values[8] = {};
                     
-                    ivector3_t cs_coord = w_convert_voxel_to_local_chunk(voxel_coord);
+                    ivector3_t cs_coord = space_voxel_to_local_chunk(voxel_coord);
                     
                     if (is_between_chunks) {
                         voxel_values[0] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y, cs_coord.z)];
@@ -204,7 +204,7 @@ static collision_triangle_t *s_get_collision_triangles(
                         x,
                         y,
                         z,
-                        w_get_surface_level(),
+                        CHUNK_SURFACE_LEVEL,
                         triangles,
                         &collision_vertex_count,
                         max_vertices);

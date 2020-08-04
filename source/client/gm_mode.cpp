@@ -9,9 +9,31 @@ static game_mode_type_t bound_game_mode;
 static eye_3d_info_t eye_info;
 static lighting_info_t lighting_info;
 
-void gm_modes_init() {
-    gm_main_init();
-    gm_play_init();
+static listener_t game_mode_listener;
+
+static void s_game_mode_event_listener(
+    void *object,
+    event_t *event,
+    event_submissions_t *events) {
+    switch (bound_game_mode) {
+    case GMT_GAME_PLAY: {
+        gm_handle_play_event(object, event, events);
+    } break;
+
+    case GMT_MAIN_MENU: {
+        gm_handle_main_event(object, event, events);
+    } break;
+
+    default: {
+    } break;
+    }
+}
+
+void gm_modes_init(event_submissions_t *events) {
+    game_mode_listener = set_listener_callback(s_game_mode_event_listener, NULL, events);
+
+    gm_main_init(game_mode_listener, events);
+    gm_play_init(game_mode_listener, events);
 }
 
 void gm_bind(game_mode_type_t mode) {

@@ -39,7 +39,7 @@ void timestep_end() {
     ++current_tick;
 }
 
-float get_timestep_delta() {
+float get_game_timestep_delta() {
     return dt;
 }
 

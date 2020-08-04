@@ -192,6 +192,8 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path) {
     res.position = ws_position;
     res.view_direction = ws_view_direction;
     res.up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+
+    return res;
 }
 
 mesh_t *dr_get_mesh_rsc(game_mesh_t mesh) {

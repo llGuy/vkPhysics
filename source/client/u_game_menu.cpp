@@ -19,16 +19,12 @@ static menu_layout_t game_menu_layout;
 
 static void s_menu_layout_disconnect_proc(
     event_submissions_t *events) {
-    submit_event(ET_LEAVE_SERVER, NULL, events);
-    // Submit fade effect and shit
-    submit_event(ET_CLEAR_MENUS, NULL, events);
-
     event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
     effect_data->dest_value = 0.0f;
     effect_data->duration = 2.5f;
     effect_data->fade_back = 1;
     effect_data->trigger_count = 1;
-    effect_data->triggers[0].trigger_type = ET_LAUNCH_MAIN_MENU_SCREEN;
+    effect_data->triggers[0].trigger_type = ET_LEAVE_SERVER;
     effect_data->triggers[0].next_event_data = NULL;
     submit_event(ET_BEGIN_FADE, effect_data, events);
 }
@@ -38,7 +34,6 @@ static void s_menu_layout_spawn_proc(
     event_spawn_t *spawn = FL_MALLOC(event_spawn_t, 1);
     spawn->client_id = get_local_client_index();
     submit_event(ET_SPAWN, spawn, events);
-    submit_event(ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY, NULL, events);
 }
 
 void u_game_menu_init() {

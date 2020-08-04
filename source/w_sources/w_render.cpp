@@ -1,5 +1,5 @@
 #include "common/containers.hpp"
-#include "game/world.hpp"
+#include "world.hpp"
 #include "w_internal.hpp"
 
 static scene_rendering_t scene_rendering;
@@ -132,15 +132,15 @@ static void s_render_person(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     player_t *p) {
-    if (p->animations.next_bound_cycle != p->animated_state) {
+    if (p->render->animations.next_bound_cycle != p->animated_state) {
         switch_to_cycle(
-            &p->animations,
+            &p->render->animations,
             p->animated_state,
             0);
     }
 
-    interpolate_joints(&p->animations, logic_delta_time(), w_animation_is_repeat((player_animated_state_t)p->animated_state));
-    sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
+    interpolate_joints(&p->render->animations, logic_delta_time(), w_animation_is_repeat((player_animated_state_t)p->animated_state));
+    sync_gpu_with_animated_transforms(&p->render->animations, transfer_command_buffer);
 
     // This has to be a bit different
     movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
@@ -158,7 +158,7 @@ static void s_render_person(
     p->render->render_data.model = glm::translate(p->ws_position) *
         normal_rotation_matrix *
         scene_rendering.player_cycles.rotation *
-        glm::scale(w_get_player_scale()) *
+        glm::scale(PLAYER_SCALE) *
         scene_rendering.player_cycles.scale;
 
     submit_skeletal_mesh(
@@ -166,29 +166,29 @@ static void s_render_person(
         &scene_rendering.player_mesh,
         &scene_rendering.player_shader,
         &p->render->render_data,
-        &p->animations);
+        &p->render->animations);
 }
 
 static void s_render_ball(
     VkCommandBuffer render_command_buffer,
     player_t *p) {
-    p->rotation_speed = p->frame_displacement / calculate_sphere_circumference(w_get_player_scale().x) * 360.0f;
-    p->rotation_angle += p->rotation_speed;
+    p->render->rotation_speed = p->frame_displacement / calculate_sphere_circumference(PLAYER_SCALE.x) * 360.0f;
+    p->render->rotation_angle += p->render->rotation_speed;
 
-    if (p->rotation_angle > 360.0f) {
-        p->rotation_angle -= 360.0f;
+    if (p->render->rotation_angle > 360.0f) {
+        p->render->rotation_angle -= 360.0f;
     }
 
     if (glm::dot(p->ws_velocity, p->ws_velocity) > 0.0001f) {
         vector3_t cross = glm::cross(glm::normalize(p->ws_velocity), p->ws_up_vector);
         vector3_t right = glm::normalize(cross);
 
-        matrix4_t rolling_rotation = glm::rotate(glm::radians(p->rotation_angle), -right);
+        matrix4_t rolling_rotation = glm::rotate(glm::radians(p->render->rotation_angle), -right);
 
-        p->rolling_matrix = rolling_rotation;
+        p->render->rolling_matrix = rolling_rotation;
     }
 
-    p->render->render_data.model = glm::translate(p->ws_position) * p->rolling_matrix * glm::scale(w_get_player_scale());
+    p->render->render_data.model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(PLAYER_SCALE);
 
     begin_mesh_submission(render_command_buffer, &scene_rendering.player_ball_shader);
     submit_mesh(
@@ -216,15 +216,15 @@ static void s_render_transition(
         
     } render_data;
 
-    if (p->animations.next_bound_cycle != p->animated_state) {
+    if (p->render->animations.next_bound_cycle != p->animated_state) {
         switch_to_cycle(
-            &p->animations,
+            &p->render->animations,
             p->animated_state,
             0);
     }
 
-    interpolate_joints(&p->animations, logic_delta_time(), w_animation_is_repeat((player_animated_state_t)p->animated_state));
-    sync_gpu_with_animated_transforms(&p->animations, transfer_command_buffer);
+    interpolate_joints(&p->render->animations, logic_delta_time(), w_animation_is_repeat((player_animated_state_t)p->animated_state));
+    sync_gpu_with_animated_transforms(&p->render->animations, transfer_command_buffer);
 
     // This has to be a bit different
     movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
@@ -242,31 +242,31 @@ static void s_render_transition(
     render_data.first_model = glm::translate(p->ws_position) *
         normal_rotation_matrix *
         scene_rendering.player_cycles.rotation *
-        glm::scale(w_get_player_scale()) *
+        glm::scale(PLAYER_SCALE) *
         scene_rendering.player_cycles.scale;
 
-    p->rotation_speed = p->frame_displacement / calculate_sphere_circumference(w_get_player_scale().x) * 360.0f;
-    p->rotation_angle += p->rotation_speed;
+    p->render->rotation_speed = p->frame_displacement / calculate_sphere_circumference(PLAYER_SCALE.x) * 360.0f;
+    p->render->rotation_angle += p->render->rotation_speed;
 
-    if (p->rotation_angle > 360.0f) {
-        p->rotation_angle -= 360.0f;
+    if (p->render->rotation_angle > 360.0f) {
+        p->render->rotation_angle -= 360.0f;
     }
 
     if (glm::dot(p->ws_velocity, p->ws_velocity) > 0.0001f) {
         vector3_t cross = glm::cross(glm::normalize(p->ws_velocity), p->ws_up_vector);
         vector3_t right = glm::normalize(cross);
 
-        matrix4_t rolling_rotation = glm::rotate(glm::radians(p->rotation_angle), -right);
+        matrix4_t rolling_rotation = glm::rotate(glm::radians(p->render->rotation_angle), -right);
 
-        p->rolling_matrix = rolling_rotation;
+        p->render->rolling_matrix = rolling_rotation;
     }
 
-    render_data.second_model = glm::translate(p->ws_position) * p->rolling_matrix * glm::scale(w_get_player_scale());
+    render_data.second_model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(PLAYER_SCALE);
 
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.1f;
     render_data.pbr_info.y = 0.1f;
-    render_data.progression = p->shape_animation_time / SHAPE_SWITCH_ANIMATION_TIME;
+    render_data.progression = p->render->shape_animation_time / SHAPE_SWITCH_ANIMATION_TIME;
 
     if (p->flags.interaction_mode == PIM_STANDING) {
         // Need to render transition from ball to person
@@ -276,7 +276,7 @@ static void s_render_transition(
             &scene_rendering.merged_shader_ball,
             &render_data,
             sizeof(render_data),
-            &p->animations);
+            &p->render->animations);
     }
     else {
         // Need to render transition from person to ball
@@ -286,7 +286,7 @@ static void s_render_transition(
             &scene_rendering.merged_shader_player,
             &render_data,
             sizeof(render_data),
-            &p->animations);
+            &p->render->animations);
     }
 }
 
@@ -295,10 +295,8 @@ void w_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
-    stack_container_t<player_t *> &players = w_get_players();
-
-    for (uint32_t i = 0; i < players.data_count; ++i) {
-        player_t *p = players[i];
+    for (uint32_t i = 0; i < get_player_count(); ++i) {
+        player_t *p = get_player(i);
         if (p) {
             if (p->flags.alive_state == PAS_ALIVE) {
                 if (!p->render) {
@@ -386,8 +384,8 @@ static void s_calculate_3rd_person_position_and_direction(
     player_t *player,
     vector3_t *position,
     vector3_t *direction) {
-    *position = player->ws_position - player->ws_view_direction * player->camera_distance.current * w_get_player_scale().x;
-    *position += player->current_camera_up * w_get_player_scale() * 2.0f;
+    *position = player->ws_position - player->ws_view_direction * player->camera_distance.current * PLAYER_SCALE.x;
+    *position += player->current_camera_up * PLAYER_SCALE * 2.0f;
 
     if (player->flags.interaction_mode == PIM_STANDING && player->flags.moving) {
         // Add view bobbing
@@ -453,65 +451,6 @@ lighting_info_t create_lighting_info() {
     return info;
 }
 
-void w_chunk_gpu_sync_and_render(
-    VkCommandBuffer render_command_buffer,
-    VkCommandBuffer transfer_command_buffer) {
-    const uint32_t max_chunks_loaded_per_frame = 10;
-    uint32_t chunks_loaded = 0;
-
-    terraform_package_t *current_terraform_package = w_get_local_current_terraform_package();
-
-    if (current_terraform_package->ray_hit_terrain) {
-        scene_rendering.chunk_color_data.pointer_radius = 3.0f;
-    }
-    else {
-        scene_rendering.chunk_color_data.pointer_radius = 0.0f;
-    }
-
-    scene_rendering.chunk_color_data.pointer_position = vector4_t(current_terraform_package->position, 1.0f);
-    scene_rendering.chunk_color_data.pointer_color = vector4_t(0.0f, 1.0f, 1.0f, 1.0f);
-
-    update_gpu_buffer(
-        transfer_command_buffer,
-        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-        0,
-        sizeof(chunk_color_data_t),
-        &scene_rendering.chunk_color_data,
-        &scene_rendering.chunk_color_data_buffer);
-
-    begin_mesh_submission(
-        render_command_buffer,
-        &scene_rendering.chunk_shader,
-        scene_rendering.chunk_color_data_buffer_set);
-
-    stack_container_t<chunk_t *> &chunks = w_get_chunks();
-    uint8_t surface_level = w_get_surface_level();
-
-    for (uint32_t i = 0; i < chunks.data_count; ++i) {
-        chunk_t *c = chunks[i];
-        if (c) {
-            if (c->flags.has_to_update_vertices && chunks_loaded < max_chunks_loaded_per_frame/* && !chunks.wait_mesh_update*/) {
-                c->flags.has_to_update_vertices = 0;
-                // Update chunk mesh and put on GPU + send to command buffer
-                // TODO:
-                w_update_chunk_mesh(
-                    transfer_command_buffer,
-                    surface_level,
-                    c);
-
-                ++chunks_loaded;
-            }
-        
-            if (c->flags.active_vertices) {
-                submit_mesh(
-                    render_command_buffer,
-                    &c->render->mesh,
-                    &scene_rendering.chunk_shader,
-                    &c->render->render_data);
-            }
-        }
-    }
-}
 
 void w_render_startup_world(
     VkCommandBuffer render_command_buffer) {

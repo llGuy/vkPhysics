@@ -19,5 +19,5 @@ void leave_game();
 
 void timestep_begin(float dt);
 void timestep_end();
-float get_timestep_delta();
+float get_game_timestep_delta();
 uint64_t &get_current_tick();

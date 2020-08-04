@@ -1,4 +1,5 @@
 #include <common/player.hpp>
+#include "client/cl_view.hpp"
 #include "ui.hpp"
 #include "net.hpp"
 #include "wd_core.hpp"
@@ -22,8 +23,13 @@ enum submode_t {
 
 static submode_t submode;
 
-void gm_play_init() {
+void gm_play_init(listener_t listener, event_submissions_t *events) {
     // Nothing to do here
+    subscribe_to_event(ET_ENTER_GAME_PLAY, listener, events);
+    subscribe_to_event(ET_LEAVE_SERVER, listener, events);
+    subscribe_to_event(ET_EXIT_GAME_PLAY, listener, events);
+    subscribe_to_event(ET_SPAWN, listener, events);
+    subscribe_to_event(ET_LOCAL_PLAYER_DIED, listener, events);
 }
 
 void gm_bind_play() {
@@ -111,4 +117,63 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     lighting_info_t *light_info = gm_get_lighting_info();
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
+}
+
+void gm_handle_play_event(void *object, event_t *event, event_submissions_t *events) {
+    switch (event->type) {
+    case ET_ENTER_GAME_PLAY: {
+        // Enter game menu
+        push_ui_panel(USI_GAME_MENU);
+        submode = S_MENU;
+
+        cl_change_view_type(GVT_MENU);
+    } break;
+
+        // Leaving the server equates to exiting the game play mode
+    case ET_LEAVE_SERVER: case ET_EXIT_GAME_PLAY: {
+        clear_ui_panels();
+
+        submit_event(ET_ENTER_MAIN_MENU, NULL, events);
+
+        gm_bind(GMT_MAIN_MENU);
+    } break;
+
+    case ET_SPAWN: {
+        clear_ui_panels();
+        push_ui_panel(USI_HUD);
+
+        cl_change_view_type(GVT_IN_GAME);
+
+        submode = S_IN_GAME;
+    } break;
+
+    case ET_PRESSED_ESCAPE: {
+        // Toggle pause / unpause
+        static uint32_t pause = 0;
+        pause = !pause;
+
+        if (pause) {
+            pop_ui_panel();
+            cl_change_view_type(GVT_IN_GAME);
+            submode = S_IN_GAME;
+        }
+        else {
+            push_ui_panel(USI_GAME_MENU);
+            cl_change_view_type(GVT_MENU);
+            submode = S_PAUSE;
+        }
+    } break;
+
+    case ET_LOCAL_PLAYER_DIED: {
+        clear_ui_panels();
+        push_ui_panel(USI_GAME_MENU);
+
+        cl_change_view_type(GVT_MENU);
+
+        submode = S_MENU;
+    } break;
+
+    default: {
+    } break;
+    }
 }

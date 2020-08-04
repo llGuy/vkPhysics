@@ -1,5 +1,5 @@
 #include <common/event.hpp>
-#include "game/e_internal.hpp"
+#include "e_internal.hpp"
 #include "renderer/renderer.hpp"
 #include <common/allocators.hpp>
 

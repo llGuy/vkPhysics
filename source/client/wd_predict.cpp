@@ -100,8 +100,7 @@ void wd_execute_player_actions(player_t *player, event_submissions_t *events) {
             }
 
             if (player->flags.alive_state == PAS_DEAD) {
-                submit_event(ET_LAUNCH_GAME_MENU_SCREEN, NULL, events);
-                submit_event(ET_ENTER_SERVER_META_MENU, NULL, events);
+                submit_event(ET_LOCAL_PLAYER_DIED, NULL, events);
             }
         }
 
@@ -119,8 +118,7 @@ void wd_predict_state(event_submissions_t *events) {
 void wd_kill_local_player(struct event_submissions_t *events) {
     LOG_INFO("Local player just died\n");
 
-    submit_event(ET_LAUNCH_GAME_MENU_SCREEN, NULL, events);
-    submit_event(ET_ENTER_SERVER_META_MENU, NULL, events);
+    submit_event(ET_LOCAL_PLAYER_DIED, NULL, events);
 
     player_t *local_player_ptr = get_player(local_player);
     local_player_ptr->flags.alive_state = PAS_DEAD;

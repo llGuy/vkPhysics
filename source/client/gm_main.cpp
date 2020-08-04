@@ -1,3 +1,4 @@
+#include "client/gm_play.hpp"
 #include "ui.hpp"
 #include "net.hpp"
 #include "dr_rsc.hpp"
@@ -8,13 +9,18 @@
 #include "wd_spectate.hpp"
 #include <common/event.hpp>
 #include <common/player.hpp>
+#include <cstddef>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 
 static fixed_premade_scene_t scene;
 
-void gm_main_init() {
+void gm_main_init(listener_t listener, event_submissions_t *events) {
     scene = dr_read_premade_rsc("assets/misc/startup/default.startup");
+
+    subscribe_to_event(ET_ENTER_MAIN_MENU, listener, events);
+    subscribe_to_event(ET_EXIT_MAIN_MENU, listener, events);
+    subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, listener, events);
 }
 
 void gm_bind_main() {
@@ -29,7 +35,9 @@ void gm_bind_main() {
     fx_disable_ssao();
 }
 
-static void s_handle_input() {
+static void s_handle_input(event_submissions_t *events) {
+    handle_ui_input(events);
+
     player_t *spect = wd_get_spectator();
     game_input_t *game_input = get_game_input();
 
@@ -70,13 +78,15 @@ static void s_handle_input() {
 }
 
 void gm_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
-    s_handle_input();
+    s_handle_input(events);
 
     tick_net(events);
 
     // Submit the mesh
     begin_mesh_submission(render, dr_get_shader_rsc(GS_CHUNK), dr_chunk_colors_g.chunk_color_set);
     submit_mesh(render, &scene.world_mesh, dr_get_shader_rsc(GS_CHUNK), &scene.world_render_data);
+
+    render_environment(render);
 
     // Update UI
     // Submits quads to a list that will get sent to the GPU
@@ -85,6 +95,7 @@ void gm_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     render_submitted_ui(transfer, ui);
 
     eye_3d_info_t *eye_info = gm_get_eye_info();
+    memset(eye_info, 0, sizeof(eye_3d_info_t));
     player_t *player = wd_get_spectator();
 
     eye_info->position = player->ws_position;
@@ -97,6 +108,30 @@ void gm_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     eye_info->dt = cl_delta_time();
 
     lighting_info_t *light_info = gm_get_lighting_info();
+    memset(light_info, 0, sizeof(lighting_info_t));
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
+}
+
+void gm_handle_main_event(void *object, struct event_t *event, struct event_submissions_t *events) {
+    switch (event->type) {
+    case ET_ENTER_MAIN_MENU: {
+        push_ui_panel(USI_MAIN_MENU);
+    } break;
+
+    case ET_EXIT_MAIN_MENU: {
+        clear_ui_panels();
+    } break;
+
+    case ET_REQUEST_TO_JOIN_SERVER: {
+        clear_ui_panels();
+
+        submit_event(ET_ENTER_GAME_PLAY, NULL, events);
+
+        gm_bind(GMT_GAME_PLAY);
+    } break;
+
+    default: {
+    } break;
+    }
 }

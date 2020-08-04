@@ -46,7 +46,7 @@ void e_debug_window() {
         data->info.ws_view_direction = direction;
         data->info.ws_up_vector = up;
         data->info.default_speed = default_speed;
-        data->info.client_data = NULL;
+        data->info.client_name = NULL;
         data->info.next_random_spawn_position = vector3_t(data->info.ws_position);
 
         player_flags_t flags;
@@ -67,27 +67,6 @@ void e_debug_window() {
         submit_event(ET_SPAWN, spawn_event, &engine_ptr->events);
     }
 
-    auto &ps = DEBUG_get_players();
-
-    player_t *spectator = DEBUG_get_spectator();
-
-    ImGui::Text("- Position: %s", glm::to_string(spectator->ws_position).c_str());
-    ImGui::Text("- Direction: %s", glm::to_string(spectator->ws_view_direction).c_str());
-
-    for (uint32_t i = 0; i < ps.data_count; ++i) {
-        player_t *p = ps.data[i];
-        if (p) {
-            if (p->flags.is_local) {
-                ImGui::Text("- Position: %s", glm::to_string(p->ws_position).c_str());
-                ImGui::Text("- Direction: %s", glm::to_string(p->ws_view_direction).c_str());
-                ImGui::Text("- Velocity: %s", glm::to_string(p->ws_velocity).c_str());
-                vector3_t cc = glm::floor(p->ws_position);
-                vector3_t from_origin = (vector3_t)cc;
-                vector3_t xs_sized = glm::floor(from_origin / (float)CHUNK_EDGE_LENGTH);
-                ImGui::Text("- Chunk coord: %s", glm::to_string((ivector3_t)xs_sized).c_str());
-            }
-        }
-    }
 
     ImGui::Separator();
     ImGui::Text("-- Net --");

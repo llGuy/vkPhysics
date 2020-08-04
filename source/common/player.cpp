@@ -146,7 +146,7 @@ static void s_handle_shape_switch(
     }
 
     if (player->switching_shapes)
-        player->shape_switching_time += get_timestep_delta();
+        player->shape_switching_time += get_game_timestep_delta();
 
     if (player->shape_switching_time > PLAYER_SHAPE_SWITCH_DURATION) {
         player->shape_switching_time = 0.0f;

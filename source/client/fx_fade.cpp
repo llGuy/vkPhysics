@@ -1,3 +1,4 @@
+#include "cl_main.hpp"
 #include <common/log.hpp>
 #include <common/game.hpp>
 #include <common/math.hpp>
@@ -36,7 +37,7 @@ void fx_tick_fade_effect(
     float duration = current_screen_brightness.max_time;
 
     if (current_screen_brightness.in_animation) {
-        current_screen_brightness.animate(get_timestep_delta());
+        current_screen_brightness.animate(cl_delta_time());
 
         if (!current_screen_brightness.in_animation) {
             submit_event(ET_FADE_FINISHED, NULL, events);
