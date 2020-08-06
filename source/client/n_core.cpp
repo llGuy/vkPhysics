@@ -1806,7 +1806,7 @@ static bool s_check_if_client_has_to_correct_state(
     if (dvelocity.x >= precision || dvelocity.y >= precision || dvelocity.z >= precision) {
         incorrect_velocity = 1;
         LOG_INFOV(
-            "Need to correct meteorite speed: %f %f %f <- %f %f %f\n",
+            "Need to correct velocity: %f %f %f <- %f %f %f\n",
             p->ws_velocity.x,
             p->ws_velocity.y,
             p->ws_velocity.z,

@@ -146,6 +146,10 @@ static void s_handle_shape_switch(
         else if (player->flags.interaction_mode == PIM_BALL) {
             player->flags.interaction_mode = PIM_STANDING;
             player->switching_shapes = 1;
+
+            // Need to set animation to the "STOP" animation if the velocity exceeds a certain value
+            if (player->frame_displacement / actions->dt > 4.0f)
+                player->animated_state = PAS_STOP_FAST;
         }
     }
 

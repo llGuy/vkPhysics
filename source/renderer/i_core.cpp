@@ -51,11 +51,14 @@ static void s_set_button_state(
     if (state == BS_DOWN) {
         raw_input.buttons[button].down_amount += surface_delta_time();
         raw_input.buttons[button].instant = 1;
+        raw_input.buttons[button].release = 0;
         raw_input.instant_indices[raw_input.instant_count++] = button;
     }
     else if (state == BS_NOT_DOWN) {
         raw_input.buttons[button].down_amount = 0.0f;
         raw_input.buttons[button].instant = 0;
+        raw_input.buttons[button].release = 1;
+        raw_input.release_indices[raw_input.release_count++] = button;
     }
 }
 
@@ -74,8 +77,6 @@ static void s_window_key_callback(
         
     case GLFW_PRESS: case GLFW_REPEAT: {
         state = BS_DOWN;
-
-        LOG_INFO("Pressed\n");
     } break;
 
     case GLFW_RELEASE: {
@@ -259,7 +260,13 @@ void poll_input_events(event_submissions_t *submissions) {
         raw_input.buttons[index].instant = 0;
     }
 
+    for (uint32_t i = 0; i < raw_input.release_count; ++i) {
+        uint32_t index = raw_input.release_indices[i];
+        raw_input.buttons[index].release = 0;
+    }
+
     raw_input.instant_count = 0;
+    raw_input.release_count = 0;
     raw_input.char_count = 0;
 
     raw_input.previous_cursor_pos_x = raw_input.cursor_pos_x;
@@ -385,6 +392,7 @@ static void s_set_button_action_state(
     game_input.actions[action].state = raw_key_mouse_input->state;
     game_input.actions[action].down_amount = raw_key_mouse_input->down_amount;
     game_input.actions[action].instant = raw_key_mouse_input->instant;
+    game_input.actions[action].release = raw_key_mouse_input->release;
 }
 
 

@@ -57,7 +57,7 @@ void wd_handle_local_player_input(float dt) {
         actions.trigger_left = 1;
     if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN)
         actions.trigger_right = 1;
-    if (game_input->actions[GIAT_TRIGGER5].instant == BS_DOWN)
+    if (game_input->actions[GIAT_TRIGGER5].release == BS_DOWN)
         actions.switch_shapes = 1;
     if (game_input->actions[GIAT_TRIGGER7].instant == BS_DOWN)
         actions.flashlight = 1;
