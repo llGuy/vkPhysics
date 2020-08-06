@@ -1,3 +1,4 @@
+#include "client/fx_post.hpp"
 #include "ui.hpp"
 #include "net.hpp"
 #include "dr_rsc.hpp"
@@ -49,7 +50,7 @@ static void s_run() {
 
         frame_command_buffers_t frame = cl_prepare_frame();
 
-        // Tick whatever game mode was bound
+        // // Tick whatever game mode was bound
         gm_tick(
             frame.render_command_buffer,
             frame.transfer_command_buffer,
@@ -70,13 +71,12 @@ int32_t main(
     int32_t argc,
     char *argv[]) {
     global_linear_allocator_init((uint32_t)megabytes(30));
-    core_listener = set_listener_callback(cl_game_event_listener, NULL, &events);
-    cl_subscribe_to_events(core_listener, &events);
     srand(time(NULL));
-    files_init();
+    core_listener = set_listener_callback(cl_game_event_listener, NULL, &events);
     running = 1;
+    files_init();
+    cl_subscribe_to_events(core_listener, &events);
 
-    game_memory_init();
     game_input_settings_init();
     renderer_init();
     fx_fader_init();
@@ -86,13 +86,17 @@ int32_t main(
     s_open();
 
     cl_command_buffers_init();
-    wd_init(&events);
+
     dr_resources_init();
+    game_memory_init();
+    wd_init(&events);
 
     // Initialise game modes
     gm_modes_init(&events);
     // Bind main menu
     gm_bind(GMT_MAIN_MENU);
+
+    fx_get_frame_info()->debug_window = 1;
 
     s_run();
 

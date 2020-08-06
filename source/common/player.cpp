@@ -17,6 +17,10 @@ static void s_nullify_player_memory() {
 void player_memory_init() {
     players.init(PLAYER_MAX_COUNT);
     s_nullify_player_memory();
+
+    for (uint32_t i = 0; i < PLAYER_MAX_COUNT; ++i) {
+        client_to_local_id_map[i] = -1;
+    }
 }
 
 player_t *add_player() {
@@ -393,34 +397,34 @@ static void s_execute_standing_player_movement(
     player_t *player,
     player_action_t *actions) {
     if (player->flags.contact == PCS_ON_GROUND) {
-        // if (player->animated_state == PAS_STOP_FAST && player->frame_displacement / actions->dt > 0.002f) {
-        //     // Need to slow down
-        //     actions->move_back = 0;
-        //     actions->move_forward = 0;
-        //     actions->move_left = 0;
-        //     actions->move_right = 0;
-        //     actions->jump = 0;
-        // }
-        // else if (actions->move_forward) {
-        //     player->animated_state = PAS_RUNNING;
-        // }
-        // else if (actions->move_back) {
-        //     player->animated_state = PAS_BACKWALKING;
-        // }
-        // else if (actions->move_left) {
-        //     player->animated_state = PAS_LEFT_WALKING;
-        // }
-        // else if (actions->move_right) {
-        //     player->animated_state = PAS_RIGHT_WALKING;
-        // }
-        // else {
-        //     player->animated_state = PAS_IDLE;
-        // }
+        if (player->animated_state == PAS_STOP_FAST && player->frame_displacement / actions->dt > 0.002f) {
+            // Need to slow down
+            actions->move_back = 0;
+            actions->move_forward = 0;
+            actions->move_left = 0;
+            actions->move_right = 0;
+            actions->jump = 0;
+        }
+        else if (actions->move_forward) {
+            player->animated_state = PAS_RUNNING;
+        }
+        else if (actions->move_back) {
+            player->animated_state = PAS_BACKWALKING;
+        }
+        else if (actions->move_left) {
+            player->animated_state = PAS_LEFT_WALKING;
+        }
+        else if (actions->move_right) {
+            player->animated_state = PAS_RIGHT_WALKING;
+        }
+        else {
+            player->animated_state = PAS_IDLE;
+        }
 
         if (actions->jump) {
             player->ws_velocity += player->ws_up_vector * 4.0f;
 
-            // player->animated_state = PAS_JUMPING_UP;
+            player->animated_state = PAS_JUMPING_UP;
 
             player->flags.contact = PCS_IN_AIR;
         }

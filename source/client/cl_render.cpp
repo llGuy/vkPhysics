@@ -28,6 +28,8 @@ void cl_command_buffers_init() {
     create_command_buffers(VK_COMMAND_BUFFER_LEVEL_SECONDARY, render_shadow_command_buffers, secondary_command_buffer_count);
     create_command_buffers(VK_COMMAND_BUFFER_LEVEL_SECONDARY, transfer_command_buffers, secondary_command_buffer_count);
     create_command_buffers(VK_COMMAND_BUFFER_LEVEL_SECONDARY, ui_command_buffers, secondary_command_buffer_count);
+
+    command_buffer_index = 0;
 }
 
 frame_command_buffers_t cl_prepare_frame() {

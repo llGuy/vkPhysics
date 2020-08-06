@@ -132,6 +132,19 @@ union player_flags_t {
     uint32_t u32;
 };
 
+enum player_animated_state_t {
+    PAS_IDLE,
+    PAS_WALKING,
+    PAS_RUNNING,
+    PAS_JUMPING_UP,
+    PAS_JUMPING_DOWN,
+    PAS_LEFT_WALKING,
+    PAS_RIGHT_WALKING,
+    PAS_STOP_FAST,
+    PAS_BACKWALKING,
+    PAS_TRIPPING
+};
+
 struct player_t {
     player_flags_t flags;
 
@@ -151,6 +164,8 @@ struct player_t {
     vector3_t ws_surface_normal;
 
     float ball_speed;
+
+    player_animated_state_t animated_state;
 
     // This will  contain everything that has to do with rendering the player
     struct player_render_t *render;

@@ -22,9 +22,11 @@ void wd_init(event_submissions_t *events) {
     world_listener = set_listener_callback(wd_world_event_listener, NULL, events);
     wd_subscribe_to_events(world_listener, events);
 
+    player_memory_init();
     wd_create_spectator();
     wd_set_local_player(-1);
 
+    chunk_memory_init();
     wd_interp_init();
 
     flags.in_meta_menu = 1;

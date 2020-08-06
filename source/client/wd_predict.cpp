@@ -31,6 +31,7 @@ void wd_handle_local_player_input(float dt) {
     game_input_t *game_input = get_game_input();
 
     player_action_t actions;
+    memset(&actions, 0, sizeof(actions));
 
     actions.bytes = 0;
 

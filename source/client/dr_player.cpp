@@ -1,4 +1,5 @@
 #include "dr_player.hpp"
+#include <common/player.hpp>
 #include <common/allocators.hpp>
 
 player_render_t *dr_player_render_init() {

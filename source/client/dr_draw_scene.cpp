@@ -11,14 +11,14 @@ static void s_render_person(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     player_t *p) {
-    if (p->render->animations.next_bound_cycle != p->render->animated_state) {
+    if (p->render->animations.next_bound_cycle != p->animated_state) {
         switch_to_cycle(
             &p->render->animations,
-            p->render->animated_state,
+            p->animated_state,
             0);
     }
 
-    interpolate_joints(&p->render->animations, cl_delta_time(), dr_is_animation_repeating((player_animated_state_t)p->render->animated_state));
+    interpolate_joints(&p->render->animations, cl_delta_time(), dr_is_animation_repeating((player_animated_state_t)p->animated_state));
     sync_gpu_with_animated_transforms(&p->render->animations, transfer_command_buffer);
 
     // This has to be a bit different
@@ -95,14 +95,14 @@ static void s_render_transition(
         
     } render_data;
 
-    if (p->render->animations.next_bound_cycle != p->render->animated_state) {
+    if (p->render->animations.next_bound_cycle != p->animated_state) {
         switch_to_cycle(
             &p->render->animations,
-            p->render->animated_state,
+            p->animated_state,
             0);
     }
 
-    interpolate_joints(&p->render->animations, cl_delta_time(), dr_is_animation_repeating((player_animated_state_t)p->render->animated_state));
+    interpolate_joints(&p->render->animations, cl_delta_time(), dr_is_animation_repeating((player_animated_state_t)p->animated_state));
     sync_gpu_with_animated_transforms(&p->render->animations, transfer_command_buffer);
 
     // This has to be a bit different
@@ -145,7 +145,7 @@ static void s_render_transition(
     render_data.color = vector4_t(1.0f);
     render_data.pbr_info.x = 0.1f;
     render_data.pbr_info.y = 0.1f;
-    render_data.progression = p->render->shape_animation_time / SHAPE_SWITCH_ANIMATION_TIME;
+    render_data.progression = p->shape_switching_time / SHAPE_SWITCH_ANIMATION_TIME;
 
     if (p->flags.interaction_mode == PIM_STANDING) {
         // Need to render transition from ball to person

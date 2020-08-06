@@ -74,6 +74,8 @@ static void s_window_key_callback(
         
     case GLFW_PRESS: case GLFW_REPEAT: {
         state = BS_DOWN;
+
+        LOG_INFO("Pressed\n");
     } break;
 
     case GLFW_RELEASE: {
@@ -223,6 +225,7 @@ input_interface_data_t input_interface_init() {
     window = glfwCreateWindow(width, height, application_name, NULL, NULL);
 
     glfwSetWindowSizeCallback(window, s_window_resize_callback);
+    LOG_INFO("Set key callback\n");
     glfwSetKeyCallback(window, s_window_key_callback);
     glfwSetMouseButtonCallback(window, s_window_mouse_button_callback);
     glfwSetCharCallback(window, s_window_character_callback);

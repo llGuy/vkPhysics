@@ -8,9 +8,6 @@ static uint64_t current_tick;
 
 void game_memory_init() {
     current_tick = 0;
-
-    chunk_memory_init();
-    player_memory_init();
 }
 
 void game_begin(game_initiate_info_t *info) {
