@@ -204,148 +204,6 @@ static void s_receive_packet_player_left(
 // Debugging!
 static bool simulate_lag = 0;
 
-static void s_flag_modified_chunks(
-    chunk_modifications_t *modifications,
-    uint32_t count) {
-    for (uint32_t i = 0; i < count; ++i) {
-        chunk_modifications_t *m_ptr = &modifications[i];
-        chunk_t *c_ptr = get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
-        c_ptr->flags.modified_marker = 1;
-        c_ptr->flags.index_of_modification_struct = i;
-    }
-}
-
-static void s_unflag_modified_chunks(
-    chunk_modifications_t *modifications,
-    uint32_t count) {
-    for (uint32_t i = 0; i < count; ++i) {
-        chunk_modifications_t *m_ptr = &modifications[i];
-        chunk_t *c_ptr = get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
-        c_ptr->flags.modified_marker = 0;
-        c_ptr->flags.index_of_modification_struct = 0;
-    }
-}
-
-static void s_fill_dummy_voxels(
-    chunk_modifications_t *modifications) {
-    for (uint32_t i = 0; i < modifications->modified_voxels_count; ++i) {
-        voxel_modification_t *v = &modifications->modifications[i];
-        g_net_data.dummy_voxels[v->index] = i;
-    }
-}
-
-static void s_unfill_dummy_voxels(
-    chunk_modifications_t *modifications) {
-    for (uint32_t i = 0; i < modifications->modified_voxels_count; ++i) {
-        voxel_modification_t *v = &modifications->modifications[i];
-        g_net_data.dummy_voxels[v->index] = CHUNK_SPECIAL_VALUE;
-    }
-}
-
-static void s_merge_chunk_modifications(
-    chunk_modifications_t *dst,
-    uint32_t *dst_count,
-    chunk_modifications_t *src,
-    uint32_t src_count) {
-    s_flag_modified_chunks(dst, *dst_count);
-
-    for (uint32_t i = 0; i < src_count; ++i) {
-        chunk_modifications_t *src_modifications = &src[i];
-
-        chunk_t *chunk = get_chunk(ivector3_t(src_modifications->x, src_modifications->y, src_modifications->z));
-
-        // Chunk has been terraformed on before (between previous game state dispatch and next one)
-        if (chunk->flags.modified_marker) {
-            // Index of modification struct would have been filled by s_flag_modiifed_chunks(), called above;
-            chunk_modifications_t *dst_modifications = &dst[chunk->flags.index_of_modification_struct];
-
-            // Has been modified, must fill dummy voxels
-            s_fill_dummy_voxels(dst_modifications);
-
-            for (uint32_t voxel = 0; voxel < src_modifications->modified_voxels_count; ++voxel) {
-                voxel_modification_t *vm_ptr = &src_modifications->modifications[voxel];
-
-                if (g_net_data.dummy_voxels[vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
-                    // Voxel has not yet been modified, can just push it into array
-                    dst_modifications->modifications[dst_modifications->modified_voxels_count++] = *vm_ptr;
-                }
-                else {
-                    // Voxel has been modified
-                    uint32_t previous_index = g_net_data.dummy_voxels[vm_ptr->index];
-                    // Just update final value
-                    dst_modifications->modifications[previous_index].final_value = vm_ptr->final_value;
-                }
-            }
-
-            s_unfill_dummy_voxels(dst_modifications);
-        }
-        else {
-            // Chunk has not been terraformed before, need to push a new modification
-            chunk_modifications_t *m = &dst[*(dst_count)];
-            ++(*dst_count);
-
-            m->x = src_modifications->x;
-            m->y = src_modifications->y;
-            m->z = src_modifications->z;
-
-            m->modified_voxels_count = src_modifications->modified_voxels_count;
-            memcpy(m->modifications, src_modifications->modifications, sizeof(voxel_modification_t) * m->modified_voxels_count);
-        }
-    }
-    
-    s_unflag_modified_chunks(dst, *dst_count);
-}
-
-static uint32_t s_fill_chunk_modification_array(
-    chunk_modifications_t *modifications) {
-    uint32_t modified_chunk_count = 0;
-    chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
-
-    uint32_t current = 0;
-            
-    for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
-        chunk_modifications_t *cm_ptr = &modifications[current];
-        chunk_t *c_ptr = chunks[c_index];
-        chunk_history_t *h_ptr = &chunks[c_index]->history;
-
-        if (h_ptr->modification_count == 0) {
-            // Chunk doesn't actually have modifications, it was just flagged
-        }
-        else {
-            cm_ptr->x = c_ptr->chunk_coord.x;
-            cm_ptr->y = c_ptr->chunk_coord.y;
-            cm_ptr->z = c_ptr->chunk_coord.z;
-            cm_ptr->modified_voxels_count = h_ptr->modification_count;
-            for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
-                cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
-                cm_ptr->modifications[v_index].initial_value = (uint8_t)h_ptr->modification_pool[cm_ptr->modifications[v_index].index];
-                cm_ptr->modifications[v_index].final_value = (uint8_t)c_ptr->voxels[cm_ptr->modifications[v_index].index];
-            }
-
-            ++current;
-        }
-    }
-
-    return current;
-}
-
-static accumulated_predicted_modification_t *s_accumulate_history() {
-    accumulated_predicted_modification_t *next_acc = add_acc_predicted_modification();
-    acc_predicted_modification_init(next_acc, get_current_tick());
-    
-    next_acc->acc_predicted_chunk_mod_count = s_fill_chunk_modification_array(next_acc->acc_predicted_modifications);
-
-    if (next_acc->acc_predicted_chunk_mod_count == 0) {
-        // Pops item that was just pushed
-        g_net_data.acc_predicted_modifications.get_next_item_head();
-
-        return NULL;
-    }
-    else {
-        return next_acc;
-    }
-}
-
 // PT_CLIENT_COMMANDS
 static void s_send_packet_client_commands() {
     int32_t local_id = translate_client_to_local_id(current_client_id);
@@ -399,7 +257,7 @@ static void s_send_packet_client_commands() {
 
             packet.player_flags = p->flags.u32;
 
-            accumulated_predicted_modification_t *next_acc = s_accumulate_history();
+            accumulated_predicted_modification_t *next_acc = accumulate_history();
             if (next_acc) {
                 // Packet will just take from the accumulation stuff
                 packet.modified_chunk_count = next_acc->acc_predicted_chunk_mod_count;
@@ -490,7 +348,7 @@ static void s_revert_history_instance(
 static void s_revert_accumulated_modifications(
     uint64_t tick_until) {
     // First push all modifications that were done, so that we can revert most previous changes too
-    s_accumulate_history();
+    accumulate_history();
     reset_modification_tracker();
 
     // Starts peeling off from the head
@@ -631,7 +489,7 @@ static void s_merge_all_recent_modifications(
         if (apm_ptr->tick >= snapshot->tick) {
             // Merge modifications
             //LOG_INFOV("Merging with tick %llu\n", apm_ptr->tick);
-            s_merge_chunk_modifications(
+            merge_chunk_modifications(
                 g_net_data.merged_recent_modifications.acc_predicted_modifications,
                 &g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count,
                 apm_ptr->acc_predicted_modifications,
@@ -656,7 +514,7 @@ static void s_create_voxels_that_need_to_be_interpolated(
             uint32_t local_cm_index = c_ptr->flags.index_of_modification_struct;
             chunk_modifications_t *local_cm_ptr = &g_net_data.merged_recent_modifications.acc_predicted_modifications[local_cm_index];
             // Chunk was flagged as modified, need to check voxel per voxel if we need to push this to chunks to interpolate
-            s_fill_dummy_voxels(local_cm_ptr);
+            fill_dummy_voxels(local_cm_ptr);
 
             uint32_t count = 0;
             for (uint32_t recv_vm_index = 0; recv_vm_index < recv_cm_ptr->modified_voxels_count; ++recv_vm_index) {
@@ -682,7 +540,7 @@ static void s_create_voxels_that_need_to_be_interpolated(
                 ++cti_ptr->modification_count;
             }
 
-            s_unfill_dummy_voxels(local_cm_ptr);
+            unfill_dummy_voxels(local_cm_ptr);
         }
         else {
             // Simple push this to chunks to interpolate
@@ -786,7 +644,7 @@ static void s_handle_correct_state(
         s_merge_all_recent_modifications(
             snapshot);
 
-        s_flag_modified_chunks(
+        flag_modified_chunks(
             g_net_data.merged_recent_modifications.acc_predicted_modifications,
             g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count);
 
@@ -794,7 +652,7 @@ static void s_handle_correct_state(
             packet->modified_chunk_count,
             packet->chunk_modifications);
 
-        s_unflag_modified_chunks(
+        unflag_modified_chunks(
             g_net_data.merged_recent_modifications.acc_predicted_modifications,
             g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count);
 
