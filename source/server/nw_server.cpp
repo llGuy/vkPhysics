@@ -5,7 +5,7 @@
 #include <common/game.hpp>
 #include <common/event.hpp>
 #include <common/string.hpp>
-#include <common/hub_packet.hpp>
+#include <common/meta_packet.hpp>
 #include <common/game_packet.hpp>
 #include <cstddef>
 
@@ -42,20 +42,20 @@ static void s_start_server(
         sizeof_chunk_mod_pack,
         sizeof_chunk_mod_pack * NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4);
 
-    hub_packet_header_t header = {};
+    meta_packet_header_t header = {};
     header.type = HPT_QUERY_SERVER_REGISTER;
 
-    hub_query_server_register_t register_packet = {};
+    meta_query_server_register_t register_packet = {};
     local_server_info.server_name = data->server_name;
     register_packet.server_name = local_server_info.server_name;
 
     serialiser_t serialiser = {};
     serialiser.init(100);
 
-    serialise_hub_packet_header(&header, &serialiser);
-    serialise_hub_query_server_register(&register_packet, &serialiser);
+    serialise_meta_packet_header(&header, &serialiser);
+    serialise_meta_query_server_register(&register_packet, &serialiser);
 
-    send_to_hub_server(&serialiser);
+    send_to_meta_server(&serialiser);
 }
 
 // PT_CONNECTION_HANDSHAKE
@@ -868,11 +868,11 @@ void nw_init(event_submissions_t *events) {
 
     g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 
-    hub_socket_init();
+    meta_socket_init();
 }
 
 void nw_tick(event_submissions_t *events) {
-    check_incoming_hub_server_packets(events);
+    check_incoming_meta_server_packets(events);
 
     s_tick_server(events);
 }

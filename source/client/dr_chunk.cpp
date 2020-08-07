@@ -43,7 +43,6 @@ void dr_destroy_chunk_render(chunk_render_t *render) {
         mesh_buffer_t *mesh_buffer = get_mesh_buffer(BT_VERTEX, &render->mesh);
         if (mesh_buffer) {
             destroy_sensitive_gpu_buffer(get_mesh_buffer(BT_VERTEX, &render->mesh)->gpu_buffer);
-            LOG_INFO("Actually destroyed a buffer\n");
         }
         FL_FREE(render);
         render = NULL;

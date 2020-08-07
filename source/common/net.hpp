@@ -115,15 +115,15 @@ struct net_data_t {
 extern net_data_t g_net_data;
 
 void main_udp_socket_init(uint16_t output_port);
-void hub_socket_init();
+void meta_socket_init();
 bool send_to_game_server(serialiser_t *serialiser, network_address_t address);
 int32_t receive_from_game_server(char *message_buffer, uint32_t max_size, network_address_t *addr);
 int32_t receive_from_client(char *message_buffer, uint32_t max_size, network_address_t *addr);
-bool send_to_hub_server(serialiser_t *serialiser);
+bool send_to_meta_server(serialiser_t *serialiser);
 bool send_to_client(serialiser_t *serialiser, network_address_t address);
 void acc_predicted_modification_init(accumulated_predicted_modification_t *apm_ptr, uint64_t tick);
 accumulated_predicted_modification_t *add_acc_predicted_modification();
-void check_incoming_hub_server_packets(event_submissions_t *events);
+void check_incoming_meta_server_packets(event_submissions_t *events);
 void flag_modified_chunks(chunk_modifications_t *modifications, uint32_t count);
 void unflag_modified_chunks(chunk_modifications_t *modifications, uint32_t count);
 void fill_dummy_voxels(chunk_modifications_t *modifications);

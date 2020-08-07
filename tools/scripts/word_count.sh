@@ -1,1 +1,1 @@
-wc -lc ../../source/game/*.cpp ../../source/game/*.hpp ../../source/game/*.inc ../../source/renderer/*.cpp ../../source/renderer/*.hpp ../../source/common/*.cpp ../../source/common/*.hpp ../../shaders/*.vert ../../shaders/*.frag ../../shaders/*.geom
+wc -lc ../../source/client/*.cpp ../../source/client/*.hpp ../../source/common/*.inc ../../source/renderer/*.cpp ../../source/renderer/*.hpp ../../source/common/*.cpp ../../source/common/*.hpp ../../shaders/*.vert ../../shaders/*.frag ../../shaders/*.geom ../../source/server/*.cpp ../../source/server/*.hpp

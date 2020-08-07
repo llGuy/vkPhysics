@@ -8,7 +8,7 @@
 #include <common/game.hpp>
 #include <common/event.hpp>
 #include <common/string.hpp>
-#include <common/hub_packet.hpp>
+#include <common/meta_packet.hpp>
 #include <common/game_packet.hpp>
 
 struct client_info_t {
@@ -35,14 +35,14 @@ static void s_request_available_servers() {
     serialiser_t serialiser = {};
     serialiser.init(20);
     
-    hub_packet_header_t available_servers_header = {};
+    meta_packet_header_t available_servers_header = {};
     available_servers_header.type = HPT_QUERY_AVAILABLE_SERVERS;
-    serialise_hub_packet_header(&available_servers_header, &serialiser);
+    serialise_meta_packet_header(&available_servers_header, &serialiser);
 
     // Expect a packet to arrive
-    send_to_hub_server(&serialiser);
+    send_to_meta_server(&serialiser);
     
-    LOG_INFO("Sent available servers request to hub\n");
+    LOG_INFO("Sent available servers request to meta\n");
 }
 
 static void s_start_client(
@@ -73,21 +73,21 @@ static void s_start_client(
     g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count = 0;
     g_net_data.merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(chunk_modifications_t, NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 
-    // Send to hub server information about client
-    hub_packet_header_t header = {};
+    // Send to meta server information about client
+    meta_packet_header_t header = {};
     header.type = HPT_QUERY_CLIENT_REGISTER;
 
-    hub_query_client_register_t register_packet = {};
+    meta_query_client_register_t register_packet = {};
     local_client_info.client_name = data->client_name;
     register_packet.client_name = local_client_info.client_name;
 
     serialiser_t serialiser = {};
     serialiser.init(100);
 
-    serialise_hub_packet_header(&header, &serialiser);
-    serialise_hub_query_client_register(&register_packet, &serialiser);
+    serialise_meta_packet_header(&header, &serialiser);
+    serialise_meta_query_client_register(&register_packet, &serialiser);
 
-    send_to_hub_server(&serialiser);
+    send_to_meta_server(&serialiser);
 
     g_net_data.available_servers.server_count = 0;
     g_net_data.available_servers.servers = FL_MALLOC(game_server_t, NET_MAX_AVAILABLE_SERVER_COUNT);
@@ -1038,11 +1038,11 @@ void nw_init(event_submissions_t *events) {
 
     g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 
-    hub_socket_init();
+    meta_socket_init();
 }
 
 void nw_tick(struct event_submissions_t *events) {
-    check_incoming_hub_server_packets(events);
+    check_incoming_meta_server_packets(events);
     s_tick_client(events);
 }
 

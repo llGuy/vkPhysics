@@ -2,11 +2,11 @@
 #include "game.hpp"
 #include "string.hpp"
 #include "socket.hpp"
-#include "hub_packet.hpp"
+#include "meta_packet.hpp"
 
 net_data_t g_net_data = {};
 
-static socket_t hub_socket;
+static socket_t meta_socket;
 static socket_t main_udp_socket;
 
 void main_udp_socket_init(uint16_t output_port) {
@@ -20,12 +20,12 @@ void main_udp_socket_init(uint16_t output_port) {
     set_socket_recv_buffer_size(main_udp_socket, 1024 * 1024);
 }
 
-#define HUB_SERVER_DOMAIN "www.llguy.fun"
+#define META_SERVER_DOMAIN "www.llguy.fun"
 
-void hub_socket_init() {
-    hub_socket = network_socket_init(SP_TCP);
-    connect_to_address(hub_socket, HUB_SERVER_DOMAIN, SERVER_HUB_OUTPUT_PORT, SP_TCP);
-    set_socket_to_non_blocking_mode(hub_socket);
+void meta_socket_init() {
+    meta_socket = network_socket_init(SP_TCP);
+    connect_to_address(meta_socket, META_SERVER_DOMAIN, SERVER_META_OUTPUT_PORT, SP_TCP);
+    set_socket_to_non_blocking_mode(meta_socket);
 }
 
 bool send_to_game_server(
@@ -57,9 +57,9 @@ int32_t receive_from_client(char *message_buffer, uint32_t max_size, network_add
         addr);
 }
 
-bool send_to_hub_server(
+bool send_to_meta_server(
     serialiser_t *serialiser) {
-    return send_to_bound_address(hub_socket, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
+    return send_to_bound_address(meta_socket, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
 }
 
 void acc_predicted_modification_init(accumulated_predicted_modification_t *apm_ptr, uint64_t tick) {
@@ -85,14 +85,14 @@ static void s_receive_response_available_servers(
     event_submissions_t *submission) {
     g_net_data.available_servers.name_to_server.clear();
     
-    hub_response_available_servers_t response = {};
-    deserialise_hub_response_available_servers(&response, serialiser);
+    meta_response_available_servers_t response = {};
+    deserialise_meta_response_available_servers(&response, serialiser);
 
     LOG_INFOV("There are %i available servers\n", response.server_count);
 
     g_net_data.available_servers.server_count = response.server_count;
     for (uint32_t i = 0; i < response.server_count; ++i) {
-        hub_server_info_t *src = &response.servers[i];
+        meta_server_info_t *src = &response.servers[i];
         game_server_t *dst = &g_net_data.available_servers.servers[i];
 
         if (dst->server_name) {
@@ -108,9 +108,9 @@ static void s_receive_response_available_servers(
     submit_event(ET_RECEIVED_AVAILABLE_SERVERS, NULL, submission);
 }
 
-void check_incoming_hub_server_packets(event_submissions_t *events) {
+void check_incoming_meta_server_packets(event_submissions_t *events) {
     int32_t received = receive_from_bound_address(
-        hub_socket,
+        meta_socket,
         g_net_data.message_buffer,
         sizeof(char) * NET_MAX_MESSAGE_SIZE);
 
@@ -123,8 +123,8 @@ void check_incoming_hub_server_packets(event_submissions_t *events) {
         in_serialiser.data_buffer = (uint8_t *)g_net_data.message_buffer;
         in_serialiser.data_buffer_size = received;
 
-        hub_packet_header_t header = {};
-        deserialise_hub_packet_header(&header, &in_serialiser);
+        meta_packet_header_t header = {};
+        deserialise_meta_packet_header(&header, &in_serialiser);
 
         switch (header.type) {
         case HPT_RESPONSE_AVAILABLE_SERVERS: {
@@ -133,15 +133,15 @@ void check_incoming_hub_server_packets(event_submissions_t *events) {
         }
         case HPT_QUERY_RESPONSIVENESS: {
             // HPT_QUERY_RESPONSIVENESS
-            hub_packet_header_t new_header = {};
+            meta_packet_header_t new_header = {};
             new_header.type = HPT_RESPONSE_RESPONSIVENESS;
 
             serialiser_t serialiser = {};
             serialiser.init(20);
 
-            serialise_hub_packet_header(&new_header, &serialiser);
+            serialise_meta_packet_header(&new_header, &serialiser);
 
-            send_to_bound_address(hub_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
+            send_to_bound_address(meta_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
             break;
         }
         default: {
@@ -151,7 +151,7 @@ void check_incoming_hub_server_packets(event_submissions_t *events) {
 
         if (i < MAX_RECEIVED_PER_TICK) {
             received = receive_from_bound_address(
-                hub_socket,
+                meta_socket,
                 g_net_data.message_buffer,
                 sizeof(char) * NET_MAX_MESSAGE_SIZE);
         }

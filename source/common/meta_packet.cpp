@@ -1,48 +1,48 @@
-#include "hub_packet.hpp"
+#include "meta_packet.hpp"
 #include "allocators.hpp"
 
-void serialise_hub_packet_header(
-    hub_packet_header_t *header,
+void serialise_meta_packet_header(
+    meta_packet_header_t *header,
     serialiser_t *serialiser) {
     serialiser->serialise_uint32(header->type);
 }
 
-void deserialise_hub_packet_header(
-    hub_packet_header_t *header,
+void deserialise_meta_packet_header(
+    meta_packet_header_t *header,
     serialiser_t *serialiser) {
-    header->type = (hub_packet_type_t)serialiser->deserialise_uint32();
+    header->type = (meta_packet_type_t)serialiser->deserialise_uint32();
 }
 
-void serialise_hub_query_server_register(
-    hub_query_server_register_t *query,
+void serialise_meta_query_server_register(
+    meta_query_server_register_t *query,
     serialiser_t *serialiser) {
     serialiser->serialise_string(query->server_name);
     serialiser->serialise_uint32(query->max_clients);
     serialiser->serialise_uint32(query->client_count);
 }
 
-void deserialise_hub_query_server_register(
-    hub_query_server_register_t *query,
+void deserialise_meta_query_server_register(
+    meta_query_server_register_t *query,
     serialiser_t *serialiser) {
     query->server_name = serialiser->deserialise_string();
     query->max_clients = serialiser->deserialise_uint32();
     query->client_count = serialiser->deserialise_uint32();
 }
 
-void serialise_hub_query_client_register(
-    hub_query_client_register_t *query,
+void serialise_meta_query_client_register(
+    meta_query_client_register_t *query,
     serialiser_t *serialiser) {
     serialiser->serialise_string(query->client_name);
 }
 
-void deserialise_hub_query_client_register(
-    hub_query_client_register_t *query,
+void deserialise_meta_query_client_register(
+    meta_query_client_register_t *query,
     serialiser_t *serialiser) {
     query->client_name- serialiser->deserialise_string();
 }
 
-void serialise_hub_server_info(
-    hub_server_info_t *info,
+void serialise_meta_server_info(
+    meta_server_info_t *info,
     serialiser_t *serialiser) {
     serialiser->serialise_string(info->server_name);
     serialiser->serialise_uint32(info->ipv4_address);
@@ -50,8 +50,8 @@ void serialise_hub_server_info(
     serialiser->serialise_uint32(info->client_count);
 }
 
-void deserialise_hub_server_info(
-    hub_server_info_t *info,
+void deserialise_meta_server_info(
+    meta_server_info_t *info,
     serialiser_t *serialiser) {
     info->server_name = serialiser->deserialise_string();
     info->ipv4_address = serialiser->deserialise_uint32();
@@ -59,21 +59,21 @@ void deserialise_hub_server_info(
     info->client_count = serialiser->deserialise_uint32();
 }
 
-void serialise_hub_response_available_servers(
-    hub_response_available_servers_t *response,
+void serialise_meta_response_available_servers(
+    meta_response_available_servers_t *response,
     serialiser_t *serialiser) {
     serialiser->serialise_uint32(response->server_count);
     for (uint32_t i = 0; i < response->server_count; ++i) {
-        serialise_hub_server_info(&response->servers[i], serialiser);
+        serialise_meta_server_info(&response->servers[i], serialiser);
     }
 }
 
-void deserialise_hub_response_available_servers(
-    hub_response_available_servers_t *response,
+void deserialise_meta_response_available_servers(
+    meta_response_available_servers_t *response,
     serialiser_t *serialiser) {
     response->server_count = serialiser->deserialise_uint32();
-    response->servers = LN_MALLOC(hub_server_info_t, response->server_count);
+    response->servers = LN_MALLOC(meta_server_info_t, response->server_count);
     for (uint32_t i = 0; i < response->server_count; ++i) {
-        deserialise_hub_server_info(&response->servers[i], serialiser);
+        deserialise_meta_server_info(&response->servers[i], serialiser);
     }
 }

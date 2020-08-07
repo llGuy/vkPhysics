@@ -3,12 +3,12 @@
 #include <common/tools.hpp>
 #include <common/string.hpp>
 #include <common/socket.hpp>
-#include <common/hub_packet.hpp>
+#include <common/meta_packet.hpp>
 #include <common/containers.hpp>
 #include <common/allocators.hpp>
 #include <common/serialiser.hpp>
 
-static socket_t hub_socket;
+static socket_t meta_socket;
 
 #define MAX_CONNECTED_CLIENTS 10000
 #define MAX_ACTIVE_SERVERS 500
@@ -44,18 +44,18 @@ static void s_end_time() {
     delta_time = time_difference(tick_end, tick_start);
 }
 
-static void s_hub_socket_init() {
-    hub_socket = network_socket_init(SP_TCP);
-    set_socket_to_non_blocking_mode(hub_socket);
+static void s_meta_socket_init() {
+    meta_socket = network_socket_init(SP_TCP);
+    set_socket_to_non_blocking_mode(meta_socket);
 
     int32_t value = 1;
-    setsockopt(hub_socket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(int32_t));
+    setsockopt(meta_socket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(int32_t));
 
     network_address_t address = {};
-    address.port = host_to_network_byte_order(SERVER_HUB_OUTPUT_PORT);
+    address.port = host_to_network_byte_order(SERVER_META_OUTPUT_PORT);
 
-    bind_network_socket_to_port(hub_socket, address);
-    set_socket_to_listening(hub_socket, MAX_ACTIVE_SERVERS + MAX_CONNECTED_CLIENTS);
+    bind_network_socket_to_port(meta_socket, address);
+    set_socket_to_listening(meta_socket, MAX_ACTIVE_SERVERS + MAX_CONNECTED_CLIENTS);
 }
 
 struct connection_t {
@@ -123,7 +123,7 @@ static void s_client_and_server_sockets_init() {
 }
 
 static void s_check_new_connections() {
-    accepted_connection_t new_connection = accept_connection(hub_socket);
+    accepted_connection_t new_connection = accept_connection(meta_socket);
 
     if (new_connection.s >= 0) {
         LOG_INFO("Received connection request, pushing to pending list\n");
@@ -162,8 +162,8 @@ static void s_check_pending_sockets() {
                 serialiser.data_buffer = message_buffer;
                 serialiser.data_buffer_size = byte_count;
 
-                hub_packet_header_t header = {};
-                deserialise_hub_packet_header(&header, &serialiser);
+                meta_packet_header_t header = {};
+                deserialise_meta_packet_header(&header, &serialiser);
 
                 if (header.type == HPT_QUERY_SERVER_REGISTER) {
                     uint32_t index = server_sockets.add();
@@ -173,8 +173,8 @@ static void s_check_pending_sockets() {
                     // Register socket as server
                     pending_sockets.remove(i);
 
-                    hub_query_server_register_t query;
-                    deserialise_hub_query_server_register(&query, &serialiser);
+                    meta_query_server_register_t query;
+                    deserialise_meta_query_server_register(&query, &serialiser);
                     server_sockets[index].server_name = create_fl_string(query.server_name);
                     server_sockets[index].max_clients = query.max_clients;
                     server_sockets[index].client_count = query.client_count;
@@ -185,8 +185,8 @@ static void s_check_pending_sockets() {
                     need_to_send_available_servers = 1;
                 }
                 else if (header.type == HPT_QUERY_CLIENT_REGISTER) {
-                    hub_query_client_register_t query;
-                    //deserialise_hub_query_client_register(&query, &serialiser);
+                    meta_query_client_register_t query;
+                    //deserialise_meta_query_client_register(&query, &serialiser);
                     query.client_name = serialiser.deserialise_string();
                     
                     uint32_t *existing = client_name_to_socket.get(simple_string_hash(query.client_name));
@@ -250,21 +250,21 @@ static void s_handle_query_available_servers(
     serialiser_t *out_serialiser,
     game_client_t *client) {
     (void)in_serialiser;
-    hub_packet_header_t header = {};
+    meta_packet_header_t header = {};
     header.type = HPT_RESPONSE_AVAILABLE_SERVERS;
-    serialise_hub_packet_header(&header, out_serialiser);
+    serialise_meta_packet_header(&header, out_serialiser);
     // Need to send all available servers back to the client
     uint32_t server_count = server_sockets.data_count - server_sockets.removed_count;
     out_serialiser->serialise_uint32(server_count);
     for (uint32_t s_index = 0; s_index < server_sockets.data_count; ++s_index) {
         game_server_t *server = &server_sockets[s_index];
         if (server->connection.flags.initialised) {
-            hub_server_info_t server_info = {};
+            meta_server_info_t server_info = {};
             server_info.server_name = server->server_name;
             server_info.ipv4_address = server->connection.address.ipv4_address;
             server_info.max_clients = server->max_clients;
             server_info.client_count = server->client_count;
-            serialise_hub_server_info(&server_info, out_serialiser);
+            serialise_meta_server_info(&server_info, out_serialiser);
         }
     }
 
@@ -275,9 +275,9 @@ static void s_process_client_packet(
     serialiser_t *in_serialiser,
     serialiser_t *out_serialiser,
     game_client_t *client) {
-    hub_packet_header_t header = {};
+    meta_packet_header_t header = {};
 
-    deserialise_hub_packet_header(&header, in_serialiser);
+    deserialise_meta_packet_header(&header, in_serialiser);
 
     switch (header.type) {
     case HPT_QUERY_AVAILABLE_SERVERS: {
@@ -298,9 +298,9 @@ static void s_process_server_packet(
     serialiser_t *in_serialiser,
     serialiser_t *out_serialiser,
     game_server_t *server) {
-    hub_packet_header_t header = {};
+    meta_packet_header_t header = {};
 
-    deserialise_hub_packet_header(&header, in_serialiser);
+    deserialise_meta_packet_header(&header, in_serialiser);
 
     switch (header.type) {
     case HPT_RESPONSE_RESPONSIVENESS: {
@@ -371,10 +371,10 @@ static void s_check_new_queries() {
         serialiser_t serialiser = {};
         serialiser.init(20);
 
-        hub_packet_header_t header = {};
+        meta_packet_header_t header = {};
         header.type = HPT_QUERY_RESPONSIVENESS;
 
-        serialise_hub_packet_header(&header, &serialiser);
+        serialise_meta_packet_header(&header, &serialiser);
 
         for (uint32_t i = 0; i < pending_sockets.data_count; ++i) {
             connection_t *ps_ptr = &pending_sockets[i];
@@ -474,7 +474,7 @@ static void s_start_loop() {
 
 void sig_handler(int32_t s) {
     // Close socket
-    destroy_socket(hub_socket);
+    destroy_socket(meta_socket);
     exit(0);
 }
 
@@ -496,7 +496,7 @@ int32_t main(
     //socket_to_connection.init();
 
     socket_api_init();
-    s_hub_socket_init();
+    s_meta_socket_init();
     s_client_and_server_sockets_init();
     s_start_loop();
 }
