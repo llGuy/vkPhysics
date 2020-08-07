@@ -79,6 +79,10 @@ void srv_game_init(event_submissions_t *events) {
 
     player_memory_init();
     chunk_memory_init();
+
+    generate_sphere(vector3_t(20.0f), 40.0f);
+    generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f);
+    generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f);
 }
 
 void srv_game_tick() {
@@ -93,6 +97,8 @@ void srv_game_tick() {
 
                     execute_action(player, action);
                 }
+
+                player->player_action_count = 0;
             }
         }
     }

@@ -801,7 +801,7 @@ static void s_tick_server(
             sizeof(char) * NET_MAX_MESSAGE_SIZE,
             &received_address);
 
-        if (received) {
+        if (received > 0) {
             serialiser_t in_serialiser = {};
             in_serialiser.data_buffer = (uint8_t *)g_net_data.message_buffer;
             in_serialiser.data_buffer_size = received;
@@ -865,8 +865,6 @@ void nw_init(event_submissions_t *events) {
     subscribe_to_event(ET_START_SERVER, net_listener_id, events);
 
     socket_api_init();
-
-    main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
 
     g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 

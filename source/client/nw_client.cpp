@@ -1036,8 +1036,6 @@ void nw_init(event_submissions_t *events) {
 
     socket_api_init();
 
-    main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
-
     g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 
     hub_socket_init();

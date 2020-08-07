@@ -29,6 +29,8 @@ static void s_end_time() {
 
 static void s_run() {
     while (running) {
+        s_begin_time();
+
         timestep_begin(dt);
 
         dispatch_events(&events);
