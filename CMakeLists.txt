@@ -83,10 +83,10 @@ if(BUILD_GRAPHICAL_APPLICATION)
 endif()
 
 # Create client application (with graphical interface)
-file(GLOB_RECURSE GAME_SOURCES "source/game/*.cpp" "source/game/*.hpp")
+file(GLOB_RECURSE CLIENT_SOURCES "source/client/*.cpp" "source/client/*.hpp")
 
 if(BUILD_GRAPHICAL_APPLICATION)
-  add_executable(vkPhysics_client "${GAME_SOURCES}")
+  add_executable(vkPhysics_client "${CLIENT_SOURCES}")
   target_include_directories(vkPhysics_client PUBLIC "${CMAKE_SOURCE_DIR}/source")
   target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "${OpenAL_LIBRARY}")
   target_compile_definitions(vkPhysics_client PUBLIC "LINK_AGAINST_RENDERER")
@@ -94,7 +94,8 @@ if(BUILD_GRAPHICAL_APPLICATION)
 endif()
 
 # Create game server application (without graphical interface)
-add_executable(vkPhysics_server "${GAME_SOURCES}")
+file(GLOB_RECURSE SERVER_SOURCES "source/server/*.cpp" "source/server/*.hpp")
+add_executable(vkPhysics_server "${SERVER_SOURCES}")
 target_include_directories(vkPhysics_server PUBLIC "${CMAKE_SOURCE_DIR}/source")
 target_link_libraries(vkPhysics_server PUBLIC "common")
  
@@ -102,8 +103,8 @@ if(WIN32)
 target_link_libraries(vkPhysics_server PUBLIC "winmm.lib")
 endif()
 
-# Create server hub application
-file(GLOB_RECURSE HUB_SOURCES "source/hub/*.cpp" "source/hub/*.hpp")
-add_executable(vkPhysics_hub "${HUB_SOURCES}")
-target_include_directories(vkPhysics_hub PUBLIC "${CMAKE_SOURCE_DIR}/source")
-target_link_libraries(vkPhysics_hub PUBLIC "common")
+# # Create server hub application
+# file(GLOB_RECURSE HUB_SOURCES "source/hub/*.cpp" "source/hub/*.hpp")
+# add_executable(vkPhysics_hub "${HUB_SOURCES}")
+# target_include_directories(vkPhysics_hub PUBLIC "${CMAKE_SOURCE_DIR}/source")
+# target_link_libraries(vkPhysics_hub PUBLIC "common")

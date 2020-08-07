@@ -51,11 +51,14 @@ static void s_set_button_state(
     if (state == BS_DOWN) {
         raw_input.buttons[button].down_amount += surface_delta_time();
         raw_input.buttons[button].instant = 1;
+        raw_input.buttons[button].release = 0;
         raw_input.instant_indices[raw_input.instant_count++] = button;
     }
     else if (state == BS_NOT_DOWN) {
         raw_input.buttons[button].down_amount = 0.0f;
         raw_input.buttons[button].instant = 0;
+        raw_input.buttons[button].release = 1;
+        raw_input.release_indices[raw_input.release_count++] = button;
     }
 }
 
@@ -223,6 +226,7 @@ input_interface_data_t input_interface_init() {
     window = glfwCreateWindow(width, height, application_name, NULL, NULL);
 
     glfwSetWindowSizeCallback(window, s_window_resize_callback);
+    LOG_INFO("Set key callback\n");
     glfwSetKeyCallback(window, s_window_key_callback);
     glfwSetMouseButtonCallback(window, s_window_mouse_button_callback);
     glfwSetCharCallback(window, s_window_character_callback);
@@ -256,7 +260,13 @@ void poll_input_events(event_submissions_t *submissions) {
         raw_input.buttons[index].instant = 0;
     }
 
+    for (uint32_t i = 0; i < raw_input.release_count; ++i) {
+        uint32_t index = raw_input.release_indices[i];
+        raw_input.buttons[index].release = 0;
+    }
+
     raw_input.instant_count = 0;
+    raw_input.release_count = 0;
     raw_input.char_count = 0;
 
     raw_input.previous_cursor_pos_x = raw_input.cursor_pos_x;
@@ -268,20 +278,6 @@ void poll_input_events(event_submissions_t *submissions) {
     sdelta_time = get_current_time() - current_time;
 
     const float MAX_FRAME_TIME = 1.0f / 60.0f;
-
-#if 0
-    if (sdelta_time < MAX_FRAME_TIME) {
-        sleep_seconds(MAX_FRAME_TIME - sdelta_time);
-        sdelta_time = MAX_FRAME_TIME;
-    }
-#endif
-
-#if 0
-    if (sdelta_time > 1.0f / 100.0f) {
-        // This is just for debugging
-        sdelta_time = 1.0f / 600.0f;
-        /}
-#endif
 
     // Start timing
     current_time = get_current_time();
@@ -396,6 +392,7 @@ static void s_set_button_action_state(
     game_input.actions[action].state = raw_key_mouse_input->state;
     game_input.actions[action].down_amount = raw_key_mouse_input->down_amount;
     game_input.actions[action].instant = raw_key_mouse_input->instant;
+    game_input.actions[action].release = raw_key_mouse_input->release;
 }
 
 

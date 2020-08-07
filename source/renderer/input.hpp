@@ -45,7 +45,8 @@ enum button_state_t : char { BS_NOT_DOWN, BS_DOWN };
 struct button_input_t {
     button_state_t state = BS_NOT_DOWN;
     float down_amount = 0.0f;
-    bool instant;
+    uint8_t instant: 4;
+    uint8_t release: 4;
 };
 
 #define MAX_CHARS 10
@@ -54,6 +55,8 @@ struct raw_input_t {
     button_input_t buttons[BT_INVALID_KEY] = {};
     uint32_t instant_count = 0;
     uint32_t instant_indices[BT_INVALID_KEY] = {};
+    uint32_t release_count = 0;
+    uint32_t release_indices[BT_INVALID_KEY] = {};
 
     uint32_t char_count;
     char char_stack[10] = {};
@@ -103,6 +106,7 @@ struct game_input_action_t {
     button_state_t state;
     float down_amount = 0.0f;
     bool instant = 0;
+    bool release = 0;
 };
 
 // To translate from raw_input_t to player_input_t

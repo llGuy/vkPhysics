@@ -29,15 +29,25 @@ enum event_type_t {
     ET_BEGIN_FADE, // With data, can be in / out
     ET_FADE_FINISHED, // Just so that game can know when to do some sort of transition or something...
 
-    ET_EXIT_MAIN_MENU_SCREEN,
-    ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY,
-    ET_CLEAR_MENUS,
-    // All the other modes (launch server loading screen, etc...
-    ET_LAUNCH_GAME_MENU_SCREEN,
-    ET_LAUNCH_MAIN_MENU_SCREEN,
-    ET_LAUNCH_INGAME_MENU,
+    // ET_EXIT_MAIN_MENU_SCREEN,
+    // ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY,
+    // ET_CLEAR_MENUS,
+    // // All the other modes (launch server loading screen, etc...
+    // ET_LAUNCH_GAME_MENU_SCREEN,
+    // ET_LAUNCH_MAIN_MENU_SCREEN,
+    // ET_LAUNCH_INGAME_MENU,
 
-    ET_ENTER_SERVER_META_MENU,
+    // Have enter or exit to have initialisation or deinitialisation when needed
+    ET_ENTER_MAIN_MENU,
+    ET_EXIT_MAIN_MENU,
+    ET_ENTER_GAME_PLAY,
+    ET_EXIT_GAME_PLAY,
+
+    ET_PAUSE,
+    ET_UNPAUSE,
+    ET_LOCAL_PLAYER_DIED,
+
+    // ET_ENTER_SERVER_META_MENU,
 
     ET_BEGIN_AI_TRAINING,
     ET_FINISH_GENERATION,
@@ -68,7 +78,8 @@ struct event_data_request_to_join_server_t {
 };
 
 struct player_init_info_t {
-    struct client_t *client_data;
+    const char *client_name;
+    uint16_t client_id;
     // A bunch of shit (more will come)
     // (name and client_id are already in client_data)
     vector3_t ws_position;
