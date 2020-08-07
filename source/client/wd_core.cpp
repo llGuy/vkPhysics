@@ -61,7 +61,9 @@ void wd_clear_world() {
 
     for (uint32_t i = 0; i < chunk_count; ++i) {
         // Destroy the chunk's rendering resources
-        dr_destroy_chunk_render(chunks[i]->render);
+        if (chunks[i]->flags.active_vertices) {
+            dr_destroy_chunk_render(chunks[i]->render);
+        }
 
         destroy_chunk(chunks[i]);
 

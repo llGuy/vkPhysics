@@ -1,5 +1,6 @@
 #include "dr_rsc.hpp"
 #include "dr_chunk.hpp"
+#include "renderer/renderer.hpp"
 #include <common/log.hpp>
 #include <common/math.hpp>
 #include <common/chunk.hpp>
@@ -39,7 +40,11 @@ chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_p
 
 void dr_destroy_chunk_render(chunk_render_t *render) {
     if (render) {
-        destroy_sensitive_gpu_buffer(get_mesh_buffer(BT_VERTEX, &render->mesh)->gpu_buffer);
+        mesh_buffer_t *mesh_buffer = get_mesh_buffer(BT_VERTEX, &render->mesh);
+        if (mesh_buffer) {
+            destroy_sensitive_gpu_buffer(get_mesh_buffer(BT_VERTEX, &render->mesh)->gpu_buffer);
+            LOG_INFO("Actually destroyed a buffer\n");
+        }
         FL_FREE(render);
         render = NULL;
     }

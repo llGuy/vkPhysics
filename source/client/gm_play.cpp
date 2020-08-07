@@ -30,6 +30,7 @@ void gm_play_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_EXIT_GAME_PLAY, listener, events);
     subscribe_to_event(ET_SPAWN, listener, events);
     subscribe_to_event(ET_LOCAL_PLAYER_DIED, listener, events);
+    subscribe_to_event(ET_PRESSED_ESCAPE, listener, events);
 }
 
 void gm_bind_play() {
@@ -162,19 +163,15 @@ void gm_handle_play_event(void *object, event_t *event, event_submissions_t *eve
     } break;
 
     case ET_PRESSED_ESCAPE: {
-        // Toggle pause / unpause
-        static uint32_t pause = 0;
-        pause = !pause;
-
-        if (pause) {
-            pop_ui_panel();
-            cl_change_view_type(GVT_IN_GAME);
-            submode = S_IN_GAME;
-        }
-        else {
+        if (submode == S_IN_GAME) {
             push_ui_panel(USI_GAME_MENU);
             cl_change_view_type(GVT_MENU);
             submode = S_PAUSE;
+        }
+        else {
+            pop_ui_panel();
+            cl_change_view_type(GVT_IN_GAME);
+            submode = S_IN_GAME;
         }
     } break;
 
