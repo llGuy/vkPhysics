@@ -1,6 +1,5 @@
-// #include "wd_core.hpp"
-// #include "srv_event.hpp"
-// #include "nw_server.hpp"
+#include "srv_game.hpp"
+#include "nw_server.hpp"
 #include <common/time.hpp>
 #include <common/game.hpp>
 #include <common/files.hpp>
@@ -36,8 +35,8 @@ static void s_run() {
 
         LN_CLEAR();
 
-        // nw_tick(&events);
-        // wd_tick();
+        nw_tick(&events);
+        srv_game_tick();
 
         timestep_end();
 
@@ -83,10 +82,10 @@ int32_t main(
     running = 1;
     files_init();
 
-    // nw_init(&events);
+    nw_init(&events);
 
     game_memory_init();
-    // wd_init(&events);
+    srv_game_init(&events);
 
     s_parse_command_line_args(argc, argv);
 
@@ -98,6 +97,6 @@ int32_t main(
     return 0;
 }
 
-float cl_delta_time() {
+float srv_delta_time() {
     return dt;
 }

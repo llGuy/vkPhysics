@@ -1,3 +1,5 @@
+#include "client/nw_client.hpp"
+#include "srv_main.hpp"
 #include "nw_server.hpp"
 #include <common/net.hpp>
 #include <common/game.hpp>
@@ -5,6 +7,7 @@
 #include <common/string.hpp>
 #include <common/hub_packet.hpp>
 #include <common/game_packet.hpp>
+#include <cstddef>
 
 static flexible_stack_container_t<uint32_t> clients_to_send_chunks_to;
 
@@ -711,16 +714,16 @@ static void s_send_packet_game_state_snapshot() {
     uint32_t data_head_before = serialiser.data_buffer_head;
     
     for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
-        client_t *c = &clients[i];
+        client_t *c = &g_net_data.clients[i];
 
         if (c->send_corrected_predicted_voxels) {
             // Serialise
             LOG_INFOV("Need to correct %i chunks\n", c->predicted_chunk_mod_count);
-            n_serialise_chunk_modifications(c->predicted_modifications, c->predicted_chunk_mod_count, &serialiser);
+            serialise_chunk_modifications(c->predicted_modifications, c->predicted_chunk_mod_count, &serialiser);
         }
         
         if (c->initialised && c->received_first_commands_packet) {
-            s_send_to(&serialiser, c->address);
+            send_to_client(&serialiser, c->address);
         }
 
         serialiser.data_buffer_head = data_head_before;
@@ -741,7 +744,7 @@ static void s_send_pending_chunks() {
     uint32_t *to_remove = LN_MALLOC(uint32_t, clients_to_send_chunks_to.data_count);
     for (uint32_t i = 0; i < clients_to_send_chunks_to.data_count; ++i) {
         uint32_t client_id = clients_to_send_chunks_to[i];
-        client_t *c_ptr = &clients[client_id];
+        client_t *c_ptr = &g_net_data.clients[client_id];
 
         LOG_INFOV("Need to send %d chunks\n", c_ptr->chunk_packet_count);
         if (c_ptr->current_chunk_sending < c_ptr->chunk_packet_count) {
@@ -750,7 +753,7 @@ static void s_send_pending_chunks() {
             serialiser.data_buffer_head = packet->size;
             serialiser.data_buffer = packet->chunk_data;
             serialiser.data_buffer_size = packet->size;
-            if (s_send_to(&serialiser, c_ptr->address)) {
+            if (send_to_client(&serialiser, c_ptr->address)) {
                 LOG_INFO("Sent chunk packet to client\n");
             }
 
@@ -769,12 +772,12 @@ static void s_send_pending_chunks() {
     }
 }
 
-void tick_server(
+static void s_tick_server(
     event_submissions_t *events) {
     static float snapshot_elapsed = 0.0f;
-    snapshot_elapsed += cl_delta_time();
+    snapshot_elapsed += srv_delta_time();
     
-    if (snapshot_elapsed >= server_snapshot_output_interval) {
+    if (snapshot_elapsed >= NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL) {
         // Send commands to the server
         s_send_packet_game_state_snapshot();
 
@@ -783,29 +786,28 @@ void tick_server(
 
     // For sending chunks to new players
     static float world_elapsed = 0.0f;
-    world_elapsed += cl_delta_time();
+    world_elapsed += srv_delta_time();
 
-    if (world_elapsed >= server_chunk_world_output_interval) {
+    if (world_elapsed >= NET_SERVER_CHUNK_WORLD_OUTPUT_INTERVAL) {
         s_send_pending_chunks();
 
         world_elapsed = 0.0f;
     }
 
-    for (uint32_t i = 0; i < clients.data_count + 1; ++i) {
+    for (uint32_t i = 0; i < g_net_data.clients.data_count + 1; ++i) {
         network_address_t received_address = {};
-        int32_t received = receive_from(
-            main_udp_socket,
-            message_buffer,
-            sizeof(char) * MAX_MESSAGE_SIZE,
+        int32_t received = receive_from_client(
+            g_net_data.message_buffer,
+            sizeof(char) * NET_MAX_MESSAGE_SIZE,
             &received_address);
 
         if (received) {
             serialiser_t in_serialiser = {};
-            in_serialiser.data_buffer = (uint8_t *)message_buffer;
+            in_serialiser.data_buffer = (uint8_t *)g_net_data.message_buffer;
             in_serialiser.data_buffer_size = received;
 
             packet_header_t header = {};
-            n_deserialise_packet_header(&header, &in_serialiser);
+            deserialise_packet_header(&header, &in_serialiser);
 
             switch(header.flags.packet_type) {
 
@@ -836,6 +838,43 @@ void tick_server(
     }
 }
 
+static listener_t net_listener_id;
+
+static void s_net_event_listener(
+    void *object,
+    event_t *event,
+    event_submissions_t *events) {
+    switch (event->type) {
+
+    case ET_START_SERVER: {
+        event_start_server_t *data = (event_start_server_t *)event->data;
+        s_start_server(data);
+
+        FL_FREE(data);
+    } break;
+
+    default: {
+    } break;
+
+    }
+}
+
 void nw_init(event_submissions_t *events) {
-    
+    net_listener_id = set_listener_callback(&s_net_event_listener, NULL, events);
+
+    subscribe_to_event(ET_START_SERVER, net_listener_id, events);
+
+    socket_api_init();
+
+    main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
+
+    g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
+
+    hub_socket_init();
+}
+
+void nw_tick(event_submissions_t *events) {
+    check_incoming_hub_server_packets(events);
+
+    s_tick_server(events);
 }
