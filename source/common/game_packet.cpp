@@ -1,7 +1,8 @@
-#include "n_internal.hpp"
-#include <common/allocators.hpp>
+#include "net.hpp"
+#include "allocators.hpp"
+#include "game_packet.hpp"
 
-uint32_t n_packed_packet_header_size() {
+uint32_t packed_packet_header_size() {
     return
         sizeof(packet_header_t::flags) +
         sizeof(packet_header_t::current_tick) +
@@ -9,12 +10,12 @@ uint32_t n_packed_packet_header_size() {
         sizeof(packet_header_t::client_id);
 }
 
-uint32_t n_packed_connection_request_size(
+uint32_t packed_connection_request_size(
     packet_connection_request_t *connection_request) {
     return sizeof(uint8_t) * (uint32_t)strlen(connection_request->name);
 }
 
-void n_serialise_packet_header(
+void serialise_packet_header(
     packet_header_t *header,
     serialiser_t *serialiser) {
     serialiser->serialise_uint32(header->flags.bytes);
@@ -23,7 +24,7 @@ void n_serialise_packet_header(
     serialiser->serialise_uint16(header->client_id);
 }
 
-void n_deserialise_packet_header(
+void deserialise_packet_header(
     packet_header_t *header,
     serialiser_t *serialiser) {
     header->flags.bytes = serialiser->deserialise_uint32();
@@ -32,19 +33,19 @@ void n_deserialise_packet_header(
     header->client_id = serialiser->deserialise_uint16();
 }
 
-void n_serialise_connection_request(
+void serialise_connection_request(
     packet_connection_request_t *packet,
     serialiser_t *serialiser) {
     serialiser->serialise_string(packet->name);
 }
 
-void n_deserialise_connection_request(
+void deserialise_connection_request(
     packet_connection_request_t *request,
     serialiser_t *serialiser) {
     request->name = serialiser->deserialise_string();
 }
 
-uint32_t n_packed_connection_handshake_size(
+uint32_t packed_connection_handshake_size(
     packet_connection_handshake_t *game_state) {
     uint32_t final_size = 0;
     final_size += sizeof(game_state->player_count);
@@ -54,7 +55,7 @@ uint32_t n_packed_connection_handshake_size(
     return final_size;
 }
 
-void n_serialise_connection_handshake(
+void serialise_connection_handshake(
     packet_connection_handshake_t *full_game_state,
     serialiser_t *serialiser) {
     serialiser->serialise_uint32(full_game_state->loaded_chunk_count);
@@ -71,7 +72,7 @@ void n_serialise_connection_handshake(
     }
 }
 
-void n_deserialise_connection_handshake(
+void deserialise_connection_handshake(
     packet_connection_handshake_t *full_game_state,
     serialiser_t *serialiser) {
     full_game_state->loaded_chunk_count = serialiser->deserialise_uint32();
@@ -90,7 +91,7 @@ void n_deserialise_connection_handshake(
     }
 }
 
-uint32_t n_packed_player_joined_size(
+uint32_t packed_player_joined_size(
     packet_player_joined_t *packet) {
     uint32_t total_size = 0;
     total_size += (uint32_t)strlen(packet->player_info.name);
@@ -104,7 +105,7 @@ uint32_t n_packed_player_joined_size(
     return total_size;
 }
 
-void n_serialise_player_joined(
+void serialise_player_joined(
     packet_player_joined_t *packet,
     serialiser_t *serialiser) {
     serialiser->serialise_string(packet->player_info.name);
@@ -116,7 +117,7 @@ void n_serialise_player_joined(
     serialiser->serialise_uint8(packet->player_info.flags.u32);
 }
 
-void n_deserialise_player_joined(
+void deserialise_player_joined(
     packet_player_joined_t *packet,
     serialiser_t *serialiser) {
     packet->player_info.name = serialiser->deserialise_string();
@@ -128,7 +129,7 @@ void n_deserialise_player_joined(
     packet->player_info.flags.u32 = serialiser->deserialise_uint32();
 }
 
-uint32_t n_packed_player_commands_size(
+uint32_t packed_player_commands_size(
     packet_client_commands_t *commands) {
     uint32_t final_size = 0;
     final_size += sizeof(packet_client_commands_t::command_count);
@@ -158,7 +159,7 @@ uint32_t n_packed_player_commands_size(
     return final_size;
 }
 
-void n_serialise_player_commands(
+void serialise_player_commands(
     packet_client_commands_t *packet,
     serialiser_t *serialiser) {
     serialiser->serialise_uint8(packet->flags);
@@ -199,7 +200,7 @@ void n_serialise_player_commands(
     }
 }
 
-void n_deserialise_player_commands(
+void deserialise_player_commands(
     packet_client_commands_t *packet,
     serialiser_t *serialiser) {
     packet->flags = serialiser->deserialise_uint8();
@@ -242,7 +243,7 @@ void n_deserialise_player_commands(
     }
 }
 
-uint32_t n_packed_game_state_snapshot_size(
+uint32_t packed_game_state_snapshot_size(
     packet_game_state_snapshot_t *packet) {
     uint32_t final_size = 0;
     final_size += sizeof(packet_game_state_snapshot_t::player_data_count);
@@ -263,7 +264,7 @@ uint32_t n_packed_game_state_snapshot_size(
     return final_size;
 }
 
-void n_serialise_game_state_snapshot(
+void serialise_game_state_snapshot(
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser) {
     serialiser->serialise_uint32(packet->player_data_count);
@@ -280,7 +281,7 @@ void n_serialise_game_state_snapshot(
     }
 }
 
-void n_deserialise_game_state_snapshot(
+void deserialise_game_state_snapshot(
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser) {
     packet->player_data_count = serialiser->deserialise_uint32();
@@ -299,7 +300,7 @@ void n_deserialise_game_state_snapshot(
     }
 }
 
-void n_serialise_chunk_modifications(
+void serialise_chunk_modifications(
     chunk_modifications_t *modifications,
     uint32_t modification_count,
     serialiser_t *serialiser) {
@@ -320,7 +321,7 @@ void n_serialise_chunk_modifications(
     }
 }
 
-chunk_modifications_t *n_deserialise_chunk_modifications(
+chunk_modifications_t *deserialise_chunk_modifications(
     uint32_t *modification_count,
     serialiser_t *serialiser) {
     *modification_count = serialiser->deserialise_uint32();
@@ -343,7 +344,7 @@ chunk_modifications_t *n_deserialise_chunk_modifications(
     return chunk_modifications;
 }
 
-uint32_t n_packed_chunk_voxels_size(
+uint32_t packed_chunk_voxels_size(
     packet_chunk_voxels_t *packet) {
     uint32_t final_size = 0;
     final_size += sizeof(packet_chunk_voxels_t::chunk_in_packet_count);
@@ -355,7 +356,7 @@ uint32_t n_packed_chunk_voxels_size(
     return final_size;
 }
 
-void n_serialise_packet_chunk_voxels(
+void serialise_packet_chunk_voxels(
     packet_chunk_voxels_t *packet,
     serialiser_t *serialiser) {
     serialiser->serialise_uint32(packet->chunk_in_packet_count);
@@ -370,7 +371,7 @@ void n_serialise_packet_chunk_voxels(
     }
 }
 
-void n_deserialise_packet_chunk_voxels(
+void deserialise_packet_chunk_voxels(
     packet_chunk_voxels_t *packet,
     serialiser_t *serialiser) {
     packet->chunk_in_packet_count = serialiser->deserialise_uint32();

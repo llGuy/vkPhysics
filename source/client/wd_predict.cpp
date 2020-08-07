@@ -1,7 +1,7 @@
-#include <common/game.hpp>
-#include "net.hpp"
+#include "nw_client.hpp"
 #include "wd_predict.hpp"
 #include "wd_spectate.hpp"
+#include <common/game.hpp>
 #include <common/event.hpp>
 #include <common/player.hpp>
 #include <renderer/input.hpp>
@@ -85,7 +85,7 @@ void wd_execute_player_actions(player_t *player, event_submissions_t *events) {
 
         execute_action(player, action);
 
-        if (connected_to_server()) {
+        if (nw_connected_to_server()) {
             // If this is local player, need to cache these commands to later send to server
             player->camera_distance.animate(action->dt);
             player->camera_fov.animate(action->dt);
@@ -100,7 +100,7 @@ void wd_execute_player_actions(player_t *player, event_submissions_t *events) {
                 player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * action->dt * 1.5f);
             }
 
-            if (connected_to_server()) {
+            if (nw_connected_to_server()) {
                 if (player->cached_player_action_count < PLAYER_MAX_ACTIONS_COUNT * 2) {
                     player->cached_player_actions[player->cached_player_action_count++] = *action;
                 }

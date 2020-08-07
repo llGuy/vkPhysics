@@ -1,5 +1,15 @@
+#include "cl_main.hpp"
+#include "common/constant.hpp"
+#include "common/socket.hpp"
+#include "nw_client.hpp"
+#include "wd_interp.hpp"
+#include "wd_predict.hpp"
 #include <common/net.hpp>
+#include <common/game.hpp>
+#include <common/event.hpp>
+#include <common/string.hpp>
 #include <common/hub_packet.hpp>
+#include <common/game_packet.hpp>
 
 struct client_info_t {
     const char *client_name;
@@ -12,7 +22,7 @@ static float client_command_output_interval = 1.0f / 25.0f;
 static bool started_client = 0;
 static uint16_t current_client_id;
 
-uint16_t get_local_client_index() {
+uint16_t nw_get_local_client_index() {
     return current_client_id;
 }
 
@@ -96,7 +106,7 @@ static void s_receive_packet_connection_handshake(
     serialiser_t *serialiser,
     event_submissions_t *events) {
     packet_connection_handshake_t handshake = {};
-    n_deserialise_connection_handshake(&handshake, serialiser);
+    deserialise_connection_handshake(&handshake, serialiser);
 
     LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
 
@@ -114,11 +124,11 @@ static void s_receive_packet_connection_handshake(
 
         uint16_t client_id = handshake.player_infos[i].client_id;
 
-        clients.data[client_id].client_id = client_id;
-        clients.data[client_id].name = handshake.player_infos[i].name;
-        clients.data[client_id].initialised = 1;
+        g_net_data.clients.data[client_id].client_id = client_id;
+        g_net_data.clients.data[client_id].name = handshake.player_infos[i].name;
+        g_net_data.clients.data[client_id].initialised = 1;
 
-        data->infos[i].client_name = clients.data[client_id].name;
+        data->infos[i].client_name = g_net_data.clients.data[client_id].name;
         data->infos[i].client_id = client_id;
         data->infos[i].ws_position = handshake.player_infos[i].ws_position;
         data->infos[i].ws_view_direction = handshake.player_infos[i].ws_view_direction;
@@ -127,13 +137,13 @@ static void s_receive_packet_connection_handshake(
         data->infos[i].flags = handshake.player_infos[i].flags.u32;
 
         if (handshake.player_infos[i].flags.is_local) {
-            LOG_INFOV("Current client ID is %i\n", clients.data[i].client_id);
+            LOG_INFOV("Current client ID is %i\n", g_net_data.clients.data[i].client_id);
 
-            clients.data[client_id].chunks_to_wait_for = handshake.loaded_chunk_count;
+            g_net_data.clients.data[client_id].chunks_to_wait_for = handshake.loaded_chunk_count;
 
             data->infos[i].next_random_spawn_position = handshake.player_infos[i].ws_next_random_position;
 
-            data->local_client_id = clients.data[i].client_id;
+            data->local_client_id = g_net_data.clients.data[i].client_id;
             current_client_id = data->local_client_id;
         }
     }
@@ -151,12 +161,12 @@ static void s_receive_packet_player_joined(
     serialiser_t *in_serialiser,
     event_submissions_t *events) {
     packet_player_joined_t packet = {};
-    n_deserialise_player_joined(&packet, in_serialiser);
+    deserialise_player_joined(&packet, in_serialiser);
 
     LOG_INFOV("%s joined the game\n", packet.player_info.name);
 
     event_new_player_t *new_player = FL_MALLOC(event_new_player_t, 1);
-    client_t *c = &clients.data[packet.player_info.client_id];
+    client_t *c = &g_net_data.clients.data[packet.player_info.client_id];
     c->name = packet.player_info.name;
     c->client_id = packet.player_info.client_id;
 
@@ -180,7 +190,7 @@ static void s_receive_packet_player_left(
     event_submissions_t *events) {
     uint16_t disconnected_client = in_serialiser->deserialise_uint16();
 
-    clients.data[disconnected_client].initialised = 0;
+    g_net_data.clients.data[disconnected_client].initialised = 0;
 
     event_player_disconnected_t *data = FL_MALLOC(event_player_disconnected_t, 1);
     data->client_id = disconnected_client;
@@ -220,7 +230,7 @@ static void s_fill_dummy_voxels(
     chunk_modifications_t *modifications) {
     for (uint32_t i = 0; i < modifications->modified_voxels_count; ++i) {
         voxel_modification_t *v = &modifications->modifications[i];
-        dummy_voxels[v->index] = i;
+        g_net_data.dummy_voxels[v->index] = i;
     }
 }
 
@@ -228,7 +238,7 @@ static void s_unfill_dummy_voxels(
     chunk_modifications_t *modifications) {
     for (uint32_t i = 0; i < modifications->modified_voxels_count; ++i) {
         voxel_modification_t *v = &modifications->modifications[i];
-        dummy_voxels[v->index] = CHUNK_SPECIAL_VALUE;
+        g_net_data.dummy_voxels[v->index] = CHUNK_SPECIAL_VALUE;
     }
 }
 
@@ -255,13 +265,13 @@ static void s_merge_chunk_modifications(
             for (uint32_t voxel = 0; voxel < src_modifications->modified_voxels_count; ++voxel) {
                 voxel_modification_t *vm_ptr = &src_modifications->modifications[voxel];
 
-                if (dummy_voxels[vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
+                if (g_net_data.dummy_voxels[vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
                     // Voxel has not yet been modified, can just push it into array
                     dst_modifications->modifications[dst_modifications->modified_voxels_count++] = *vm_ptr;
                 }
                 else {
                     // Voxel has been modified
-                    uint32_t previous_index = dummy_voxels[vm_ptr->index];
+                    uint32_t previous_index = g_net_data.dummy_voxels[vm_ptr->index];
                     // Just update final value
                     dst_modifications->modifications[previous_index].final_value = vm_ptr->final_value;
                 }
@@ -320,14 +330,14 @@ static uint32_t s_fill_chunk_modification_array(
 }
 
 static accumulated_predicted_modification_t *s_accumulate_history() {
-    accumulated_predicted_modification_t *next_acc = s_add_acc_predicted_modification();
-    s_acc_predicted_modification_init(next_acc, get_current_tick());
+    accumulated_predicted_modification_t *next_acc = add_acc_predicted_modification();
+    acc_predicted_modification_init(next_acc, get_current_tick());
     
     next_acc->acc_predicted_chunk_mod_count = s_fill_chunk_modification_array(next_acc->acc_predicted_modifications);
 
     if (next_acc->acc_predicted_chunk_mod_count == 0) {
         // Pops item that was just pushed
-        acc_predicted_modifications.get_next_item_head();
+        g_net_data.acc_predicted_modifications.get_next_item_head();
 
         return NULL;
     }
@@ -353,7 +363,7 @@ static void s_send_packet_client_commands() {
             p->cached_player_action_count = 0;
         }
         else {
-            client_t *c = &clients[p->client_id];
+            client_t *c = &g_net_data.clients[p->client_id];
 
             packet_client_commands_t packet = {};
             packet.did_correction = c->waiting_on_correction;
@@ -427,17 +437,17 @@ static void s_send_packet_client_commands() {
             
             packet_header_t header = {};
             header.current_tick = get_current_tick();
-            header.current_packet_count = current_packet;
+            header.current_packet_count = g_net_data.current_packet;
             header.client_id = current_client_id;
             header.flags.packet_type = PT_CLIENT_COMMANDS;
-            header.flags.total_packet_size = n_packed_packet_header_size() + n_packed_player_commands_size(&packet);
+            header.flags.total_packet_size = packed_packet_header_size() + packed_player_commands_size(&packet);
 
             serialiser_t serialiser = {};
             serialiser.init(header.flags.total_packet_size);
-            n_serialise_packet_header(&header, &serialiser);
-            n_serialise_player_commands(&packet, &serialiser);
+            serialise_packet_header(&header, &serialiser);
+            serialise_player_commands(&packet, &serialiser);
 
-            s_send_to(&serialiser, bound_server_address);
+            send_to_game_server(&serialiser, bound_server_address);
     
             p->cached_player_action_count = 0;
 
@@ -484,9 +494,9 @@ static void s_revert_accumulated_modifications(
     reset_modification_tracker();
 
     // Starts peeling off from the head
-    accumulated_predicted_modification_t *current = acc_predicted_modifications.get_next_item_head();
+    accumulated_predicted_modification_t *current = g_net_data.acc_predicted_modifications.get_next_item_head();
 
-    uint32_t total_available = acc_predicted_modifications.head_tail_difference;
+    uint32_t total_available = g_net_data.acc_predicted_modifications.head_tail_difference;
     uint32_t removed_count = 1;
 
     uint64_t old_tick = current->tick;
@@ -507,7 +517,7 @@ static void s_revert_accumulated_modifications(
             }
             else {
                 // Peel off next modification
-                current = acc_predicted_modifications.get_next_item_head();
+                current = g_net_data.acc_predicted_modifications.get_next_item_head();
             }
         }
         else {
@@ -573,7 +583,7 @@ static void s_handle_incorrect_state(
         if (snapshot->packet_contains_terrain_correction) {
             uint32_t modification_count = 0;
             // BUG:
-            chunk_modifications_t *modifications = n_deserialise_chunk_modifications(&modification_count, serialiser);
+            chunk_modifications_t *modifications = deserialise_chunk_modifications(&modification_count, serialiser);
 
             for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {
                 chunk_modifications_t *cm_ptr = &modifications[cm_index];
@@ -614,21 +624,21 @@ static void s_set_voxels_to_final_interpolated_values() {
 
 static void s_merge_all_recent_modifications(
     player_snapshot_t *snapshot) {
-    uint32_t apm_index = acc_predicted_modifications.tail;
-    for (uint32_t apm = 0; apm < acc_predicted_modifications.head_tail_difference; ++apm) {
-        accumulated_predicted_modification_t *apm_ptr = &acc_predicted_modifications.buffer[apm_index];
+    uint32_t apm_index = g_net_data.acc_predicted_modifications.tail;
+    for (uint32_t apm = 0; apm < g_net_data.acc_predicted_modifications.head_tail_difference; ++apm) {
+        accumulated_predicted_modification_t *apm_ptr = &g_net_data.acc_predicted_modifications.buffer[apm_index];
         // For all modifications that were after the snapshot tick that server is sending us
         if (apm_ptr->tick >= snapshot->tick) {
             // Merge modifications
             //LOG_INFOV("Merging with tick %llu\n", apm_ptr->tick);
             s_merge_chunk_modifications(
-                merged_recent_modifications.acc_predicted_modifications,
-                &merged_recent_modifications.acc_predicted_chunk_mod_count,
+                g_net_data.merged_recent_modifications.acc_predicted_modifications,
+                &g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count,
                 apm_ptr->acc_predicted_modifications,
                 apm_ptr->acc_predicted_chunk_mod_count);
         }
 
-        apm_index = acc_predicted_modifications.increment_index(apm_index);
+        apm_index = g_net_data.acc_predicted_modifications.increment_index(apm_index);
     }
 }
 
@@ -644,14 +654,14 @@ static void s_create_voxels_that_need_to_be_interpolated(
             chunk_modifications_t *dst_cm_ptr = &cti_ptr->modifications[cti_ptr->modification_count];
 
             uint32_t local_cm_index = c_ptr->flags.index_of_modification_struct;
-            chunk_modifications_t *local_cm_ptr = &merged_recent_modifications.acc_predicted_modifications[local_cm_index];
+            chunk_modifications_t *local_cm_ptr = &g_net_data.merged_recent_modifications.acc_predicted_modifications[local_cm_index];
             // Chunk was flagged as modified, need to check voxel per voxel if we need to push this to chunks to interpolate
             s_fill_dummy_voxels(local_cm_ptr);
 
             uint32_t count = 0;
             for (uint32_t recv_vm_index = 0; recv_vm_index < recv_cm_ptr->modified_voxels_count; ++recv_vm_index) {
                 voxel_modification_t *recv_vm_ptr = &recv_cm_ptr->modifications[recv_vm_index];
-                if (dummy_voxels[recv_vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
+                if (g_net_data.dummy_voxels[recv_vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
                     if (recv_vm_ptr->final_value != c_ptr->voxels[recv_vm_ptr->index]) {
                         // Was not modified, can push this
                         dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].index = recv_vm_ptr->index;
@@ -704,7 +714,7 @@ static void s_clear_outdated_modifications_from_history(
     player_snapshot_t *snapshot) {
     if (snapshot->terraformed) {
         // Need to remove all modifications from tail to tick
-        accumulated_predicted_modification_t *current = acc_predicted_modifications.get_next_item_tail();
+        accumulated_predicted_modification_t *current = g_net_data.acc_predicted_modifications.get_next_item_tail();
         uint32_t count = 1;
 
         // Pop all modifications until last tick that server processed
@@ -721,7 +731,7 @@ static void s_clear_outdated_modifications_from_history(
                 //LOG_ERROR("ERRORRRORORORORRO\n");
             }
 
-            current = acc_predicted_modifications.get_next_item_tail();
+            current = g_net_data.acc_predicted_modifications.get_next_item_tail();
             ++count;
         }
 
@@ -746,8 +756,8 @@ static void s_handle_correct_state(
     }
 
     if (still_receiving_chunk_packets){
-        accumulated_predicted_modification_t *new_modification = s_add_acc_predicted_modification();
-        s_acc_predicted_modification_init(new_modification, 0);
+        accumulated_predicted_modification_t *new_modification = add_acc_predicted_modification();
+        acc_predicted_modification_init(new_modification, 0);
 
         new_modification->acc_predicted_chunk_mod_count = packet->modified_chunk_count;
         for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
@@ -769,24 +779,24 @@ static void s_handle_correct_state(
         s_set_voxels_to_final_interpolated_values();
 
         // Fill merged recent modifications
-        s_acc_predicted_modification_init(
-            &merged_recent_modifications,
+        acc_predicted_modification_init(
+            &g_net_data.merged_recent_modifications,
             0);
 
         s_merge_all_recent_modifications(
             snapshot);
 
         s_flag_modified_chunks(
-            merged_recent_modifications.acc_predicted_modifications,
-            merged_recent_modifications.acc_predicted_chunk_mod_count);
+            g_net_data.merged_recent_modifications.acc_predicted_modifications,
+            g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count);
 
         s_create_voxels_that_need_to_be_interpolated(
             packet->modified_chunk_count,
             packet->chunk_modifications);
 
         s_unflag_modified_chunks(
-            merged_recent_modifications.acc_predicted_modifications,
-            merged_recent_modifications.acc_predicted_chunk_mod_count);
+            g_net_data.merged_recent_modifications.acc_predicted_modifications,
+            g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count);
 
         s_clear_outdated_modifications_from_history(snapshot);
     }
@@ -829,14 +839,14 @@ static void s_receive_packet_game_state_snapshot(
 #endif
 
     packet_game_state_snapshot_t packet = {};
-    n_deserialise_game_state_snapshot(&packet, serialiser);
-    packet.chunk_modifications = n_deserialise_chunk_modifications(&packet.modified_chunk_count, serialiser);
+    deserialise_game_state_snapshot(&packet, serialiser);
+    packet.chunk_modifications = deserialise_chunk_modifications(&packet.modified_chunk_count, serialiser);
 
     for (uint32_t i = 0; i < packet.player_data_count; ++i) {
         player_snapshot_t *snapshot = &packet.player_snapshots[i];
 
         if (snapshot->client_id == current_client_id) {
-            client_t *c = &clients[snapshot->client_id];
+            client_t *c = &g_net_data.clients[snapshot->client_id];
             int32_t local_id = translate_client_to_local_id(snapshot->client_id);
             player_t *p = get_player(local_id);
             s_handle_local_player_snapshot(
@@ -948,10 +958,9 @@ static void s_check_incoming_game_server_packets(
         }
 
         network_address_t received_address = {};
-        int32_t received = receive_from(
-            main_udp_socket,
-            message_buffer,
-            sizeof(char) * MAX_MESSAGE_SIZE,
+        int32_t received = receive_from_game_server(
+            g_net_data.message_buffer,
+            sizeof(char) * NET_MAX_MESSAGE_SIZE,
             &received_address);
 
         // In future, separate thread will be capturing all these packets
@@ -960,11 +969,11 @@ static void s_check_incoming_game_server_packets(
 
         while (received) {
             serialiser_t in_serialiser = {};
-            in_serialiser.data_buffer = (uint8_t *)message_buffer;
+            in_serialiser.data_buffer = (uint8_t *)g_net_data.message_buffer;
             in_serialiser.data_buffer_size = received;
 
             packet_header_t header = {};
-            n_deserialise_packet_header(&header, &in_serialiser);
+            deserialise_packet_header(&header, &in_serialiser);
 
             switch(header.flags.packet_type) {
 
@@ -1007,10 +1016,9 @@ static void s_check_incoming_game_server_packets(
             }
 
             if (i < MAX_RECEIVED_PER_TICK) {
-                received = receive_from(
-                    main_udp_socket,
-                    message_buffer,
-                    sizeof(char) * MAX_MESSAGE_SIZE,
+                received = receive_from_game_server(
+                    g_net_data.message_buffer,
+                    sizeof(char) * NET_MAX_MESSAGE_SIZE,
                     &received_address);
             }
             else {
@@ -1031,19 +1039,17 @@ static void s_check_incoming_game_server_packets(
             s_merge_all_recent_modifications(&dummy);
 
             s_create_voxels_that_need_to_be_interpolated(
-                merged_recent_modifications.acc_predicted_chunk_mod_count,
-                merged_recent_modifications.acc_predicted_modifications);
+                g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count,
+                g_net_data.merged_recent_modifications.acc_predicted_modifications);
 
-            acc_predicted_modifications.tail = 0;
-            acc_predicted_modifications.head = 0;
-            acc_predicted_modifications.head_tail_difference = 0;
+            g_net_data.acc_predicted_modifications.tail = 0;
+            g_net_data.acc_predicted_modifications.head = 0;
+            g_net_data.acc_predicted_modifications.head_tail_difference = 0;
         }
     }
 }
 
-
-
-void tick_client(
+static void s_tick_client(
     event_submissions_t *events) {
     raw_input_t *input = get_raw_input();
     s_check_incoming_game_server_packets(events);
@@ -1063,14 +1069,14 @@ static void s_send_packet_connection_request(
     request.name = info->name;
     
     packet_header_t header = {};
-    header.flags.packet_type = PT_CONNECTION_REQUEST
-    header.flags.total_packet_size = n_packed_packet_header_size() + n_packed_connection_request_size(&request);
-    header.current_packet_count = current_packet;
+    header.flags.packet_type = PT_CONNECTION_REQUEST;
+    header.flags.total_packet_size = packed_packet_header_size() + packed_connection_request_size(&request);
+    header.current_packet_count = g_net_data.current_packet;
 
-    n_serialise_packet_header(&header, &serialiser);
-    n_serialise_connection_request(&request, &serialiser);
+    serialise_packet_header(&header, &serialiser);
+    serialise_connection_request(&request, &serialiser);
 
-    if (s_send_to(&serialiser, bound_server_address)) {
+    if (send_to_game_server(&serialiser, bound_server_address)) {
         LOG_INFO("Success sent connection request\n");
         client_check_incoming_packets = 1;
     }
@@ -1086,13 +1092,104 @@ static void s_send_packet_client_disconnect() {
 
     packet_header_t header = {};
     header.current_tick = get_current_tick();
-    header.current_packet_count = current_packet;
+    header.current_packet_count = g_net_data.current_packet;
     header.client_id = current_client_id;
     header.flags.packet_type = PT_CLIENT_DISCONNECT;
-    header.flags.total_packet_size = n_packed_packet_header_size();
+    header.flags.total_packet_size = packed_packet_header_size();
 
-    n_serialise_packet_header(&header, &serialiser);
+    serialise_packet_header(&header, &serialiser);
     
-    s_send_to(&serialiser, bound_server_address);
+    send_to_game_server(&serialiser, bound_server_address);
 }
 
+static listener_t net_listener_id;
+
+static void s_net_event_listener(
+    void *object,
+    event_t *event,
+    event_submissions_t *events) {
+    switch (event->type) {
+
+    case ET_START_CLIENT: {
+        event_start_client_t *data = (event_start_client_t *)event->data;
+        s_start_client(data);
+        FL_FREE(data);
+    } break;
+
+    case ET_REQUEST_REFRESH_SERVER_PAGE: {
+        s_request_available_servers();
+    } break;
+
+    case ET_REQUEST_TO_JOIN_SERVER: {
+        event_data_request_to_join_server_t *data = (event_data_request_to_join_server_t *)event->data;
+        local_client_info_t client_info;
+        client_info.name = local_client_info.client_name;
+
+        if (data->server_name) {
+            uint32_t *game_server_index = g_net_data.available_servers.name_to_server.get(simple_string_hash(data->server_name));
+            if (game_server_index) {
+                uint32_t ip_address = g_net_data.available_servers.servers[*game_server_index].ipv4_address;
+            
+                s_send_packet_connection_request(ip_address, &client_info);
+
+                FL_FREE((void *)data->server_name);
+            }
+            else {
+                LOG_ERRORV("Couldn't find server name: %s\n", data->server_name);
+
+                FL_FREE((void *)data->server_name);
+            }
+        }
+        else if (data->ip_address) {
+            uint32_t ip_address = str_to_ipv4_int32(data->ip_address, GAME_OUTPUT_PORT_SERVER, SP_UDP);
+            s_send_packet_connection_request(ip_address, &client_info);
+        }
+        else {
+            
+        }
+
+        FL_FREE(data);
+    } break;
+
+    case ET_LEAVE_SERVER: {
+        if (bound_server_address.ipv4_address > 0) {
+            // Send to server message
+            s_send_packet_client_disconnect();
+        
+            memset(&bound_server_address, 0, sizeof(bound_server_address));
+            memset(g_net_data.clients.data, 0, sizeof(client_t) * g_net_data.clients.max_size);
+
+            client_check_incoming_packets = 0;
+        
+            LOG_INFO("Disconnecting\n");
+        }
+    } break;
+
+    }
+}
+
+void nw_init(event_submissions_t *events) {
+    net_listener_id = set_listener_callback(&s_net_event_listener, NULL, events);
+
+    subscribe_to_event(ET_START_CLIENT, net_listener_id, events);
+    subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, net_listener_id, events);
+    subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
+    subscribe_to_event(ET_REQUEST_REFRESH_SERVER_PAGE, net_listener_id, events);
+
+    socket_api_init();
+
+    main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
+
+    g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
+
+    hub_socket_init();
+}
+
+void nw_tick(struct event_submissions_t *events) {
+    check_incoming_hub_server_packets(events);
+    s_tick_client(events);
+}
+
+bool nw_connected_to_server() {
+    return bound_server_address.ipv4_address != 0;
+}

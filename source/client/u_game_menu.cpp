@@ -1,7 +1,7 @@
-#include "net.hpp"
+#include <cstddef>
+#include "nw_client.hpp"
 #include "u_internal.hpp"
 #include <common/event.hpp>
-#include <cstddef>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 #include <common/allocators.hpp>
@@ -32,7 +32,7 @@ static void s_menu_layout_disconnect_proc(
 static void s_menu_layout_spawn_proc(
     event_submissions_t *events) {
     event_spawn_t *spawn = FL_MALLOC(event_spawn_t, 1);
-    spawn->client_id = get_local_client_index();
+    spawn->client_id = nw_get_local_client_index();
     submit_event(ET_SPAWN, spawn, events);
 }
 

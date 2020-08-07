@@ -1,11 +1,11 @@
-#include "client/fx_post.hpp"
 #include "ui.hpp"
-#include "net.hpp"
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
+#include "fx_post.hpp"
 #include "fx_fade.hpp"
 #include "gm_mode.hpp"
 #include "cl_event.hpp"
+#include "nw_client.hpp"
 #include "cl_render.hpp"
 #include <common/game.hpp>
 #include <common/files.hpp>
@@ -81,7 +81,7 @@ int32_t main(
     renderer_init();
     fx_fader_init();
     ui_init(&events);
-    net_init(&events);
+    nw_init(&events);
 
     s_open();
 

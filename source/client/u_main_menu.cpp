@@ -1,5 +1,5 @@
 #include "ui.hpp"
-#include "net.hpp"
+#include <common/net.hpp>
 #include "u_internal.hpp"
 #include <common/math.hpp>
 #include <common/event.hpp>
@@ -65,7 +65,7 @@ static struct {
 } build_map_menu;
 
 void u_refresh_main_menu_server_page() {
-    available_servers_t *servers = get_available_servers();
+    available_servers_t *servers = &g_net_data.available_servers;
 
     browse_server_menu.server_count = servers->server_count;
 

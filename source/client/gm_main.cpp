@@ -1,11 +1,11 @@
-#include "client/gm_play.hpp"
+#include "gm_play.hpp"
 #include "ui.hpp"
-#include "net.hpp"
 #include "dr_rsc.hpp"
 #include "gm_main.hpp"
 #include "gm_mode.hpp"
 #include "fx_post.hpp"
 #include "cl_main.hpp"
+#include "nw_client.hpp"
 #include "wd_spectate.hpp"
 #include <common/event.hpp>
 #include <common/player.hpp>
@@ -80,7 +80,7 @@ static void s_handle_input(event_submissions_t *events) {
 void gm_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
     s_handle_input(events);
 
-    tick_net(events);
+    nw_tick(events);
 
     // Submit the mesh
     begin_mesh_submission(render, dr_get_shader_rsc(GS_CHUNK), dr_chunk_colors_g.chunk_color_set);

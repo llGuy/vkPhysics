@@ -1,5 +1,6 @@
-#include "net.hpp"
 #include "wd_interp.hpp"
+#include "common/constant.hpp"
+#include <common/net.hpp>
 
 static chunks_to_interpolate_t chunks_to_interpolate;
 
@@ -12,7 +13,7 @@ void wd_interp_init() {
 
 void wd_chunks_interp_step(float dt) {
     chunks_to_interpolate.elapsed += dt;
-    float progression = chunks_to_interpolate.elapsed / server_snapshot_interval();
+    float progression = chunks_to_interpolate.elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
 
     if (progression >= 1.0f) {
         progression = 1.0f;

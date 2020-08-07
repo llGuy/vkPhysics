@@ -116,7 +116,8 @@ extern net_data_t g_net_data;
 
 void main_udp_socket_init(uint16_t output_port);
 void hub_socket_init();
-bool send_to(serialiser_t *serialiser, network_address_t address);
+bool send_to_game_server(serialiser_t *serialiser, network_address_t address);
+int32_t receive_from_game_server(char *message_buffer, uint32_t max_size, network_address_t *addr);
 bool send_to_hub_server(serialiser_t *serialiser);
 void acc_predicted_modification_init(accumulated_predicted_modification_t *apm_ptr, uint64_t tick);
 accumulated_predicted_modification_t *add_acc_predicted_modification();

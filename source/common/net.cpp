@@ -34,6 +34,14 @@ bool send_to_game_server(
     return send_to(main_udp_socket, address, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
 }
 
+int32_t receive_from_game_server(char *message_buffer, uint32_t max_size, network_address_t *addr) {
+    return receive_from(
+        main_udp_socket,
+        message_buffer,
+        sizeof(char) * max_size,
+        addr);
+}
+
 bool send_to_hub_server(
     serialiser_t *serialiser) {
     return send_to_bound_address(hub_socket, (char *)serialiser->data_buffer, serialiser->data_buffer_head);

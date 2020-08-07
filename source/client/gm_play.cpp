@@ -1,7 +1,7 @@
 #include <common/player.hpp>
-#include "client/cl_view.hpp"
+#include "cl_view.hpp"
+#include "nw_client.hpp"
 #include "ui.hpp"
-#include "net.hpp"
 #include "wd_core.hpp"
 #include "gm_play.hpp"
 #include "gm_mode.hpp"
@@ -85,7 +85,7 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
     s_handle_input(events);
 
-    tick_net(events);
+    nw_tick(events);
 
     // The world always gets ticked - when menus get displayed, the world has to keep being simulated
     wd_tick(events);

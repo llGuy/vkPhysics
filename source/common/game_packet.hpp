@@ -1,10 +1,6 @@
 #pragma once
 
 #include "net.hpp"
-#include <common/tools.hpp>
-#include <common/serialiser.hpp>
-
-
 
 // PACKET TYPES ///////////////////////////////////////////////////////////////
 enum packet_type_t {
@@ -45,15 +41,10 @@ struct packet_header_t {
     uint32_t client_id;
 };
 
-uint32_t n_packed_packet_header_size();
+uint32_t packed_packet_header_size();
 
-void n_serialise_packet_header(
-    packet_header_t *header,
-    serialiser_t *serialiser);
-
-void n_deserialise_packet_header(
-    packet_header_t *header,
-    serialiser_t *serialiser);
+void serialise_packet_header(packet_header_t *header, serialiser_t *serialiser);
+void deserialise_packet_header(packet_header_t *header, serialiser_t *serialiser);
 
 
 
@@ -64,16 +55,9 @@ struct packet_connection_request_t {
     const char *name;
 };
 
-uint32_t n_packed_connection_request_size(
-    packet_connection_request_t *connection_request);
-
-void n_deserialise_connection_request(
-    packet_connection_request_t *request,
-    serialiser_t *serialiser);
-
-void n_serialise_connection_request(
-    packet_connection_request_t *packet,
-    serialiser_t *serialiser);
+uint32_t packed_connection_request_size(packet_connection_request_t *connection_request);
+void deserialise_connection_request(packet_connection_request_t *request, serialiser_t *serialiser);
+void serialise_connection_request(packet_connection_request_t *packet, serialiser_t *serialiser);
 
 struct full_player_info_t {
     const char *name;
@@ -99,32 +83,18 @@ struct packet_connection_handshake_t {
     full_player_info_t *player_infos;
 };
 
-uint32_t n_packed_connection_handshake_size(
-    packet_connection_handshake_t *game_state);
-
-void n_serialise_connection_handshake(
-    packet_connection_handshake_t *full_game_state,
-    serialiser_t *serialiser);
-
-void n_deserialise_connection_handshake(
-    packet_connection_handshake_t *full_game_state,
-    serialiser_t *serialiser);
+uint32_t packed_connection_handshake_size(packet_connection_handshake_t *game_state);
+void serialise_connection_handshake(packet_connection_handshake_t *full_game_state, serialiser_t *serialiser);
+void deserialise_connection_handshake(packet_connection_handshake_t *full_game_state, serialiser_t *serialiser);
 
 // Will be sent from server to all players
 struct packet_player_joined_t {
     full_player_info_t player_info;
 };
 
-uint32_t n_packed_player_joined_size(
-    packet_player_joined_t *packet);
-
-void n_serialise_player_joined(
-    packet_player_joined_t *packet,
-    serialiser_t *serialiser);
-
-void n_deserialise_player_joined(
-    packet_player_joined_t *packet,
-    serialiser_t *serialiser);
+uint32_t packed_player_joined_size(packet_player_joined_t *packet);
+void serialise_player_joined(packet_player_joined_t *packet, serialiser_t *serialiser);
+void deserialise_player_joined(packet_player_joined_t *packet, serialiser_t *serialiser);
 
 struct packet_client_commands_t {
     union {
@@ -153,16 +123,9 @@ struct packet_client_commands_t {
     chunk_modifications_t *chunk_modifications;
 };
 
-uint32_t n_packed_player_commands_size(
-    packet_client_commands_t *commands);
-
-void n_serialise_player_commands(
-    packet_client_commands_t *packet,
-    serialiser_t *serialiser);
-
-void n_deserialise_player_commands(
-    packet_client_commands_t *packet,
-    serialiser_t *serialiser);
+uint32_t packed_player_commands_size(packet_client_commands_t *commands);
+void serialise_player_commands(packet_client_commands_t *packet, serialiser_t *serialiser);
+void deserialise_player_commands(packet_client_commands_t *packet, serialiser_t *serialiser);
 
 // Will use this during game play
 struct packet_game_state_snapshot_t {
@@ -174,34 +137,23 @@ struct packet_game_state_snapshot_t {
     chunk_modifications_t *chunk_modifications;
 };
 
-uint32_t n_packed_game_state_snapshot_size(
-    packet_game_state_snapshot_t *packet);
+uint32_t packed_game_state_snapshot_size(packet_game_state_snapshot_t *packet);
+void serialise_game_state_snapshot(packet_game_state_snapshot_t *packet, serialiser_t *serialiser);
+void deserialise_game_state_snapshot(packet_game_state_snapshot_t *packet, serialiser_t *serialiser);
+void serialise_chunk_modifications(chunk_modifications_t *modifications, uint32_t modification_count, serialiser_t *serialiser);
+chunk_modifications_t *deserialise_chunk_modifications(uint32_t *modification_count, serialiser_t *serialiser);
 
-void n_serialise_game_state_snapshot(
-    packet_game_state_snapshot_t *packet,
-    serialiser_t *serialiser);
+struct voxel_chunk_values_t {
+    // Chunk coord
+    int16_t x, y, z;
+    uint8_t *voxel_values;
+};
 
-void n_deserialise_game_state_snapshot(
-    packet_game_state_snapshot_t *packet,
-    serialiser_t *serialiser);
+struct packet_chunk_voxels_t {
+    uint32_t chunk_in_packet_count;
+    voxel_chunk_values_t *values;
+};
 
-void n_serialise_chunk_modifications(
-    chunk_modifications_t *modifications,
-    uint32_t modification_count,
-    serialiser_t *serialiser);
-
-chunk_modifications_t *n_deserialise_chunk_modifications(
-    uint32_t *modification_count,
-    serialiser_t *serialiser);
-
-// packet_chunk_voxels_t defined in net.hpp
-uint32_t n_packed_chunk_voxels_size(
-    packet_chunk_voxels_t *packet);
-
-void n_serialise_packet_chunk_voxels(
-    packet_chunk_voxels_t *packet,
-    serialiser_t *serialiser);
-
-void n_deserialise_packet_chunk_voxels(
-    packet_chunk_voxels_t *packet,
-    serialiser_t *serialiser);
+uint32_t packed_chunk_voxels_size(packet_chunk_voxels_t *packet);
+void serialise_packet_chunk_voxels(packet_chunk_voxels_t *packet, serialiser_t *serialiser);
+void deserialise_packet_chunk_voxels(packet_chunk_voxels_t *packet, serialiser_t *serialiser);
