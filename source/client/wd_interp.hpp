@@ -12,4 +12,5 @@ struct chunks_to_interpolate_t {
 
 void wd_interp_init();
 void wd_chunks_interp_step(float dt);
+void wd_player_interp_step(float dt, struct player_t *p);
 chunks_to_interpolate_t *wd_get_chunks_to_interpolate();

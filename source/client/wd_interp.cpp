@@ -43,6 +43,54 @@ void wd_chunks_interp_step(float dt) {
     }
 }
 
+void wd_player_interp_step(
+    float dt,
+    player_t *p) {
+    // This adds a little delay
+    // Makes sure that there is always snapshots to interpolate between
+    if (p->remote_snapshots.head_tail_difference >= 3) {
+        uint32_t previous_snapshot_index = p->remote_snapshots.tail;
+        uint32_t next_snapshot_index = p->remote_snapshots.tail;
+
+        if (++next_snapshot_index == p->remote_snapshots.buffer_size) {
+            next_snapshot_index = 0;
+        }
+
+        p->elapsed += dt;
+
+        float progression = p->elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+        
+        // It is possible that progression went way past maximum (in case of extreme lag, so need to
+        // take into account how many times over maximum time we went)
+        if (progression >= 1.0f) {
+            int32_t skip_count = (int32_t)(floor(progression));
+            //progression = fmod(progression, 1.0f);
+            progression -= (float)skip_count;
+            p->elapsed -= NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL * (float)skip_count;
+
+            for (int32_t i = 0; i < skip_count; ++i) {
+                p->remote_snapshots.get_next_item_tail();
+            }
+
+            previous_snapshot_index = p->remote_snapshots.tail;
+            next_snapshot_index = p->remote_snapshots.tail;
+
+            if (++next_snapshot_index == p->remote_snapshots.buffer_size) {
+                next_snapshot_index = 0;
+            }
+        }
+
+        player_snapshot_t *previous_snapshot = &p->remote_snapshots.buffer[previous_snapshot_index];
+        player_snapshot_t *next_snapshot = &p->remote_snapshots.buffer[next_snapshot_index];
+
+        p->ws_position = interpolate(previous_snapshot->ws_position, next_snapshot->ws_position, progression);
+        p->ws_view_direction = interpolate(previous_snapshot->ws_view_direction, next_snapshot->ws_view_direction, progression);
+        p->ws_up_vector = interpolate(previous_snapshot->ws_up_vector, next_snapshot->ws_up_vector, progression);
+
+        p->flags.alive_state = previous_snapshot->alive_state;
+    }
+}
+
 chunks_to_interpolate_t *wd_get_chunks_to_interpolate() {
     return &chunks_to_interpolate;
 }
