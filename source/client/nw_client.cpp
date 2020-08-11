@@ -795,7 +795,7 @@ static void s_check_incoming_game_server_packets(
     event_submissions_t *events) {
     raw_input_t *input = get_raw_input();
 
-#if 1
+#if 0
     if (input->buttons[BT_F].instant) {
         simulate_lag = !simulate_lag;
 

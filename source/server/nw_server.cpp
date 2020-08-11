@@ -1,4 +1,3 @@
-#include "client/nw_client.hpp"
 #include "srv_main.hpp"
 #include "nw_server.hpp"
 #include <common/net.hpp>

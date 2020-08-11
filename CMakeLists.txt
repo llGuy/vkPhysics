@@ -2,109 +2,79 @@ cmake_minimum_required(VERSION "3.2")
 
 project(vkPhysics)
 
-set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set (CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTB_IMAGE_IMPLEMENTATION -D_MBCS -DCIMGUI_DEFINE_ENUMS_AND_STRUCTS")
 
-if(NOT WIN32)
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
-endif()
-
-# Create common library
+# Get source files
 file(GLOB_RECURSE COMMON_SOURCES "source/common/*.cpp" "source/common/*.hpp")
-add_library(common STATIC "${COMMON_SOURCES}")
-set_target_properties(common PROPERTIES PREFIX "")
-target_include_directories(common PUBLIC "${CMAKE_SOURCE_DIR}/depdendencies/glm")
-target_compile_definitions(common PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
+file(GLOB_RECURSE CLIENT_SOURCES "source/client/*.cpp" "source/client/*.hpp")
+file(GLOB_RECURSE SERVER_SOURCES "source/server/*.cpp" "source/server/*.hpp")
+file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
 
-# Create renderer library
+# Include directories for all targets
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/stb")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/glm")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/imgui/include")
+include_directories("${CMAKE_SOURCE_DIR}/source")
 
+# Find packages
 find_package(Vulkan)
+find_package(CURL)
 
-# set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/modules")
-find_package(OpenAL)
+# Create common
+add_library(common STATIC "${COMMON_SOURCES}")
+target_compile_definitions(common PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 
-if (OpenAL_FOUND)
-  message("${OpenAL_LIBRARY}")
-  message("${Vulkan_LIBRARY}")
-# else()
-#   message("Did not find OpenAL")
-endif()
-
-# Only build renderer target if Vulkan was found
-set(BUILD_GRAPHICAL_APPLICATION false)
-
-if(NOT Vulkan_FOUND)
-  # Bundled version is .lib and is only for Windows machines for now
-  include_directories("${CMAKE_SOURCE_DIR}/dependencies/vulkan/include")
-
-  if(WIN32)
-    link_directories("${CMAKE_SOURCE_DIR}/dependencies/vulkan/lib")
-    set(BUILD_GRAPHICAL_APPLICATION true)
-  endif()
-
-  message("Using bundled Vulkan version")
-else(NOT Vulkan_FOUND)
-  # Use package libs and includes that were found
+# Create renderer 
+if(Vulkan_FOUND)
+  message(STATUS "Found Vulkan package in system")
+  set(BUILD_CLIENT true)
   include_directories("${Vulkan_INCLUDE_DIRS}")
-  set(BUILD_GRAPHICAL_APPLICATION true)
-
-  message("Using preinstalled Vulkan")
-endif()
-
-if(NOT OpenAL_FOUND)
-  message("Didn't find OpenAL, there is a problem!")
-else(NOT OpenAL_FOUND)
-  message("${OpenAL_LIBRARY}")
-  message("Using preinstalled OpenAL")
-  # include_directories("${OpenAL_INCLUDE_DIR}")
-endif()
-
-if(BUILD_GRAPHICAL_APPLICATION)
-  file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
-  add_library(renderer STATIC "${RENDERER_SOURCES}")
-  target_include_directories(renderer PUBLIC "${CMAKE_SOURCE_DIR}/source" "${CMAKE_SOURCE_DIR}/dependencies/stb" "${CMAKE_SOURCE_DIR}/imgui/include")
-  set_target_properties(renderer PROPERTIES PREFIX "")
-  target_link_libraries(renderer PUBLIC "${Vulkan_LIBRARY}" "common")
-  target_link_libraries(renderer PUBLIC "${OpenAL_LIBRARY}")
-  target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
+else(Vulkan_FOUND)
+  message(WARNING "Failed to find Vulkan package in system")
 
   if(WIN32)
-    # For Win32, GLFW dependency is provided, for Linux, it is not
+    message(STATUS "On Windows, using bundled vulkan version")
+    link_directories("${CMAKE_SOURCE_DIR}/dependencies/vulkan/lib")
+    include_directories("${CMAKE_SOURCE_DIR}/dependencies/vulkan/include")
+    set(BUILD_CLIENT true)
+  else(WIN32)
+    set(BUILD_CLIENT false)
+    message(WARNING "Cannot use bundled vulkan libraries, on Linux - not buliding client")
+  endif()
+endif()
+
+if(BUILD_CLIENT)
+  add_library(renderer STATIC "${RENDERER_SOURCES}")
+  target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
+  if(WIN32)
     link_directories("${CMAKE_SOURCE_DIR}/dependencies/glfw/lib")
     target_link_libraries(renderer PUBLIC "user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib" "glfw3.lib" "msvcrtd.lib" "libcmtd.lib" "ucrtd.lib")
     target_include_directories(renderer PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/glfw/include")
-  else (WIN32)
-    target_link_libraries(renderer PUBLIC "glfw")
+  else(WIN32)
+    target_link_libraries(renderer PUBLIC "${Vulkan_LIBRARY}" "common" "glfw")
   endif()
 endif()
 
-# Create client application (with graphical interface)
-file(GLOB_RECURSE CLIENT_SOURCES "source/client/*.cpp" "source/client/*.hpp")
+if(CURL_FOUND)
+  message("Found CURL")
+  include_directories("${CURL_INCLUDE_DIRS}")
+else(CURL_FOUND)
+  message("Didn't find curl - using bundled curl")
+endif()
 
-if(BUILD_GRAPHICAL_APPLICATION)
+# Create client (recheck if statement for clarity - TODO: merge renderer with client)
+if(BUILD_CLIENT)
   add_executable(vkPhysics_client "${CLIENT_SOURCES}")
-  target_include_directories(vkPhysics_client PUBLIC "${CMAKE_SOURCE_DIR}/source")
-  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "${OpenAL_LIBRARY}")
+  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "${CURL_LIBRARIES}")
   target_compile_definitions(vkPhysics_client PUBLIC "LINK_AGAINST_RENDERER")
-  target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
 endif()
 
-# Create game server application (without graphical interface)
-file(GLOB_RECURSE SERVER_SOURCES "source/server/*.cpp" "source/server/*.hpp")
+# Create server (server can get built on whatever platform with or without vulkan support)
 add_executable(vkPhysics_server "${SERVER_SOURCES}")
-target_include_directories(vkPhysics_server PUBLIC "${CMAKE_SOURCE_DIR}/source")
-target_link_libraries(vkPhysics_server PUBLIC "common")
- 
+target_link_libraries(vkPhysics_server PUBLIC "common" "${CURL_LIBRARIES}")
 if(WIN32)
-target_link_libraries(vkPhysics_server PUBLIC "winmm.lib")
+  target_link_libraries(vkPhysics_server PUBLIC "winmm.lib")
 endif()
-
-# # Create server hub application
-# file(GLOB_RECURSE HUB_SOURCES "source/hub/*.cpp" "source/hub/*.hpp")
-# add_executable(vkPhysics_hub "${HUB_SOURCES}")
-# target_include_directories(vkPhysics_hub PUBLIC "${CMAKE_SOURCE_DIR}/source")
-# target_link_libraries(vkPhysics_hub PUBLIC "common")
+ 
