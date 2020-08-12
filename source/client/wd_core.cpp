@@ -32,7 +32,7 @@ void wd_init(event_submissions_t *events) {
     flags.in_meta_menu = 1;
 }
 
-// TODO
+// TODO: Implement
 void wd_destroy() {}
 
 void wd_input(float dt) {

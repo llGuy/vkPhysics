@@ -1,3 +1,0 @@
-[submodule "dependencies/ktx"]
-	path = dependencies/ktx
-	url = https://github.com/KhronosGroup/KTX-Software.git
