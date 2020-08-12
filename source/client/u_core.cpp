@@ -80,6 +80,7 @@ void ui_init(
     u_main_menu_init();
     u_hud_init();
     u_game_menu_init();
+    u_sign_up_menu_init();
 }
 
 void handle_ui_input(
@@ -96,6 +97,10 @@ void handle_ui_input(
 
         case USI_GAME_MENU: {
             u_game_menu_input(events, raw_input);
+        } break;
+
+        case USI_SIGN_UP: {
+            u_sign_up_menu_input(events, raw_input);
         } break;
 
         default: {
@@ -119,6 +124,10 @@ void tick_ui(
 
         case USI_GAME_MENU: {
             u_submit_game_menu();
+        } break;
+
+        case USI_SIGN_UP: {
+            u_submit_sign_up_menu();
         } break;
 
         default: {

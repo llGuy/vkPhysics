@@ -270,7 +270,7 @@ void u_submit_main_menu() {
             push_colored_ui_box(
                 &browse_server_menu.refresh_button);
 
-            push_ui_input_text(1, 0xFFFFFFFF, &browse_server_menu.ip_address);
+            push_ui_input_text(1, 0, 0xFFFFFFFF, &browse_server_menu.ip_address);
 
             push_colored_ui_box(
                 &browse_server_menu.ip_address_box);

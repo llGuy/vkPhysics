@@ -98,6 +98,9 @@ int32_t main(
 
     fx_get_frame_info()->debug_window = 1;
 
+    // Check if the user has registered and can actually join servers
+    nw_check_registration(&events);
+
     s_run();
 
     dispatch_events(&events);

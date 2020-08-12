@@ -521,7 +521,8 @@ static ivector2_t get_px_cursor_position(
 }
 
 void push_ui_text(
-    ui_text_t *text) {
+    ui_text_t *text,
+    bool secret) {
     VkExtent2D resolution = r_swapchain_extent();
 
     ui_box_t *box = text->dst_box;
@@ -534,10 +535,19 @@ void push_ui_text(
     ivector2_t px_cursor_position = get_px_cursor_position(box, text, resolution);
 
     uint32_t chars_since_new_line = 0;
+
+    char *characters = text->characters;
+
+    if (secret) {
+        characters = LN_MALLOC(char, text->char_count);
+        for (uint32_t i = 0; i < text->char_count; ++i) {
+            characters[i] = '*';
+        }
+    }
     
     for (uint32_t character = 0;
          character < text->char_count;) {
-        char current_char_value = text->characters[character];
+        char current_char_value = characters[character];
         if (current_char_value == '\n') {
             px_cursor_position.y -= px_char_height;
             px_cursor_position.x = x_start + box->px_position.ix;
@@ -600,6 +610,7 @@ void push_ui_text(
 
 void push_ui_input_text(
     bool render_cursor,
+    bool secret,
     uint32_t cursor_color,
     struct ui_input_text_t *input) {
     VkExtent2D resolution = r_swapchain_extent();
@@ -631,7 +642,7 @@ void push_ui_input_text(
     }
     
     // Push input text
-    push_ui_text(&input->text);
+    push_ui_text(&input->text, secret);
     // Push cursor quad
     if (render_cursor) {
         ui_box_t *box = input->text.dst_box;

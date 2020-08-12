@@ -4,6 +4,7 @@ enum ui_stack_item_t {
     USI_MAIN_MENU,
     USI_HUD,
     USI_GAME_MENU,
+    USI_SIGN_UP,
     USI_INVALID,
 };
 

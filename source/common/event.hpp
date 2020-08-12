@@ -53,6 +53,9 @@ enum event_type_t {
     ET_FINISH_GENERATION,
     ET_RESET_AI_ARENA,
 
+    // When the username hasn't registered, request a username and password
+    ET_REQUEST_USER_INFORMATION,
+
     ET_INVALID_EVENT_TYPE
 };
 

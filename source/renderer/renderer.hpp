@@ -759,10 +759,12 @@ DECLARE_VOID_RENDERER_PROC(void, push_reversed_colored_ui_box,
     const vector2_t &size);
 
 DECLARE_VOID_RENDERER_PROC(void, push_ui_text,
-    struct ui_text_t *text);
+    struct ui_text_t *text,
+    bool secret = 0);
 
 DECLARE_VOID_RENDERER_PROC(void, push_ui_input_text,
     bool render_cursor,
+    bool secret,
     uint32_t cursor_color,
     struct ui_input_text_t *text);
     

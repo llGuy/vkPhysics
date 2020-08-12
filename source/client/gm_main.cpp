@@ -21,6 +21,7 @@ void gm_main_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_ENTER_MAIN_MENU, listener, events);
     subscribe_to_event(ET_EXIT_MAIN_MENU, listener, events);
     subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, listener, events);
+    subscribe_to_event(ET_REQUEST_USER_INFORMATION, listener, events);
 }
 
 void gm_bind_main() {
@@ -129,6 +130,10 @@ void gm_handle_main_event(void *object, struct event_t *event, struct event_subm
         submit_event(ET_ENTER_GAME_PLAY, NULL, events);
 
         gm_bind(GMT_GAME_PLAY);
+    } break;
+
+    case ET_REQUEST_USER_INFORMATION: {
+        push_ui_panel(USI_SIGN_UP);
     } break;
 
     default: {
