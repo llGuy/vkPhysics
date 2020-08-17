@@ -1030,6 +1030,10 @@ static void s_net_event_listener(
         nw_request_sign_up(data->username, data->password);
     } break;
 
+    case ET_CLOSED_WINDOW: {
+        nw_stop_request_thread();
+    } break;
+
     }
 }
 
@@ -1041,6 +1045,7 @@ void nw_init(event_submissions_t *events) {
     subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
     subscribe_to_event(ET_REQUEST_REFRESH_SERVER_PAGE, net_listener_id, events);
     subscribe_to_event(ET_ATTEMPT_SIGN_UP, net_listener_id, events);
+    subscribe_to_event(ET_CLOSED_WINDOW, net_listener_id, events);
 
     socket_api_init();
 
@@ -1052,7 +1057,10 @@ void nw_init(event_submissions_t *events) {
 }
 
 void nw_tick(struct event_submissions_t *events) {
-    check_incoming_meta_server_packets(events);
+    // check_incoming_meta_server_packets(events);
+    // Check for meta server packets
+    nw_check_meta_request_status_and_handle(events);
+
     s_tick_client(events);
 }
 

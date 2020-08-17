@@ -36,10 +36,13 @@ static linear_allocator_t allocator;
 static size_t s_write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
     uint32_t byte_count = nmemb * size;
 
-    if (request_result_size + byte_count > REQUEST_RESULT_MAX_SIZE) {
+    if (request_result_size + byte_count < REQUEST_RESULT_MAX_SIZE) {
         memcpy(request_result + request_result_size, ptr, byte_count);
         request_result_size += byte_count;
     }
+
+    LOG_INFOV("Byte count: %d\n", byte_count);
+    LOG_INFOV("Message: \n%s\n", request_result);
 
     return byte_count;
 }
@@ -71,12 +74,15 @@ static void s_meta_thread() {
 
         printf("Started job\n");
 
+        bool quit = 0;
+
         switch (current_request_type) {
         case R_SIGN_UP: {
             request_sign_up_data_t *data = (request_sign_up_data_t *)current_request_data;
 
             serialiser_t serialiser = s_fill_request();
-            serialiser.serialise_string("api/rg_user_sign_in.php");
+            serialiser.serialise_string("api/register_user.php");
+            curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
 
             serialiser_t fields = {};
             fields.data_buffer = (uint8_t *)allocator.allocate(REQUEST_MAX_SIZE);
@@ -84,12 +90,21 @@ static void s_meta_thread() {
             fields.data_buffer_size = REQUEST_MAX_SIZE;
             fields.serialise_string("username=", 0);
             fields.serialise_string(data->username, 0);
+            fields.serialise_uint8('&');
             fields.serialise_string("password=", 0);
             fields.serialise_string(data->password, 1);
 
             // Fill post fields
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields.data_buffer);
         } break;
+
+        case R_QUIT: {
+            quit = 1;
+        } break;
+        }
+
+        if (quit) {
+            break;
         }
 
         curl_easy_perform(curl);
@@ -114,6 +129,7 @@ void begin_meta_client_thread() {
         exit(1);
     }
 
+    curl_easy_setopt(curl, CURLOPT_URL, meta_server_hostname);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s_write_callback);
     curl_easy_setopt(curl, CURLOPT_POST, 1);
 
@@ -127,12 +143,13 @@ void begin_meta_client_thread() {
     meta_thread = std::thread(s_meta_thread);
 }
 
-char *check_request_finished(uint32_t *size) {
+char *check_request_finished(uint32_t *size, request_t *type) {
     std::lock_guard<std::mutex> lock (mutex);
     if (finished_job) {
         finished_job = 0;
 
         *size = request_result_size;
+        *type = current_request_type;
 
         request_result_size = 0;
 
@@ -152,4 +169,8 @@ void send_request(request_t request, void *data) {
     }
 
     ready.notify_one();
+}
+
+void join_meta_thread() {
+    meta_thread.join();
 }

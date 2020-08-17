@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <sha1.hpp>
 #include "u_internal.hpp"
+#include <common/meta.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 
@@ -109,10 +110,27 @@ static void s_typing_boxes_init() {
     currently_typing = TB_INVALID;
 }
 
+static ui_box_t error_box;
+static ui_text_t error_text;
+static request_error_t error_type;
+static bool error_happened;
+
+static void s_error_section_init() {
+    error_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.07f, 0.01f), ui_vector2_t(0.8f, 0.8f), &panel_box, 0x0);
+
+    error_text.init(&error_box, u_game_font(),
+        ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+        1.5f, 1.3f, 30, 1.8f);
+
+    if (!error_text.char_count)
+        error_text.draw_string("Username already exists", 0xFF0000FF);
+}
+
 void u_sign_up_menu_init() {
     s_panel_init();
     s_buttons_init();
     s_typing_boxes_init();
+    s_error_section_init();
 }
 
 void u_submit_sign_up_menu() {
@@ -130,6 +148,9 @@ void u_submit_sign_up_menu() {
     push_ui_text(&prompt_password_text);
     push_ui_input_text(1, 0, 0xFFFFFFFF, &type_username_text);
     push_ui_input_text(1, 1, 0xFFFFFFFF, &type_password_text);
+
+    if (error_happened)
+        push_ui_text(&error_text);
 }
 
 void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
@@ -213,6 +234,8 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
             event_data->password = password;
 
             submit_event(ET_ATTEMPT_SIGN_UP, event_data, events);
+
+            error_happened = 0;
         } break;
 
         case B_LOGIN: {
@@ -238,4 +261,16 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
         type_username_text.input(input);
     else if (currently_typing == TB_PASSWORD)
         type_password_text.input(input);
+}
+
+void u_handle_sign_up_failed(request_error_t ierror_type) {
+    error_happened = 1;
+    error_type = ierror_type;
+
+    switch (error_type) {
+    case RE_USERNAME_EXISTS: {
+        error_text.char_count = 0;
+        error_text.draw_string("Username already exists", 0xFF0000FF);
+    } break;
+    }
 }

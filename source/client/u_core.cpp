@@ -1,10 +1,11 @@
 #include "ui.hpp"
-#include "u_internal.hpp"
-#include <common/event.hpp>
 #include <cstddef>
+#include "u_internal.hpp"
+#include <common/meta.hpp>
+#include <common/event.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
-#include <vulkan/vulkan_core.h>
+#include <common/allocators.hpp>
 
 // Whenever a new menu gets opened, it gets added to this stack to which the mouse pointer will be
 // having effect (or just be rendered)
@@ -27,6 +28,14 @@ static void s_ui_event_listener(
         u_main_menu_init();
         u_game_menu_init();
         u_hud_init();
+    } break;
+
+    case ET_META_REQUEST_ERROR: {
+        event_meta_request_error_t *data = (event_meta_request_error_t *)event->data;
+
+        u_handle_sign_up_failed(data->error_type);
+
+        FL_FREE(data);
     } break;
 
     default: {
@@ -70,6 +79,7 @@ void ui_init(
     subscribe_to_event(ET_RECEIVED_AVAILABLE_SERVERS, ui_listener, events);
     subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
     subscribe_to_event(ET_RESIZE_SURFACE, ui_listener, events);
+    subscribe_to_event(ET_META_REQUEST_ERROR, ui_listener, events);
 
     global_font = load_font(
         "assets/font/fixedsys.fnt",

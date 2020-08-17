@@ -1,6 +1,7 @@
 #pragma once
     
 
+#include "meta.hpp"
 #include "tools.hpp"
 
 // Engine events
@@ -58,6 +59,8 @@ enum event_type_t {
 
     ET_ATTEMPT_SIGN_UP,
     ET_SIGN_UP_SUCCESS,
+
+    ET_META_REQUEST_ERROR,
 
     ET_INVALID_EVENT_TYPE
 };
@@ -162,6 +165,10 @@ struct event_t {
 struct event_attempt_sign_up_t {
     const char *username;
     const char *password;
+};
+
+struct event_meta_request_error_t {
+    request_error_t error_type;
 };
 
 typedef void(*listener_callback_t)(
