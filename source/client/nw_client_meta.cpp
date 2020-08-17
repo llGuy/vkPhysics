@@ -1,9 +1,16 @@
 #include <cstddef>
-#include <curl/curl.h>
+#include <stdio.h>
+#include <sha1.hpp>
 #include <common/log.hpp>
+#include <common/meta.hpp>
 #include <common/files.hpp>
 #include <common/event.hpp>
 #include <common/serialiser.hpp>
+#include <common/allocators.hpp>
+
+void nw_init_meta_connection() {
+    begin_meta_client_thread();
+}
 
 void nw_check_registration(event_submissions_t *events) {
     file_handle_t file_handle = create_file("assets/.user_meta", FLF_TEXT);
@@ -37,9 +44,18 @@ void nw_check_registration(event_submissions_t *events) {
         LOG_INFO("User already signed in\n");
     }
     else {
-        LOG_INFO("User hasn't signed in yet\n");
+        LOG_INFO("User hasn't signed up yet\n");
 
         // Request the user to register a name
         submit_event(ET_REQUEST_USER_INFORMATION, NULL, events);
     }
+}
+
+void nw_request_sign_up(
+    const char *username,
+    const char *password) {
+    request_sign_up_data_t *sign_up_data = LN_MALLOC(request_sign_up_data_t, 1);
+
+    // Sends request to the web server
+    send_request(R_SIGN_UP, &sign_up_data);
 }

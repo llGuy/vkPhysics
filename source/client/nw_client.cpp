@@ -1,13 +1,14 @@
 #include "cl_main.hpp"
-#include "common/constant.hpp"
-#include "common/socket.hpp"
 #include "nw_client.hpp"
 #include "wd_interp.hpp"
 #include "wd_predict.hpp"
 #include <common/net.hpp>
 #include <common/game.hpp>
 #include <common/event.hpp>
+#include <common/socket.hpp>
 #include <common/string.hpp>
+#include "nw_client_meta.hpp"
+#include <common/constant.hpp>
 #include <common/meta_packet.hpp>
 #include <common/game_packet.hpp>
 
@@ -1023,6 +1024,12 @@ static void s_net_event_listener(
         }
     } break;
 
+    case ET_ATTEMPT_SIGN_UP: {
+        event_attempt_sign_up_t *data = (event_attempt_sign_up_t *)event->data;
+
+        nw_request_sign_up(data->username, data->password);
+    } break;
+
     }
 }
 
@@ -1033,12 +1040,15 @@ void nw_init(event_submissions_t *events) {
     subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, net_listener_id, events);
     subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
     subscribe_to_event(ET_REQUEST_REFRESH_SERVER_PAGE, net_listener_id, events);
+    subscribe_to_event(ET_ATTEMPT_SIGN_UP, net_listener_id, events);
 
     socket_api_init();
 
     g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 
     meta_socket_init();
+
+    nw_init_meta_connection();
 }
 
 void nw_tick(struct event_submissions_t *events) {

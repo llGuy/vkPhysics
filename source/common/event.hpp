@@ -56,6 +56,9 @@ enum event_type_t {
     // When the username hasn't registered, request a username and password
     ET_REQUEST_USER_INFORMATION,
 
+    ET_ATTEMPT_SIGN_UP,
+    ET_SIGN_UP_SUCCESS,
+
     ET_INVALID_EVENT_TYPE
 };
 
@@ -154,6 +157,11 @@ struct event_t {
 
     // Likely to be allocated on free list allocator
     void *data;
+};
+
+struct event_attempt_sign_up_t {
+    const char *username;
+    const char *password;
 };
 
 typedef void(*listener_callback_t)(

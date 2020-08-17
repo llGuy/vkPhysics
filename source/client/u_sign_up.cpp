@@ -1,4 +1,9 @@
+#include "common/allocators.hpp"
+#include "common/event.hpp"
+#include "common/string.hpp"
 #include "ui.hpp"
+#include <cstdio>
+#include <sha1.hpp>
 #include "u_internal.hpp"
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
@@ -184,6 +189,30 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
         case B_SIGNUP: {
             currently_typing = TB_INVALID;
             // Request meta server if username is available, if not, re-prompt
+            // Immediately SHA1 the password
+
+            char *username = create_fl_string(type_username_text.text.characters);
+            uint8_t *password_bin = LN_MALLOC(uint8_t, 20);
+            memset(password_bin, 0, sizeof(uint8_t) * 20);
+
+            SHA1_CTX ctx;
+            SHA1Init(&ctx);
+
+            SHA1Update(&ctx, (uint8_t *)type_password_text.text.characters, type_password_text.text.char_count);
+            SHA1Final(password_bin, &ctx);
+
+            char *password = FL_MALLOC(char, 41);
+            memset(password, 0, sizeof(char) * 41);
+
+            for (uint32_t i = 0; i < 20; ++i) {
+                sprintf(password + (2 * i), "%02x", password_bin[i]);
+            }
+
+            event_attempt_sign_up_t *event_data = LN_MALLOC(event_attempt_sign_up_t, 1);
+            event_data->username = username;
+            event_data->password = password;
+
+            submit_event(ET_ATTEMPT_SIGN_UP, event_data, events);
         } break;
 
         case B_LOGIN: {

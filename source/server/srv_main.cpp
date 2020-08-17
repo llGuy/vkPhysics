@@ -1,6 +1,8 @@
+#include <sha1.hpp>
 #include "srv_game.hpp"
 #include "nw_server.hpp"
 #include <common/time.hpp>
+#include <common/meta.hpp>
 #include <common/game.hpp>
 #include <common/files.hpp>
 #include <common/event.hpp>
@@ -38,6 +40,14 @@ static void s_run() {
         LN_CLEAR();
 
         nw_tick(&events);
+
+#if 0
+        char *output = check_request_finished();
+        if (output) {
+            LOG_INFO("Got back to main thread\n");
+        }
+#endif
+
         srv_game_tick();
 
         timestep_end();
@@ -84,6 +94,18 @@ int32_t main(
     running = 1;
     files_init();
 
+    { // For testing hashing
+        uint8_t hash[20];
+
+        SHA1_CTX ctx;
+        SHA1Init(&ctx);
+
+        uint8_t str[] = "Hello";
+        SHA1Update(&ctx, str, 5);
+        SHA1Final(hash, &ctx);
+    }
+
+    begin_meta_client_thread();
     nw_init(&events);
 
     game_memory_init();
@@ -91,6 +113,12 @@ int32_t main(
 
     s_parse_command_line_args(argc, argv);
 
+#if 0
+    { // Just for testing meta server stuff
+        send_request(R_SIGN_UP);
+    }
+#endif
+ 
     s_run();
 
     dispatch_events(&events);

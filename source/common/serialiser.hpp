@@ -51,7 +51,8 @@ struct serialiser_t {
         const vector4_t &v4);
     
     void serialise_string(
-        const char *string);
+        const char *string,
+        bool null_terminate = 1);
 
     uint8_t deserialise_uint8();
     

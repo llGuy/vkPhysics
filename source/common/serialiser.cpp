@@ -200,11 +200,15 @@ uint64_t serialiser_t::deserialise_uint64() {
 }
 
 void serialiser_t::serialise_string(
-    const char *string) {
-    uint32_t string_length = (uint32_t)strlen(string);
-    
-    uint8_t *pointer = grow_data_buffer((uint32_t)strlen(string) + 1);
-    memcpy(pointer, string, string_length + 1);
+    const char *string,
+    bool null_terminate) {
+    uint32_t length = (uint32_t)strlen(string);
+
+    if (null_terminate)
+        ++length;
+
+    uint8_t *pointer = grow_data_buffer(length);
+    memcpy(pointer, string, length);
 }
 
 
