@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTB_IMAGE_IMPLEMENTATION -D_MBCS -DCIMGUI_DEFINE_ENUMS_AND_STRUCTS")
 
 # Get source files
-file(GLOB_RECURSE COMMON_SOURCES "source/common/*.cpp" "source/common/*.hpp")
+file(GLOB_RECURSE COMMON_SOURCES "source/common/*.cpp" "source/common/*.hpp" "dependencies/sha/sha1.cpp")
 file(GLOB_RECURSE CLIENT_SOURCES "source/client/*.cpp" "source/client/*.hpp")
 file(GLOB_RECURSE SERVER_SOURCES "source/server/*.cpp" "source/server/*.hpp")
 file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
@@ -15,12 +15,18 @@ file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hp
 # Include directories for all targets
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/stb")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/glm")
+include_directories("${CMAKE_SOURCE_DIR}/dependencies/sha")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/imgui/include")
 include_directories("${CMAKE_SOURCE_DIR}/source")
 
 # Find packages
 find_package(Vulkan)
 find_package(CURL)
+
+# Threading library
+if (NOT WIN32)
+  link_libraries("pthread")
+endif()
 
 # Create common
 add_library(common STATIC "${COMMON_SOURCES}")
