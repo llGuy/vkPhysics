@@ -67,7 +67,11 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 submit_event(ET_META_REQUEST_ERROR, data, events);
             }
             else {
+                // Save the userid and usertag
+
+#if 0
                 submit_event(ET_SIGN_UP_SUCCESS, NULL, events);
+#endif
             }
         } break;
         }

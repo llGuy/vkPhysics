@@ -16,17 +16,27 @@ static const char *meta_server_hostname = "meta.llguy.fun";
 static std::thread meta_thread;
 
 static std::condition_variable ready;
-static bool requested_job;
-static bool finished_job;
 static std::mutex mutex;
 
-// Current request
+// Shared state between job thread (doing requests), and main thread
+static struct shared_t {
+    request_t current_request_type;
+    void *current_request_data;
+    char *request_result;
+    uint32_t request_result_size;
+    bool doing_job;
+} shared;
+
+static bool requested_work;
+
+#if 0
 static request_t current_request_type;
 static void *current_request_data;
 
 // Result of the current request
 static char *request_result;
 static uint32_t request_result_size;
+#endif
 
 static CURL *curl;
 
@@ -36,13 +46,13 @@ static linear_allocator_t allocator;
 static size_t s_write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
     uint32_t byte_count = nmemb * size;
 
-    if (request_result_size + byte_count < REQUEST_RESULT_MAX_SIZE) {
-        memcpy(request_result + request_result_size, ptr, byte_count);
-        request_result_size += byte_count;
+    if (shared.request_result_size + byte_count < REQUEST_RESULT_MAX_SIZE) {
+        memcpy(shared.request_result + shared.request_result_size, ptr, byte_count);
+        shared.request_result_size += byte_count;
     }
 
-    LOG_INFOV("Byte count: %d\n", byte_count);
-    LOG_INFOV("Message: \n%s\n", request_result);
+    LOG_INFOV("META: Byte count: %d\n", byte_count);
+    LOG_INFOV("META: Message: \n%s\n", shared.request_result);
 
     return byte_count;
 }
@@ -69,16 +79,18 @@ static void s_meta_thread() {
     for (;;) {
         allocator.clear();
 
-        std::unique_lock<std::mutex> lock (mutex);
-        ready.wait(lock, [] { return requested_job; });
+        printf("META: Waiting on job...\n");
 
-        printf("Started job\n");
+        std::unique_lock<std::mutex> lock (mutex);
+        ready.wait(lock, [] { return shared.doing_job; });
+
+        LOG_INFO("META: Started job\n");
 
         bool quit = 0;
 
-        switch (current_request_type) {
+        switch (shared.current_request_type) {
         case R_SIGN_UP: {
-            request_sign_up_data_t *data = (request_sign_up_data_t *)current_request_data;
+            request_sign_up_data_t *data = (request_sign_up_data_t *)shared.current_request_data;
 
             serialiser_t serialiser = s_fill_request();
             serialiser.serialise_string("api/register_user.php");
@@ -109,14 +121,11 @@ static void s_meta_thread() {
 
         curl_easy_perform(curl);
 
-        // Set new URL, perform request
-        printf("Finished this job, %d", current_request_type);
+        printf("\n\nMETA: Finished this job\n");;
 
-        requested_job = 0;
-        finished_job = 1;
+        shared.doing_job = 0;
 
         lock.unlock();
-        ready.notify_one();
     }
 }
 
@@ -133,27 +142,35 @@ void begin_meta_client_thread() {
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s_write_callback);
     curl_easy_setopt(curl, CURLOPT_POST, 1);
 
-    requested_job = 0;
-    finished_job = 0;
-    request_result_size = 0;
+    shared.doing_job = 0;
+    shared.request_result_size = 0;
 
-    request_result = FL_MALLOC(char, REQUEST_RESULT_MAX_SIZE);
+    shared.request_result = FL_MALLOC(char, REQUEST_RESULT_MAX_SIZE);
     allocator.init(4096);
 
     meta_thread = std::thread(s_meta_thread);
 }
 
 char *check_request_finished(uint32_t *size, request_t *type) {
-    std::lock_guard<std::mutex> lock (mutex);
-    if (finished_job) {
-        finished_job = 0;
+    if (requested_work) {
+        std::unique_lock<std::mutex> lock (mutex);
 
-        *size = request_result_size;
-        *type = current_request_type;
+        // If work was requested and the other thread isn't doing work
+        if (!shared.doing_job) {
+            LOG_INFO("MAIN: META thread stopped work\n");
 
-        request_result_size = 0;
+            *size = shared.request_result_size;
+            *type = shared.current_request_type;
 
-        return request_result;
+            shared.request_result_size = 0;
+
+            requested_work = 0;
+
+            return shared.request_result;
+        }
+        else {
+            return NULL;
+        }
     }
     else {
         return NULL;
@@ -161,11 +178,14 @@ char *check_request_finished(uint32_t *size, request_t *type) {
 }
 
 void send_request(request_t request, void *data) {
+    // This is not shared
+    requested_work = 1;
+
     { // Push the request
-        std::lock_guard<std::mutex> lock (mutex);
-        requested_job = 1;
-        current_request_type = request;
-        current_request_data = data;
+        std::unique_lock<std::mutex> lock (mutex);
+        shared.doing_job = 1;
+        shared.current_request_type = request;
+        shared.current_request_data = data;
     }
 
     ready.notify_one();

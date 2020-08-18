@@ -38,6 +38,11 @@ static void s_ui_event_listener(
         FL_FREE(data);
     } break;
 
+    case ET_SIGN_UP_SUCCESS: {
+        clear_ui_panels();
+        push_ui_panel(USI_MAIN_MENU);
+    } break;
+
     default: {
     } break;
 
@@ -80,6 +85,7 @@ void ui_init(
     subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
     subscribe_to_event(ET_RESIZE_SURFACE, ui_listener, events);
     subscribe_to_event(ET_META_REQUEST_ERROR, ui_listener, events);
+    subscribe_to_event(ET_SIGN_UP_SUCCESS, ui_listener, events);
 
     global_font = load_font(
         "assets/font/fixedsys.fnt",
