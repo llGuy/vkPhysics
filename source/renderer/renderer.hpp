@@ -720,7 +720,7 @@ struct ui_box_t {
         float rad_angle);
 };
 
-#define MAX_TEXTURES_IN_RENDER_LIST 20
+#define MAX_TEXTURES_IN_RENDER_LIST 25
 #define MAX_QUADS_TO_RENDER 1000
 
 DECLARE_VOID_RENDERER_PROC(void, ui_rendering_init,

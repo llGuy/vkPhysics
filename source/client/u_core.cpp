@@ -12,6 +12,8 @@
 static ui_stack_item_t stack_items[10];
 static int32_t stack_item_count;
 
+bool debugging_freeze = 0;
+
 static void s_ui_event_listener(
     void *object,
     event_t *event,
@@ -27,6 +29,7 @@ static void s_ui_event_listener(
         // Need to reinitialise UI system
         u_main_menu_init();
         u_game_menu_init();
+        u_sign_up_menu_init();
         u_hud_init();
     } break;
 
@@ -39,6 +42,14 @@ static void s_ui_event_listener(
     } break;
 
     case ET_SIGN_UP_SUCCESS: {
+        clear_ui_panels();
+        push_ui_panel(USI_MAIN_MENU);
+
+        // debugging_freeze = 1;
+    } break;
+
+    case ET_PRESSED_ESCAPE: {
+        // debugging_freeze = 1;
         clear_ui_panels();
         push_ui_panel(USI_MAIN_MENU);
     } break;
@@ -86,6 +97,7 @@ void ui_init(
     subscribe_to_event(ET_RESIZE_SURFACE, ui_listener, events);
     subscribe_to_event(ET_META_REQUEST_ERROR, ui_listener, events);
     subscribe_to_event(ET_SIGN_UP_SUCCESS, ui_listener, events);
+    subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
 
     global_font = load_font(
         "assets/font/fixedsys.fnt",
@@ -128,8 +140,8 @@ void handle_ui_input(
 
 void tick_ui(
     event_submissions_t *events) {
-    for (uint32_t i = 0; i < stack_item_count; ++i) {
-        switch (stack_items[i]) {
+    if (stack_item_count) {
+        switch (stack_items[stack_item_count - 1]) {
         case USI_MAIN_MENU: {
             u_submit_main_menu();
         } break;
@@ -143,7 +155,8 @@ void tick_ui(
         } break;
 
         case USI_SIGN_UP: {
-            u_submit_sign_up_menu();
+            if (!debugging_freeze)
+                u_submit_sign_up_menu();
         } break;
 
         default: {

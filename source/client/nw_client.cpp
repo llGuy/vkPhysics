@@ -11,6 +11,7 @@
 #include <common/constant.hpp>
 #include <common/meta_packet.hpp>
 #include <common/game_packet.hpp>
+#include <cstddef>
 
 struct client_info_t {
     const char *client_name;
@@ -1027,7 +1028,8 @@ static void s_net_event_listener(
     case ET_ATTEMPT_SIGN_UP: {
         event_attempt_sign_up_t *data = (event_attempt_sign_up_t *)event->data;
 
-        nw_request_sign_up(data->username, data->password);
+        // nw_request_sign_up(data->username, data->password);
+        submit_event(ET_SIGN_UP_SUCCESS, NULL, events);
     } break;
 
     case ET_CLOSED_WINDOW: {

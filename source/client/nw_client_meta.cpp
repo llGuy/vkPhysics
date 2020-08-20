@@ -9,7 +9,7 @@
 #include <common/allocators.hpp>
 
 void nw_init_meta_connection() {
-    begin_meta_client_thread();
+    // begin_meta_client_thread();
 }
 
 void nw_check_registration(event_submissions_t *events) {
@@ -52,6 +52,7 @@ void nw_check_registration(event_submissions_t *events) {
 }
 
 void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
+#if 0
     uint32_t size = 0;
     request_t request_type;
     char *data = check_request_finished(&size, &request_type);
@@ -76,20 +77,25 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
         } break;
         }
     }
+#endif
 }
 
 void nw_request_sign_up(
     const char *username,
     const char *password) {
+#if 0
     request_sign_up_data_t *sign_up_data = LN_MALLOC(request_sign_up_data_t, 1);
     sign_up_data->username = username;
     sign_up_data->password = password;
 
     // Sends request to the web server
     send_request(R_SIGN_UP, sign_up_data);
+#endif
 }
 
 void nw_stop_request_thread() {
+#if 0
     send_request(R_QUIT, NULL);
     join_meta_thread();
+#endif
 }

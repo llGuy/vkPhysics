@@ -38,8 +38,10 @@ static void s_buttons_init() {
         ui_text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 7, 1.8f);
 
-    if (!signup_text.char_count)
+    if (!signup_text.char_count) {
         signup_text.draw_string("SIGN UP", 0xFFFFFFFF);
+        signup_text.null_terminate();
+    }
 
     login_box.init(RT_RIGHT_DOWN, 3.0f, ui_vector2_t(-0.07f, 0.2f), ui_vector2_t(0.4f, 0.4f), &panel_box, 0x09090956);
     login_color.init(0x05050536, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
@@ -47,8 +49,10 @@ static void s_buttons_init() {
         ui_text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 7, 1.8f);
 
-    if (!login_text.char_count)
+    if (!login_text.char_count) {
         login_text.draw_string("LOGIN", 0xFFFFFFFF);
+        login_text.null_terminate();
+    }
 }
 
 enum typing_box_t { TB_USERNAME, TB_PASSWORD, TB_INVALID };
@@ -75,8 +79,10 @@ static void s_typing_boxes_init() {
                                   ui_text_t::font_stream_box_relative_to_t::BOTTOM,
                                   0.8f, 0.9f, 25, 1.8f);
 
-        if (!prompt_username_text.char_count)
+        if (!prompt_username_text.char_count) {
             prompt_username_text.draw_string("USERNAME:", 0xFFFFFFFF);
+            prompt_username_text.null_terminate();
+        }
 
         type_username_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.3f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         type_username_color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
@@ -94,8 +100,10 @@ static void s_typing_boxes_init() {
                                   ui_text_t::font_stream_box_relative_to_t::BOTTOM,
                                   0.8f, 0.9f, 25, 1.8f);
 
-        if (!prompt_password_text.char_count)
-            prompt_password_text.draw_string("PASSWORD:", 0xFFFFFFFF);
+        if (!prompt_password_text.char_count) {
+            prompt_password_text.draw_string("PASSWOR:", 0xFFFFFFFF);
+            prompt_password_text.null_terminate();
+        }
 
         type_password_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.1f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         type_password_color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
@@ -122,8 +130,10 @@ static void s_error_section_init() {
         ui_text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 30, 1.8f);
 
-    if (!error_text.char_count)
+    if (!error_text.char_count) {
         error_text.draw_string("Username already exists", 0xFF0000FF);
+        error_text.null_terminate();
+    }
 }
 
 void u_sign_up_menu_init() {
@@ -134,11 +144,13 @@ void u_sign_up_menu_init() {
 }
 
 void u_submit_sign_up_menu() {
-    push_colored_ui_box(&panel_box);
     push_colored_ui_box(&signup_box);
+#if 0
+    push_colored_ui_box(&panel_box);
     push_colored_ui_box(&login_box);
     push_colored_ui_box(&type_username_box);
     push_colored_ui_box(&type_password_box);
+#endif
     
     mark_ui_textured_section(u_game_font()->font_img.descriptor);
 
@@ -146,11 +158,13 @@ void u_submit_sign_up_menu() {
     push_ui_text(&login_text);
     push_ui_text(&prompt_username_text);
     push_ui_text(&prompt_password_text);
+#if 0
     push_ui_input_text(1, 0, 0xFFFFFFFF, &type_username_text);
     push_ui_input_text(1, 1, 0xFFFFFFFF, &type_password_text);
 
     if (error_happened)
         push_ui_text(&error_text);
+#endif
 }
 
 void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {

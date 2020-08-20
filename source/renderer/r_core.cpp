@@ -116,7 +116,7 @@ static VKAPI_ATTR VkBool32 VKAPI_PTR s_debug_messenger_callback(
     VkDebugUtilsMessageTypeFlagsEXT,
     const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
     void *) {
-#if 0
+#if 1
     LOG_ERRORV("Validation layer: %s\n\n", callback_data->pMessage);
 #endif
     return 0;
@@ -846,6 +846,8 @@ void swapchain_information(
     dst->height = swapchain.extent.height;
 }
 
+extern bool debugging_freeze;
+
 VkCommandBuffer begin_frame() {
     VkFence null_fence = VK_NULL_HANDLE;
 
@@ -858,6 +860,7 @@ VkCommandBuffer begin_frame() {
         &image_index);
 
     vkWaitForFences(device, 1, &fences[current_frame], VK_TRUE, UINT64_MAX);
+
     vkResetFences(device, 1, &fences[current_frame]);
 
     begin_command_buffer(primary_command_buffers[image_index], 0, NULL);
@@ -915,7 +918,6 @@ void end_frame(
     vkCmdBeginRenderPass(primary_command_buffers[image_index], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
     r_execute_final_pass(primary_command_buffers[image_index]);
-
     if (info->debug_window) {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -952,7 +954,10 @@ void end_frame(
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &render_finished_semaphores[current_frame];
  
-    vkQueueSubmit(graphics_queue, 1, &submit_info, fences[current_frame]);
+    VkResult result = vkQueueSubmit(graphics_queue, 1, &submit_info, fences[current_frame]);
+    if (result != VK_SUCCESS) {
+        LOG_ERROR("FAILED TO SUBMIT WORK TO THE GPU\n");
+    }
 
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -962,7 +967,11 @@ void end_frame(
     present_info.pSwapchains = &swapchain.swapchain;
     present_info.pImageIndices = &image_index;
 
-    VkResult result = vkQueuePresentKHR(present_queue, &present_info);
+    result = vkQueuePresentKHR(present_queue, &present_info);
+
+    if (result != VK_SUCCESS) {
+        LOG_ERROR("FAILED TO PRESENT TO SCREEN\n");
+    }
 
     current_frame = (current_frame + 1) % FRAMES_IN_FLIGHT;
 
