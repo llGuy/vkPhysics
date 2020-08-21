@@ -408,6 +408,10 @@ void sync_gpu_with_textured_vertex_list(
             sizeof(gui_textured_vertex_t) * textured_list.vertex_count,
             textured_list.vertices,
             &textured_list.vtx_buffer);
+
+        if (sizeof(gui_textured_vertex_t) * textured_list.vertex_count > 65536) {
+            LOG_ERROR("WE HAVE A BIG PROBLEM\n");
+        }
     }
 }
 

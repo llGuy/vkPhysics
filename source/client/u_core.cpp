@@ -51,7 +51,7 @@ static void s_ui_event_listener(
     case ET_PRESSED_ESCAPE: {
         // debugging_freeze = 1;
         clear_ui_panels();
-        push_ui_panel(USI_MAIN_MENU);
+        push_ui_panel(USI_HUD);
     } break;
 
     default: {

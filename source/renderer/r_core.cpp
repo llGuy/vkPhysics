@@ -718,13 +718,14 @@ static void s_global_descriptor_layouts_init() {
 
     VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.sampler[0]));
 
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    
-    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.input_attachment[0]));
-
     binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     
     VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.uniform_buffer[0]));
+
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    
+    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_layouts.input_attachment[0]));
 }
 
 struct sensitive_gpu_buffer_t {

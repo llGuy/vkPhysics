@@ -82,7 +82,7 @@ shader_binding_info_t create_mesh_binding_info(
             stride = sizeof(vector4_t);
         } break;
         case BT_JOINT_INDICES: {
-            format = VK_FORMAT_R32G32B32A32_UINT;
+            format = VK_FORMAT_R32G32B32A32_SINT;
             stride = sizeof(ivector4_t);
         } break;
         default: {

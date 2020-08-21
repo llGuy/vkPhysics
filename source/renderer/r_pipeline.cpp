@@ -1248,7 +1248,8 @@ void r_execute_gaussian_blur_pass(
 
 static rpipeline_stage_t ui_stage;
 static rpipeline_shader_t ui_shader; // This just renders the previous stage
-static VkCommandBuffer render_previous_command_buffer;
+static VkCommandBuffer render_previous_command_buffers[3];
+static uint32_t render_previous_index;
 
 rpipeline_stage_t *r_ui_stage() {
     return &ui_stage;
@@ -1321,8 +1322,10 @@ static void s_ui_stage_init() {
 
     create_command_buffers(
         VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-        &render_previous_command_buffer,
-        1);
+        render_previous_command_buffers,
+        3);
+
+    render_previous_index = 0;
 
     VkDescriptorSetLayout input_layouts[] = {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
@@ -1357,8 +1360,10 @@ void r_execute_ui_pass(
         &inheritance_info,
         RPI_UI);
 
+    VkCommandBuffer current_buffer = render_previous_command_buffers[render_previous_index];
+
     begin_command_buffer(
-        render_previous_command_buffer,
+        current_buffer,
         VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
         &inheritance_info);
 
@@ -1366,20 +1371,20 @@ void r_execute_ui_pass(
     viewport.width = (float)r_swapchain_extent().width;
     viewport.height = (float)r_swapchain_extent().height;
     viewport.maxDepth = 1;
-    vkCmdSetViewport(render_previous_command_buffer, 0, 1, &viewport);
+    vkCmdSetViewport(current_buffer, 0, 1, &viewport);
 
     VkRect2D rect = {};
     rect.extent = r_swapchain_extent();
-    vkCmdSetScissor(render_previous_command_buffer, 0, 1, &rect);
+    vkCmdSetScissor(current_buffer, 0, 1, &rect);
 
-    vkCmdBindPipeline(render_previous_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ui_shader.pipeline);
+    vkCmdBindPipeline(current_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ui_shader.pipeline);
 
     VkDescriptorSet inputs[] = {
                                 previous_output,
     };
     
     vkCmdBindDescriptorSets(
-        render_previous_command_buffer,
+        current_buffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         ui_shader.layout,
         0,
@@ -1388,9 +1393,9 @@ void r_execute_ui_pass(
         0,
         NULL);
 
-    vkCmdDraw(render_previous_command_buffer, 4, 1, 0, 0);
+    vkCmdDraw(current_buffer, 4, 1, 0, 0);
 
-    end_command_buffer(render_previous_command_buffer);
+    end_command_buffer(current_buffer);
 
     VkClearValue clear_values = {};
     
@@ -1407,12 +1412,14 @@ void r_execute_ui_pass(
 
     vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
-    vkCmdExecuteCommands(command_buffer, 1, &render_previous_command_buffer);
+    vkCmdExecuteCommands(command_buffer, 1, &current_buffer);
     vkCmdExecuteCommands(command_buffer, 1, &ui_command_buffer);
 
     vkCmdEndRenderPass(command_buffer);
 
     s_update_previous_output(ui_stage.descriptor_set);
+
+    render_previous_index = (render_previous_index + 1) % 3;
 }
 
 static rpipeline_stage_t final_stage;

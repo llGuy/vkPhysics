@@ -140,7 +140,7 @@ static void s_browse_server_menu_init() {
 
     if (!browse_server_menu.connect_text.char_count) {
         browse_server_menu.connect_text.draw_string(
-            "Connect",
+            "12345678901234567890",
             0xFFFFFFFF);
     }
 
@@ -170,7 +170,7 @@ static void s_browse_server_menu_init() {
 
     if (!browse_server_menu.refresh_text.char_count) {
         browse_server_menu.refresh_text.draw_string(
-            "Refresh",
+            "THI SIS LOADS OF TEXT HAHHAHAH HAHAHAM UAHAH",
             0xFFFFFFFF);
     }
 
@@ -249,6 +249,16 @@ void u_main_menu_init() {
 
 void u_submit_main_menu() {
     main_menu_layout.submit();
+
+    if (0) {
+        for (uint32_t i = 0; i < 10; ++i) {
+            push_colored_ui_box(
+                &browse_server_menu.connect_button);
+
+            push_colored_ui_box(
+                &browse_server_menu.refresh_button);
+        }
+    }
 
     if (main_menu_layout.menu_opened()) {
         switch(main_menu_layout.current_open_menu) {

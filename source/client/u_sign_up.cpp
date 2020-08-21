@@ -145,25 +145,27 @@ void u_sign_up_menu_init() {
 
 void u_submit_sign_up_menu() {
     push_colored_ui_box(&signup_box);
-#if 0
-    push_colored_ui_box(&panel_box);
-    push_colored_ui_box(&login_box);
-    push_colored_ui_box(&type_username_box);
-    push_colored_ui_box(&type_password_box);
+#if 1
+        push_colored_ui_box(&panel_box);
+        push_colored_ui_box(&login_box);
+        push_colored_ui_box(&type_password_box);
+        push_colored_ui_box(&type_username_box);
 #endif
     
+#if 1
     mark_ui_textured_section(u_game_font()->font_img.descriptor);
 
     push_ui_text(&signup_text);
     push_ui_text(&login_text);
     push_ui_text(&prompt_username_text);
     push_ui_text(&prompt_password_text);
-#if 0
+#if 1
     push_ui_input_text(1, 0, 0xFFFFFFFF, &type_username_text);
     push_ui_input_text(1, 1, 0xFFFFFFFF, &type_password_text);
 
     if (error_happened)
         push_ui_text(&error_text);
+#endif
 #endif
 }
 

@@ -134,7 +134,7 @@ void gm_handle_main_event(void *object, struct event_t *event, struct event_subm
 
     case ET_REQUEST_USER_INFORMATION: {
         clear_ui_panels();
-        push_ui_panel(USI_HUD);
+        push_ui_panel(USI_SIGN_UP);
     } break;
 
     default: {
