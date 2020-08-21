@@ -12,8 +12,6 @@
 static ui_stack_item_t stack_items[10];
 static int32_t stack_item_count;
 
-bool debugging_freeze = 0;
-
 static void s_ui_event_listener(
     void *object,
     event_t *event,
@@ -41,17 +39,9 @@ static void s_ui_event_listener(
         FL_FREE(data);
     } break;
 
-    case ET_SIGN_UP_SUCCESS: {
+    case ET_SIGN_UP_SUCCESS: case ET_LOGIN_SUCCESS: {
         clear_ui_panels();
         push_ui_panel(USI_MAIN_MENU);
-
-        // debugging_freeze = 1;
-    } break;
-
-    case ET_PRESSED_ESCAPE: {
-        // debugging_freeze = 1;
-        clear_ui_panels();
-        push_ui_panel(USI_HUD);
     } break;
 
     default: {
@@ -155,8 +145,7 @@ void tick_ui(
         } break;
 
         case USI_SIGN_UP: {
-            if (!debugging_freeze)
-                u_submit_sign_up_menu();
+            u_submit_sign_up_menu();
         } break;
 
         default: {

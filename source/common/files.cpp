@@ -7,7 +7,7 @@
 struct file_object_t {
     FILE *file;
     const char *path;
-    file_load_flags_t type;
+    uint32_t type;
 };
 
 static stack_container_t<file_object_t> files;
@@ -31,7 +31,7 @@ static const char *s_create_path(const char *path) {
 
 file_handle_t create_file(
     const char *file,
-    file_load_flags_t type) {
+    uint32_t type) {
     file_handle_t handle = files.add();
     file_object_t *object = files.get(handle);
 
@@ -43,11 +43,14 @@ file_handle_t create_file(
     }
     else {
         char flags[3] = { 'r', '\0', '\0' };
+        if (type & FLF_WRITEABLE) {
+            flags[0] = 'w';
+        }
         if (type & FLF_BINARY) {
             flags[1] = 'b';
         }
-        if (type & FLF_WRITEABLE) {
-            flags[0] = 'w';
+        if (type & FLF_OVERWRITE) {
+            flags[1] = '+';
         }
 
         object->file = fopen(object->path, flags);

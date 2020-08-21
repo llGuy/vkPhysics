@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <mutex>
 #include <thread>
 #include <chrono>
@@ -29,15 +30,6 @@ static struct shared_t {
 
 static bool requested_work;
 
-#if 0
-static request_t current_request_type;
-static void *current_request_data;
-
-// Result of the current request
-static char *request_result;
-static uint32_t request_result_size;
-#endif
-
 static CURL *curl;
 
 // Buffer used for creating URLs, fields, etc...
@@ -49,6 +41,8 @@ static size_t s_write_callback(char *ptr, size_t size, size_t nmemb, void *userd
     if (shared.request_result_size + byte_count < REQUEST_RESULT_MAX_SIZE) {
         memcpy(shared.request_result + shared.request_result_size, ptr, byte_count);
         shared.request_result_size += byte_count;
+
+        shared.request_result[shared.request_result_size + byte_count] = 0;
     }
 
     LOG_INFOV("META: Byte count: %d\n", byte_count);
@@ -96,18 +90,37 @@ static void s_meta_thread() {
             serialiser.serialise_string("api/register_user.php");
             curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
 
-            serialiser_t fields = {};
-            fields.data_buffer = (uint8_t *)allocator.allocate(REQUEST_MAX_SIZE);
-
-            fields.data_buffer_size = REQUEST_MAX_SIZE;
-            fields.serialise_string("username=", 0);
-            fields.serialise_string(data->username, 0);
-            fields.serialise_uint8('&');
-            fields.serialise_string("password=", 0);
-            fields.serialise_string(data->password, 1);
+            char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
+            sprintf(fields, "username=%s&password=%s", data->username, data->password);
 
             // Fill post fields
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields.data_buffer);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+        } break;
+
+        case R_AUTOMATIC_LOGIN: {
+            request_automatic_login_t *data = (request_automatic_login_t *)shared.current_request_data;
+
+            serialiser_t serialiser = s_fill_request();
+            serialiser.serialise_string("api/auto_login_user.php");
+            curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
+
+            char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
+            sprintf(fields, "usertag=%d&userid=%d", data->usertag, data->userid);
+
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+        } break;
+
+        case R_LOGIN: {
+            request_login_data_t *data = (request_login_data_t *)shared.current_request_data;
+
+            serialiser_t serialiser = s_fill_request();
+            serialiser.serialise_string("api/login_user.php");
+            curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
+
+            char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
+            sprintf(fields, "username=%s&password=%s", data->username, data->password);
+
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
         } break;
 
         case R_QUIT: {
@@ -121,7 +134,7 @@ static void s_meta_thread() {
 
         curl_easy_perform(curl);
 
-        printf("\n\nMETA: Finished this job\n");;
+        printf("META: Finished this job\n");;
 
         shared.doing_job = 0;
 

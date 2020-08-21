@@ -140,7 +140,7 @@ static void s_browse_server_menu_init() {
 
     if (!browse_server_menu.connect_text.char_count) {
         browse_server_menu.connect_text.draw_string(
-            "12345678901234567890",
+            "Connect",
             0xFFFFFFFF);
     }
 
@@ -170,7 +170,7 @@ static void s_browse_server_menu_init() {
 
     if (!browse_server_menu.refresh_text.char_count) {
         browse_server_menu.refresh_text.draw_string(
-            "THI SIS LOADS OF TEXT HAHHAHAH HAHAHAM UAHAH",
+            "Refresh",
             0xFFFFFFFF);
     }
 

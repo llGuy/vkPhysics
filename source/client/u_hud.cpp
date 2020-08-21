@@ -1,5 +1,5 @@
-#include "u_internal.hpp"
 #include "ui.hpp"
+#include "u_internal.hpp"
 #include <renderer/renderer.hpp>
 
 // HUD for now, just contains a crosshair
@@ -10,9 +10,6 @@ static struct {
     uint32_t current_crosshair;
     vector2_t uvs[6];
 } crosshair_selection;
-
-
-
 
 enum button_t { B_SIGNUP, B_LOGIN, B_USERNAME, B_PASSWORD, B_INVALID };
 
@@ -36,10 +33,6 @@ static ui_box_t login_box;
 static ui_text_t login_text;
 static widget_color_t login_color;
 
-
-
-
-
 static struct {
     // When you select a server, press connect to request connection
     ui_box_t connect_button;
@@ -59,16 +52,6 @@ static struct {
     ui_input_text_t ip_address;
     widget_color_t ip_address_color;
 } browse_server_menu;
-
-
-
-
-
-
-
-
-
-
 
 void u_hud_init() {
     crosshair.init(

@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <stdio.h>
 #include <sha1.hpp>
+#include <string.h>
 #include <common/log.hpp>
 #include <common/meta.hpp>
 #include <common/files.hpp>
@@ -8,8 +9,10 @@
 #include <common/serialiser.hpp>
 #include <common/allocators.hpp>
 
+static const char *current_username;
+
 void nw_init_meta_connection() {
-    // begin_meta_client_thread();
+    begin_meta_client_thread();
 }
 
 void nw_check_registration(event_submissions_t *events) {
@@ -37,22 +40,37 @@ void nw_check_registration(event_submissions_t *events) {
         serialiser.data_buffer_size = contents.size;
 
         const char *username = serialiser.deserialise_string();
-        uint32_t uid = serialiser.deserialise_uint32();
         uint32_t usertag = serialiser.deserialise_uint32();
+        uint32_t uid = serialiser.deserialise_uint32();
 
         // Automatically log into the server
-        LOG_INFO("User already signed in\n");
+        LOG_INFOV("User information found: \"%s\" with tag %d and user ID %d - attempting to login in...\n", username, usertag, uid);
+        request_automatic_login_t *login_data = FL_MALLOC(request_automatic_login_t, 1);
+        login_data->userid = uid;
+        login_data->usertag = usertag;
+
+        send_request(R_AUTOMATIC_LOGIN, login_data);
     }
     else {
-        LOG_INFO("User hasn't signed up yet\n");
+        LOG_INFO("No user information has been found in /assets/.user_meta - requesting user to sign up or login...\n");
 
         // Request the user to register a name
         submit_event(ET_REQUEST_USER_INFORMATION, NULL, events);
     }
 }
 
+static char *s_skip_line(char *pointer) {
+    while (*pointer) {
+        switch (*pointer) {
+        case '\n': return ++pointer;
+        default: ++pointer;
+        }
+    }
+
+    return NULL;
+}
+
 void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
-#if 0
     uint32_t size = 0;
     request_t request_type;
     char *data = check_request_finished(&size, &request_type);
@@ -60,42 +78,88 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
     if (data) {
         // Request was finished
         switch (request_type) {
-        case R_SIGN_UP: {
-            if (data[0] == '0') {
-                // Failed to sign up - username was taken
-                event_meta_request_error_t *data = FL_MALLOC(event_meta_request_error_t, 1);
-                data->error_type = RE_USERNAME_EXISTS;
-                submit_event(ET_META_REQUEST_ERROR, data, events);
+        case R_SIGN_UP: case R_LOGIN: {
+            if (data[0] == '1') {
+                // Exit sign up menu
+                submit_event(ET_SIGN_UP_SUCCESS, NULL, events);
+
+                // The 2 bytes corresond to the 1 and the new line
+                char *user_tag_str = data + 2;
+                uint32_t usertag = atoi(user_tag_str);
+
+                char *user_id_str = s_skip_line(user_tag_str);
+                uint32_t userid = atoi(user_id_str);
+
+                // Save the userid and usertag
+                serialiser_t serialiser = {};
+                serialiser.init(strlen(current_username) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
+                serialiser.serialise_string(current_username);
+                serialiser.serialise_uint32(usertag);
+                serialiser.serialise_uint32(userid);
+
+                file_handle_t file = create_file("assets/.user_meta", FLF_OVERWRITE | FLF_WRITEABLE);
+
+                write_file(file, serialiser.data_buffer, serialiser.data_buffer_head);
+
+                free_file(file);
             }
             else {
-                // Save the userid and usertag
+                // Failed to sign up or login
+                event_meta_request_error_t *data = FL_MALLOC(event_meta_request_error_t, 1);
 
-#if 0
-                submit_event(ET_SIGN_UP_SUCCESS, NULL, events);
-#endif
+                if (request_type == R_SIGN_UP) {
+                    data->error_type = RE_USERNAME_EXISTS;
+                }
+                else {
+                    data->error_type = RE_INCORRECT_PASSWORD_OR_USERNAME;
+                }
+
+                submit_event(ET_META_REQUEST_ERROR, data, events);
+            }
+        } break;
+
+        case R_AUTOMATIC_LOGIN: {
+            if (data[0] == '1') {
+                LOG_INFO("Succeeded to login - game may begin\n");
+            }
+            else {
+                LOG_INFO("Failed to login\n");
+
+                // Request the user to login (or sign up) a name
+                submit_event(ET_REQUEST_USER_INFORMATION, NULL, events);
             }
         } break;
         }
     }
-#endif
 }
 
 void nw_request_sign_up(
     const char *username,
     const char *password) {
-#if 0
     request_sign_up_data_t *sign_up_data = LN_MALLOC(request_sign_up_data_t, 1);
+    current_username = username;
+
     sign_up_data->username = username;
     sign_up_data->password = password;
 
     // Sends request to the web server
     send_request(R_SIGN_UP, sign_up_data);
-#endif
+}
+
+void nw_request_login(
+    const char *username,
+    const char *password) {
+    request_login_data_t *login_data = LN_MALLOC(request_login_data_t, 1);
+    current_username = username;
+
+    login_data->username = username;
+    login_data->password = password;
+
+    // Sends request to the web server
+    send_request(R_LOGIN, login_data);
 }
 
 void nw_stop_request_thread() {
-#if 0
     send_request(R_QUIT, NULL);
     join_meta_thread();
-#endif
 }

@@ -144,29 +144,23 @@ void u_sign_up_menu_init() {
 }
 
 void u_submit_sign_up_menu() {
+    push_colored_ui_box(&panel_box);
     push_colored_ui_box(&signup_box);
-#if 1
-        push_colored_ui_box(&panel_box);
-        push_colored_ui_box(&login_box);
-        push_colored_ui_box(&type_password_box);
-        push_colored_ui_box(&type_username_box);
-#endif
+    push_colored_ui_box(&login_box);
+    push_colored_ui_box(&type_password_box);
+    push_colored_ui_box(&type_username_box);
     
-#if 1
     mark_ui_textured_section(u_game_font()->font_img.descriptor);
 
     push_ui_text(&signup_text);
     push_ui_text(&login_text);
     push_ui_text(&prompt_username_text);
     push_ui_text(&prompt_password_text);
-#if 1
     push_ui_input_text(1, 0, 0xFFFFFFFF, &type_username_text);
     push_ui_input_text(1, 1, 0xFFFFFFFF, &type_password_text);
 
     if (error_happened)
         push_ui_text(&error_text);
-#endif
-#endif
 }
 
 void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
@@ -223,7 +217,7 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
 
     if (input->buttons[BT_MOUSE_LEFT].instant) {
         switch (hovering_over) {
-        case B_SIGNUP: {
+        case B_SIGNUP: case B_LOGIN: {
             currently_typing = TB_INVALID;
             // Request meta server if username is available, if not, re-prompt
             // Immediately SHA1 the password
@@ -245,18 +239,22 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
                 sprintf(password + (2 * i), "%02x", password_bin[i]);
             }
 
-            event_attempt_sign_up_t *event_data = LN_MALLOC(event_attempt_sign_up_t, 1);
-            event_data->username = username;
-            event_data->password = password;
+            if (hovering_over == B_SIGNUP) {
+                event_attempt_sign_up_t *event_data = FL_MALLOC(event_attempt_sign_up_t, 1);
+                event_data->username = username;
+                event_data->password = password;
 
-            submit_event(ET_ATTEMPT_SIGN_UP, event_data, events);
+                submit_event(ET_ATTEMPT_SIGN_UP, event_data, events);
+            }
+            else {
+                event_attempt_login_t *event_data = FL_MALLOC(event_attempt_login_t, 1);
+                event_data->username = username;
+                event_data->password = password;
+
+                submit_event(ET_ATTEMPT_LOGIN, event_data, events);
+            }
 
             error_happened = 0;
-        } break;
-
-        case B_LOGIN: {
-            currently_typing = TB_INVALID;
-            // Request meta server if username and password is correct, if not, re-prompt
         } break;
 
         case B_USERNAME: {

@@ -60,6 +60,9 @@ enum event_type_t {
     ET_ATTEMPT_SIGN_UP,
     ET_SIGN_UP_SUCCESS,
 
+    ET_ATTEMPT_LOGIN,
+    ET_LOGIN_SUCCESS,
+
     ET_META_REQUEST_ERROR,
 
     ET_INVALID_EVENT_TYPE
@@ -163,6 +166,11 @@ struct event_t {
 };
 
 struct event_attempt_sign_up_t {
+    const char *username;
+    const char *password;
+};
+
+struct event_attempt_login_t {
     const char *username;
     const char *password;
 };

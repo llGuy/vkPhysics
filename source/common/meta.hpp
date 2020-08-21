@@ -6,6 +6,7 @@ enum request_t {
     R_SIGN_UP,
     R_LOGIN,
     R_AVAILABLE_SERVERS,
+    R_AUTOMATIC_LOGIN,
     R_QUIT,
     // TODO:
     R_INVALID
@@ -13,7 +14,7 @@ enum request_t {
 
 enum request_error_t {
     RE_USERNAME_EXISTS,
-    RE_INCORRECT_PASSWORD,
+    RE_INCORRECT_PASSWORD_OR_USERNAME,
     RE_INVALID
 };
 
@@ -23,6 +24,11 @@ struct request_sign_up_data_t {
 };
 
 struct request_login_data_t {
+    const char *username;
+    const char *password;
+};
+
+struct request_automatic_login_t {
     uint32_t usertag;
     uint32_t userid;
 };

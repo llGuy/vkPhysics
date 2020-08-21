@@ -1028,8 +1028,13 @@ static void s_net_event_listener(
     case ET_ATTEMPT_SIGN_UP: {
         event_attempt_sign_up_t *data = (event_attempt_sign_up_t *)event->data;
 
-        // nw_request_sign_up(data->username, data->password);
-        submit_event(ET_SIGN_UP_SUCCESS, NULL, events);
+        nw_request_sign_up(data->username, data->password);
+    } break;
+
+    case ET_ATTEMPT_LOGIN: {
+        event_attempt_login_t *data = (event_attempt_login_t *)event->data;
+
+        nw_request_login(data->username, data->password);
     } break;
 
     case ET_CLOSED_WINDOW: {
@@ -1048,6 +1053,7 @@ void nw_init(event_submissions_t *events) {
     subscribe_to_event(ET_REQUEST_REFRESH_SERVER_PAGE, net_listener_id, events);
     subscribe_to_event(ET_ATTEMPT_SIGN_UP, net_listener_id, events);
     subscribe_to_event(ET_CLOSED_WINDOW, net_listener_id, events);
+    subscribe_to_event(ET_ATTEMPT_LOGIN, net_listener_id, events);
 
     socket_api_init();
 

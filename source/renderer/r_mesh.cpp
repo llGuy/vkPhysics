@@ -1070,7 +1070,6 @@ void load_animation_cycles(
         uint32_t *animation_id_p = animation_name_linker.get(simple_string_hash(animation_name));
         if (animation_id_p) {
             uint32_t animation_id = *animation_id_p;
-            LOG_INFOV("Animation %d links with %s\n", animation_id, animation_name);
 
             animation_cycle_t *cycle = &cycles->cycles[*animation_id_p];
             cycle->animation_name = animation_name;
@@ -1109,8 +1108,6 @@ void load_animation_cycles(
             }
         }
         else {
-            LOG_ERRORV("Animation %s hasn't been linked to animation ID!\n", animation_name);
-
             float duration = serialiser.deserialise_float32();
             uint32_t joint_animation_count = serialiser.deserialise_uint32();
         
