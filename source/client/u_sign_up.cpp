@@ -286,5 +286,10 @@ void u_handle_sign_up_failed(request_error_t ierror_type) {
         error_text.char_count = 0;
         error_text.draw_string("Username already exists", 0xFF0000FF);
     } break;
+
+    case RE_INCORRECT_PASSWORD_OR_USERNAME: {
+        error_text.char_count = 0;
+        error_text.draw_string("Incorrect username or password", 0xFF0000FF);
+    } break;
     }
 }
