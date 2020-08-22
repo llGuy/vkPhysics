@@ -1,5 +1,5 @@
-#include <cstdio>
 #include <mutex>
+#include <cstdio>
 #include <thread>
 #include <chrono>
 #include "log.hpp"
@@ -69,6 +69,12 @@ static serialiser_t s_fill_request(bool null_terminate = 0) {
     return serialiser;
 }
 
+static void s_set_url(const char *path) {
+    serialiser_t serialiser = s_fill_request();
+    serialiser.serialise_string(path);
+    curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
+}
+
 static void s_meta_thread() {
     for (;;) {
         allocator.clear();
@@ -86,40 +92,41 @@ static void s_meta_thread() {
         case R_SIGN_UP: {
             request_sign_up_data_t *data = (request_sign_up_data_t *)shared.current_request_data;
 
-            serialiser_t serialiser = s_fill_request();
-            serialiser.serialise_string("api/register_user.php");
-            curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
-
-            char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
-            sprintf(fields, "username=%s&password=%s", data->username, data->password);
+            s_set_url("api/register_user.php");
 
             // Fill post fields
+            char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
+            sprintf(fields, "username=%s&password=%s", data->username, data->password);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
         } break;
 
         case R_AUTOMATIC_LOGIN: {
             request_automatic_login_t *data = (request_automatic_login_t *)shared.current_request_data;
 
-            serialiser_t serialiser = s_fill_request();
-            serialiser.serialise_string("api/auto_login_user.php");
-            curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
+            s_set_url("api/auto_login_user.php");
 
             char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
             sprintf(fields, "usertag=%d&userid=%d", data->usertag, data->userid);
-
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
         } break;
 
         case R_LOGIN: {
             request_login_data_t *data = (request_login_data_t *)shared.current_request_data;
 
-            serialiser_t serialiser = s_fill_request();
-            serialiser.serialise_string("api/login_user.php");
-            curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
+            s_set_url("api/login_user.php");
 
             char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
             sprintf(fields, "username=%s&password=%s", data->username, data->password);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+        } break;
 
+        case R_REGISTER_SERVER: {
+            request_register_server_t *data = (request_register_server_t *)shared.current_request_data;
+
+            s_set_url("api/register_server.php");
+
+            char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
+            sprintf(fields, "servername=%s", data->server_name);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
         } break;
 

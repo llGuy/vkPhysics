@@ -3,12 +3,24 @@
 #include <stdint.h>
 
 enum request_t {
+    // Requests to create an account
     R_SIGN_UP,
+    // Requests to login to an existing account
     R_LOGIN,
+    // Requests for the available servers (which are active)
     R_AVAILABLE_SERVERS,
+    // Whenever a client begins the game, this request gets sent to log the player in
     R_AUTOMATIC_LOGIN,
+
+    // Registers server (tells the meta server the name)
+    R_REGISTER_SERVER,
+    // Tells the meta server that the running game server just started being online
+    R_SERVER_ACTIVE,
+    // Tells the meta server that the running game server just stopped being online
+    R_SERVER_INACTIVE,
+
+    // Just makes sure that the request thread stops
     R_QUIT,
-    // TODO:
     R_INVALID
 };
 
@@ -35,6 +47,10 @@ struct request_automatic_login_t {
 
 struct request_available_server_t {
     // Doesn't contain anything
+};
+
+struct request_register_server_t {
+    const char *server_name;
 };
 
 // TODO: Free memory that is used to create the request in the main thread
