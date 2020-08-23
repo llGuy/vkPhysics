@@ -1,8 +1,10 @@
 #include <common/log.hpp>
 #include <common/meta.hpp>
 #include <common/files.hpp>
+#include "common/string.hpp"
 #include "nw_server_meta.hpp"
 #include <common/serialiser.hpp>
+#include <common/allocators.hpp>
 
 static const char *current_server_name;
 
@@ -11,7 +13,7 @@ void nw_init_meta_connection() {
 }
 
 void nw_check_registration() {
-    file_handle_t file_handle = create_file("assets/.user_meta", FLF_TEXT);
+    file_handle_t file_handle = create_file("assets/.server_meta", FLF_TEXT);
     file_contents_t contents = read_file(file_handle);
 
     // .user_meta should contain user id, user tag and user name
@@ -38,5 +40,50 @@ void nw_check_registration() {
 
         // Just send to the meta server that this server is active
         LOG_INFOV("Server information found: \"%s\" with ID %d - telling meta server that game server just started\n", server_name, id);
+    }
+    else {
+        bool register_finished = 0;
+        LOG_INFO("Server infmroation not found: requesting a name\n");
+        LOG_INFO("Please enter a name for this server: ");
+
+        while (!register_finished) {
+            char name[50] = {};
+            fgets(name, sizeof(char) * 50, stdin);
+
+            request_register_server_t *data = FL_MALLOC(request_register_server_t, 1);
+            data->server_name = create_fl_string(name);
+
+            send_request(R_REGISTER_SERVER, data);
+
+            // Check for server to reply
+            char *request_result = NULL;
+            uint32_t request_result_size = 0;
+            request_t request_type = R_INVALID;
+            while (
+                !(request_result = check_request_finished(
+                      &request_result_size,
+                      &request_type)));
+
+            LOG_INFO("Received result\n");
+
+            if (request_result[0] == '1') {
+                // Save the server name and the server id
+                char *user_id_str = &request_result[2];
+                uint32_t userid = atoi(user_id_str);
+
+                // Save the userid and usertag
+                serialiser_t serialiser = {};
+                serialiser.init(strlen(current_username) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
+                serialiser.serialise_string(current_username);
+                serialiser.serialise_uint32(usertag);
+                serialiser.serialise_uint32(userid);
+
+                file_handle_t file = create_file("assets/.user_meta", FLF_OVERWRITE | FLF_WRITEABLE);
+
+                write_file(file, serialiser.data_buffer, serialiser.data_buffer_head);
+
+                free_file(file);
+            }
+        }
     }
 }

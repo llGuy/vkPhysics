@@ -105,13 +105,12 @@ int32_t main(
         SHA1Final(hash, &ctx);
     }
 
-    begin_meta_client_thread();
     nw_init(&events);
 
     game_memory_init();
     srv_game_init(&events);
 
-    s_parse_command_line_args(argc, argv);
+    // s_parse_command_line_args(argc, argv);
 
 #if 0
     { // Just for testing meta server stuff

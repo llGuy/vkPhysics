@@ -1,3 +1,4 @@
+#include "server/nw_server_meta.hpp"
 #include "srv_main.hpp"
 #include "nw_server.hpp"
 #include <common/net.hpp>
@@ -867,11 +868,13 @@ void nw_init(event_submissions_t *events) {
 
     g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 
-    meta_socket_init();
+    // meta_socket_init();
+    nw_init_meta_connection();
+    nw_check_registration();
 }
 
 void nw_tick(event_submissions_t *events) {
-    check_incoming_meta_server_packets(events);
+    // check_incoming_meta_server_packets(events);
 
     s_tick_server(events);
 }
