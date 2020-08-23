@@ -7,6 +7,7 @@
 #include <common/allocators.hpp>
 
 static const char *current_server_name;
+static uint32_t current_server_id;
 
 void nw_init_meta_connection() {
     begin_meta_client_thread();
@@ -38,8 +39,14 @@ void nw_check_registration() {
         const char *server_name = serialiser.deserialise_string();
         uint32_t id = serialiser.deserialise_uint32();
 
+        current_server_id = id;
+
         // Just send to the meta server that this server is active
         LOG_INFOV("Server information found: \"%s\" with ID %d - telling meta server that game server just started\n", server_name, id);
+
+        request_server_active_t *data = FL_MALLOC(request_server_active_t, 1);
+        data->server_id = id;
+        send_request(R_SERVER_ACTIVE, data);
     }
     else {
         bool register_finished = 0;
@@ -49,6 +56,10 @@ void nw_check_registration() {
         while (!register_finished) {
             char name[50] = {};
             fgets(name, sizeof(char) * 50, stdin);
+
+            for (char *c = name; *c; ++c) {
+                if (*c == '\n') *c = 0;
+            }
 
             request_register_server_t *data = FL_MALLOC(request_register_server_t, 1);
             data->server_name = create_fl_string(name);
@@ -64,26 +75,45 @@ void nw_check_registration() {
                       &request_result_size,
                       &request_type)));
 
+            current_server_name = data->server_name;
+
             LOG_INFO("Received result\n");
 
             if (request_result[0] == '1') {
                 // Save the server name and the server id
-                char *user_id_str = &request_result[2];
-                uint32_t userid = atoi(user_id_str);
+                char *server_id_str = &request_result[2];
+                uint32_t server_id = atoi(server_id_str);
 
                 // Save the userid and usertag
                 serialiser_t serialiser = {};
-                serialiser.init(strlen(current_username) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
-                serialiser.serialise_string(current_username);
-                serialiser.serialise_uint32(usertag);
-                serialiser.serialise_uint32(userid);
+                serialiser.init(strlen(current_server_name) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
+                serialiser.serialise_string(current_server_name);
+                serialiser.serialise_uint32(server_id);
 
-                file_handle_t file = create_file("assets/.user_meta", FLF_OVERWRITE | FLF_WRITEABLE);
+                file_handle_t file = create_file("assets/.server_meta", FLF_OVERWRITE | FLF_WRITEABLE);
 
                 write_file(file, serialiser.data_buffer, serialiser.data_buffer_head);
 
                 free_file(file);
+
+                register_finished = 1;
+            }
+            else {
+                LOG_INFO("Server name not availble, please enter another name for this server: ");
             }
         }
     }
+}
+
+void nw_deactivate_server() {
+    request_server_inactive_t *data = FL_MALLOC(request_server_inactive_t, 1);
+    data->server_id = current_server_id;
+    send_request(R_SERVER_INACTIVE, data);
+
+    join_meta_thread();
+}
+
+void nw_stop_request_thread() {
+    send_request(R_QUIT, NULL);
+    join_meta_thread();
 }

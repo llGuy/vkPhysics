@@ -53,6 +53,14 @@ struct request_register_server_t {
     const char *server_name;
 };
 
+struct request_server_active_t {
+    uint32_t server_id;
+};
+
+struct request_server_inactive_t {
+    uint32_t server_id;
+};
+
 // TODO: Free memory that is used to create the request in the main thread
 
 // Starts the thread from which HTTP requests to the meta server

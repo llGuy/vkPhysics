@@ -1,4 +1,6 @@
 #include <sha1.hpp>
+#include <signal.h>
+#include "nw_server_meta.hpp"
 #include "srv_game.hpp"
 #include "nw_server.hpp"
 #include <common/time.hpp>
@@ -41,13 +43,6 @@ static void s_run() {
 
         nw_tick(&events);
 
-#if 0
-        char *output = check_request_finished();
-        if (output) {
-            LOG_INFO("Got back to main thread\n");
-        }
-#endif
-
         srv_game_tick();
 
         timestep_end();
@@ -85,40 +80,33 @@ static void s_parse_command_line_args(int32_t argc, char *argv[]) {
     }
 }
 
+static void s_handle_interrupt(int signum) {
+    nw_deactivate_server();
+
+    LOG_INFO("Stopped running server\n");
+
+    exit(signum);
+}
+
 // Entry point for client program
 int32_t main(
     int32_t argc,
     char *argv[]) {
+    signal(SIGINT, s_handle_interrupt);
+
     global_linear_allocator_init((uint32_t)megabytes(30));
     srand(time(NULL));
     running = 1;
     files_init();
-
-    { // For testing hashing
-        uint8_t hash[20];
-
-        SHA1_CTX ctx;
-        SHA1Init(&ctx);
-
-        uint8_t str[] = "Hello";
-        SHA1Update(&ctx, str, 5);
-        SHA1Final(hash, &ctx);
-    }
 
     nw_init(&events);
 
     game_memory_init();
     srv_game_init(&events);
 
-    // s_parse_command_line_args(argc, argv);
-
-#if 0
-    { // Just for testing meta server stuff
-        send_request(R_SIGN_UP);
-    }
-#endif
- 
     s_run();
+
+    nw_deactivate_server();
 
     dispatch_events(&events);
     dispatch_events(&events);

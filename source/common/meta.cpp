@@ -130,18 +130,40 @@ static void s_meta_thread() {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
         } break;
 
+        case R_SERVER_ACTIVE: {
+            request_server_active_t *data = (request_server_active_t *)shared.current_request_data;
+
+            s_set_url("api/activate_server.php");
+
+            char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
+            sprintf(fields, "uid=%d", data->server_id);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+        } break;
+
+        case R_SERVER_INACTIVE: {
+            request_server_inactive_t *data = (request_server_inactive_t *)shared.current_request_data;
+
+            s_set_url("api/deactivate_server.php");
+
+            char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
+            sprintf(fields, "uid=%d", data->server_id);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+
+            quit = 1;
+        } break;
+
         case R_QUIT: {
             quit = 1;
         } break;
         }
 
-        if (quit) {
-            break;
-        }
-
         curl_easy_perform(curl);
 
         printf("META: Finished this job\n");;
+
+        if (quit) {
+            break;
+        }
 
         shared.doing_job = 0;
 
