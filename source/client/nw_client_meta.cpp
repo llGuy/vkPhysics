@@ -1,4 +1,8 @@
+#include "common/net.hpp"
+#include "common/socket.hpp"
+#include "common/string.hpp"
 #include <cstddef>
+#include <cstdlib>
 #include <stdio.h>
 #include <sha1.hpp>
 #include <string.h>
@@ -59,11 +63,13 @@ void nw_check_registration(event_submissions_t *events) {
     }
 }
 
-static char *s_skip_line(char *pointer) {
+static char *s_skip_to(char *pointer, char c) {
     while (*pointer) {
-        switch (*pointer) {
-        case '\n': return ++pointer;
-        default: ++pointer;
+        if (*pointer == c) {
+            return ++pointer;
+        }
+        else {
+            ++pointer;
         }
     }
 
@@ -87,7 +93,7 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 char *user_tag_str = data + 2;
                 uint32_t usertag = atoi(user_tag_str);
 
-                char *user_id_str = s_skip_line(user_tag_str);
+                char *user_id_str = s_skip_to(user_tag_str, '\n');
                 uint32_t userid = atoi(user_id_str);
 
                 // Save the userid and usertag
@@ -121,6 +127,10 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
         case R_AUTOMATIC_LOGIN: {
             if (data[0] == '1') {
                 LOG_INFO("Succeeded to login - game may begin\n");
+
+                // Request meta server - which servers are online at the moment
+                request_available_server_t *data = FL_MALLOC(request_available_server_t, 1);
+                send_request(R_AVAILABLE_SERVERS, data);
             }
             else {
                 LOG_INFO("Failed to login\n");
@@ -128,6 +138,62 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 // Request the user to login (or sign up) a name
                 submit_event(ET_REQUEST_USER_INFORMATION, NULL, events);
             }
+        } break;
+
+        case R_AVAILABLE_SERVERS: {
+            // 4;Yoshis_Island;81.187.137.231;0
+
+            g_net_data.available_servers.name_to_server.clear();
+
+            uint32_t server_count = atoi(data);
+
+            LOG_INFOV("There are %d servers\n", server_count);
+
+            char *server_str = &data[2];
+
+            uint32_t i = 0;
+
+            bool processing = 1;
+            while (processing) {
+                if (*server_str == '\0') {
+                    processing = 0;
+                }
+                else {
+                    char *server_id_start = server_str;
+                    server_str = s_skip_to(server_str, ';');
+                    uint32_t server_id_length = (server_str - server_id_start) - 2;
+
+                    char *server_name_start = server_str;
+                    server_str = s_skip_to(server_str, ';');
+                    uint32_t server_name_length = (server_str - server_name_start) - 2;
+
+                    char *ip_start = server_str;
+                    server_str = s_skip_to(server_str, ';');
+                    uint32_t ip_length = (server_str - ip_start) - 2;
+
+                    char *player_count_start = server_str;
+                    server_str = s_skip_to(server_str, '\n');
+                    uint32_t player_count_length = (server_str - player_count_start) - 2;
+
+                    uint32_t server_id = atoi(server_id_start);
+                    const char *server_name = create_fl_string(server_name_start, server_name_length);
+                    const char *ip_address = create_fl_string(ip_start, ip_length);
+                    uint32_t player_count = atoi(player_count_start);
+
+                    LOG_INFOV("Server (%d) called \"%s\" (ip: %s) has %d player(s) active\n", server_id, server_name, ip_address, player_count);
+
+                    game_server_t *dst = &g_net_data.available_servers.servers[i];
+                    dst->server_name = server_name;
+                    dst->ipv4_address = str_to_ipv4_int32(ip_address, GAME_OUTPUT_PORT_SERVER, SP_UDP);
+                    g_net_data.available_servers.name_to_server.insert(simple_string_hash(server_name), i);
+
+                    ++i;
+                }
+            }
+
+            g_net_data.available_servers.server_count = i;
+
+            submit_event(ET_RECEIVED_AVAILABLE_SERVERS, NULL, events);
         } break;
         }
     }

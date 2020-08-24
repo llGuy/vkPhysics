@@ -152,6 +152,14 @@ static void s_meta_thread() {
             quit = 1;
         } break;
 
+        case R_AVAILABLE_SERVERS: {
+            request_available_server_t *data = (request_available_server_t *)shared.current_request_data;
+
+            s_set_url("api/available_servers.php");
+
+            // There are no fields to set
+        } break;
+
         case R_QUIT: {
             quit = 1;
         } break;

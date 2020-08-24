@@ -6,8 +6,8 @@
 
 // Allocates a string on free list allocator
 inline char *create_fl_string(
-    const char *buffer) {
-    uint32_t string_length = (uint32_t)strlen(buffer);
+    const char *buffer, uint32_t length = 0) {
+    uint32_t string_length = (!length) ? (uint32_t)strlen(buffer) : length;
     char *new_buffer = FL_MALLOC(char, string_length + 1);
 
     memcpy(new_buffer, buffer, string_length + 1);
