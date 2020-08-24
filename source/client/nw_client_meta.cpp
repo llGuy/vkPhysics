@@ -1,26 +1,36 @@
-#include "common/net.hpp"
-#include "common/socket.hpp"
-#include "common/string.hpp"
 #include <cstddef>
 #include <cstdlib>
 #include <stdio.h>
 #include <sha1.hpp>
 #include <string.h>
+#include <common/net.hpp>
 #include <common/log.hpp>
 #include <common/meta.hpp>
 #include <common/files.hpp>
 #include <common/event.hpp>
+#include <common/socket.hpp>
+#include <common/string.hpp>
+#include "nw_client_meta.hpp"
 #include <common/serialiser.hpp>
 #include <common/allocators.hpp>
 
 static const char *current_username;
+// Default path is to "assets/.user_meta", although, for debugging,
+// it is often useful to have other users
+static const char *path_to_user_meta_info = "assets/.user_meta";
 
 void nw_init_meta_connection() {
     begin_meta_client_thread();
 }
 
+void nw_set_path_to_user_meta_info(const char *path) {
+    path_to_user_meta_info = path;
+}
+
 void nw_check_registration(event_submissions_t *events) {
-    file_handle_t file_handle = create_file("assets/.user_meta", FLF_TEXT);
+    LOG_INFOV("Reading user information from path: %s\n", path_to_user_meta_info);
+
+    file_handle_t file_handle = create_file(path_to_user_meta_info, FLF_TEXT);
     file_contents_t contents = read_file(file_handle);
 
     // .user_meta should contain user id, user tag and user name
@@ -44,6 +54,7 @@ void nw_check_registration(event_submissions_t *events) {
         serialiser.data_buffer_size = contents.size;
 
         const char *username = serialiser.deserialise_string();
+        current_username = username;
         uint32_t usertag = serialiser.deserialise_uint32();
         uint32_t uid = serialiser.deserialise_uint32();
 
@@ -54,6 +65,10 @@ void nw_check_registration(event_submissions_t *events) {
         login_data->usertag = usertag;
 
         send_request(R_AUTOMATIC_LOGIN, login_data);
+
+        event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
+        start_client_data->client_name = current_username;
+        submit_event(ET_START_CLIENT, start_client_data, events);
     }
     else {
         LOG_INFO("No user information has been found in /assets/.user_meta - requesting user to sign up or login...\n");
@@ -103,11 +118,18 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 serialiser.serialise_uint32(usertag);
                 serialiser.serialise_uint32(userid);
 
-                file_handle_t file = create_file("assets/.user_meta", FLF_OVERWRITE | FLF_WRITEABLE);
+                file_handle_t file = create_file(path_to_user_meta_info, FLF_OVERWRITE | FLF_WRITEABLE);
 
                 write_file(file, serialiser.data_buffer, serialiser.data_buffer_head);
 
                 free_file(file);
+
+                // Request available servers list
+                nw_request_available_servers();
+
+                event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
+                start_client_data->client_name = current_username;
+                submit_event(ET_START_CLIENT, start_client_data, events);
             }
             else {
                 // Failed to sign up or login
@@ -141,8 +163,6 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
         } break;
 
         case R_AVAILABLE_SERVERS: {
-            // 4;Yoshis_Island;81.187.137.231;0
-
             g_net_data.available_servers.name_to_server.clear();
 
             uint32_t server_count = atoi(data);
@@ -155,7 +175,7 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
 
             bool processing = 1;
             while (processing) {
-                if (*server_str == '\0') {
+                if (*server_str == '\0' || *server_str == '\n') {
                     processing = 0;
                 }
                 else {
@@ -223,6 +243,14 @@ void nw_request_login(
 
     // Sends request to the web server
     send_request(R_LOGIN, login_data);
+}
+
+void nw_request_available_servers() {
+    LOG_INFO("Requesting available servers from meta server\n");
+
+    // Request meta server - which servers are online at the moment
+    request_available_server_t *data = FL_MALLOC(request_available_server_t, 1);
+    send_request(R_AVAILABLE_SERVERS, data);
 }
 
 void nw_stop_request_thread() {

@@ -79,12 +79,11 @@ static void s_meta_thread() {
     for (;;) {
         allocator.clear();
 
-        printf("META: Waiting on job...\n");
-
         std::unique_lock<std::mutex> lock (mutex);
         ready.wait(lock, [] { return shared.doing_job; });
 
         LOG_INFO("META: Started job\n");
+        memset(shared.request_result, 0, REQUEST_RESULT_MAX_SIZE);
 
         bool quit = 0;
 

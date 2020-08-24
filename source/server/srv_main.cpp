@@ -8,7 +8,6 @@
 #include <common/game.hpp>
 #include <common/files.hpp>
 #include <common/event.hpp>
-#include <renderer/input.hpp>
 #include <common/allocators.hpp>
 
 static bool running;

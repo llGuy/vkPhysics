@@ -11,6 +11,7 @@
 #include <common/files.hpp>
 #include <common/event.hpp>
 #include "nw_client_meta.hpp"
+#include "nw_client_meta.hpp"
 #include <renderer/input.hpp>
 #include <common/allocators.hpp>
 
@@ -35,10 +36,6 @@ static void s_open() {
     
     // submit_event(ET_LAUNCH_MAIN_MENU_SCREEN, NULL, &events);
     submit_event(ET_ENTER_MAIN_MENU, NULL, &events);
-
-    event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
-    start_client_data->client_name = "Some shit";
-    submit_event(ET_START_CLIENT, start_client_data, &events);
 }
 
 static void s_run() {
@@ -67,6 +64,33 @@ static void s_run() {
     }
 }
 
+static void s_parse_command_line_args(
+    int32_t argc,
+    char *argv[]) {
+    enum option_t { O_USER_META_PATH };
+
+    option_t current_option;
+    for (uint32_t i = 1; i < argc; ++i) {
+        char *arg = argv[i];
+        if (arg[0] == '-') {
+            // This is an option
+            switch (arg[1]) {
+            case 'u': {
+                current_option = O_USER_META_PATH;
+            } break;
+            }
+        }
+        else {
+            // This is information
+            switch (current_option) {
+            case O_USER_META_PATH: {
+                nw_set_path_to_user_meta_info(arg);
+            } break;
+            }
+        }
+    }
+}
+
 // Entry point for client program
 int32_t main(
     int32_t argc,
@@ -78,6 +102,7 @@ int32_t main(
     files_init();
     cl_subscribe_to_events(core_listener, &events);
 
+    s_parse_command_line_args(argc, argv);
     game_input_settings_init();
     renderer_init();
     fx_fader_init();

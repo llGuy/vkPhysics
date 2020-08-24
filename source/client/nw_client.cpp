@@ -33,20 +33,6 @@ static bool client_check_incoming_packets = 0;
 static bool still_receiving_chunk_packets;
 static uint32_t chunks_to_receive;
 
-static void s_request_available_servers() {
-    serialiser_t serialiser = {};
-    serialiser.init(20);
-    
-    meta_packet_header_t available_servers_header = {};
-    available_servers_header.type = HPT_QUERY_AVAILABLE_SERVERS;
-    serialise_meta_packet_header(&available_servers_header, &serialiser);
-
-    // Expect a packet to arrive
-    send_to_meta_server(&serialiser);
-    
-    LOG_INFO("Sent available servers request to meta\n");
-}
-
 static void s_start_client(
     event_start_client_t *data) {
     still_receiving_chunk_packets = 0;
@@ -90,15 +76,6 @@ static void s_start_client(
     serialise_meta_query_client_register(&register_packet, &serialiser);
 
     send_to_meta_server(&serialiser);
-
-    g_net_data.available_servers.server_count = 0;
-    g_net_data.available_servers.servers = FL_MALLOC(game_server_t, NET_MAX_AVAILABLE_SERVER_COUNT);
-    memset(g_net_data.available_servers.servers, 0, sizeof(game_server_t) * NET_MAX_AVAILABLE_SERVER_COUNT);
-    g_net_data.available_servers.name_to_server.init();
-
-    serialiser.data_buffer_head = 0;
-    
-    s_request_available_servers();
 }
 
 static network_address_t bound_server_address = {};
@@ -977,7 +954,7 @@ static void s_net_event_listener(
     } break;
 
     case ET_REQUEST_REFRESH_SERVER_PAGE: {
-        s_request_available_servers();
+        nw_request_available_servers();
     } break;
 
     case ET_REQUEST_TO_JOIN_SERVER: {
@@ -991,13 +968,9 @@ static void s_net_event_listener(
                 uint32_t ip_address = g_net_data.available_servers.servers[*game_server_index].ipv4_address;
             
                 s_send_packet_connection_request(ip_address, &client_info);
-
-                FL_FREE((void *)data->server_name);
             }
             else {
                 LOG_ERRORV("Couldn't find server name: %s\n", data->server_name);
-
-                FL_FREE((void *)data->server_name);
             }
         }
         else if (data->ip_address) {
@@ -1062,6 +1035,11 @@ void nw_init(event_submissions_t *events) {
     meta_socket_init();
 
     nw_init_meta_connection();
+
+    g_net_data.available_servers.server_count = 0;
+    g_net_data.available_servers.servers = FL_MALLOC(game_server_t, NET_MAX_AVAILABLE_SERVER_COUNT);
+    memset(g_net_data.available_servers.servers, 0, sizeof(game_server_t) * NET_MAX_AVAILABLE_SERVER_COUNT);
+    g_net_data.available_servers.name_to_server.init();
 }
 
 void nw_tick(struct event_submissions_t *events) {
