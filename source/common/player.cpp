@@ -64,8 +64,13 @@ int32_t translate_client_to_local_id(uint16_t client_id) {
     return client_to_local_id_map[client_id];
 }
 
-player_t *get_player(uint32_t local_id) {
-    return players[local_id];
+player_t *get_player(int32_t local_id) {
+    if (local_id >= 0) {
+        return players[local_id];
+    }
+    else {
+        return NULL;
+    }
 }
 
 uint32_t get_player_count() {

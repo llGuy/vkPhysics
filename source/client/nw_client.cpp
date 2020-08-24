@@ -199,7 +199,7 @@ static void s_send_packet_client_commands() {
         if (simulate_lag) {
             p->cached_player_action_count = 0;
         }
-        else {
+        else if (p) {
             client_t *c = &g_net_data.clients[p->client_id];
 
             packet_client_commands_t packet = {};
@@ -686,13 +686,15 @@ static void s_receive_packet_game_state_snapshot(
             client_t *c = &g_net_data.clients[snapshot->client_id];
             int32_t local_id = translate_client_to_local_id(snapshot->client_id);
             player_t *p = get_player(local_id);
-            s_handle_local_player_snapshot(
-                c,
-                p,
-                snapshot,
-                &packet,
-                serialiser,
-                events);
+            if (p) {
+                s_handle_local_player_snapshot(
+                    c,
+                    p,
+                    snapshot,
+                    &packet,
+                    serialiser,
+                    events);
+            }
         }
         else {
             int32_t local_id = translate_client_to_local_id(snapshot->client_id);
