@@ -58,28 +58,6 @@ static void s_run() {
     }
 }
 
-static void s_parse_command_line_args(int32_t argc, char *argv[]) {
-    if (argc >= 2) {
-        event_start_server_t *data = FL_MALLOC(event_start_server_t, 1);
-        uint32_t server_name_length = strlen(argv[1]);
-        char *server_name = FL_MALLOC(char, server_name_length + 1);
-        server_name[server_name_length] = 0;
-        strcpy(server_name, argv[1]);
-        for (uint32_t c = 0; c < server_name_length; ++c) {
-            if (server_name[c] == '_') {
-                server_name[c] = ' ';
-            }
-        }
-
-        data->server_name = server_name;
-
-        submit_event(ET_START_SERVER, data, &events);
-    }
-    else {
-        LOG_ERROR("Incorrect command line arguments, correct usage is (underscores will be replaced by spaces): ./vkPhysics_server My_awesome_server_name\n");
-    }
-}
-
 static void s_handle_interrupt(int signum) {
     nw_deactivate_server();
 

@@ -1,6 +1,7 @@
 #include <common/log.hpp>
 #include <common/meta.hpp>
 #include <common/files.hpp>
+#include <common/event.hpp>
 #include "common/string.hpp"
 #include "nw_server_meta.hpp"
 #include <common/serialiser.hpp>
@@ -13,7 +14,7 @@ void nw_init_meta_connection() {
     begin_meta_client_thread();
 }
 
-void nw_check_registration() {
+void nw_check_registration(event_submissions_t *events) {
     file_handle_t file_handle = create_file("assets/.server_meta", FLF_TEXT);
     file_contents_t contents = read_file(file_handle);
 
@@ -47,6 +48,10 @@ void nw_check_registration() {
         request_server_active_t *data = FL_MALLOC(request_server_active_t, 1);
         data->server_id = id;
         send_request(R_SERVER_ACTIVE, data);
+
+        event_start_server_t *event_data = FL_MALLOC(event_start_server_t, 1);
+        event_data->server_name = server_name;
+        submit_event(ET_START_SERVER, event_data, events);
     }
     else {
         bool register_finished = 0;
@@ -102,6 +107,10 @@ void nw_check_registration() {
                 LOG_INFO("Server name not availble, please enter another name for this server: ");
             }
         }
+
+        event_start_server_t *event_data = FL_MALLOC(event_start_server_t, 1);
+        event_data->server_name = current_server_name;
+        submit_event(ET_START_SERVER, event_data, events);
     }
 }
 

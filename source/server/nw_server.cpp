@@ -41,21 +41,6 @@ static void s_start_server(
     g_net_data.chunk_modification_allocator.pool_init(
         sizeof_chunk_mod_pack,
         sizeof_chunk_mod_pack * NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4);
-
-    meta_packet_header_t header = {};
-    header.type = HPT_QUERY_SERVER_REGISTER;
-
-    meta_query_server_register_t register_packet = {};
-    local_server_info.server_name = data->server_name;
-    register_packet.server_name = local_server_info.server_name;
-
-    serialiser_t serialiser = {};
-    serialiser.init(100);
-
-    serialise_meta_packet_header(&header, &serialiser);
-    serialise_meta_query_server_register(&register_packet, &serialiser);
-
-    send_to_meta_server(&serialiser);
 }
 
 // PT_CONNECTION_HANDSHAKE
@@ -870,11 +855,9 @@ void nw_init(event_submissions_t *events) {
 
     // meta_socket_init();
     nw_init_meta_connection();
-    nw_check_registration();
+    nw_check_registration(events);
 }
 
 void nw_tick(event_submissions_t *events) {
-    // check_incoming_meta_server_packets(events);
-
     s_tick_server(events);
 }
