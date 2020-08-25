@@ -181,19 +181,19 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 else {
                     char *server_id_start = server_str;
                     server_str = s_skip_to(server_str, ';');
-                    uint32_t server_id_length = (server_str - server_id_start) - 2;
+                    uint32_t server_id_length = (server_str - server_id_start) - 1;
 
                     char *server_name_start = server_str;
                     server_str = s_skip_to(server_str, ';');
-                    uint32_t server_name_length = (server_str - server_name_start) - 2;
+                    uint32_t server_name_length = (server_str - server_name_start) - 1;
 
                     char *ip_start = server_str;
                     server_str = s_skip_to(server_str, ';');
-                    uint32_t ip_length = (server_str - ip_start) - 2;
+                    uint32_t ip_length = (server_str - ip_start) - 1;
 
                     char *player_count_start = server_str;
                     server_str = s_skip_to(server_str, '\n');
-                    uint32_t player_count_length = (server_str - player_count_start) - 2;
+                    uint32_t player_count_length = (server_str - player_count_start) - 1;
 
                     uint32_t server_id = atoi(server_id_start);
                     const char *server_name = create_fl_string(server_name_start, server_name_length);

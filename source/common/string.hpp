@@ -11,6 +11,7 @@ inline char *create_fl_string(
     char *new_buffer = FL_MALLOC(char, string_length + 1);
 
     memcpy(new_buffer, buffer, string_length + 1);
+    new_buffer[string_length] = 0;
 
     return new_buffer;
 }

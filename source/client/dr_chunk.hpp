@@ -7,6 +7,8 @@ typedef mesh_render_data_t chunk_render_data_t;
 struct chunk_render_t {
     mesh_t mesh;
     chunk_render_data_t render_data;
+
+    uint32_t id;
 };
 
 // Temporary, just for refactoring

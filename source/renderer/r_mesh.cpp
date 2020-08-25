@@ -947,7 +947,7 @@ static animation_link_data_t s_fill_animation_linker(
         };
 
         uint32_t bits;
-    } flags;
+    } flags = {};
 
     for (uint32_t i = 0; i < token_count; ++i) {
         if (tokens[i].type == TT_NEW_LINE) {

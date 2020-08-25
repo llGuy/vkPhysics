@@ -215,6 +215,8 @@ char *check_request_finished(uint32_t *size, request_t *type) {
 
             requested_work = 0;
 
+            FL_FREE(shared.current_request_data);
+
             return shared.request_result;
         }
         else {

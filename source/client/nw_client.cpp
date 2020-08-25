@@ -1034,8 +1034,6 @@ void nw_init(event_submissions_t *events) {
 
     g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 
-    meta_socket_init();
-
     nw_init_meta_connection();
 
     g_net_data.available_servers.server_count = 0;
