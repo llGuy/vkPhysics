@@ -1,4 +1,5 @@
 #include "nw_client.hpp"
+#include "dr_player.hpp"
 #include "wd_predict.hpp"
 #include "wd_spectate.hpp"
 #include <common/game.hpp>
@@ -110,6 +111,9 @@ void wd_execute_player_actions(player_t *player, event_submissions_t *events) {
             }
 
             if (player->flags.alive_state == PAS_DEAD) {
+                player->render->rotation_speed = 0.0f;
+                player->render->rotation_angle = 0.0f;
+                player->render->rolling_matrix = matrix4_t(1.0f);
                 submit_event(ET_LOCAL_PLAYER_DIED, NULL, events);
             }
         }
@@ -135,6 +139,9 @@ void wd_kill_local_player(struct event_submissions_t *events) {
     submit_event(ET_LOCAL_PLAYER_DIED, NULL, events);
 
     player_t *local_player_ptr = s_get_local_player();
+    local_player_ptr->render->rotation_speed = 0.0f;
+    local_player_ptr->render->rotation_angle = 0.0f;
+    local_player_ptr->render->rolling_matrix = matrix4_t(1.0f);
     local_player_ptr->flags.alive_state = PAS_DEAD;
 }
 

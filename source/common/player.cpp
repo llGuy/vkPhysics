@@ -556,6 +556,7 @@ static void s_check_player_dead(
                 LOG_INFO("Player has just died\n");
 
                 player->flags.alive_state = PAS_DEAD;
+                player->frame_displacement = 0.0f;
             }
         }
     }
