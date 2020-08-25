@@ -59,14 +59,15 @@ void wd_player_interp_step(
         p->elapsed += dt;
 
         float progression = p->elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
-        
+
         // It is possible that progression went way past maximum (in case of extreme lag, so need to
         // take into account how many times over maximum time we went)
         if (progression >= 1.0f) {
             int32_t skip_count = (int32_t)(floor(progression));
             //progression = fmod(progression, 1.0f);
             progression -= (float)skip_count;
-            p->elapsed -= NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL * (float)skip_count;
+            p->elapsed = progression * NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+            // p->elapsed -= NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL * (float)skip_count;
 
             for (int32_t i = 0; i < skip_count; ++i) {
                 p->remote_snapshots.get_next_item_tail();

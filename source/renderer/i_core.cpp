@@ -220,10 +220,8 @@ input_interface_data_t input_interface_init() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    // int32_t width = vidmode->width / 2;
-    // int32_t height = vidmode->height / 2;
-    int32_t width = 400;
-    int32_t height = 300;
+    int32_t width = vidmode->width / 2;
+    int32_t height = vidmode->height / 2;
 
     window = glfwCreateWindow(width, height, application_name, NULL, NULL);
 
@@ -280,6 +278,18 @@ void poll_input_events(event_submissions_t *submissions) {
     sdelta_time = get_current_time() - current_time;
 
     const float MAX_FRAME_TIME = 1.0f / 60.0f;
+
+#if 1
+    if (sdelta_time > MAX_FRAME_TIME) {
+        // This is just for debugging
+        sdelta_time = MAX_FRAME_TIME;
+    }
+    else {
+        double wait_time = (MAX_FRAME_TIME - sdelta_time);
+        sleep_seconds(wait_time);
+        sdelta_time = MAX_FRAME_TIME;
+    }
+#endif
 
     // Start timing
     current_time = get_current_time();
