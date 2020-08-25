@@ -3,7 +3,10 @@
 #include <common/allocators.hpp>
 
 player_render_t *dr_player_render_init() {
-    return FL_MALLOC(player_render_t, 1);
+    player_render_t *player_render = FL_MALLOC(player_render_t, 1);
+    memset(player_render, 0, sizeof(player_render_t));
+    player_render->rolling_matrix = matrix4_t(1.0f);
+    return player_render;
 }
 
 bool dr_is_animation_repeating(player_animated_state_t state) {

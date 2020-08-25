@@ -233,7 +233,7 @@ void generate_sphere(
 }
 
 void generate_platform(const vector3_t &position, float width, float depth) {
-    for (int32_t z = position.z - depth / 2; position.z + depth / 2; ++z) {
+    for (int32_t z = position.z - depth / 2; z < position.z + depth / 2; ++z) {
         for (int32_t x = position.x - width / 2; x < position.x + width / 2; ++x) {
             ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
             ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
