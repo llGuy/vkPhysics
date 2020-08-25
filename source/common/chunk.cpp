@@ -232,6 +232,20 @@ void generate_sphere(
     }
 }
 
+void generate_platform(const vector3_t &position, float width, float depth) {
+    for (int32_t z = position.z - depth / 2; position.z + depth / 2; ++z) {
+        for (int32_t x = position.x - width / 2; x < position.x + width / 2; ++x) {
+            ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
+            ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
+            chunk_t *chunk = get_chunk(chunk_coord);
+            chunk->flags.has_to_update_vertices = 1;
+            ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
+            uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
+            chunk->voxels[index] = 80;
+        }
+    }
+}
+
 terraform_package_t cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,

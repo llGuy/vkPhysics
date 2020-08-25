@@ -107,6 +107,16 @@ static void s_handle_event_new_player(
     player_t *player = add_player();
     fill_player_info(player, &data->info);
 
+    if (!player->flags.is_local) {
+        player->flags.is_remote = 1;
+
+        player->remote_snapshots.init();
+        player->elapsed = 0.0f;
+    }
+
+    player->render = dr_player_render_init();
+    dr_player_animated_instance_init(&player->render->animations);
+
     FL_FREE(event->data);
 }
 
