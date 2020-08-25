@@ -656,6 +656,7 @@ static void s_send_packet_game_state_snapshot() {
             snapshot->terraformed = c->did_terrain_mod_previous_tick;
             snapshot->interaction_mode = p->flags.interaction_mode;
             snapshot->alive_state = p->flags.alive_state;
+            snapshot->contact = p->flags.contact;
             
             if (snapshot->terraformed) {
                 snapshot->terraform_tick = c->tick_at_which_client_terraformed;

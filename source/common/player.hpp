@@ -56,6 +56,7 @@ struct player_snapshot_t {
             uint16_t packet_contains_terrain_correction: 1;
             uint16_t alive_state: 2;
             uint16_t interaction_mode: 3;
+            uint16_t contact: 1;
         };
         uint16_t flags;
     };

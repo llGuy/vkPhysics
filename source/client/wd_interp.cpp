@@ -84,11 +84,26 @@ void wd_player_interp_step(
         player_snapshot_t *previous_snapshot = &p->remote_snapshots.buffer[previous_snapshot_index];
         player_snapshot_t *next_snapshot = &p->remote_snapshots.buffer[next_snapshot_index];
 
+        // For things that cannot be interpolated
+        player_snapshot_t *middle_snapshot = previous_snapshot;
+        if (progression > 0.5f) {
+            middle_snapshot = next_snapshot;
+        }
+
+        vector3_t previous_position = p->ws_position;
         p->ws_position = interpolate(previous_snapshot->ws_position, next_snapshot->ws_position, progression);
         p->ws_view_direction = interpolate(previous_snapshot->ws_view_direction, next_snapshot->ws_view_direction, progression);
         p->ws_up_vector = interpolate(previous_snapshot->ws_up_vector, next_snapshot->ws_up_vector, progression);
 
-        p->flags.alive_state = previous_snapshot->alive_state;
+        // Just so that it's not zero
+        p->ws_velocity = p->ws_position - previous_position;
+        p->flags.contact = middle_snapshot->contact;
+
+        if (p->flags.contact == PCS_ON_GROUND) {
+            p->frame_displacement = glm::length(previous_position - p->ws_position);
+        }
+
+        p->flags.alive_state = middle_snapshot->alive_state;
     }
 }
 
