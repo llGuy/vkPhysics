@@ -1,6 +1,7 @@
 #include "server/nw_server_meta.hpp"
 #include "srv_main.hpp"
 #include "nw_server.hpp"
+#include "srv_game.hpp"
 #include <common/net.hpp>
 #include <common/game.hpp>
 #include <common/event.hpp>
@@ -398,9 +399,7 @@ static void s_receive_packet_client_commands(
         deserialise_player_commands(&commands, serialiser);
 
         if (commands.requested_spawn) {
-            event_spawn_t *spawn = FL_MALLOC(event_spawn_t, 1);
-            spawn->client_id = client_id;
-            submit_event(ET_SPAWN, spawn, events);
+            spawn_player(client_id);
         }
         
         if (commands.did_correction) {

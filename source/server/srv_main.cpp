@@ -40,9 +40,8 @@ static void s_run() {
 
         LN_CLEAR();
 
-        srv_game_tick();
-
         nw_tick(&events);
+        srv_game_tick();
 
         timestep_end();
 

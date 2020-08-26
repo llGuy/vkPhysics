@@ -33,21 +33,17 @@ static bool client_check_incoming_packets = 0;
 static bool still_receiving_chunk_packets;
 static uint32_t chunks_to_receive;
 
+// Start the client sockets and initialize containers
 static void s_start_client(
     event_start_client_t *data) {
     still_receiving_chunk_packets = 0;
     chunks_to_receive = 0;
 
     memset(g_net_data.dummy_voxels, CHUNK_SPECIAL_VALUE, sizeof(g_net_data.dummy_voxels));
-
     main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
-
     g_net_data.clients.init(NET_MAX_CLIENT_COUNT);
-    
     started_client = 1;
-
     track_modification_history();
-
     g_net_data.acc_predicted_modifications.init();
 
     uint32_t sizeof_chunk_mod_pack = sizeof(chunk_modifications_t) * MAX_PREDICTED_CHUNK_MODIFICATIONS;
@@ -61,24 +57,48 @@ static void s_start_client(
     g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count = 0;
     g_net_data.merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(chunk_modifications_t, NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 
-    // Send to meta server information about client
-    meta_packet_header_t header = {};
-    header.type = HPT_QUERY_CLIENT_REGISTER;
-
-    meta_query_client_register_t register_packet = {};
     local_client_info.client_name = data->client_name;
-    register_packet.client_name = local_client_info.client_name;
-
-    serialiser_t serialiser = {};
-    serialiser.init(100);
-
-    serialise_meta_packet_header(&header, &serialiser);
-    serialise_meta_query_client_register(&register_packet, &serialiser);
-
-    send_to_meta_server(&serialiser);
 }
 
 static network_address_t bound_server_address = {};
+
+static void s_fill_enter_server_data(
+    packet_connection_handshake_t *handshake,
+    event_enter_server_t *data) {
+    int32_t highest_client_index = -1;
+    
+    // Add all the players
+    for (uint32_t i = 0; i < handshake->player_count; ++i) {
+        if (highest_client_index < (int32_t)handshake->player_infos[i].client_id) {
+            highest_client_index = handshake->player_infos[i].client_id;
+        }
+
+        uint16_t client_id = handshake->player_infos[i].client_id;
+
+        g_net_data.clients.data[client_id].client_id = client_id;
+        g_net_data.clients.data[client_id].name = handshake->player_infos[i].name;
+        g_net_data.clients.data[client_id].initialised = 1;
+
+        data->infos[i].client_name = g_net_data.clients.data[client_id].name;
+        data->infos[i].client_id = client_id;
+        data->infos[i].ws_position = handshake->player_infos[i].ws_position;
+        data->infos[i].ws_view_direction = handshake->player_infos[i].ws_view_direction;
+        data->infos[i].ws_up_vector = handshake->player_infos[i].ws_up_vector;
+        data->infos[i].default_speed = handshake->player_infos[i].default_speed;
+        data->infos[i].flags = handshake->player_infos[i].flags.u32;
+
+        if (handshake->player_infos[i].flags.is_local) {
+            LOG_INFOV("Current client ID is %i\n", g_net_data.clients.data[i].client_id);
+
+            g_net_data.clients.data[client_id].chunks_to_wait_for = handshake->loaded_chunk_count;
+
+            data->infos[i].next_random_spawn_position = handshake->player_infos[i].ws_next_random_position;
+
+            data->local_client_id = g_net_data.clients.data[i].client_id;
+            current_client_id = data->local_client_id;
+        }
+    }
+}
 
 // PT_CONNECTION_HANDSHAKE
 static void s_receive_packet_connection_handshake(
@@ -93,39 +113,7 @@ static void s_receive_packet_connection_handshake(
     data->info_count = handshake.player_count;
     data->infos = FL_MALLOC(player_init_info_t, data->info_count);
 
-    int32_t highest_client_index = -1;
-    
-    // Add all the players
-    for (uint32_t i = 0; i < handshake.player_count; ++i) {
-        if (highest_client_index < (int32_t)handshake.player_infos[i].client_id) {
-            highest_client_index = handshake.player_infos[i].client_id;
-        }
-
-        uint16_t client_id = handshake.player_infos[i].client_id;
-
-        g_net_data.clients.data[client_id].client_id = client_id;
-        g_net_data.clients.data[client_id].name = handshake.player_infos[i].name;
-        g_net_data.clients.data[client_id].initialised = 1;
-
-        data->infos[i].client_name = g_net_data.clients.data[client_id].name;
-        data->infos[i].client_id = client_id;
-        data->infos[i].ws_position = handshake.player_infos[i].ws_position;
-        data->infos[i].ws_view_direction = handshake.player_infos[i].ws_view_direction;
-        data->infos[i].ws_up_vector = handshake.player_infos[i].ws_up_vector;
-        data->infos[i].default_speed = handshake.player_infos[i].default_speed;
-        data->infos[i].flags = handshake.player_infos[i].flags.u32;
-
-        if (handshake.player_infos[i].flags.is_local) {
-            LOG_INFOV("Current client ID is %i\n", g_net_data.clients.data[i].client_id);
-
-            g_net_data.clients.data[client_id].chunks_to_wait_for = handshake.loaded_chunk_count;
-
-            data->infos[i].next_random_spawn_position = handshake.player_infos[i].ws_next_random_position;
-
-            data->local_client_id = g_net_data.clients.data[i].client_id;
-            current_client_id = data->local_client_id;
-        }
-    }
+    s_fill_enter_server_data(&handshake, data);
 
     submit_event(ET_ENTER_SERVER, data, events);
 
@@ -183,6 +171,64 @@ static void s_receive_packet_player_left(
 // Debugging!
 static bool simulate_lag = 0;
 
+static void s_inform_on_death(
+    player_t *p,
+    player_alive_state_t previous_alive_state,
+    packet_client_commands_t *packet) {
+    if (previous_alive_state == PAS_DEAD && p->flags.alive_state == PAS_ALIVE) {
+        // Means player just spawned
+        LOG_INFO("Requesting to spawn\n");
+        packet->requested_spawn = 1;
+    }
+    else {
+        packet->requested_spawn = 0;
+    }
+}
+
+static void s_fill_commands_with_actions(
+    player_t *p,
+    packet_client_commands_t *packet) {
+    packet->command_count = (uint8_t)p->cached_player_action_count;
+    packet->actions = LN_MALLOC(player_action_t, packet->command_count);
+
+    if (packet->command_count) {
+        LOG_NETWORK_DEBUG("--- Sending commands to the server\n");
+    }
+
+    for (uint32_t i = 0; i < packet->command_count; ++i) {
+        packet->actions[i].bytes = p->cached_player_actions[i].bytes;
+        packet->actions[i].dmouse_x = p->cached_player_actions[i].dmouse_x;
+        packet->actions[i].dmouse_y = p->cached_player_actions[i].dmouse_y;
+        packet->actions[i].dt = p->cached_player_actions[i].dt;
+        packet->actions[i].accumulated_dt = p->cached_player_actions[i].accumulated_dt;
+        packet->actions[i].tick = p->cached_player_actions[i].tick;
+
+        LOG_NETWORK_DEBUGV("Tick %lu; actions %d; dmouse_x %f; dmouse_y %f; dt %f\n",
+                           packet->actions[i].tick,
+                           packet->actions[i].bytes,
+                           packet->actions[i].dmouse_x,
+                           packet->actions[i].dmouse_y,
+                           packet->actions[i].dt);
+    }
+
+    if (packet->command_count) {
+        LOG_NETWORK_DEBUGV("Final velocity %f %f %f\n\n", p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
+    }
+}
+
+static void s_fill_predicted_data(
+    player_t *p,
+    packet_client_commands_t *packet) {
+    packet->ws_final_position = p->ws_position;
+    packet->ws_final_view_direction = p->ws_view_direction;
+    packet->ws_final_up_vector = p->ws_up_vector;
+    packet->ws_final_velocity = p->ws_velocity;
+}
+
+static void s_fill_with_accumulated_chunk_modifications() {
+    
+}
+
 // PT_CLIENT_COMMANDS
 static void s_send_packet_client_commands() {
     int32_t local_id = translate_client_to_local_id(current_client_id);
@@ -205,49 +251,15 @@ static void s_send_packet_client_commands() {
             packet_client_commands_t packet = {};
             packet.did_correction = c->waiting_on_correction;
 
-            if (previous_alive_state == PAS_DEAD && p->flags.alive_state == PAS_ALIVE) {
-                // Means player just spawned
-                LOG_INFO("Requesting to spawn\n");
-                packet.requested_spawn = 1;
-            }
-            else {
-                packet.requested_spawn = 0;
-            }
-
+            // Tell server if player just died and update the "previous alive state" variable
+            s_inform_on_death(p, previous_alive_state, &packet);
             previous_alive_state = (player_alive_state_t)p->flags.alive_state;
 
-            packet.command_count = (uint8_t)p->cached_player_action_count;
-            packet.actions = LN_MALLOC(player_action_t, packet.command_count);
+            // Fill packet with the actions
+            s_fill_commands_with_actions(p, &packet);
 
-            if (packet.command_count) {
-                LOG_NETWORK_DEBUG("--- Sending commands to the server\n");
-            }
-
-            for (uint32_t i = 0; i < packet.command_count; ++i) {
-                packet.actions[i].bytes = p->cached_player_actions[i].bytes;
-                packet.actions[i].dmouse_x = p->cached_player_actions[i].dmouse_x;
-                packet.actions[i].dmouse_y = p->cached_player_actions[i].dmouse_y;
-                packet.actions[i].dt = p->cached_player_actions[i].dt;
-                packet.actions[i].accumulated_dt = p->cached_player_actions[i].accumulated_dt;
-                packet.actions[i].tick = p->cached_player_actions[i].tick;
-
-                LOG_NETWORK_DEBUGV("Tick %lu; actions %d; dmouse_x %f; dmouse_y %f; dt %f\n",
-                                   packet.actions[i].tick,
-                                   packet.actions[i].bytes,
-                                   packet.actions[i].dmouse_x,
-                                   packet.actions[i].dmouse_y,
-                                   packet.actions[i].dt);
-            }
-
-            if (packet.command_count) {
-                LOG_NETWORK_DEBUGV("Final velocity %f %f %f\n\n", p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
-            }
-
-            packet.ws_final_position = p->ws_position;
-            packet.ws_final_view_direction = p->ws_view_direction;
-            packet.ws_final_up_vector = p->ws_up_vector;
-            packet.ws_final_velocity = p->ws_velocity;
-
+            // Fill predicted state
+            s_fill_predicted_data(p, &packet);
             packet.player_flags = p->flags.u32;
 
             accumulated_predicted_modification_t *next_acc = accumulate_history();
@@ -662,6 +674,8 @@ static void s_handle_local_player_snapshot(
     event_submissions_t *events) {
     // TODO: Watch out for this:
     if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
+        LOG_INFO("Just did correction\n");
+
         s_handle_incorrect_state(
             c,
             p,
@@ -790,7 +804,7 @@ static void s_check_incoming_game_server_packets(
     event_submissions_t *events) {
     raw_input_t *input = get_raw_input();
 
-#if 0
+#if 1
     if (input->buttons[BT_F].instant) {
         simulate_lag = !simulate_lag;
 

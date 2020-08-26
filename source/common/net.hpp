@@ -9,6 +9,9 @@
 #define MAX_PREDICTED_CHUNK_MODIFICATIONS 20
 #define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 250
 
+//#define NET_DEBUG_VOXEL_INTERPOLATION 1
+//#define NET_DEBUG 1
+
 struct voxel_modification_t {
     uint16_t index;
     uint8_t final_value;

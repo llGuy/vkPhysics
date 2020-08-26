@@ -6,13 +6,10 @@
 
 static listener_t game_listener;
 
-static void s_handle_event_spawn(event_t *event) {
-    event_spawn_t *data = (event_spawn_t *)event->data;
-    uint32_t id = data->client_id;
+void spawn_player(uint32_t client_id) {
+    LOG_INFOV("Client %i spawned\n", client_id);
 
-    LOG_INFOV("Client %i spawned\n", data->client_id);
-
-    int32_t local_id = translate_client_to_local_id(id);
+    int32_t local_id = translate_client_to_local_id(client_id);
     player_t *p = get_player(local_id);
     p->ws_position = p->next_random_spawn_position;
     p->ws_view_direction = glm::normalize(-p->ws_position);
@@ -29,8 +26,6 @@ static void s_handle_event_spawn(event_t *event) {
     float y_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
     float z_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
     p->next_random_spawn_position = vector3_t(x_rand, y_rand, z_rand);
-
-    FL_FREE(data);
 }
 
 static void s_handle_event_new_player(event_t *event) {
@@ -59,10 +54,6 @@ static void s_handle_event_player_disconnected(
 static void s_game_listener(void *object, event_t *event, event_submissions_t *events) {
     switch(event->type) {
 
-    case ET_SPAWN: {
-        s_handle_event_spawn(event);
-    } break;
-        
     case ET_NEW_PLAYER: {
         s_handle_event_new_player(event);
     } break;
@@ -88,15 +79,9 @@ void srv_game_init(event_submissions_t *events) {
     player_memory_init();
     chunk_memory_init();
 
-    // generate_sphere(vector3_t(20.0f), 40.0f);
-    // generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f);
-    // generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f);
-
-    for (int32_t z = -4; z < 4; ++z) {
-        for (int32_t x = -4; x < 4; ++x) {
-            generate_sphere(vector3_t(x * 16 - 8, 8.0f, z * 16 - 8), 5.0f, 140);
-        }
-    }
+    generate_sphere(vector3_t(20.0f), 40.0f, 140);
+    generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f, 140);
+    generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f, 140);
 }
 
 void srv_game_tick() {
