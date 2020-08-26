@@ -68,6 +68,7 @@ void nw_check_registration(event_submissions_t *events) {
 
             request_register_server_t *data = FL_MALLOC(request_register_server_t, 1);
             data->server_name = create_fl_string(name);
+            current_server_name = data->server_name;
 
             send_request(R_REGISTER_SERVER, data);
 
@@ -79,8 +80,6 @@ void nw_check_registration(event_submissions_t *events) {
                 !(request_result = check_request_finished(
                       &request_result_size,
                       &request_type)));
-
-            current_server_name = data->server_name;
 
             LOG_INFO("Received result\n");
 
