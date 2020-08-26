@@ -88,9 +88,15 @@ void srv_game_init(event_submissions_t *events) {
     player_memory_init();
     chunk_memory_init();
 
-    generate_sphere(vector3_t(20.0f), 40.0f);
-    generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f);
-    generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f);
+    // generate_sphere(vector3_t(20.0f), 40.0f);
+    // generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f);
+    // generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f);
+
+    for (int32_t z = -4; z < 4; ++z) {
+        for (int32_t x = -4; x < 4; ++x) {
+            generate_sphere(vector3_t(x * 16 - 8, 8.0f, z * 16 - 8), 5.0f, 140);
+        }
+    }
 }
 
 void srv_game_tick() {
@@ -104,6 +110,10 @@ void srv_game_tick() {
                     player_action_t *action = &player->player_actions[i];
 
                     execute_action(player, action);
+
+                    if (player->flags.alive_state == PAS_DEAD) {
+                        break;
+                    }
                 }
 
                 player->player_action_count = 0;

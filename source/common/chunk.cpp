@@ -158,7 +158,8 @@ chunk_t **get_modified_chunks(
 
 void generate_sphere(
     const vector3_t &ws_center,
-    float ws_radius) {
+    float ws_radius,
+    float max_value) {
     ivector3_t vs_center = space_world_to_voxel(ws_center);
     vector3_t vs_float_center = (vector3_t)(vs_center);
 
@@ -202,7 +203,7 @@ void generate_sphere(
                         //current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
 
                         uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
-                        uint8_t new_value = (uint32_t)((proportion) * (float)CHUNK_MAX_VOXEL_VALUE_I);
+                        uint8_t new_value = (uint32_t)((proportion) * max_value);
                         if (*v < new_value) {
                             *v = new_value;
                         }
@@ -221,7 +222,7 @@ void generate_sphere(
                         ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
 
                         uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
-                        uint8_t new_value = (uint32_t)((proportion) * (float)CHUNK_MAX_VOXEL_VALUE_I);
+                        uint8_t new_value = (uint32_t)((proportion) * max_value);
                         if (*v < new_value) {
                             *v = new_value;
                         }
