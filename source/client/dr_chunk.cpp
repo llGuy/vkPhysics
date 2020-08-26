@@ -364,6 +364,7 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
 
         if (c->render) {
             dr_destroy_chunk_render(c->render);
+            c->render = NULL;
             LOG_INFO("Destroyed chunk data\n");
         }
     }
