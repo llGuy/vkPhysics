@@ -219,6 +219,10 @@ static void s_send_packet_client_commands() {
             packet.command_count = (uint8_t)p->cached_player_action_count;
             packet.actions = LN_MALLOC(player_action_t, packet.command_count);
 
+            if (packet.command_count) {
+                LOG_NETWORK_DEBUG("--- Sending commands to the server\n");
+            }
+
             for (uint32_t i = 0; i < packet.command_count; ++i) {
                 packet.actions[i].bytes = p->cached_player_actions[i].bytes;
                 packet.actions[i].dmouse_x = p->cached_player_actions[i].dmouse_x;
@@ -226,7 +230,17 @@ static void s_send_packet_client_commands() {
                 packet.actions[i].dt = p->cached_player_actions[i].dt;
                 packet.actions[i].accumulated_dt = p->cached_player_actions[i].accumulated_dt;
                 packet.actions[i].tick = p->cached_player_actions[i].tick;
-                //LOG_INFOV("Accumulated dt: %f\n", packet.actions[i].accumulated_dt);
+
+                LOG_NETWORK_DEBUGV("Tick %lu; actions %d; dmouse_x %f; dmouse_y %f; dt %f\n",
+                                   packet.actions[i].tick,
+                                   packet.actions[i].bytes,
+                                   packet.actions[i].dmouse_x,
+                                   packet.actions[i].dmouse_y,
+                                   packet.actions[i].dt);
+            }
+
+            if (packet.command_count) {
+                LOG_NETWORK_DEBUGV("Final velocity %f %f %f\n\n", p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
             }
 
             packet.ws_final_position = p->ws_position;

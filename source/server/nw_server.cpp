@@ -400,14 +400,7 @@ static void s_receive_packet_client_commands(
         if (commands.requested_spawn) {
             event_spawn_t *spawn = FL_MALLOC(event_spawn_t, 1);
             spawn->client_id = client_id;
-            //LOG_INFOV("Client %i spawned\n", client_id);
             submit_event(ET_SPAWN, spawn, events);
-
-            // Generate a new random position next time player needs to spawn
-            float x_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
-            float y_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
-            float z_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
-            p->next_random_spawn_position = vector3_t(x_rand, y_rand, z_rand);
         }
         
         if (commands.did_correction) {
@@ -425,9 +418,24 @@ static void s_receive_packet_client_commands(
                 //LOG_INFOV("Received Tick %llu\n", (unsigned long long)c->tick);
             }
 
+            if (commands.command_count) {
+                LOG_NETWORK_DEBUG("--- Received commands from client\n");
+            }
+
             for (uint32_t i = 0; i < commands.command_count; ++i) {
                 //LOG_INFOV("Accumulated dt: %f\n", commands.actions[i].accumulated_dt);
                 push_player_actions(p, &commands.actions[i], 1);
+
+                LOG_NETWORK_DEBUGV("Tick %lu; actions %d; dmouse_x %f; dmouse_y %f; dt %f\n",
+                                   commands.actions[i].tick,
+                                   commands.actions[i].bytes,
+                                   commands.actions[i].dmouse_x,
+                                   commands.actions[i].dmouse_y,
+                                   commands.actions[i].dt);
+            }
+
+            if (commands.command_count) {
+                LOG_NETWORK_DEBUGV("Final velocity %f %f %f\n\n", commands.ws_final_velocity.x, commands.ws_final_velocity.y, commands.ws_final_velocity.z);
             }
 
             c->ws_predicted_position = commands.ws_final_position;
@@ -488,16 +496,43 @@ static bool s_check_if_client_has_to_correct_state(
     float precision = 0.000001f;
     bool incorrect_position = 0;
     if (dposition.x >= precision || dposition.y >= precision || dposition.z >= precision) {
+        LOG_INFOV(
+            "Need to correct position: %f %f %f <- %f %f %f\n",
+            p->ws_position.x,
+            p->ws_position.y,
+            p->ws_position.z,
+            c->ws_predicted_position.x,
+            c->ws_predicted_position.y,
+            c->ws_predicted_position.z);
+
         incorrect_position = 1;
     }
 
     bool incorrect_direction = 0;
     if (ddirection.x >= precision || ddirection.y >= precision || ddirection.z >= precision) {
+        LOG_INFOV(
+            "Need to correct position: %f %f %f <- %f %f %f\n",
+            p->ws_view_direction.x,
+            p->ws_view_direction.y,
+            p->ws_view_direction.z,
+            c->ws_predicted_view_direction.x,
+            c->ws_predicted_view_direction.y,
+            c->ws_predicted_view_direction.z);
+
         incorrect_direction = 1;
     }
 
     bool incorrect_up = 0;
     if (dup.x >= precision || dup.y >= precision || dup.z >= precision) {
+        LOG_INFOV(
+            "Need to correct up vector: %f %f %f <- %f %f %f\n",
+            p->ws_up_vector.x,
+            p->ws_up_vector.y,
+            p->ws_up_vector.z,
+            c->ws_predicted_up_vector.x,
+            c->ws_predicted_up_vector.y,
+            c->ws_predicted_up_vector.z);
+
         incorrect_up = 1;
     }
 

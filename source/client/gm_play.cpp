@@ -86,10 +86,10 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
     s_handle_input(events);
 
-    nw_tick(events);
-
     // The world always gets ticked - when menus get displayed, the world has to keep being simulated
     wd_tick(events);
+
+    nw_tick(events);
     dr_draw_game(render, transfer);
 
     tick_ui(events);

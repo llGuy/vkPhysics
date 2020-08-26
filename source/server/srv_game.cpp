@@ -24,6 +24,12 @@ static void s_handle_event_spawn(event_t *event) {
     p->flags.interaction_mode = PIM_METEORITE;
     p->ws_velocity = vector3_t(0.0f);
 
+    // Generate a new random position next time player needs to spawn
+    float x_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+    float y_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+    float z_rand = (float)(rand() % 100 + 100) * (rand() % 2 == 0 ? -1 : 1);
+    p->next_random_spawn_position = vector3_t(x_rand, y_rand, z_rand);
+
     FL_FREE(data);
 }
 
