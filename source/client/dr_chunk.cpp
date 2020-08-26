@@ -12,8 +12,6 @@ static uint32_t id = 0;
 chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_position) {
     chunk_render_t *chunk_render = FL_MALLOC(chunk_render_t, 1);
 
-    LOG_INFOV("Created chunk render with ID#%d\n", id);
-
     memset(chunk_render, 0, sizeof(chunk_render_t));
 
     uint32_t buffer_size = sizeof(vector3_t) * CHUNK_MAX_VERTICES_PER_CHUNK;
@@ -47,8 +45,6 @@ chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_p
 
 void dr_destroy_chunk_render(chunk_render_t *render) {
     if (render) {
-        LOG_INFOV("Destroying chunk render with ID#%d\n", render->id);
-
         mesh_buffer_t *mesh_buffer = get_mesh_buffer(BT_VERTEX, &render->mesh);
         if (mesh_buffer) {
             destroy_sensitive_gpu_buffer(get_mesh_buffer(BT_VERTEX, &render->mesh)->gpu_buffer);

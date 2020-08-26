@@ -3,6 +3,7 @@
 #include "string.hpp"
 #include "socket.hpp"
 #include "meta_packet.hpp"
+#include <cstdio>
 
 net_data_t g_net_data = {};
 
@@ -18,6 +19,18 @@ void main_udp_socket_init(uint16_t output_port) {
     bind_network_socket_to_port(main_udp_socket, address);
     set_socket_to_non_blocking_mode(main_udp_socket);
     set_socket_recv_buffer_size(main_udp_socket, 1024 * 1024);
+
+    // For debugging purposes
+    if (output_port == GAME_OUTPUT_PORT_CLIENT) {
+        g_net_data.log_file = fopen("net_log_client.txt", "w+");
+    }
+    else {
+        g_net_data.log_file = fopen("net_log_server.txt", "w+");
+    }
+
+    if (!g_net_data.log_file) {
+        LOG_INFO("Failed to open log file for networking\n");
+    }
 }
 
 #define META_SERVER_DOMAIN "www.llguy.fun"

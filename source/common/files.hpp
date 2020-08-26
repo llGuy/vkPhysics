@@ -49,20 +49,8 @@ struct file_contents_t {
     };
 };
 
-file_contents_t read_file(
-    file_handle_t handle);
-
-void free_file_contents(
-    file_handle_t file,
-    file_contents_t content);
-
-void write_file(
-    file_handle_t file,
-    uint8_t *bytes,
-    uint32_t size);
-
-void free_file(
-    file_handle_t handle);
-
-void free_image(
-    file_contents_t contents);
+file_contents_t read_file(file_handle_t handle);
+void free_file_contents(file_handle_t file, file_contents_t content);
+void write_file(file_handle_t file, uint8_t *bytes, uint32_t size);
+void free_file(file_handle_t handle);
+void free_image(file_contents_t contents);

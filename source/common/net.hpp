@@ -11,6 +11,7 @@
 
 //#define NET_DEBUG_VOXEL_INTERPOLATION 1
 //#define NET_DEBUG 1
+#define NET_DEBUG_TERRAFORMING 1
 
 struct voxel_modification_t {
     uint16_t index;
@@ -113,6 +114,10 @@ struct net_data_t {
         NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PACK_COUNT> acc_predicted_modifications;
     accumulated_predicted_modification_t merged_recent_modifications;
     available_servers_t available_servers;
+
+#if NET_DEBUG_TERRAFORMING
+    FILE *log_file;
+#endif
 };
 
 extern net_data_t g_net_data;
@@ -138,3 +143,16 @@ void merge_chunk_modifications(
     uint32_t *dst_count,
     chunk_modifications_t *src,
     uint32_t src_count);
+
+#if NET_DEBUG_TERRAFORMING
+template <typename ...T> void debug_log(
+    const char *format,
+    bool stdout,
+    T ...values) {
+    fprintf(g_net_data.log_file, format, values...);
+
+    if (stdout) {
+        printf(format, values...);
+    }
+}
+#endif

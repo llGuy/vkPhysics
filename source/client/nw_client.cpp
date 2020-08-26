@@ -88,8 +88,6 @@ static void s_fill_enter_server_data(
         data->infos[i].flags = handshake->player_infos[i].flags.u32;
 
         if (handshake->player_infos[i].flags.is_local) {
-            LOG_INFOV("Current client ID is %i\n", g_net_data.clients.data[i].client_id);
-
             g_net_data.clients.data[client_id].chunks_to_wait_for = handshake->loaded_chunk_count;
 
             data->infos[i].next_random_spawn_position = handshake->player_infos[i].ws_next_random_position;
@@ -192,7 +190,7 @@ static void s_fill_commands_with_actions(
     packet->actions = LN_MALLOC(player_action_t, packet->command_count);
 
     if (packet->command_count) {
-        LOG_NETWORK_DEBUG("--- Sending commands to the server\n");
+        debug_log("\tClient has made %d actions\n", 0, packet->command_count);
     }
 
     for (uint32_t i = 0; i < packet->command_count; ++i) {
@@ -203,16 +201,21 @@ static void s_fill_commands_with_actions(
         packet->actions[i].accumulated_dt = p->cached_player_actions[i].accumulated_dt;
         packet->actions[i].tick = p->cached_player_actions[i].tick;
 
-        LOG_NETWORK_DEBUGV("Tick %lu; actions %d; dmouse_x %f; dmouse_y %f; dt %f\n",
-                           packet->actions[i].tick,
-                           packet->actions[i].bytes,
-                           packet->actions[i].dmouse_x,
-                           packet->actions[i].dmouse_y,
-                           packet->actions[i].dt);
+        debug_log("\t\tAt tick %lu: actions %d, dmouse_x %f; dmouse_y %f; dt %f; accumulated dt %f\n", 0,
+            packet->actions[i].tick,
+            packet->actions[i].bytes,
+            packet->actions[i].dmouse_x,
+            packet->actions[i].dmouse_y,
+            packet->actions[i].dt,
+            packet->actions[i].accumulated_dt);
     }
 
     if (packet->command_count) {
-        LOG_NETWORK_DEBUGV("Final velocity %f %f %f\n\n", p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
+        debug_log("\tWith these actions, predicted values were:\n", 0);
+        debug_log("\t\tPosition: %f %f %f\n", 0, p->ws_position.x, p->ws_position.y, p->ws_position.z);
+        debug_log("\t\tVelocity: %f %f %f\n", 0, p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
+        debug_log("\t\tView Direction: %f %f %f\n", 0, p->ws_view_direction.x, p->ws_view_direction.y, p->ws_view_direction.z);
+        debug_log("\t\tUp vector: %f %f %f\n", 0, p->ws_up_vector.x, p->ws_up_vector.y, p->ws_up_vector.z);
     }
 }
 
@@ -225,8 +228,28 @@ static void s_fill_predicted_data(
     packet->ws_final_velocity = p->ws_velocity;
 }
 
-static void s_fill_with_accumulated_chunk_modifications() {
-    
+static void s_fill_with_accumulated_chunk_modifications(
+    packet_client_commands_t *packet) {
+    accumulated_predicted_modification_t *next_acc = accumulate_history();
+    if (next_acc) {
+        // Packet will just take from the accumulation stuff
+        packet->modified_chunk_count = next_acc->acc_predicted_chunk_mod_count;
+        packet->chunk_modifications = next_acc->acc_predicted_modifications;
+    }
+    else {
+        packet->modified_chunk_count = 0;
+        packet->chunk_modifications = NULL;
+    }
+
+    if (packet->modified_chunk_count) {
+        debug_log("\tModified %i chunks\n", 0, packet->modified_chunk_count);
+        for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
+            debug_log("\t\tIn chunk (%i %i %i):\n", 0, packet->chunk_modifications[i].x, packet->chunk_modifications[i].y, packet->chunk_modifications[i].z);
+            for (uint32_t v = 0; v < packet->chunk_modifications[i].modified_voxels_count; ++v) {
+                debug_log("\t\t- index %i \t| initial value %i \t| final value %i\n", 0, (int32_t)packet->chunk_modifications[i].modifications[v].index, (int32_t)packet->chunk_modifications[i].modifications[v].initial_value, (int32_t)packet->chunk_modifications[i].modifications[v].final_value);
+            }
+        }
+    }
 }
 
 // PT_CLIENT_COMMANDS
@@ -244,6 +267,7 @@ static void s_send_packet_client_commands() {
                                                
         if (simulate_lag) {
             p->cached_player_action_count = 0;
+            debug_log("@@@@@@ ^^^ We are simulating lag so not sending anything\n", 0);
         }
         else if (p) {
             client_t *c = &g_net_data.clients[p->client_id];
@@ -262,70 +286,30 @@ static void s_send_packet_client_commands() {
             s_fill_predicted_data(p, &packet);
             packet.player_flags = p->flags.u32;
 
-            accumulated_predicted_modification_t *next_acc = accumulate_history();
-            if (next_acc) {
-                // Packet will just take from the accumulation stuff
-                packet.modified_chunk_count = next_acc->acc_predicted_chunk_mod_count;
-                packet.chunk_modifications = next_acc->acc_predicted_modifications;
-            }
-            else {
-                packet.modified_chunk_count = 0;
-                packet.chunk_modifications = NULL;
-            }
-
-            if (packet.modified_chunk_count) {
-#if NET_DEBUG
-                printf("\n SENDING COMMANDS: ");
-                for (uint32_t i = 0; i < packet.command_count; ++i) {
-                    printf("(Tick %llu | adt %f) ", packet.actions[i].tick, packet.actions[i].accumulated_dt);
-                }
-                printf("\n");
-#endif
-            }
-            
-#if NET_DEBUG_VOXEL_INTERPOLATION
-            if (packet.modified_chunk_count) {
-                printf("\n");
-                LOG_INFOV("(Tick %llu) Modified %i chunks\n", (unsigned long long)get_current_tick(), packet.modified_chunk_count);
-                for (uint32_t i = 0; i < packet.modified_chunk_count; ++i) {
-                    LOG_INFOV("In chunk (%i %i %i): \n", packet.chunk_modifications[i].x, packet.chunk_modifications[i].y, packet.chunk_modifications[i].z);
-                    for (uint32_t v = 0; v < packet.chunk_modifications[i].modified_voxels_count; ++v) {
-                        LOG_INFOV("- index %i | initial value %i | final value %i\n", (int32_t)packet.chunk_modifications[i].modifications[v].index, (int32_t)packet.chunk_modifications[i].modifications[v].initial_value, (int32_t)packet.chunk_modifications[i].modifications[v].final_value);
-                    }
-                }
-            }
-#endif
-            
+            // Fill with chunk modifications that were made during past few frames
+            s_fill_with_accumulated_chunk_modifications(&packet);
             reset_modification_tracker();
-            
+                        
             packet_header_t header = {};
-            header.current_tick = get_current_tick();
-            header.current_packet_count = g_net_data.current_packet;
-            header.client_id = current_client_id;
-            header.flags.packet_type = PT_CLIENT_COMMANDS;
-            header.flags.total_packet_size = packed_packet_header_size() + packed_player_commands_size(&packet);
+            { // Fill header
+                header.current_tick = get_current_tick();
+                header.current_packet_count = g_net_data.current_packet;
+                header.client_id = current_client_id;
+                header.flags.packet_type = PT_CLIENT_COMMANDS;
+                header.flags.total_packet_size = packed_packet_header_size() + packed_player_commands_size(&packet);
+            }
 
             serialiser_t serialiser = {};
-            serialiser.init(header.flags.total_packet_size);
-            serialise_packet_header(&header, &serialiser);
-            serialise_player_commands(&packet, &serialiser);
+            { // Serialise all the data
+                serialiser.init(header.flags.total_packet_size);
+                serialise_packet_header(&header, &serialiser);
+                serialise_player_commands(&packet, &serialiser);
+            }
 
             send_to_game_server(&serialiser, bound_server_address);
     
             p->cached_player_action_count = 0;
-
             c->waiting_on_correction = 0;
-
-#if 0
-            // For debugging purposes
-            if (modified_chunk_count) {
-                static uint32_t m_count = 0;
-                ++m_count;
-                if (m_count == 2) {
-                    exit(1);
-                }
-            }
-#endif
         }
     }
 }
@@ -426,6 +410,11 @@ static void s_handle_incorrect_state(
     p->ws_velocity = snapshot->ws_velocity;
     p->flags.interaction_mode = snapshot->interaction_mode;
 
+    debug_log("\t\tSetting position to (%f %f %f)\n", 0, p->ws_position.x, p->ws_position.y, p->ws_position.z);
+    debug_log("\t\tSetting velocity to (%f %f %f)\n", 0, p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
+    debug_log("\t\tSetting view direction to (%f %f %f)\n", 0, p->ws_view_direction.x, p->ws_view_direction.y, p->ws_view_direction.z);
+    debug_log("\t\tSetting up vector to (%f %f %f)\n", 0, p->ws_up_vector.x, p->ws_up_vector.y, p->ws_up_vector.z);
+
     if (p->flags.alive_state == PAS_ALIVE && snapshot->alive_state == PAS_DEAD) {
         // Handle death
         wd_kill_local_player(events);
@@ -435,9 +424,8 @@ static void s_handle_incorrect_state(
 
     // Revert voxel modifications up from tick that server processed
     if (snapshot->terraformed) {
-#if NET_DEBUG
-        LOG_INFOV("Reverting to %llu...\n", (unsigned long long)snapshot->tick);
-#endif
+        debug_log("Reverting all modifications from current to tick %lu\n", 0, snapshot->tick);
+
         s_revert_accumulated_modifications(snapshot->tick);
         s_correct_chunks(packet);
         // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
@@ -674,7 +662,7 @@ static void s_handle_local_player_snapshot(
     event_submissions_t *events) {
     // TODO: Watch out for this:
     if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
-        LOG_INFO("Just did correction\n");
+        debug_log("\tClient has to do a correction\n", 1);
 
         s_handle_incorrect_state(
             c,
@@ -685,6 +673,8 @@ static void s_handle_local_player_snapshot(
             events);
     }
     else {
+        debug_log("\tClient predicted state correctly - no correction needed!\n", 0);
+
         s_handle_correct_state(
             c,
             p,
@@ -699,9 +689,7 @@ static void s_receive_packet_game_state_snapshot(
     serialiser_t *serialiser,
     uint64_t received_tick,
     event_submissions_t *events) {
-#if NET_DEBUG
-    LOG_INFO("\n\n RECEIVED GAME STATE PACKET\n");
-#endif
+    debug_log("##### Received game state snapshot\n", 0);
 
     packet_game_state_snapshot_t packet = {};
     deserialise_game_state_snapshot(&packet, serialiser);
@@ -740,8 +728,6 @@ static void s_receive_packet_chunk_voxels(
     serialiser_t *serialiser,
     event_submissions_t *events) {
     uint32_t loaded_chunk_count = serialiser->deserialise_uint32();
-
-    LOG_INFOV("Received %d chunks\n", loaded_chunk_count);
 
     for (uint32_t c = 0; c < loaded_chunk_count; ++c) {
         int16_t x = serialiser->deserialise_int16();
@@ -819,6 +805,7 @@ static void s_check_incoming_game_server_packets(
         elapsed += cl_delta_time();
         if (elapsed >= client_command_output_interval) {
             // Send commands to the server
+            debug_log("----- Sending client commands to the server at tick %llu\n", 0, get_current_tick());
             s_send_packet_client_commands();
 
             elapsed = 0.0f;
