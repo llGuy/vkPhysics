@@ -409,6 +409,8 @@ static void s_handle_incorrect_state(
     p->next_random_spawn_position = snapshot->ws_next_random_spawn;
     p->ws_velocity = snapshot->ws_velocity;
     p->flags.interaction_mode = snapshot->interaction_mode;
+    p->animated_state = (player_animated_state_t)snapshot->animated_state;
+    p->frame_displacement = snapshot->frame_displacement;
 
     debug_log("\t\tSetting position to (%f %f %f)\n", 0, p->ws_position.x, p->ws_position.y, p->ws_position.z);
     debug_log("\t\tSetting velocity to (%f %f %f)\n", 0, p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);

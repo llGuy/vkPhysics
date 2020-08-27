@@ -57,6 +57,7 @@ struct player_snapshot_t {
             uint16_t alive_state: 2;
             uint16_t interaction_mode: 3;
             uint16_t contact: 1;
+            uint16_t animated_state: 4;
         };
         uint16_t flags;
     };
@@ -67,6 +68,7 @@ struct player_snapshot_t {
     vector3_t ws_up_vector;
     vector3_t ws_next_random_spawn;
     vector3_t ws_velocity;
+    float frame_displacement;
 
     // Tick that client has to revert to if client needs to do a correction
     uint64_t tick;

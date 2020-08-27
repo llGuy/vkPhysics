@@ -256,6 +256,7 @@ uint32_t packed_game_state_snapshot_size(
         sizeof(player_snapshot_t::ws_up_vector) +
         sizeof(player_snapshot_t::ws_next_random_spawn) +
         sizeof(player_snapshot_t::ws_velocity) +
+        sizeof(player_snapshot_t::frame_displacement) +
         sizeof(player_snapshot_t::tick) +
         sizeof(player_snapshot_t::terraform_tick);
 
@@ -276,6 +277,7 @@ void serialise_game_state_snapshot(
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_up_vector);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_next_random_spawn);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_velocity);
+        serialiser->serialise_float32(packet->player_snapshots[i].frame_displacement);
         serialiser->serialise_uint64(packet->player_snapshots[i].tick);
         serialiser->serialise_uint64(packet->player_snapshots[i].terraform_tick);
     }
@@ -295,6 +297,7 @@ void deserialise_game_state_snapshot(
         packet->player_snapshots[i].ws_up_vector = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_next_random_spawn = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_velocity = serialiser->deserialise_vector3();
+        packet->player_snapshots[i].frame_displacement = serialiser->deserialise_float32();
         packet->player_snapshots[i].tick = serialiser->deserialise_uint64();
         packet->player_snapshots[i].terraform_tick = serialiser->deserialise_uint64();
     }

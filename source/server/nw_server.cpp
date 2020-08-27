@@ -691,6 +691,8 @@ static void s_send_packet_game_state_snapshot() {
             snapshot->interaction_mode = p->flags.interaction_mode;
             snapshot->alive_state = p->flags.alive_state;
             snapshot->contact = p->flags.contact;
+            snapshot->animated_state = p->animated_state;
+            snapshot->frame_displacement = p->frame_displacement;
             
             if (snapshot->terraformed) {
                 snapshot->terraform_tick = c->tick_at_which_client_terraformed;
