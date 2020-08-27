@@ -1,3 +1,4 @@
+#include <ctime>
 #include "ui.hpp"
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"

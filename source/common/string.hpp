@@ -46,7 +46,7 @@ inline uint32_t simple_string_hash(
 
 inline uint32_t str_to_int(const char *str, uint32_t length) {
     int32_t ret = 0;
-    for(int32_t i = 0; i < length; ++i) {
+    for(int32_t i = 0; i < (int32_t)length; ++i) {
         ret = ret * 10 + (str[i] - '0');
     }
     return ret;

@@ -64,6 +64,14 @@ A million repetitions of "a"
 #endif
 #endif
 
+#if _WIN32
+#if BIG_ENDIAN_MACHINE
+#define BYTE_ORDER BIG_ENDIAN
+#elif SMALL_ENDIAN_MACHINE
+#define BYTE_ORDER LITTLE_ENDIAN
+#endif
+#endif
+
 #if !defined(BYTE_ORDER) || \
     (BYTE_ORDER != BIG_ENDIAN && BYTE_ORDER != LITTLE_ENDIAN && \
     BYTE_ORDER != PDP_ENDIAN)

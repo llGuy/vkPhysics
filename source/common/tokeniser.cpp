@@ -74,7 +74,7 @@ static void s_string_data_deinit(
     node_data->string_length = 0;
 }
 
-static void *s_handle_conflict(
+static void s_handle_conflict(
     uint32_t current_char,
     const char *string, 
     uint32_t length,

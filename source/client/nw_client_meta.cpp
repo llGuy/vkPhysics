@@ -222,7 +222,7 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
 void nw_request_sign_up(
     const char *username,
     const char *password) {
-    request_sign_up_data_t *sign_up_data = LN_MALLOC(request_sign_up_data_t, 1);
+    request_sign_up_data_t *sign_up_data = FL_MALLOC(request_sign_up_data_t, 1);
     current_username = username;
 
     sign_up_data->username = username;
@@ -235,7 +235,7 @@ void nw_request_sign_up(
 void nw_request_login(
     const char *username,
     const char *password) {
-    request_login_data_t *login_data = LN_MALLOC(request_login_data_t, 1);
+    request_login_data_t *login_data = FL_MALLOC(request_login_data_t, 1);
     current_username = username;
 
     login_data->username = username;

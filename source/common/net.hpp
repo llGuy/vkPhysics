@@ -147,11 +147,11 @@ void merge_chunk_modifications(
 #if NET_DEBUG_TERRAFORMING
 template <typename ...T> void debug_log(
     const char *format,
-    bool stdout,
+    bool print_to_console,
     T ...values) {
     fprintf(g_net_data.log_file, format, values...);
 
-    if (stdout) {
+    if (print_to_console) {
         printf(format, values...);
     }
 }
