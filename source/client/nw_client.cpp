@@ -399,6 +399,9 @@ static void s_handle_incorrect_state(
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser,
     event_submissions_t *events) {
+    player_flags_t real_player_flags = {};
+    real_player_flags.u32 = snapshot->player_local_flags;
+
     // Do correction!
     p->ws_position = snapshot->ws_position;
     p->ws_view_direction = snapshot->ws_view_direction;
@@ -411,6 +414,8 @@ static void s_handle_incorrect_state(
     p->flags.interaction_mode = snapshot->interaction_mode;
     p->animated_state = (player_animated_state_t)snapshot->animated_state;
     p->frame_displacement = snapshot->frame_displacement;
+    p->flags.contact = real_player_flags.contact;
+    p->flags.moving = real_player_flags.moving;
 
     debug_log("\t\tSetting position to (%f %f %f)\n", 0, p->ws_position.x, p->ws_position.y, p->ws_position.z);
     debug_log("\t\tSetting velocity to (%f %f %f)\n", 0, p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);

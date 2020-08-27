@@ -251,6 +251,7 @@ uint32_t packed_game_state_snapshot_size(
     uint32_t player_snapshot_size =
         sizeof(player_snapshot_t::flags) +
         sizeof(player_snapshot_t::client_id) +
+        sizeof(player_snapshot_t::player_local_flags) +
         sizeof(player_snapshot_t::ws_position) +
         sizeof(player_snapshot_t::ws_view_direction) +
         sizeof(player_snapshot_t::ws_up_vector) +
@@ -272,6 +273,7 @@ void serialise_game_state_snapshot(
     for (uint32_t i = 0; i < packet->player_data_count; ++i) {
         serialiser->serialise_uint16(packet->player_snapshots[i].flags);
         serialiser->serialise_uint16(packet->player_snapshots[i].client_id);
+        serialiser->serialise_uint32(packet->player_snapshots[i].player_local_flags);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_position);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_view_direction);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_up_vector);
@@ -292,6 +294,7 @@ void deserialise_game_state_snapshot(
     for (uint32_t i = 0; i < packet->player_data_count; ++i) {
         packet->player_snapshots[i].flags = serialiser->deserialise_uint16();
         packet->player_snapshots[i].client_id = serialiser->deserialise_uint16();
+        packet->player_snapshots[i].player_local_flags = serialiser->deserialise_uint32();
         packet->player_snapshots[i].ws_position = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_view_direction = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_up_vector = serialiser->deserialise_vector3();

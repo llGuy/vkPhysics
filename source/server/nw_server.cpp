@@ -681,6 +681,7 @@ static void s_send_packet_game_state_snapshot() {
             }
 
             snapshot->client_id = c->client_id;
+            snapshot->player_local_flags = p->flags.u32;
             snapshot->ws_position = p->ws_position;
             snapshot->ws_view_direction = p->ws_view_direction;
             snapshot->ws_next_random_spawn = p->next_random_spawn_position;
