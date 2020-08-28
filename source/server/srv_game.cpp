@@ -116,7 +116,7 @@ void srv_game_init(event_submissions_t *events) {
     generate_math_equation(
         vector3_t(0.0f),
         vector3_t(100.0f),
-        s_tube);
+        s_bumps);
 }
 
 void srv_game_tick() {

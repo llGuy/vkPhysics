@@ -98,6 +98,8 @@ void wd_player_interp_step(
         // Just so that it's not zero
         p->ws_velocity = p->ws_position - previous_position;
         p->flags.contact = middle_snapshot->contact;
+        p->flags.interaction_mode = middle_snapshot->interaction_mode;
+        p->animated_state = (player_animated_state_t)middle_snapshot->animated_state;
 
         if (p->flags.contact == PCS_ON_GROUND) {
             p->frame_displacement = glm::length(previous_position - p->ws_position);

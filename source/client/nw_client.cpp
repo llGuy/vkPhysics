@@ -343,37 +343,38 @@ static void s_revert_accumulated_modifications(
     // Starts peeling off from the head
     accumulated_predicted_modification_t *current = g_net_data.acc_predicted_modifications.get_next_item_head();
 
-    uint32_t total_available = g_net_data.acc_predicted_modifications.head_tail_difference;
-    uint32_t removed_count = 1;
+    if (current) {
+        uint32_t total_available = g_net_data.acc_predicted_modifications.head_tail_difference;
+        uint32_t removed_count = 1;
 
-    uint64_t old_tick = current->tick;
-    uint64_t new_tick = 0;
+        uint64_t old_tick = current->tick;
+        uint64_t new_tick = 0;
     
-    while (current) {
-        if (current->tick >= tick_until) {
-            // Revert these changes
-            s_revert_history_instance(current);
-            //LOG_INFOV("- Reverted to tick %llu\n", (unsigned long long)current->tick);
+        while (current) {
+            if (current->tick >= tick_until) {
+                // Revert these changes
+                s_revert_history_instance(current);
+                //LOG_INFOV("- Reverted to tick %llu\n", (unsigned long long)current->tick);
 
-            ++removed_count;
+                ++removed_count;
 
-            if (current->tick == tick_until) {
-                // Simply break, don't revert anymore
-                new_tick = tick_until;
-                break;
+                if (current->tick == tick_until) {
+                    // Simply break, don't revert anymore
+                    new_tick = tick_until;
+                    break;
+                }
+                else {
+                    // Peel off next modification
+                    current = g_net_data.acc_predicted_modifications.get_next_item_head();
+                }
             }
             else {
-                // Peel off next modification
-                current = g_net_data.acc_predicted_modifications.get_next_item_head();
+                current = NULL;
+                LOG_INFO("BULLLLLLLLLLLLLLSHIIIIIIIIIIIIIIITTTTTTTT ERRRRRRRRROOOOOOORRRRRRRR\n");
+                break;
             }
         }
-        else {
-            current = NULL;
-            LOG_INFO("BULLLLLLLLLLLLLLSHIIIIIIIIIIIIIIITTTTTTTT ERRRRRRRRROOOOOOORRRRRRRR\n");
-            break;
-        }
-    }
-}
+}}
 
 static void s_correct_chunks(
     packet_game_state_snapshot_t *snapshot) {
@@ -390,74 +391,6 @@ static void s_correct_chunks(
             c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
         }
     }
-}
-
-static void s_handle_incorrect_state(
-    client_t *c,
-    player_t *p,
-    player_snapshot_t *snapshot,
-    packet_game_state_snapshot_t *packet,
-    serialiser_t *serialiser,
-    event_submissions_t *events) {
-    player_flags_t real_player_flags = {};
-    real_player_flags.u32 = snapshot->player_local_flags;
-
-    // Do correction!
-    p->ws_position = snapshot->ws_position;
-    p->ws_view_direction = snapshot->ws_view_direction;
-    p->ws_up_vector = snapshot->ws_up_vector;
-    p->cached_player_action_count = 0;
-    p->player_action_count = 0;
-    p->accumulated_dt = 0.0f;
-    p->next_random_spawn_position = snapshot->ws_next_random_spawn;
-    p->ws_velocity = snapshot->ws_velocity;
-    p->flags.interaction_mode = snapshot->interaction_mode;
-    p->animated_state = (player_animated_state_t)snapshot->animated_state;
-    p->frame_displacement = snapshot->frame_displacement;
-    p->flags.contact = real_player_flags.contact;
-    p->flags.moving = real_player_flags.moving;
-
-    debug_log("\t\tSetting position to (%f %f %f)\n", 0, p->ws_position.x, p->ws_position.y, p->ws_position.z);
-    debug_log("\t\tSetting velocity to (%f %f %f)\n", 0, p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
-    debug_log("\t\tSetting view direction to (%f %f %f)\n", 0, p->ws_view_direction.x, p->ws_view_direction.y, p->ws_view_direction.z);
-    debug_log("\t\tSetting up vector to (%f %f %f)\n", 0, p->ws_up_vector.x, p->ws_up_vector.y, p->ws_up_vector.z);
-
-    if (p->flags.alive_state == PAS_ALIVE && snapshot->alive_state == PAS_DEAD) {
-        // Handle death
-        wd_kill_local_player(events);
-    }
-
-    p->flags.alive_state = snapshot->alive_state;
-
-    // Revert voxel modifications up from tick that server processed
-    if (snapshot->terraformed) {
-        debug_log("Reverting all modifications from current to tick %lu\n", 0, snapshot->tick);
-
-        s_revert_accumulated_modifications(snapshot->tick);
-        s_correct_chunks(packet);
-        // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
-
-        // Now deserialise extra voxel corrections
-        if (snapshot->packet_contains_terrain_correction) {
-            uint32_t modification_count = 0;
-            // BUG:
-            chunk_modifications_t *modifications = deserialise_chunk_modifications(&modification_count, serialiser);
-
-            for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {
-                chunk_modifications_t *cm_ptr = &modifications[cm_index];
-                chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
-                for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
-                    voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-                    c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
-                }
-            }
-        }
-    }
-                
-    get_current_tick() = snapshot->tick;
-
-    // Basically says that the client just did a correction - set correction flag on next packet sent to server
-    c->waiting_on_correction = 1;
 }
 
 static void s_set_voxels_to_final_interpolated_values() {
@@ -599,6 +532,74 @@ static void s_clear_outdated_modifications_from_history(
     }
 }
 
+static void s_handle_incorrect_state(
+    client_t *c,
+    player_t *p,
+    player_snapshot_t *snapshot,
+    packet_game_state_snapshot_t *packet,
+    serialiser_t *serialiser,
+    event_submissions_t *events) {
+    player_flags_t real_player_flags = {};
+    real_player_flags.u32 = snapshot->player_local_flags;
+
+    // Do correction!
+    p->ws_position = snapshot->ws_position;
+    p->ws_view_direction = snapshot->ws_view_direction;
+    p->ws_up_vector = snapshot->ws_up_vector;
+    p->cached_player_action_count = 0;
+    p->player_action_count = 0;
+    p->accumulated_dt = 0.0f;
+    p->next_random_spawn_position = snapshot->ws_next_random_spawn;
+    p->ws_velocity = snapshot->ws_velocity;
+    p->flags.interaction_mode = snapshot->interaction_mode;
+    p->animated_state = (player_animated_state_t)snapshot->animated_state;
+    p->frame_displacement = snapshot->frame_displacement;
+    p->flags.contact = real_player_flags.contact;
+    p->flags.moving = real_player_flags.moving;
+
+    debug_log("\t\tSetting position to (%f %f %f)\n", 0, p->ws_position.x, p->ws_position.y, p->ws_position.z);
+    debug_log("\t\tSetting velocity to (%f %f %f)\n", 0, p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
+    debug_log("\t\tSetting view direction to (%f %f %f)\n", 0, p->ws_view_direction.x, p->ws_view_direction.y, p->ws_view_direction.z);
+    debug_log("\t\tSetting up vector to (%f %f %f)\n", 0, p->ws_up_vector.x, p->ws_up_vector.y, p->ws_up_vector.z);
+
+    if (p->flags.alive_state == PAS_ALIVE && snapshot->alive_state == PAS_DEAD) {
+        // Handle death
+        wd_kill_local_player(events);
+    }
+
+    p->flags.alive_state = snapshot->alive_state;
+
+    // Revert voxel modifications up from tick that server processed
+    if (snapshot->terraformed)  {
+        debug_log("Reverting all modifications from current to tick %lu\n", 0, snapshot->tick);
+
+        s_revert_accumulated_modifications(snapshot->tick);
+        s_correct_chunks(packet);
+        // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
+
+        // Now deserialise extra voxel corrections
+        if (snapshot->packet_contains_terrain_correction) {
+            uint32_t modification_count = 0;
+            // BUG:
+            chunk_modifications_t *modifications = deserialise_chunk_modifications(&modification_count, serialiser);
+
+            for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {
+                chunk_modifications_t *cm_ptr = &modifications[cm_index];
+                chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+                for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
+                    voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+                    c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+                }
+            }
+        }
+    }
+                
+    get_current_tick() = snapshot->tick;
+
+    // Basically says that the client just did a correction - set correction flag on next packet sent to server
+    c->waiting_on_correction = 1;
+}
+
 static void s_handle_correct_state(
     client_t *c,
     player_t *p,
@@ -637,12 +638,9 @@ static void s_handle_correct_state(
         s_set_voxels_to_final_interpolated_values();
 
         // Fill merged recent modifications
-        acc_predicted_modification_init(
-            &g_net_data.merged_recent_modifications,
-            0);
+        acc_predicted_modification_init(&g_net_data.merged_recent_modifications, 0);
 
-        s_merge_all_recent_modifications(
-            snapshot);
+        s_merge_all_recent_modifications(snapshot);
 
         flag_modified_chunks(
             g_net_data.merged_recent_modifications.acc_predicted_modifications,
