@@ -247,6 +247,26 @@ void generate_platform(const vector3_t &position, float width, float depth) {
     }
 }
 
+void generate_math_equation(const vector3_t &ws_center, const vector3_t &extent, float(*equation)(float x, float y, float z)) {
+    for (int32_t z = ws_center.z - extent.z / 2; z < ws_center.z + extent.z / 2; ++z) {
+        for (int32_t y = ws_center.y - extent.y / 2; y < ws_center.y + extent.y / 2; ++y) {
+            for (int32_t x = ws_center.x - extent.x / 2; x < ws_center.x + extent.x / 2; ++x) {
+                float c = equation(x - ws_center.x, y - ws_center.y, z - ws_center.z);
+
+                if (c > 0.0f) {
+                    ivector3_t voxel_coord = ivector3_t((float)x, (float)y, (float)z);
+                    ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
+                    chunk_t *chunk = get_chunk(chunk_coord);
+                    chunk->flags.has_to_update_vertices = 1;
+                    ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
+                    uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
+                    chunk->voxels[index] = (uint8_t)(150.0f * c);
+                }
+            }
+        }
+    }
+}
+
 terraform_package_t cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,

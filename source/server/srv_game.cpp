@@ -69,6 +69,36 @@ static void s_game_listener(void *object, event_t *event, event_submissions_t *e
     
 }
 
+static float s_bumps(float x, float y, float z) {
+    float right = sin(0.1f * x) * cos(0.1f * y)  * 10.0f;
+
+    float dist = fabs(right - z);
+
+    if (dist < 4.0f) {
+        return 1.0f - (dist / 4.0f);
+    }
+    else {
+        return 0.0f;
+    }
+}
+
+static float s_tube(float x, float y, float z) {
+    x *= 0.1f;
+    y *= 0.1f;
+    z *= 0.1f;
+
+    float right = 1.0f / (15.0f * (x * x + y * y));
+
+    float dist = fabs(right - z);
+
+    if (dist < 4.0f) {
+        return 1.0f - (dist / 4.0f);
+    }
+    else {
+        return 0.0f;
+    }
+}
+
 void srv_game_init(event_submissions_t *events) {
     game_listener = set_listener_callback(&s_game_listener, NULL, events);
 
@@ -79,9 +109,14 @@ void srv_game_init(event_submissions_t *events) {
     player_memory_init();
     chunk_memory_init();
 
-    generate_sphere(vector3_t(20.0f), 40.0f, 140);
-    generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f, 140);
-    generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f, 140);
+    // generate_sphere(vector3_t(20.0f), 40.0f, 140);
+    // generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f, 140);
+    // generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f, 140);
+
+    generate_math_equation(
+        vector3_t(0.0f),
+        vector3_t(100.0f),
+        s_tube);
 }
 
 void srv_game_tick() {

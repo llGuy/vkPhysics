@@ -59,6 +59,7 @@ chunk_t **get_modified_chunks(uint32_t *count);
 // Adds a sphere through modifying voxels
 void generate_sphere(const vector3_t &ws_center, float ws_radius, float max_value);
 void generate_platform(const vector3_t &position, float width, float depth);
+void generate_math_equation(const vector3_t &ws_center, const vector3_t &ws_extent, float(*equation)(float x, float y, float z));
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
