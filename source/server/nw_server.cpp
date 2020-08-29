@@ -659,7 +659,7 @@ static void s_send_packet_game_state_snapshot() {
             if (has_to_correct_state || has_to_correct_terrain) {
                 if (c->waiting_on_correction) {
                     // TODO: Make sure to relook at this, so that in case of packet loss, the server doesn't just stall at this forever
-                    LOG_INFO("Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n");
+                    LOG_INFOV("(%lu) Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n", get_current_tick());
                     snapshot->client_needs_to_correct_state = 0;
                     snapshot->server_waiting_for_correction = 1;
                 }
@@ -678,6 +678,10 @@ static void s_send_packet_game_state_snapshot() {
                     p->cached_player_action_count = 0;
                     p->player_action_count = 0;
                 }
+            }
+            else {
+                snapshot->client_needs_to_correct_state = 0;
+                snapshot->server_waiting_for_correction = 0;
             }
 
             snapshot->client_id = c->client_id;

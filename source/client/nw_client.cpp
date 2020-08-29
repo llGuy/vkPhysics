@@ -1,4 +1,5 @@
 #include "cl_main.hpp"
+#include "common/chunk.hpp"
 #include "nw_client.hpp"
 #include "wd_interp.hpp"
 #include "wd_predict.hpp"
@@ -593,6 +594,22 @@ static void s_handle_incorrect_state(
             }
         }
     }
+    else {
+        LOG_INFOV("Hard-sync chunks with server's chunks (%d)\n", packet->modified_chunk_count);
+
+        // Need to finish all interpolation of chunks
+        wd_finish_interp_step();
+
+        for (uint32_t cm_index = 0; cm_index < packet->modified_chunk_count; ++cm_index) {
+            chunk_modifications_t *cm_ptr = &packet->chunk_modifications[cm_index];
+            chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+
+            for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
+                voxel_modification_t *vm_ptr = &cm_ptr->modifications[v_index];
+                c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+            }
+        }
+    }
                 
     get_current_tick() = snapshot->tick;
 
@@ -679,6 +696,10 @@ static void s_handle_local_player_snapshot(
     }
     else {
         debug_log("\tClient predicted state correctly - no correction needed!\n", 0);
+
+        if (snapshot->server_waiting_for_correction) {
+            LOG_INFO("Server is waiting for the correction\n");
+        }
 
         s_handle_correct_state(
             c,
