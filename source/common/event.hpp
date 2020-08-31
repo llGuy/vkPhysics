@@ -65,6 +65,8 @@ enum event_type_t {
 
     ET_META_REQUEST_ERROR,
 
+    ET_ENTER_MAP_CREATOR,
+
     ET_INVALID_EVENT_TYPE
 };
 
@@ -177,6 +179,10 @@ struct event_attempt_login_t {
 
 struct event_meta_request_error_t {
     request_error_t error_type;
+};
+
+struct event_enter_map_creator_t {
+    const char *map_path;
 };
 
 typedef void(*listener_callback_t)(
