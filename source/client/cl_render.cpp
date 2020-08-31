@@ -1,4 +1,4 @@
-#include "gm_mode.hpp"
+#include "sc_scene.hpp"
 #include "fx_post.hpp"
 #include "cl_render.hpp"
 #include <common/event.hpp>
@@ -58,8 +58,8 @@ static void s_render() {
 
     VkCommandBuffer final_command_buffer = begin_frame();
 
-    eye_3d_info_t *eye_info = gm_get_eye_info();
-    lighting_info_t *lighting_info = gm_get_lighting_info();
+    eye_3d_info_t *eye_info = sc_get_eye_info();
+    lighting_info_t *lighting_info = sc_get_lighting_info();
 
     gpu_data_sync(final_command_buffer, eye_info, lighting_info);
     // All data transfers

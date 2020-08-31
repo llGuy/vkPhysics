@@ -4,7 +4,7 @@
 #include "wd_core.hpp"
 #include "fx_post.hpp"
 #include "fx_fade.hpp"
-#include "gm_mode.hpp"
+#include "sc_scene.hpp"
 #include "cl_event.hpp"
 #include "nw_client.hpp"
 #include "cl_render.hpp"
@@ -49,8 +49,8 @@ static void s_run() {
 
         frame_command_buffers_t frame = cl_prepare_frame();
 
-        // // Tick whatever game mode was bound
-        gm_tick(
+        // // Tick whatever scene was bound
+        sc_tick(
             frame.render_command_buffer,
             frame.transfer_command_buffer,
             frame.ui_command_buffer,
@@ -118,10 +118,10 @@ int32_t main(
     game_memory_init();
     wd_init(&events);
 
-    // Initialise game modes
-    gm_modes_init(&events);
+    // Initialise scenes
+    sc_scenes_init(&events);
     // Bind main menu
-    gm_bind(GMT_MAIN_MENU);
+    sc_bind(ST_MAIN_MENU);
 
     fx_get_frame_info()->debug_window = 1;
 

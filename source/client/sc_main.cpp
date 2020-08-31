@@ -1,8 +1,8 @@
-#include "gm_play.hpp"
+#include "sc_play.hpp"
 #include "ui.hpp"
 #include "dr_rsc.hpp"
-#include "gm_main.hpp"
-#include "gm_mode.hpp"
+#include "sc_main.hpp"
+#include "sc_scene.hpp"
 #include "fx_post.hpp"
 #include "cl_main.hpp"
 #include "nw_client.hpp"
@@ -15,7 +15,7 @@
 
 static fixed_premade_scene_t scene;
 
-void gm_main_init(listener_t listener, event_submissions_t *events) {
+void sc_main_init(listener_t listener, event_submissions_t *events) {
     scene = dr_read_premade_rsc("assets/misc/startup/default.startup");
 
     subscribe_to_event(ET_ENTER_MAIN_MENU, listener, events);
@@ -24,7 +24,7 @@ void gm_main_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_REQUEST_USER_INFORMATION, listener, events);
 }
 
-void gm_bind_main() {
+void sc_bind_main() {
     player_t *spect = wd_get_spectator();
 
     // Position the player at the right place and view in the right direction
@@ -78,7 +78,7 @@ static void s_handle_input(event_submissions_t *events) {
     }
 }
 
-void gm_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
+void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
     s_handle_input(events);
 
     nw_tick(events);
@@ -95,7 +95,7 @@ void gm_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     // (from renderer module) - submits the quads to the GPU
     render_submitted_ui(transfer, ui);
 
-    eye_3d_info_t *eye_info = gm_get_eye_info();
+    eye_3d_info_t *eye_info = sc_get_eye_info();
     memset(eye_info, 0, sizeof(eye_3d_info_t));
     player_t *player = wd_get_spectator();
 
@@ -108,13 +108,13 @@ void gm_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     eye_info->far = 10000.0f;
     eye_info->dt = cl_delta_time();
 
-    lighting_info_t *light_info = gm_get_lighting_info();
+    lighting_info_t *light_info = sc_get_lighting_info();
     memset(light_info, 0, sizeof(lighting_info_t));
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
 }
 
-void gm_handle_main_event(void *object, struct event_t *event, struct event_submissions_t *events) {
+void sc_handle_main_event(void *object, struct event_t *event, struct event_submissions_t *events) {
     switch (event->type) {
     case ET_ENTER_MAIN_MENU: {
         push_ui_panel(USI_MAIN_MENU);
@@ -129,7 +129,7 @@ void gm_handle_main_event(void *object, struct event_t *event, struct event_subm
 
         submit_event(ET_ENTER_GAME_PLAY, NULL, events);
 
-        gm_bind(GMT_GAME_PLAY);
+        sc_bind(ST_GAME_PLAY);
     } break;
 
     case ET_REQUEST_USER_INFORMATION: {

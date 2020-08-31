@@ -3,8 +3,8 @@
 #include "nw_client.hpp"
 #include "ui.hpp"
 #include "wd_core.hpp"
-#include "gm_play.hpp"
-#include "gm_mode.hpp"
+#include "sc_play.hpp"
+#include "sc_scene.hpp"
 #include "fx_post.hpp"
 #include "cl_main.hpp"
 #include "wd_predict.hpp"
@@ -23,7 +23,7 @@ enum submode_t {
 
 static submode_t submode;
 
-void gm_play_init(listener_t listener, event_submissions_t *events) {
+void sc_play_init(listener_t listener, event_submissions_t *events) {
     // Nothing to do here
     subscribe_to_event(ET_ENTER_GAME_PLAY, listener, events);
     subscribe_to_event(ET_LEAVE_SERVER, listener, events);
@@ -33,7 +33,7 @@ void gm_play_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_PRESSED_ESCAPE, listener, events);
 }
 
-void gm_bind_play() {
+void sc_bind_play() {
     fx_disable_blur();
     fx_enable_ssao();
 }
@@ -81,7 +81,7 @@ static void s_calculate_pos_and_dir(player_t *player, vector3_t *position, vecto
     }
 }
 
-void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
+void sc_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
     timestep_begin(cl_delta_time());
 
     s_handle_input(events);
@@ -96,7 +96,7 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     render_submitted_ui(transfer, ui);
 
 
-    eye_3d_info_t *eye_info = gm_get_eye_info();
+    eye_3d_info_t *eye_info = sc_get_eye_info();
     player_t *player = NULL;
     int32_t local_id = wd_get_local_player();
 
@@ -126,7 +126,7 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     eye_info->far = 10000.0f;
     eye_info->dt = cl_delta_time();
 
-    lighting_info_t *light_info = gm_get_lighting_info();
+    lighting_info_t *light_info = sc_get_lighting_info();
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
 
@@ -134,7 +134,7 @@ void gm_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     timestep_end();
 }
 
-void gm_handle_play_event(void *object, event_t *event, event_submissions_t *events) {
+void sc_handle_play_event(void *object, event_t *event, event_submissions_t *events) {
     switch (event->type) {
     case ET_ENTER_GAME_PLAY: {
         // Enter game menu
@@ -150,7 +150,7 @@ void gm_handle_play_event(void *object, event_t *event, event_submissions_t *eve
 
         submit_event(ET_ENTER_MAIN_MENU, NULL, events);
 
-        gm_bind(GMT_MAIN_MENU);
+        sc_bind(ST_MAIN_MENU);
     } break;
 
     case ET_SPAWN: {
