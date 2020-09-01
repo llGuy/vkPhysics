@@ -31,6 +31,8 @@ file_handle_t create_file(
 void delete_file(
     const char *file);
 
+bool does_file_exist(file_handle_t handle);
+
 struct file_contents_t {
     bool fl_allocated;
     union {

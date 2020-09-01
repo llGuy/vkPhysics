@@ -104,6 +104,7 @@ int32_t main(
     cl_subscribe_to_events(core_listener, &events);
 
     s_parse_command_line_args(argc, argv);
+    game_memory_init();
     game_input_settings_init();
     renderer_init();
     fx_fader_init();
@@ -115,7 +116,6 @@ int32_t main(
     cl_command_buffers_init();
 
     dr_resources_init();
-    game_memory_init();
     wd_init(&events);
 
     // Initialise scenes

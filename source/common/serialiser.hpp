@@ -69,6 +69,7 @@ struct serialiser_t {
     vector3_t deserialise_vector3();
     
     const char *deserialise_string();
+    const char *deserialise_fl_string();
     
     uint8_t *deserialise_bytes(
         uint8_t *bytes,

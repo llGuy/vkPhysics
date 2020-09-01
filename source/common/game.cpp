@@ -1,3 +1,4 @@
+#include "map.hpp"
 #include "game.hpp"
 #include "event.hpp"
 #include "chunk.hpp"
@@ -8,6 +9,7 @@ static uint64_t current_tick;
 
 void game_memory_init() {
     current_tick = 0;
+    load_map_names();
 }
 
 void game_begin(game_initiate_info_t *info) {

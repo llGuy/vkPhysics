@@ -5,6 +5,7 @@
 enum scene_type_t {
     ST_MAIN_MENU,
     ST_GAME_PLAY,
+    ST_MAP_CREATOR,
     ST_INVALID
 };
 

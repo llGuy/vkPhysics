@@ -22,6 +22,7 @@ void sc_main_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_EXIT_MAIN_MENU, listener, events);
     subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, listener, events);
     subscribe_to_event(ET_REQUEST_USER_INFORMATION, listener, events);
+    subscribe_to_event(ET_ENTER_MAP_CREATOR, listener, events);
 }
 
 void sc_bind_main() {
@@ -135,6 +136,14 @@ void sc_handle_main_event(void *object, struct event_t *event, struct event_subm
     case ET_REQUEST_USER_INFORMATION: {
         clear_ui_panels();
         push_ui_panel(USI_SIGN_UP);
+    } break;
+
+    case ET_ENTER_MAP_CREATOR: {
+        clear_ui_panels();
+
+        submit_event(ET_BEGIN_MAP_EDITING, event->data, events);
+
+        sc_bind(ST_MAP_CREATOR);
     } break;
 
     default: {

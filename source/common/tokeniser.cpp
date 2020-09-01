@@ -322,3 +322,8 @@ token_t *tokenise(
 
     return tokens_buffer;
 }
+
+void clear_tokeniser() {
+    FL_FREE(tokens_buffer);
+    // Fix memory leak
+}

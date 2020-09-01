@@ -1,5 +1,6 @@
 #include "client/cl_view.hpp"
 #include "common/event.hpp"
+#include "common/map.hpp"
 #include "ui.hpp"
 #include "cl_main.hpp"
 #include "fx_post.hpp"
@@ -22,7 +23,7 @@ static submode_t submode;
 
 void sc_map_creator_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_PRESSED_ESCAPE, listener, events);
-    subscribe_to_event(ET_ENTER_MAP_CREATOR, listener, events);
+    subscribe_to_event(ET_BEGIN_MAP_EDITING, listener, events);
 }
 
 void sc_bind_map_creator() {
@@ -81,11 +82,17 @@ void sc_map_creator_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCom
 
 void sc_handle_map_creator_event(void *object, event_t *event, event_submissions_t *events) {
     switch (event->type) {
-    case ET_ENTER_MAP_CREATOR: {
+    case ET_BEGIN_MAP_EDITING: {
         clear_ui_panels();
 
         submode = S_IN_GAME;
         cl_change_view_type(GVT_IN_GAME);
+
+        event_enter_map_creator_t *event_data = (event_enter_map_creator_t *)event->data;
+
+        load_map(event_data->map_path);
+
+        FL_FREE(event->data);
     } break;
 
     case ET_PRESSED_ESCAPE: {

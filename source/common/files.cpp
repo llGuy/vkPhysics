@@ -59,6 +59,10 @@ file_handle_t create_file(
     return handle;
 }
 
+bool does_file_exist(file_handle_t handle) {
+    return files.get(handle)->file != NULL;
+}
+
 file_contents_t read_file(
     file_handle_t handle) {
     file_object_t *object = files.get(handle);

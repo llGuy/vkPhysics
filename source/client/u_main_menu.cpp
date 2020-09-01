@@ -1,6 +1,7 @@
 #include "ui.hpp"
 #include <cstddef>
 #include "u_list.hpp"
+#include <common/map.hpp>
 #include <common/net.hpp>
 #include "u_internal.hpp"
 #include <common/math.hpp>
@@ -27,11 +28,7 @@ static const char *button_names[5] = {
 static menu_layout_t main_menu_layout;
 
 static ui_list_t servers_list_menu;
-
-static struct {
-    ui_box_t edit_button;
-    ui_text_t edit_text;
-} build_map_menu;
+static ui_list_t build_map_list_menu;
 
 void u_refresh_main_menu_server_page() {
     available_servers_t *servers = &g_net_data.available_servers;
@@ -106,7 +103,74 @@ static void s_browse_server_menu_init() {
         });
 }
 
+void u_refresh_build_menu_page() {
+    map_names_t *map_names = get_map_names();
+
+    u_list_clear(&build_map_list_menu);
+    u_list_begin(&build_map_list_menu, map_names->count);
+
+    for (uint32_t i = 0; i < map_names->count; ++i) {
+        u_list_add(&build_map_list_menu, &map_names->maps[i]);
+    }
+
+    u_list_end(&build_map_list_menu);
+}
+
 static void s_build_map_menu_init() {
+    const char *button_texts[] = { "Edit" };
+
+    void (* handle_input_procs[1])(ui_list_t *, event_submissions_t *) = {
+        [] (ui_list_t *list, event_submissions_t *events) {
+            if (list->selected_item != 0xFFFF) {
+                event_enter_map_creator_t *event_data = FL_MALLOC(event_enter_map_creator_t, 1);
+                // Data contains the path to the map
+                void *item_data = list->items[list->selected_item].data;
+                map_names_t::pair_t *pair = (map_names_t::pair_t *)item_data;
+
+                event_data->map_path = pair->path;
+
+                // Need to close the main menu, and start a fade effect
+                event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
+                effect_data->dest_value = 0.0f;
+                effect_data->duration = 2.5f;
+                effect_data->fade_back = 1;
+                effect_data->trigger_count = 1;
+                effect_data->triggers[0].trigger_type = ET_ENTER_MAP_CREATOR;
+                effect_data->triggers[0].next_event_data = event_data;
+                submit_event(ET_BEGIN_FADE, effect_data, events);
+            }
+            else if (list->is_typing) {
+                // Code for the "Edit" button
+                const char *path = list->input_text.get_string();
+
+                event_enter_map_creator_t *data = FL_MALLOC(event_enter_map_creator_t, 1);
+                memset(data, 0, sizeof(event_enter_map_creator_t));
+                data->map_path = list->input_text.get_string();
+
+                event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
+                effect_data->dest_value = 0.0f;
+                effect_data->duration = 2.5f;
+                effect_data->fade_back = 1;
+                effect_data->trigger_count = 1;
+                effect_data->triggers[0].trigger_type = ET_ENTER_MAP_CREATOR;
+                effect_data->triggers[0].next_event_data = data;
+                submit_event(ET_BEGIN_FADE, effect_data, events);
+            }
+        },
+    };
+
+    u_list_init(
+        &main_menu_layout.current_menu,
+        &build_map_list_menu,
+        1, button_texts,
+        handle_input_procs,
+        [] (ui_list_item_t *item) {
+            map_names_t::pair_t *pair = (map_names_t::pair_t *)item->data;
+            item->text.draw_string(pair->name, 0xFFFFFFFF);
+            item->text.null_terminate();
+        });
+
+    u_refresh_build_menu_page();
 }
 
 static void s_menus_init() {
@@ -150,25 +214,25 @@ void u_submit_main_menu() {
         case B_BROWSE_SERVER: {
             u_submit_list(&servers_list_menu);
         } break;
+
+        case B_BUILD_MAP: {
+            u_submit_list(&build_map_list_menu);
+        } break;
         }
     }
 }
     
-static void s_browse_menu_input(
-    event_submissions_t *events,
-    raw_input_t *input) {
-    u_list_input(&servers_list_menu, events, input);
-}
-
 void u_main_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
     if (main_menu_layout.input(events, input)) {
         switch (main_menu_layout.current_open_menu) {
         case B_BROWSE_SERVER: {
-            s_browse_menu_input(
-                events,
-                input);
+            u_list_input(&servers_list_menu, events, input);
+        } break;
+
+        case B_BUILD_MAP: {
+            u_list_input(&build_map_list_menu, events, input);
         } break;
         }
     }

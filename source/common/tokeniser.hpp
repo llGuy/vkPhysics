@@ -34,3 +34,5 @@ token_t *tokenise(
     char *input,
     char comment_character,
     uint32_t *token_count);
+
+void clear_tokeniser();

@@ -78,19 +78,6 @@ void nw_check_registration(event_submissions_t *events) {
     }
 }
 
-static char *s_skip_to(char *pointer, char c) {
-    while (*pointer) {
-        if (*pointer == c) {
-            return ++pointer;
-        }
-        else {
-            ++pointer;
-        }
-    }
-
-    return NULL;
-}
-
 void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
     uint32_t size = 0;
     request_t request_type;
@@ -108,7 +95,7 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 char *user_tag_str = data + 2;
                 uint32_t usertag = atoi(user_tag_str);
 
-                char *user_id_str = s_skip_to(user_tag_str, '\n');
+                char *user_id_str = skip_to(user_tag_str, '\n');
                 uint32_t userid = atoi(user_id_str);
 
                 // Save the userid and usertag
@@ -180,19 +167,19 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 }
                 else {
                     char *server_id_start = server_str;
-                    server_str = s_skip_to(server_str, ';');
+                    server_str = skip_to(server_str, ';');
                     uint32_t server_id_length = (server_str - server_id_start) - 1;
 
                     char *server_name_start = server_str;
-                    server_str = s_skip_to(server_str, ';');
+                    server_str = skip_to(server_str, ';');
                     uint32_t server_name_length = (server_str - server_name_start) - 1;
 
                     char *ip_start = server_str;
-                    server_str = s_skip_to(server_str, ';');
+                    server_str = skip_to(server_str, ';');
                     uint32_t ip_length = (server_str - ip_start) - 1;
 
                     char *player_count_start = server_str;
-                    server_str = s_skip_to(server_str, '\n');
+                    server_str = skip_to(server_str, '\n');
                     uint32_t player_count_length = (server_str - player_count_start) - 1;
 
                     uint32_t server_id = atoi(server_id_start);

@@ -56,3 +56,35 @@ inline float str_to_float(const char *str, uint32_t length) {
     char *end = const_cast<char *>(str + length);
     return strtof(str, &end);
 }
+
+// Skips characters until one that is equal to c - returns the pointer to the char that is just after the
+// character that's equal to c
+inline char *skip_to(char *pointer, char c) {
+    while (*pointer) {
+        if (*pointer == c) {
+            return ++pointer;
+        }
+        else {
+            ++pointer;
+        }
+    }
+
+    if (c == 0) {
+        return pointer;
+    }
+    else {
+        return NULL;
+    }
+}
+
+// Skips characters that are equal to c (consecutive)
+inline char *skip_while(char *pointer, char c) {
+    while (*pointer) {
+        if (*pointer != c) {
+            return pointer;
+        }
+        else {
+            ++pointer;
+        }
+    }
+}

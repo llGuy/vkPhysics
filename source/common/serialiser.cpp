@@ -222,6 +222,16 @@ const char *serialiser_t::deserialise_string() {
     return(ret);
 }
 
+const char *serialiser_t::deserialise_fl_string() {
+    uint8_t *pointer = &data_buffer[data_buffer_head];
+    uint32_t string_length = (uint32_t)strlen((char *)pointer);
+    grow_data_buffer(string_length + 1);
+
+    char *ret = (char *)FL_MALLOC(char, string_length + 1);
+    memcpy(ret, pointer, string_length + 1);
+    return(ret);
+}
+
 void serialiser_t::serialise_bytes(
     uint8_t *bytes,
     uint32_t size) {

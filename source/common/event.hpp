@@ -30,14 +30,6 @@ enum event_type_t {
     ET_BEGIN_FADE, // With data, can be in / out
     ET_FADE_FINISHED, // Just so that game can know when to do some sort of transition or something...
 
-    // ET_EXIT_MAIN_MENU_SCREEN,
-    // ET_CLEAR_MENUS_AND_ENTER_GAMEPLAY,
-    // ET_CLEAR_MENUS,
-    // // All the other modes (launch server loading screen, etc...
-    // ET_LAUNCH_GAME_MENU_SCREEN,
-    // ET_LAUNCH_MAIN_MENU_SCREEN,
-    // ET_LAUNCH_INGAME_MENU,
-
     // Have enter or exit to have initialisation or deinitialisation when needed
     ET_ENTER_MAIN_MENU,
     ET_EXIT_MAIN_MENU,
@@ -47,8 +39,6 @@ enum event_type_t {
     ET_PAUSE,
     ET_UNPAUSE,
     ET_LOCAL_PLAYER_DIED,
-
-    // ET_ENTER_SERVER_META_MENU,
 
     ET_BEGIN_AI_TRAINING,
     ET_FINISH_GENERATION,
@@ -65,7 +55,10 @@ enum event_type_t {
 
     ET_META_REQUEST_ERROR,
 
+    // Event that is used to exit the main menu
     ET_ENTER_MAP_CREATOR,
+    // Event that is used to begin building maps
+    ET_BEGIN_MAP_EDITING,
 
     ET_INVALID_EVENT_TYPE
 };

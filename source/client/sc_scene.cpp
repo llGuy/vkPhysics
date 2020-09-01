@@ -1,4 +1,5 @@
 #include "sc_scene.hpp"
+#include "client/sc_map_creator.hpp"
 #include "sc_main.hpp"
 #include "sc_play.hpp"
 #include <renderer/renderer.hpp>
@@ -24,6 +25,10 @@ static void s_scene_event_listener(
         sc_handle_main_event(object, event, events);
     } break;
 
+    case ST_MAP_CREATOR: {
+        sc_handle_map_creator_event(object, event, events);
+    } break;
+
     default: {
     } break;
     }
@@ -34,6 +39,7 @@ void sc_scenes_init(event_submissions_t *events) {
 
     sc_main_init(scene_listener, events);
     sc_play_init(scene_listener, events);
+    sc_map_creator_init(scene_listener, events);
 }
 
 void sc_bind(scene_type_t scene_type) {
@@ -46,6 +52,10 @@ void sc_bind(scene_type_t scene_type) {
 
     case ST_GAME_PLAY: {
         sc_bind_play();
+    } break;
+
+    case ST_MAP_CREATOR: {
+        sc_bind_map_creator();
     } break;
 
     default: {
@@ -61,6 +71,10 @@ void sc_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer u
 
     case ST_GAME_PLAY: {
         sc_play_tick(render, transfer, ui, events);
+    } break;
+
+    case ST_MAP_CREATOR: {
+        sc_map_creator_tick(render, transfer, ui, events);
     } break;
 
     default: {
