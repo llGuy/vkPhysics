@@ -87,5 +87,21 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
         submode = S_IN_GAME;
         cl_change_view_type(GVT_IN_GAME);
     } break;
+
+    case ET_PRESSED_ESCAPE: {
+        if (submode == S_IN_GAME) {
+            push_ui_panel(USI_GAME_MENU);
+            cl_change_view_type(GVT_MENU);
+            submode = S_PAUSE;
+        }
+        else {
+            pop_ui_panel();
+            cl_change_view_type(GVT_IN_GAME);
+            submode = S_IN_GAME;
+        }
+    } break;
+
+    default: {
+    } break;
     }
 }
