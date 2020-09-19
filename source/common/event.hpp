@@ -59,6 +59,7 @@ enum event_type_t {
     ET_ENTER_MAP_CREATOR,
     // Event that is used to begin building maps
     ET_BEGIN_MAP_EDITING,
+    ET_DONT_CREATE_NEW_MAP,
 
     ET_INVALID_EVENT_TYPE
 };

@@ -75,9 +75,10 @@ static typing_box_t currently_typing;
 static void s_typing_boxes_init() {
     { // For typing username
         prompt_username_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.4f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
-        prompt_username_text.init(&prompt_username_box, u_game_font(),
-                                  ui_text_t::font_stream_box_relative_to_t::BOTTOM,
-                                  0.8f, 0.9f, 25, 1.8f);
+        prompt_username_text.init(
+            &prompt_username_box, u_game_font(),
+            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            0.8f, 0.9f, 25, 1.8f);
 
         if (!prompt_username_text.char_count) {
             prompt_username_text.draw_string("USERNAME:", 0xFFFFFFFF);
@@ -86,9 +87,10 @@ static void s_typing_boxes_init() {
 
         type_username_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.3f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         type_username_color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
-        type_username_text.text.init(&type_username_box, u_game_font(),
-                                     ui_text_t::font_stream_box_relative_to_t::BOTTOM,
-                                     0.8f, 0.9f, 25, 1.8f);
+        type_username_text.text.init(
+            &type_username_box, u_game_font(),
+            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            0.8f, 0.9f, 25, 1.8f);
 
         type_username_text.text_color = 0xFFFFFFFF;
         type_username_text.cursor_position = 0;
@@ -96,20 +98,22 @@ static void s_typing_boxes_init() {
  
     { // For typing password
         prompt_password_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.2f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
-        prompt_password_text.init(&prompt_password_box, u_game_font(),
-                                  ui_text_t::font_stream_box_relative_to_t::BOTTOM,
-                                  0.8f, 0.9f, 25, 1.8f);
+        prompt_password_text.init(
+            &prompt_password_box, u_game_font(),
+            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            0.8f, 0.9f, 25, 1.8f);
 
         if (!prompt_password_text.char_count) {
-            prompt_password_text.draw_string("PASSWOR:", 0xFFFFFFFF);
+            prompt_password_text.draw_string("PASSWORD:", 0xFFFFFFFF);
             prompt_password_text.null_terminate();
         }
 
         type_password_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.1f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         type_password_color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
-        type_password_text.text.init(&type_password_box, u_game_font(),
-                                     ui_text_t::font_stream_box_relative_to_t::BOTTOM,
-                                     0.8f, 0.9f, 25, 1.8f);
+        type_password_text.text.init(
+            &type_password_box, u_game_font(),
+            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            0.8f, 0.9f, 25, 1.8f);
 
         type_password_text.text_color = 0xFFFFFFFF;
         type_password_text.cursor_position = 0;

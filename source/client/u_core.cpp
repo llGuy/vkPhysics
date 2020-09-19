@@ -1,5 +1,6 @@
 #include "ui.hpp"
 #include <cstddef>
+#include "u_popup.hpp"
 #include "u_internal.hpp"
 #include <common/meta.hpp>
 #include <common/event.hpp>
@@ -99,6 +100,7 @@ void ui_init(
     u_hud_init();
     u_game_menu_init();
     u_sign_up_menu_init();
+    u_popups_init();
 }
 
 void handle_ui_input(
@@ -121,6 +123,10 @@ void handle_ui_input(
             u_sign_up_menu_input(events, raw_input);
         } break;
 
+        case USI_POPUP: {
+            u_popup_input(events, raw_input);
+        } break;
+
         default: {
             // Nothing
         } break;
@@ -130,8 +136,8 @@ void handle_ui_input(
 
 void tick_ui(
     event_submissions_t *events) {
-    if (stack_item_count) {
-        switch (stack_items[stack_item_count - 1]) {
+    for (uint32_t i = 0; i < stack_item_count; ++i) {
+        switch (stack_items[i]) {
         case USI_MAIN_MENU: {
             u_submit_main_menu();
         } break;
@@ -146,6 +152,10 @@ void tick_ui(
 
         case USI_SIGN_UP: {
             u_submit_sign_up_menu();
+        } break;
+
+        case USI_POPUP: {
+            u_submit_popups();
         } break;
 
         default: {

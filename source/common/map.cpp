@@ -9,7 +9,6 @@
 
 static file_handle_t map_names_file;
 static map_names_t map_names;
-static map_t *current_loaded_map;
 
 void load_map_names() {
     map_names_file = create_file("assets/maps/map_names", FLF_TEXT);
@@ -50,15 +49,15 @@ void load_map_names() {
             break;
         }
     }
-
-    current_loaded_map = FL_MALLOC(map_t, 1);
 }
 
 map_names_t *get_map_names() {
     return &map_names;
 }
 
-void load_map(const char *path) {
+map_t *load_map(const char *path) {
+    map_t *current_loaded_map = FL_MALLOC(map_t, 1);
+
     current_loaded_map->path = path;
 
     char full_path[50] = {};
@@ -130,13 +129,20 @@ void load_map(const char *path) {
                 }
             }
         }
+
+        current_loaded_map->is_new = 0;
     }
+    else {
+        current_loaded_map->is_new = 1;
+    }
+
+    return current_loaded_map;
 }
 
-void save_map() {
+void save_map(map_t *map) {
     // Serialise stuff
 }
 
-void unload_map() {
-    memset(current_loaded_map, 0, sizeof(map_t));
+void unload_map(map_t *map) {
+    memset(map, 0, sizeof(map_t));
 }

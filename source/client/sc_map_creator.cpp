@@ -1,4 +1,5 @@
 #include "client/cl_view.hpp"
+#include "client/u_popup.hpp"
 #include "common/event.hpp"
 #include "common/map.hpp"
 #include "ui.hpp"
@@ -12,6 +13,7 @@
 #include "sc_map_creator.hpp"
 
 #include <common/player.hpp>
+#include <cstddef>
 
 enum submode_t {
     S_IN_GAME,
@@ -20,6 +22,9 @@ enum submode_t {
 };
 
 static submode_t submode;
+
+// 
+static map_t *map;
 
 void sc_map_creator_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_PRESSED_ESCAPE, listener, events);
@@ -90,7 +95,25 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
 
         event_enter_map_creator_t *event_data = (event_enter_map_creator_t *)event->data;
 
-        load_map(event_data->map_path);
+        map_t *map = load_map(event_data->map_path);
+        if (map->is_new) {
+            // Create popup
+            ui_popup_t *popup = u_add_popup(2);
+            u_push_popup_section_text(popup, "Create new?");
+
+            const char *texts[] = { "Yes", "No" };
+            void (* procs[2])(ui_popup_t *, event_submissions_t *) = {
+                [] (ui_popup_t *, event_submissions_t *) { printf("Creating map\n");},
+                [] (ui_popup_t *, event_submissions_t *) { printf("Not creating map\n");}
+            };
+
+            u_push_popup_section_button_double(popup, texts, procs);
+
+            u_prepare_popup_for_render(popup);
+
+            cl_change_view_type(GVT_MENU);
+            submode = S_PAUSE;
+        }
 
         FL_FREE(event->data);
     } break;

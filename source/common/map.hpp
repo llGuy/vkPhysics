@@ -26,6 +26,6 @@ struct map_names_t {
 
 void load_map_names();
 map_names_t *get_map_names();
-void load_map(const char *path);
-void save_map();
-void unload_map();
+map_t *load_map(const char *path);
+void save_map(map_t *map);
+void unload_map(map_t *map);
