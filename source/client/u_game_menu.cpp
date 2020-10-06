@@ -24,7 +24,7 @@ static void s_menu_layout_disconnect_proc(
     effect_data->duration = 2.5f;
     effect_data->fade_back = 1;
     effect_data->trigger_count = 1;
-    effect_data->triggers[0].trigger_type = ET_LEAVE_SERVER;
+    effect_data->triggers[0].trigger_type = ET_EXIT_SCENE;
     effect_data->triggers[0].next_event_data = NULL;
     submit_event(ET_BEGIN_FADE, effect_data, events);
 }

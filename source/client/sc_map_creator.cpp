@@ -29,6 +29,8 @@ static map_t *map;
 void sc_map_creator_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_PRESSED_ESCAPE, listener, events);
     subscribe_to_event(ET_BEGIN_MAP_EDITING, listener, events);
+    subscribe_to_event(ET_CREATE_NEW_MAP, listener, events);
+    subscribe_to_event(ET_DONT_CREATE_NEW_MAP, listener, events);
 }
 
 void sc_bind_map_creator() {
@@ -103,8 +105,8 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
 
             const char *texts[] = { "Yes", "No" };
             void (* procs[2])(ui_popup_t *, event_submissions_t *) = {
-                [] (ui_popup_t *, event_submissions_t *) { printf("Creating map\n");},
-                [] (ui_popup_t *, event_submissions_t *) { printf("Not creating map\n");}
+                [] (ui_popup_t *, event_submissions_t *events) { submit_event(ET_CREATE_NEW_MAP, NULL, events); },
+                [] (ui_popup_t *, event_submissions_t *events) { submit_event(ET_DONT_CREATE_NEW_MAP, NULL, events); }
             };
 
             u_push_popup_section_button_double(popup, texts, procs);
@@ -114,8 +116,19 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
             cl_change_view_type(GVT_MENU);
             submode = S_PAUSE;
         }
+        else {
+            // TODO: Load map contents from file
+        }
 
         FL_FREE(event->data);
+    } break;
+
+    case ET_CREATE_NEW_MAP: {
+        // Add map to map names
+    } break;
+
+    case ET_DONT_CREATE_NEW_MAP: {
+        // Exit map creator
     } break;
 
     case ET_PRESSED_ESCAPE: {

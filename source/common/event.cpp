@@ -1,3 +1,4 @@
+#include "log.hpp"
 #include "event.hpp"
 
 listener_t set_listener_callback(
@@ -15,7 +16,14 @@ void subscribe_to_event(
     event_type_t type,
     listener_t listener,
     event_submissions_t *events) {
-    events->subscriptions[type].listeners[events->subscriptions[type].count++] = listener;
+    // Check that there wasn't already a subscription to this events, from this listener
+    if (!(events->subscriptions[type].listener_table[listener])) {
+        events->subscriptions[type].listeners[events->subscriptions[type].count++] = listener;
+        events->subscriptions[type].listener_table[listener] = 1;
+    }
+    else {
+        LOG_ERROR("Listener already subscribed to this event\n");
+    }
 }
 
 void submit_event(

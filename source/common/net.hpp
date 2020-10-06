@@ -11,7 +11,7 @@
 
 //#define NET_DEBUG_VOXEL_INTERPOLATION 1
 //#define NET_DEBUG 1
-#define NET_DEBUG_TERRAFORMING 1
+//#define NET_DEBUG_TERRAFORMING 1
 
 struct voxel_modification_t {
     uint16_t index;
@@ -115,9 +115,7 @@ struct net_data_t {
     accumulated_predicted_modification_t merged_recent_modifications;
     available_servers_t available_servers;
 
-#if NET_DEBUG_TERRAFORMING
     FILE *log_file;
-#endif
 };
 
 extern net_data_t g_net_data;
@@ -154,5 +152,12 @@ template <typename ...T> void debug_log(
     if (print_to_console) {
         printf(format, values...);
     }
+}
+#else
+template<typename ...T> void debug_log(
+    const char *format,
+    bool print_to_console,
+    T ...values) {
+    // Don't do anything
 }
 #endif

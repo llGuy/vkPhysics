@@ -1,5 +1,4 @@
 #pragma once
-    
 
 #include "meta.hpp"
 #include "tools.hpp"
@@ -34,7 +33,7 @@ enum event_type_t {
     ET_ENTER_MAIN_MENU,
     ET_EXIT_MAIN_MENU,
     ET_ENTER_GAME_PLAY,
-    ET_EXIT_GAME_PLAY,
+    ET_EXIT_SCENE,
 
     ET_PAUSE,
     ET_UNPAUSE,
@@ -59,6 +58,7 @@ enum event_type_t {
     ET_ENTER_MAP_CREATOR,
     // Event that is used to begin building maps
     ET_BEGIN_MAP_EDITING,
+    ET_CREATE_NEW_MAP,
     ET_DONT_CREATE_NEW_MAP,
 
     ET_INVALID_EVENT_TYPE
@@ -187,6 +187,7 @@ typedef void(*listener_callback_t)(
 struct listener_subscriptions_t {
     uint32_t count = 0;
     uint32_t listeners[MAX_LISTENERS] = {};
+    uint8_t listener_table[MAX_LISTENERS] = {};
 };
 
 struct event_submissions_t {
@@ -200,6 +201,10 @@ struct event_submissions_t {
     uint32_t pending_event_count = 0;
     event_t pending_events[MAX_EVENTS] = {};
 };
+
+// Makes sure no duplicates occur
+void begin_listener_subscription(listener_t listener, event_submissions_t *events);
+void end_listener_subscriptions(listener_t listener, event_submissions_t *events);
 
 // Setting object to NULL will just not bind callback to any data object (this would be used for structures with member functions)
 listener_t set_listener_callback(

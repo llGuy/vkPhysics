@@ -84,7 +84,6 @@ void ui_init(
         events);
 
     subscribe_to_event(ET_RECEIVED_AVAILABLE_SERVERS, ui_listener, events);
-    subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
     subscribe_to_event(ET_RESIZE_SURFACE, ui_listener, events);
     subscribe_to_event(ET_META_REQUEST_ERROR, ui_listener, events);
     subscribe_to_event(ET_SIGN_UP_SUCCESS, ui_listener, events);

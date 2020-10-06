@@ -27,7 +27,7 @@ void sc_play_init(listener_t listener, event_submissions_t *events) {
     // Nothing to do here
     subscribe_to_event(ET_ENTER_GAME_PLAY, listener, events);
     subscribe_to_event(ET_LEAVE_SERVER, listener, events);
-    subscribe_to_event(ET_EXIT_GAME_PLAY, listener, events);
+    subscribe_to_event(ET_EXIT_SCENE, listener, events);
     subscribe_to_event(ET_SPAWN, listener, events);
     subscribe_to_event(ET_LOCAL_PLAYER_DIED, listener, events);
     subscribe_to_event(ET_PRESSED_ESCAPE, listener, events);
@@ -145,7 +145,7 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
     } break;
 
         // Leaving the server equates to exiting the game play mode
-    case ET_LEAVE_SERVER: case ET_EXIT_GAME_PLAY: {
+    case ET_LEAVE_SERVER: case ET_EXIT_SCENE: {
         clear_ui_panels();
 
         submit_event(ET_ENTER_MAIN_MENU, NULL, events);
@@ -167,11 +167,15 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
             push_ui_panel(USI_GAME_MENU);
             cl_change_view_type(GVT_MENU);
             submode = S_PAUSE;
+
+            LOG_INFO("Going to pause menu\n");
         }
         else {
             pop_ui_panel();
             cl_change_view_type(GVT_IN_GAME);
             submode = S_IN_GAME;
+
+            LOG_INFO("Going to game play\n");
         }
     } break;
 
