@@ -32,6 +32,10 @@ static void s_ui_event_listener(
         u_hud_init();
     } break;
 
+    case ET_SPAWN: {
+        
+    } break;
+
     case ET_META_REQUEST_ERROR: {
         event_meta_request_error_t *data = (event_meta_request_error_t *)event->data;
 

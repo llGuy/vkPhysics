@@ -145,4 +145,12 @@ void save_map(map_t *map) {
 
 void unload_map(map_t *map) {
     memset(map, 0, sizeof(map_t));
+    // TODO: Make sure to reset all the voxels from the chunks
+}
+
+// Saving the file will happen later
+void add_map_name(const char *map_name, const char *path) {
+    auto *p = &map_names.maps[map_names.count++];
+    p->name = map_name;
+    p->path = path;
 }

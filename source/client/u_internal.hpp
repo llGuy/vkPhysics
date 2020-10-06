@@ -37,6 +37,8 @@ void u_submit_hud();
 void u_game_menu_init();
 void u_submit_game_menu();
 void u_game_menu_input(struct event_submissions_t *events, struct raw_input_t *input);
+enum play_button_function_t { PBF_SPAWN, PBF_UNPAUSE };
+void u_set_play_button_function(play_button_function_t function);
 
 // SIGN UP MENU ///////////////////////////////////////////////////////////////
 void u_sign_up_menu_init();

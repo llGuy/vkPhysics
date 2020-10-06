@@ -46,7 +46,7 @@ static void s_handle_input(event_submissions_t *events) {
     } break;
 
     case S_IN_GAME: {
-        wd_input(cl_delta_time());
+        wd_game_input(cl_delta_time());
     } break;
 
     case S_PAUSE: {

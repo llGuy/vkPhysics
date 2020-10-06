@@ -35,7 +35,7 @@ void wd_init(event_submissions_t *events) {
 // TODO: Implement
 void wd_destroy() {}
 
-void wd_input(float dt) {
+void wd_game_input(float dt) {
     wd_handle_local_player_input(dt);
 }
 

@@ -16,6 +16,7 @@ enum button_t {
 };
 
 static menu_layout_t game_menu_layout;
+static play_button_function_t function;
 
 static void s_menu_layout_disconnect_proc(
     event_submissions_t *events) {
@@ -68,4 +69,8 @@ void u_game_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
     game_menu_layout.input(events, input);
+}
+
+void u_set_play_button_function(play_button_function_t function) {
+    // TODO:
 }
