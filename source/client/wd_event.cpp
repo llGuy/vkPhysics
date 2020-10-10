@@ -13,9 +13,6 @@ void wd_subscribe_to_events(listener_t world_listener, event_submissions_t *even
     subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
     subscribe_to_event(ET_LEAVE_SERVER, world_listener, events);
     subscribe_to_event(ET_PLAYER_DISCONNECTED, world_listener, events);
-    subscribe_to_event(ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
-    subscribe_to_event(ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA, world_listener, events);
-    subscribe_to_event(ET_SET_CHUNK_HISTORY_TRACKER, world_listener, events);
     subscribe_to_event(ET_SPAWN, world_listener, events);
     subscribe_to_event(ET_BEGIN_AI_TRAINING, world_listener, events);
     subscribe_to_event(ET_RESET_AI_ARENA, world_listener, events);
@@ -136,21 +133,8 @@ static void s_handle_event_player_disconnected(
     }
 }
 
-static void s_handle_event_started_receiving_initial_chunk_data() {
-    // w_toggle_mesh_update_wait(1);
-}
-
 static void s_handle_event_finished_receiving_initial_chunk_data() {
     // w_toggle_mesh_update_wait(0);
-}
-
-static void s_handle_event_set_chunk_history_tracker(
-    event_t *event) {
-    event_set_chunk_history_tracker_t *data = (event_set_chunk_history_tracker_t *)event->data;
-    assert(0);
-    // context_ptr->track_history = data->value;
-
-    FL_FREE(data);
 }
 
 static void s_handle_event_launch_main_menu_screen() {
@@ -201,18 +185,6 @@ void wd_world_event_listener(void *object, event_t *event, event_submissions_t *
 
     case ET_PLAYER_DISCONNECTED: {
         s_handle_event_player_disconnected(event);
-    } break;
-
-    case ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA: {
-        s_handle_event_started_receiving_initial_chunk_data();
-    } break;
-
-    case ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA: {
-        s_handle_event_finished_receiving_initial_chunk_data();
-    } break;
-
-    case ET_SET_CHUNK_HISTORY_TRACKER: {
-        s_handle_event_set_chunk_history_tracker(event);
     } break;
 
     case ET_BEGIN_AI_TRAINING: {

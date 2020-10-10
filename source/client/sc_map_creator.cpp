@@ -262,7 +262,7 @@ static void s_exit_map_editor(event_submissions_t *events) {
     wd_clear_world();
 
     ui_clear_panels();
-    submit_event(ET_ENTER_MAIN_MENU, NULL, events);
+    submit_event(ET_ENTER_MAIN_MENU_SCENE, NULL, events);
 
     // Bind to main menu, and the main menu will then have to handle the ET_ENTER_MAIN_MENU event
     sc_bind(ST_MAIN_MENU);

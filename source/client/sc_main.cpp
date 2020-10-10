@@ -18,11 +18,10 @@ static fixed_premade_scene_t scene;
 void sc_main_init(listener_t listener, event_submissions_t *events) {
     scene = dr_read_premade_rsc("assets/misc/startup/default.startup");
 
-    subscribe_to_event(ET_ENTER_MAIN_MENU, listener, events);
-    subscribe_to_event(ET_EXIT_MAIN_MENU, listener, events);
+    subscribe_to_event(ET_ENTER_MAIN_MENU_SCENE, listener, events);
     subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, listener, events);
     subscribe_to_event(ET_REQUEST_USER_INFORMATION, listener, events);
-    subscribe_to_event(ET_ENTER_MAP_CREATOR, listener, events);
+    subscribe_to_event(ET_ENTER_MAP_CREATOR_SCENE, listener, events);
 }
 
 void sc_bind_main() {
@@ -117,18 +116,14 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
 void sc_handle_main_event(void *object, struct event_t *event, struct event_submissions_t *events) {
     switch (event->type) {
-    case ET_ENTER_MAIN_MENU: {
+    case ET_ENTER_MAIN_MENU_SCENE: {
         ui_push_panel(USI_MAIN_MENU);
-    } break;
-
-    case ET_EXIT_MAIN_MENU: {
-        ui_clear_panels();
     } break;
 
     case ET_REQUEST_TO_JOIN_SERVER: {
         ui_clear_panels();
 
-        submit_event(ET_ENTER_GAME_PLAY, NULL, events);
+        submit_event(ET_ENTER_GAME_PLAY_SCENE, NULL, events);
 
         sc_bind(ST_GAME_PLAY);
     } break;
@@ -138,7 +133,7 @@ void sc_handle_main_event(void *object, struct event_t *event, struct event_subm
         ui_push_panel(USI_SIGN_UP);
     } break;
 
-    case ET_ENTER_MAP_CREATOR: {
+    case ET_ENTER_MAP_CREATOR_SCENE: {
         ui_clear_panels();
 
         submit_event(ET_BEGIN_MAP_EDITING, event->data, events);

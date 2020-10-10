@@ -10,52 +10,81 @@
 typedef uint32_t listener_t;
 
 enum event_type_t {
+    // When window gets resurfaced (various parts of the system need to know - e.g. UI code)
     ET_RESIZE_SURFACE,
+    // Shuts down the program
     ET_CLOSED_WINDOW,
+    // When the user presses a join server button, needs to notify network code to send a join request to game server
     ET_REQUEST_TO_JOIN_SERVER,
+    // When game server replies, submit the ET_ENTER_SERVER event to notify for instance the world code to initialise the world
     ET_ENTER_SERVER,
+    // This happens when the user presses the spawn button (with the "play" icon in the game menu)
     ET_SPAWN,
+    // When a new player joins the game server, client will receive a packet saying a new player joined
+    // The client program will submit this event to add the player to the list of players to interpolate
+    // This is the same thing with the server program
     ET_NEW_PLAYER,
+    // Once the user id and the user tag of the current user is retrieved, this will be triggered,
+    // Causing the client program to send an automatic login request to the meta server
     ET_START_CLIENT,
+    // Once the server is and server tag of the current server program is retrieved, this will be triggered
+    // Causing the server program to send an automatic packet to the meta server notifying it of its online status
     ET_START_SERVER,
+    // This event is a very general event that may cause different things to happen depending on which scene is
+    // Bound. It happens when the escape key is pressed (duh)
     ET_PRESSED_ESCAPE,
+    // Notifies the network module to tell the game server that we're getting out of here
     ET_LEAVE_SERVER,
+    // When another player leaves, this will notify the client (same thing with the server program)
+    // To get rid of the player data in the world code
     ET_PLAYER_DISCONNECTED,
-    ET_STARTED_RECEIVING_INITIAL_CHUNK_DATA,
-    ET_FINISHED_RECEIVING_INITIAL_CHUNK_DATA,
-    ET_SET_CHUNK_HISTORY_TRACKER,
+    // When user presses the refresh button on main menu (for available servers)
+    // This event will notify the network module to send a request to the meta server requesting
+    // All the available (online) game servers
     ET_REQUEST_REFRESH_SERVER_PAGE,
+    // When the client receives the response from the meta server, this event will notify the UI module
+    // To update what is on the main menu page
     ET_RECEIVED_AVAILABLE_SERVERS,
+    // This is an event which will cause a fade effect to begin. Fade effects are used throughout the lifetime
+    // Of the game. They are used to transition between different scenes. When the program reaches the middle
+    // Of a fade effect, the window will be all black. Here, it is possible to trigger another event.
+    // Often what happens, is all the ACTUAL work gets done when the screen is black (e.g. leaving
+    // The server, and going back to the main menu) so that there isn't a really blunt cut
     ET_BEGIN_FADE, // With data, can be in / out
+    // In case some code has to be executed when the fade effect has finished
     ET_FADE_FINISHED, // Just so that game can know when to do some sort of transition or something...
 
-    // Have enter or exit to have initialisation or deinitialisation when needed
-    ET_ENTER_MAIN_MENU,
-    ET_EXIT_MAIN_MENU,
-    ET_ENTER_GAME_PLAY,
     ET_EXIT_SCENE,
+
+    ET_ENTER_MAIN_MENU_SCENE,
+    // These two purely affect the main menu scene
+    ET_ENTER_GAME_PLAY_SCENE,
+    ET_ENTER_MAP_CREATOR_SCENE,
 
     ET_PAUSE,
     ET_UNPAUSE,
     ET_LOCAL_PLAYER_DIED,
 
+    // ----------------------------- REDUNDANT FOR NOW (not doing any AI testing)
     ET_BEGIN_AI_TRAINING,
     ET_FINISH_GENERATION,
     ET_RESET_AI_ARENA,
+    // -----------------------------
 
     // When the username hasn't registered, request a username and password
     ET_REQUEST_USER_INFORMATION,
 
+    // When the user clicks on the sign up button to register a username and password, request gets sent
+    // To the meta server - client waits for response
     ET_ATTEMPT_SIGN_UP,
+    // Meta server has responded with the sign up success
     ET_SIGN_UP_SUCCESS,
-
+    // Similar to above, except it's for logging in
     ET_ATTEMPT_LOGIN,
     ET_LOGIN_SUCCESS,
 
     ET_META_REQUEST_ERROR,
 
-    // Event that is used to exit the main menu
-    ET_ENTER_MAP_CREATOR,
     // Event that is used to begin building maps
     ET_BEGIN_MAP_EDITING,
     ET_CREATE_NEW_MAP,

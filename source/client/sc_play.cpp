@@ -25,8 +25,7 @@ static submode_t submode;
 
 void sc_play_init(listener_t listener, event_submissions_t *events) {
     // Nothing to do here
-    subscribe_to_event(ET_ENTER_GAME_PLAY, listener, events);
-    subscribe_to_event(ET_LEAVE_SERVER, listener, events);
+    subscribe_to_event(ET_ENTER_GAME_PLAY_SCENE, listener, events);
     subscribe_to_event(ET_EXIT_SCENE, listener, events);
     subscribe_to_event(ET_SPAWN, listener, events);
     subscribe_to_event(ET_LOCAL_PLAYER_DIED, listener, events);
@@ -136,7 +135,7 @@ void sc_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
 void sc_handle_play_event(void *object, event_t *event, event_submissions_t *events) {
     switch (event->type) {
-    case ET_ENTER_GAME_PLAY: {
+    case ET_ENTER_GAME_PLAY_SCENE: {
         // Enter game menu
         ui_push_panel(USI_GAME_MENU);
         submode = S_MENU;
@@ -144,11 +143,11 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
         cl_change_view_type(GVT_MENU);
     } break;
 
-        // Leaving the server equates to exiting the game play mode
-    case ET_LEAVE_SERVER: case ET_EXIT_SCENE: {
+    case ET_EXIT_SCENE: {
         ui_clear_panels();
 
-        submit_event(ET_ENTER_MAIN_MENU, NULL, events);
+        submit_event(ET_ENTER_MAIN_MENU_SCENE, NULL, events);
+        submit_event(ET_LEAVE_SERVER, NULL, events);
 
         sc_bind(ST_MAIN_MENU);
     } break;

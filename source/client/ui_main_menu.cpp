@@ -136,7 +136,7 @@ static void s_build_map_menu_init() {
                 effect_data->duration = 2.5f;
                 effect_data->fade_back = 1;
                 effect_data->trigger_count = 1;
-                effect_data->triggers[0].trigger_type = ET_ENTER_MAP_CREATOR;
+                effect_data->triggers[0].trigger_type = ET_ENTER_MAP_CREATOR_SCENE;
                 effect_data->triggers[0].next_event_data = event_data;
                 submit_event(ET_BEGIN_FADE, effect_data, events);
             }
@@ -154,7 +154,7 @@ static void s_build_map_menu_init() {
                 effect_data->duration = 2.5f;
                 effect_data->fade_back = 1;
                 effect_data->trigger_count = 1;
-                effect_data->triggers[0].trigger_type = ET_ENTER_MAP_CREATOR;
+                effect_data->triggers[0].trigger_type = ET_ENTER_MAP_CREATOR_SCENE;
                 effect_data->triggers[0].next_event_data = data;
                 submit_event(ET_BEGIN_FADE, effect_data, events);
             }

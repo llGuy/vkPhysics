@@ -35,8 +35,7 @@ static void s_open() {
     fade_info->trigger_count = 0;
     submit_event(ET_BEGIN_FADE, fade_info, &events);
     
-    // submit_event(ET_LAUNCH_MAIN_MENU_SCREEN, NULL, &events);
-    submit_event(ET_ENTER_MAIN_MENU, NULL, &events);
+    submit_event(ET_ENTER_MAIN_MENU_SCENE, NULL, &events);
 }
 
 static void s_run() {
