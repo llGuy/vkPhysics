@@ -111,12 +111,13 @@ void srv_game_init(event_submissions_t *events) {
 
     // generate_sphere(vector3_t(20.0f), 40.0f, 140);
     // generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f, 140);
-    generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f, 140);
+    generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f, 140, GT_ADDITIVE);
 
     generate_math_equation(
         vector3_t(0.0f),
         vector3_t(100.0f),
-        s_bumps);
+        s_bumps,
+        GT_ADDITIVE);
 }
 
 void srv_game_tick() {

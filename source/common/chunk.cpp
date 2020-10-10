@@ -156,10 +156,126 @@ chunk_t **get_modified_chunks(
     return modified_chunks;
 }
 
+void generate_hollow_sphere(
+    const vector3_t &ws_center,
+    float ws_radius,
+    float max_value,
+    generation_type_t type) {
+    float (* generation_proc)(float distance_squared, float radius_squared);
+    switch(type) {
+    case GT_ADDITIVE: {
+        generation_proc =
+            [] (float distance_squared, float radius_squared) {
+                return 1.0f - (distance_squared / radius_squared);
+            };
+    } break;
+
+    case GT_DESTRUCTIVE: {
+        generation_proc =
+            [] (float distance_squared, float radius_squared) {
+                return 0.0f;
+            };
+
+    } break;
+    }
+
+    ivector3_t vs_center = space_world_to_voxel(ws_center);
+    vector3_t vs_float_center = (vector3_t)(vs_center);
+
+    ivector3_t current_chunk_coord = space_voxel_to_chunk(vs_center);
+
+    chunk_t *current_chunk = get_chunk(
+        current_chunk_coord);
+
+    current_chunk->flags.has_to_update_vertices = 1;
+
+    int32_t diameter = (int32_t)ws_radius * 2 + 1;
+
+    int32_t start_z = vs_center.z - (int32_t)ws_radius;
+    int32_t start_y = vs_center.y - (int32_t)ws_radius;
+    int32_t start_x = vs_center.x - (int32_t)ws_radius;
+
+    float radius_squared = ws_radius * ws_radius;
+    float smaller_radius_squared = (ws_radius - 10) * (ws_radius - 10);
+
+    for (int32_t z = start_z; z < start_z + diameter; ++z) {
+        for (int32_t y = start_y; y < start_y + diameter; ++y) {
+            for (int32_t x = start_x; x < start_x + diameter; ++x) {
+                ivector3_t vs_position = ivector3_t(x, y, z);
+                vector3_t vs_float = vector3_t((float)x, (float)y, (float)z);
+                vector3_t vs_diff_float = vs_float - vs_float_center;
+
+                float distance_squared = glm::dot(vs_diff_float, vs_diff_float);
+
+                if (distance_squared <= radius_squared && distance_squared > smaller_radius_squared) {
+                    ivector3_t c = space_voxel_to_chunk(vs_position);
+
+                    ivector3_t chunk_origin_diff = vs_position - current_chunk_coord * (int32_t)CHUNK_EDGE_LENGTH;
+                    //if (c.x == current_chunk_coord.x && c.y == current_chunk_coord.y && c.z == current_chunk_coord.z) {
+                    if (chunk_origin_diff.x >= 0 && chunk_origin_diff.x < 16 &&
+                        chunk_origin_diff.y >= 0 && chunk_origin_diff.y < 16 &&
+                        chunk_origin_diff.z >= 0 && chunk_origin_diff.z < 16) {
+                        // Is within current chunk boundaries
+                        float proportion = generation_proc(distance_squared, radius_squared);
+
+                        ivector3_t voxel_coord = chunk_origin_diff;
+
+                        //current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
+
+                        uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t new_value = (uint32_t)((proportion) * max_value);
+                        if (*v < new_value) {
+                            *v = new_value;
+                        }
+                    }
+                    else {
+                        ivector3_t c = space_voxel_to_chunk(vs_position);
+
+                        // In another chunk, need to switch current_chunk pointer
+                        current_chunk = get_chunk(c);
+                        current_chunk_coord = c;
+
+                        current_chunk->flags.has_to_update_vertices = 1;
+
+                        float proportion = generation_proc(distance_squared, radius_squared);
+
+                        ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
+
+                        uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t new_value = (uint32_t)((proportion) * max_value);
+                        if (*v < new_value) {
+                            *v = new_value;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 void generate_sphere(
     const vector3_t &ws_center,
     float ws_radius,
-    float max_value) {
+    float max_value,
+    generation_type_t type) {
+    float (* generation_proc)(float distance_squared, float radius_squared);
+    switch(type) {
+    case GT_ADDITIVE: {
+        generation_proc =
+            [] (float distance_squared, float radius_squared) {
+                return 1.0f - (distance_squared / radius_squared);
+            };
+    } break;
+
+    case GT_DESTRUCTIVE: {
+        generation_proc =
+            [] (float distance_squared, float radius_squared) {
+                return 0.0f;
+            };
+
+    } break;
+    }
+
     ivector3_t vs_center = space_world_to_voxel(ws_center);
     vector3_t vs_float_center = (vector3_t)(vs_center);
 
@@ -196,7 +312,7 @@ void generate_sphere(
                         chunk_origin_diff.y >= 0 && chunk_origin_diff.y < 16 &&
                         chunk_origin_diff.z >= 0 && chunk_origin_diff.z < 16) {
                         // Is within current chunk boundaries
-                        float proportion = 1.0f - (distance_squared / radius_squared);
+                        float proportion = generation_proc(distance_squared, radius_squared);
 
                         ivector3_t voxel_coord = chunk_origin_diff;
 
@@ -217,7 +333,7 @@ void generate_sphere(
 
                         current_chunk->flags.has_to_update_vertices = 1;
 
-                        float proportion = 1.0f - (distance_squared / radius_squared);
+                        float proportion = generation_proc(distance_squared, radius_squared);
 
                         ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
 
@@ -233,7 +349,25 @@ void generate_sphere(
     }
 }
 
-void generate_platform(const vector3_t &position, float width, float depth) {
+void generate_platform(const vector3_t &position, float width, float depth, generation_type_t type) {
+    uint8_t (* generation_proc)();
+    switch (type) {
+    case GT_ADDITIVE: {
+        generation_proc =
+            [] () -> uint8_t {
+                return 80;
+            };
+    } break;
+
+    case GT_DESTRUCTIVE: {
+        generation_proc =
+            [] () -> uint8_t {
+                return 0;
+            };
+
+    } break;
+    }
+
     for (int32_t z = position.z - depth / 2; z < position.z + depth / 2; ++z) {
         for (int32_t x = position.x - width / 2; x < position.x + width / 2; ++x) {
             ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
@@ -242,12 +376,33 @@ void generate_platform(const vector3_t &position, float width, float depth) {
             chunk->flags.has_to_update_vertices = 1;
             ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
             uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
-            chunk->voxels[index] = 80;
+            chunk->voxels[index] = generation_proc();
         }
     }
 }
 
-void generate_math_equation(const vector3_t &ws_center, const vector3_t &extent, float(*equation)(float x, float y, float z)) {
+void generate_math_equation(
+    const vector3_t &ws_center,
+    const vector3_t &extent,
+    float(*equation)(float x, float y, float z),
+    generation_type_t type) {
+    uint8_t (* generation_proc)(float equation_result);
+    switch (type) {
+    case GT_ADDITIVE: {
+        generation_proc =
+            [] (float equation_result) -> uint8_t {
+                return (uint8_t)(150.0f * equation_result);
+            };
+    } break;
+
+    case GT_DESTRUCTIVE: {
+        generation_proc =
+            [] (float equation_result) -> uint8_t {
+                return 0;
+            };
+    } break;
+    }
+
     for (int32_t z = ws_center.z - extent.z / 2; z < ws_center.z + extent.z / 2; ++z) {
         for (int32_t y = ws_center.y - extent.y / 2; y < ws_center.y + extent.y / 2; ++y) {
             for (int32_t x = ws_center.x - extent.x / 2; x < ws_center.x + extent.x / 2; ++x) {
@@ -260,7 +415,7 @@ void generate_math_equation(const vector3_t &ws_center, const vector3_t &extent,
                     chunk->flags.has_to_update_vertices = 1;
                     ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
                     uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
-                    chunk->voxels[index] = (uint8_t)(150.0f * c);
+                    chunk->voxels[index] = generation_proc(c);
                 }
             }
         }
