@@ -1,6 +1,8 @@
 #include "map.hpp"
 #include "common/chunk.hpp"
+#include "common/containers.hpp"
 #include "files.hpp"
+#include <bits/stdint-uintn.h>
 #include <string.h>
 #include <stdio.h>
 #include "string.hpp"
@@ -9,8 +11,11 @@
 
 static file_handle_t map_names_file;
 static map_names_t map_names;
+static hash_table_t<uint32_t, 10, 5, 5> map_name_to_index;
 
 void load_map_names() {
+    map_name_to_index.init();
+
     map_names_file = create_file("assets/maps/map_names", FLF_TEXT);
     file_contents_t contents = read_file(map_names_file);
 
@@ -26,6 +31,7 @@ void load_map_names() {
 
         char *end_of_name = skip_to(p, '\"');
         map_names.maps[map_names.count].name = create_fl_string(p, (end_of_name - p) - 1);
+        map_name_to_index.insert(simple_string_hash(map_names.maps[map_names.count].name), map_names.count);
 
         p = skip_while(end_of_name, ' ');
 
@@ -150,7 +156,13 @@ void unload_map(map_t *map) {
 
 // Saving the file will happen later
 void add_map_name(const char *map_name, const char *path) {
-    auto *p = &map_names.maps[map_names.count++];
-    p->name = map_name;
-    p->path = path;
+    // If the map files hasn't been created, or if the name wasn't in the map_names file (or both), this function will be called
+    // If it is the case that the name was in the map_names file, just create a new file, don't add it to the map names list
+    // Otherwise, add it to the map name list
+    uint32_t *item = map_name_to_index.get(simple_string_hash(map_name));
+    if (!item) {
+        auto *p = &map_names.maps[map_names.count++];
+        p->name = map_name;
+        p->path = path;
+    }
 }

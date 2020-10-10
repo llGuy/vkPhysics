@@ -279,6 +279,8 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
         event_enter_map_creator_t *event_data = (event_enter_map_creator_t *)event->data;
 
         map = load_map(event_data->map_path);
+        map->name = event_data->map_name;
+        
         if (map->is_new) {
             // Create popup
             ui_popup_t *popup = u_add_popup(2);

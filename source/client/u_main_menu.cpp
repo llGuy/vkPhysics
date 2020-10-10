@@ -127,6 +127,7 @@ static void s_build_map_menu_init() {
                 void *item_data = list->items[list->selected_item].data;
                 map_names_t::pair_t *pair = (map_names_t::pair_t *)item_data;
 
+                event_data->map_name = pair->name;
                 event_data->map_path = pair->path;
 
                 // Need to close the main menu, and start a fade effect
@@ -145,6 +146,7 @@ static void s_build_map_menu_init() {
 
                 event_enter_map_creator_t *data = FL_MALLOC(event_enter_map_creator_t, 1);
                 memset(data, 0, sizeof(event_enter_map_creator_t));
+                data->map_name = NULL;
                 data->map_path = list->input_text.get_string();
 
                 event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);

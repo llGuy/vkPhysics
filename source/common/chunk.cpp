@@ -166,7 +166,13 @@ void generate_hollow_sphere(
     case GT_ADDITIVE: {
         generation_proc =
             [] (float distance_squared, float radius_squared) {
-                return 1.0f - (distance_squared / radius_squared);
+                float diff = abs(distance_squared - radius_squared);
+                if (diff < 120.0f) {
+                    return 1.0f - (diff / 120.0f);
+                }
+                else {
+                    return 0.0f;
+                }
             };
     } break;
 
@@ -207,7 +213,7 @@ void generate_hollow_sphere(
 
                 float distance_squared = glm::dot(vs_diff_float, vs_diff_float);
 
-                if (distance_squared <= radius_squared && distance_squared > smaller_radius_squared) {
+                if (distance_squared <= radius_squared) {
                     ivector3_t c = space_voxel_to_chunk(vs_position);
 
                     ivector3_t chunk_origin_diff = vs_position - current_chunk_coord * (int32_t)CHUNK_EDGE_LENGTH;
@@ -216,7 +222,7 @@ void generate_hollow_sphere(
                         chunk_origin_diff.y >= 0 && chunk_origin_diff.y < 16 &&
                         chunk_origin_diff.z >= 0 && chunk_origin_diff.z < 16) {
                         // Is within current chunk boundaries
-                        float proportion = generation_proc(distance_squared, radius_squared);
+                        float proportion = generation_proc(distance_squared, smaller_radius_squared);
 
                         ivector3_t voxel_coord = chunk_origin_diff;
 
@@ -237,7 +243,7 @@ void generate_hollow_sphere(
 
                         current_chunk->flags.has_to_update_vertices = 1;
 
-                        float proportion = generation_proc(distance_squared, radius_squared);
+                        float proportion = generation_proc(distance_squared, smaller_radius_squared);
 
                         ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
 
@@ -320,9 +326,9 @@ void generate_sphere(
 
                         uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * max_value);
-                        if (*v < new_value) {
+                        // if (*v < new_value) {
                             *v = new_value;
-                        }
+                            // }
                     }
                     else {
                         ivector3_t c = space_voxel_to_chunk(vs_position);
@@ -339,9 +345,9 @@ void generate_sphere(
 
                         uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * max_value);
-                        if (*v < new_value) {
+                        // if (*v < new_value) {
                             *v = new_value;
-                        }
+                            // }
                     }
                 }
             }

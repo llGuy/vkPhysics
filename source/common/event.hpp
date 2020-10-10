@@ -177,6 +177,7 @@ struct event_meta_request_error_t {
 
 struct event_enter_map_creator_t {
     const char *map_path;
+    const char *map_name;
 };
 
 typedef void(*listener_callback_t)(
