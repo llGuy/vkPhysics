@@ -1,7 +1,8 @@
 #pragma once
 
+#include "ui_hover.hpp"
+#include <common/event.hpp>
 #include "renderer/renderer.hpp"
-#include "u_internal.hpp"
 
 enum popup_section_type_t { PST_BUTTON_DOUBLE, PST_BUTTON_SINGLE, PST_TEXT, PST_INPUT, PST_INVALID };
 
@@ -54,20 +55,20 @@ struct ui_popup_t {
     popup_section_t sections[MAX_SECTIONS_IN_POPUP];
 };
 
-void u_popups_init();
+void ui_popups_init();
 // Pushes a popup to the ui stack and returns a pointer to continue initialisation
-ui_popup_t *u_add_popup(uint32_t vertical_section_count);
-void u_push_popup_section_button_double(
+ui_popup_t *ui_add_popup(uint32_t vertical_section_count);
+void ui_push_popup_section_button_double(
     ui_popup_t *popup,
     const char **button_text,
     void (** handle_press_proc)(ui_popup_t *, event_submissions_t *));
-void u_push_popup_section_button_single(
+void ui_push_popup_section_button_single(
     ui_popup_t *popup,
     const char *button_text,
     void (* handle_press_proc)(ui_popup_t *, event_submissions_t *));
-void u_push_popup_section_text(ui_popup_t *popup, const char *text);
-void u_push_popup_section_input(ui_popup_t *popup);
+void ui_push_popup_section_text(ui_popup_t *popup, const char *text);
+void ui_push_popup_section_input(ui_popup_t *popup);
 // Initialise all the ui_box_t and ui_text_t, etc...
-void u_prepare_popup_for_render(ui_popup_t *popup);
-void u_submit_popups();
-void u_popup_input(event_submissions_t *events, raw_input_t *input);
+void ui_prepare_popup_for_render(ui_popup_t *popup);
+void ui_submit_popups();
+void ui_popup_input(event_submissions_t *events, raw_input_t *input);

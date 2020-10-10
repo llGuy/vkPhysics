@@ -1,11 +1,11 @@
 #include <client/cl_view.hpp>
-#include <client/u_popup.hpp>
+#include <client/ui_popup.hpp>
 #include <common/chunk.hpp>
 #include <common/event.hpp>
 #include <common/map.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
-#include "ui.hpp"
+#include "ui_core.hpp"
 #include "cl_main.hpp"
 #include "fx_post.hpp"
 #include "wd_core.hpp"
@@ -217,7 +217,7 @@ static void s_handle_input(event_submissions_t *events) {
     } break;
 
     case S_PAUSE: {
-        handle_ui_input(events);
+        ui_handle_input(events);
     } break;
 
     default: {
@@ -235,7 +235,7 @@ void sc_map_creator_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCom
 
     dr_draw_game(render, transfer);
 
-    tick_ui(events);
+    ui_tick(events);
     render_submitted_ui(transfer, ui);
 
     eye_3d_info_t *eye_info = sc_get_eye_info();
@@ -261,7 +261,7 @@ static void s_exit_map_editor(event_submissions_t *events) {
     unload_map(map);
     wd_clear_world();
 
-    clear_ui_panels();
+    ui_clear_panels();
     submit_event(ET_ENTER_MAIN_MENU, NULL, events);
 
     // Bind to main menu, and the main menu will then have to handle the ET_ENTER_MAIN_MENU event
@@ -271,7 +271,7 @@ static void s_exit_map_editor(event_submissions_t *events) {
 void sc_handle_map_creator_event(void *object, event_t *event, event_submissions_t *events) {
     switch (event->type) {
     case ET_BEGIN_MAP_EDITING: {
-        clear_ui_panels();
+        ui_clear_panels();
 
         submode = S_IN_GAME;
         cl_change_view_type(GVT_IN_GAME);
@@ -283,8 +283,8 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
         
         if (map->is_new) {
             // Create popup
-            ui_popup_t *popup = u_add_popup(2);
-            u_push_popup_section_text(popup, "Create new?");
+            ui_popup_t *popup = ui_add_popup(2);
+            ui_push_popup_section_text(popup, "Create new?");
 
             const char *texts[] = { "Yes", "No" };
             void (* procs[2])(ui_popup_t *, event_submissions_t *) = {
@@ -292,9 +292,9 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
                 [] (ui_popup_t *, event_submissions_t *events) { submit_event(ET_DONT_CREATE_NEW_MAP, NULL, events); }
             };
 
-            u_push_popup_section_button_double(popup, texts, procs);
+            ui_push_popup_section_button_double(popup, texts, procs);
 
-            u_prepare_popup_for_render(popup);
+            ui_prepare_popup_for_render(popup);
 
             cl_change_view_type(GVT_MENU);
             submode = S_PAUSE;
@@ -309,7 +309,7 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
     case ET_CREATE_NEW_MAP: {
         // Add map to map names
         add_map_name(map->name, map->path);
-        pop_ui_panel();
+        ui_pop_panel();
 
         submode = S_IN_GAME;
         cl_change_view_type(GVT_IN_GAME);
@@ -333,12 +333,12 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
 
     case ET_PRESSED_ESCAPE: {
         if (submode == S_IN_GAME) {
-            push_ui_panel(USI_GAME_MENU);
+            ui_push_panel(USI_GAME_MENU);
             cl_change_view_type(GVT_MENU);
             submode = S_PAUSE;
         }
         else {
-            pop_ui_panel();
+            ui_pop_panel();
             cl_change_view_type(GVT_IN_GAME);
             submode = S_IN_GAME;
         }

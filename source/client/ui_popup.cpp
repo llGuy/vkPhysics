@@ -1,5 +1,6 @@
-#include "ui.hpp"
-#include "u_popup.hpp"
+#include "ui_menu_layout.hpp"
+#include "ui_core.hpp"
+#include "ui_popup.hpp"
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 
@@ -10,24 +11,24 @@ static ui_popup_t popups[MAX_POPUPS] = {};
 
 #define INVALID_TYPING_INDEX 0xFFFF
 
-void u_popups_init() {
+void ui_popups_init() {
     popup_count = 0;
     memset(popups, 0, sizeof(ui_popup_t) * MAX_POPUPS);
 }
 
-ui_popup_t *u_add_popup(uint32_t vertical_section_count) {
+ui_popup_t *ui_add_popup(uint32_t vertical_section_count) {
     ui_popup_t *popup = &popups[popup_count++];
     memset(popup, 0, sizeof(ui_popup_t));
 
     popup->vertical_section_count = 0;
     popup->current_typing_section = INVALID_TYPING_INDEX;
 
-    push_ui_panel(USI_POPUP);
+    ui_push_panel(USI_POPUP);
 
     return popup;
 }
 
-void u_push_popup_section_button_double(
+void ui_push_popup_section_button_double(
     ui_popup_t *popup,
     const char **button_text,
     void (** handle_press_proc)(ui_popup_t *, event_submissions_t *)) {
@@ -43,7 +44,7 @@ void u_push_popup_section_button_double(
     }
 }
 
-void u_push_popup_section_button_single(
+void ui_push_popup_section_button_single(
     ui_popup_t *popup,
     const char *button_text,
     void (* handle_press_proc)(ui_popup_t *, event_submissions_t *)) {
@@ -57,7 +58,7 @@ void u_push_popup_section_button_single(
     section->s_button.button.handle_press_proc = handle_press_proc;
 }
 
-void u_push_popup_section_text(ui_popup_t *popup, const char *text) {
+void ui_push_popup_section_text(ui_popup_t *popup, const char *text) {
     popup_section_t *section = &popup->sections[popup->vertical_section_count++];
     memset(section, 0, sizeof(popup_section_t));
 
@@ -65,14 +66,14 @@ void u_push_popup_section_text(ui_popup_t *popup, const char *text) {
     section->text.string = text;
 }
 
-void u_push_popup_section_input(ui_popup_t *popup) {
+void ui_push_popup_section_input(ui_popup_t *popup) {
     popup_section_t *section = &popup->sections[popup->vertical_section_count++];
     memset(section, 0, sizeof(popup_section_t));
 
     section->type = PST_INPUT;
 }
 
-void u_prepare_popup_for_render(ui_popup_t *popup) {
+void ui_prepare_popup_for_render(ui_popup_t *popup) {
     { // Initialise popup main panel
         popup->panel.init(RT_CENTER, 1.0f, ui_vector2_t(0.0f, 0.0f), ui_vector2_t(0.6f, 0.6f), NULL, 0x000000EE);
     }
@@ -97,7 +98,7 @@ void u_prepare_popup_for_render(ui_popup_t *popup) {
 
             button->text.init(
                 &button->box,
-                u_game_font(),
+                ui_game_font(),
                 ui_text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f, 25, 1.8f);
 
@@ -123,7 +124,7 @@ void u_prepare_popup_for_render(ui_popup_t *popup) {
 
                 button->text.init(
                     &button->box,
-                    u_game_font(),
+                    ui_game_font(),
                     ui_text_t::font_stream_box_relative_to_t::BOTTOM,
                     0.8f, 0.9f, 7, 1.8f);
 
@@ -148,7 +149,7 @@ void u_prepare_popup_for_render(ui_popup_t *popup) {
 
                 button->text.init(
                     &button->box,
-                    u_game_font(),
+                    ui_game_font(),
                     ui_text_t::font_stream_box_relative_to_t::BOTTOM,
                     0.8f, 0.9f, 7, 1.8f);
 
@@ -174,7 +175,7 @@ void u_prepare_popup_for_render(ui_popup_t *popup) {
 
             text->text.init(
                 &text->box,
-                u_game_font(),
+                ui_game_font(),
                 ui_text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f, 25, 1.8f);
 
@@ -190,7 +191,7 @@ void u_prepare_popup_for_render(ui_popup_t *popup) {
             input->box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(start_x, current_y), ui_vector2_t(0.9f, 0.2f), &popup->panel, 0x09090936);
             input->color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
             input->input.text.init(
-                &input->box, u_game_font(),
+                &input->box, ui_game_font(),
                 ui_text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f, 25, 1.8f);
 
@@ -203,8 +204,8 @@ void u_prepare_popup_for_render(ui_popup_t *popup) {
     }
 }
 
-void u_submit_popups() {
-    mark_ui_textured_section(u_game_font()->font_img.descriptor);
+void ui_submit_popups() {
+    mark_ui_textured_section(ui_game_font()->font_img.descriptor);
 
     for (uint32_t i = 0; i < popup_count; ++i) {
         ui_popup_t *popup = &popups[i];
@@ -239,7 +240,7 @@ void u_submit_popups() {
     }
 }
 
-void u_popup_input(event_submissions_t *events, raw_input_t *input) {
+void ui_popup_input(event_submissions_t *events, raw_input_t *input) {
     if (popup_count) {
         ui_popup_t *popup = &popups[popup_count - 1];
 
@@ -255,7 +256,7 @@ void u_popup_input(event_submissions_t *events, raw_input_t *input) {
 
             switch (section->type) {
             case PST_BUTTON_SINGLE: {
-                if ((hovering = u_hover_over_box(
+                if ((hovering = ui_hover_over_box(
                     &section->s_button.button.box,
                     input->cursor_pos_x,
                     input->cursor_pos_y))) {
@@ -269,7 +270,7 @@ void u_popup_input(event_submissions_t *events, raw_input_t *input) {
 
             case PST_BUTTON_DOUBLE: {
                 for (uint32_t j = 0; j < 2; ++j) {
-                    if ((hovering = u_hover_over_box(
+                    if ((hovering = ui_hover_over_box(
                         &section->d_button.buttons[j].box,
                         input->cursor_pos_x,
                         input->cursor_pos_y))) {
@@ -283,7 +284,7 @@ void u_popup_input(event_submissions_t *events, raw_input_t *input) {
             } break;
 
             case PST_INPUT: {
-                if ((hovering = u_hover_over_box(
+                if ((hovering = ui_hover_over_box(
                     &section->input.box,
                     input->cursor_pos_x,
                     input->cursor_pos_y))) {

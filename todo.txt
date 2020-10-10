@@ -1,0 +1,4 @@
+- Fix mess with calling UI code from scene code (e.g. whenever a spawn event triggers, don't clear game menu, etc...)
+- Make sure that pressing unpause button doesn't trigger spawn event
+- Make sure that resizing doesn't crash from UI code
+- Consider replacing SSAO with shadows

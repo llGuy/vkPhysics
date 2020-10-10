@@ -1,9 +1,9 @@
-#include "ui.hpp"
+#include "ui_core.hpp"
+#include "ui_menu_layout.hpp"
+#include "ui_list.hpp"
 #include <cstddef>
-#include "u_list.hpp"
 #include <common/map.hpp>
 #include <common/net.hpp>
-#include "u_internal.hpp"
 #include <common/math.hpp>
 #include <common/event.hpp>
 #include <renderer/input.hpp>
@@ -30,17 +30,17 @@ static menu_layout_t main_menu_layout;
 static ui_list_t servers_list_menu;
 static ui_list_t build_map_list_menu;
 
-void u_refresh_main_menu_server_page() {
+void ui_refresh_main_menu_server_page() {
     available_servers_t *servers = &g_net_data.available_servers;
 
-    u_list_clear(&servers_list_menu);
-    u_list_begin(&servers_list_menu, servers->server_count);
+    ui_list_clear(&servers_list_menu);
+    ui_list_begin(&servers_list_menu, servers->server_count);
 
     for (uint32_t i = 0; i < servers->server_count; ++i) {
-        u_list_add(&servers_list_menu, &servers->servers[i]);
+        ui_list_add(&servers_list_menu, &servers->servers[i]);
     }
 
-    u_list_end(&servers_list_menu);
+    ui_list_end(&servers_list_menu);
 }
 
 static void s_browse_server_menu_init() {
@@ -91,7 +91,7 @@ static void s_browse_server_menu_init() {
         }
     };
 
-    u_list_init(
+    ui_list_init(
         &main_menu_layout.current_menu,
         &servers_list_menu,
         2, button_texts,
@@ -103,17 +103,17 @@ static void s_browse_server_menu_init() {
         });
 }
 
-void u_refresh_build_menu_page() {
+void ui_refresh_build_menu_page() {
     map_names_t *map_names = get_map_names();
 
-    u_list_clear(&build_map_list_menu);
-    u_list_begin(&build_map_list_menu, map_names->count);
+    ui_list_clear(&build_map_list_menu);
+    ui_list_begin(&build_map_list_menu, map_names->count);
 
     for (uint32_t i = 0; i < map_names->count; ++i) {
-        u_list_add(&build_map_list_menu, &map_names->maps[i]);
+        ui_list_add(&build_map_list_menu, &map_names->maps[i]);
     }
 
-    u_list_end(&build_map_list_menu);
+    ui_list_end(&build_map_list_menu);
 }
 
 static void s_build_map_menu_init() {
@@ -161,7 +161,7 @@ static void s_build_map_menu_init() {
         },
     };
 
-    u_list_init(
+    ui_list_init(
         &main_menu_layout.current_menu,
         &build_map_list_menu,
         1, button_texts,
@@ -172,7 +172,7 @@ static void s_build_map_menu_init() {
             item->text.null_terminate();
         });
 
-    u_refresh_build_menu_page();
+    ui_refresh_build_menu_page();
 }
 
 static void s_menus_init() {
@@ -186,14 +186,14 @@ static void s_menu_layout_quit_proc(
     submit_event(ET_CLOSED_WINDOW, NULL, events);
 }
 
-void u_main_menu_init() {
+void ui_main_menu_init() {
     const char *widget_icon_paths[] = { NULL, NULL, NULL, NULL };
 
     VkDescriptorSet sets[] = {
-        u_texture(UT_PLAY_ICON),
-        u_texture(UT_BUILD_ICON),
-        u_texture(UT_SETTINGS_ICON),
-        u_texture(UT_QUIT_ICON),
+        ui_texture(UT_PLAY_ICON),
+        ui_texture(UT_BUILD_ICON),
+        ui_texture(UT_SETTINGS_ICON),
+        ui_texture(UT_QUIT_ICON),
     };
 
     menu_click_handler_t procs[] = {
@@ -208,39 +208,39 @@ void u_main_menu_init() {
     s_menus_init();
 }
 
-void u_submit_main_menu() {
+void ui_submit_main_menu() {
     main_menu_layout.submit();
 
     if (main_menu_layout.menu_opened()) {
         switch(main_menu_layout.current_open_menu) {
         case B_BROWSE_SERVER: {
-            u_submit_list(&servers_list_menu);
+            ui_submit_list(&servers_list_menu);
         } break;
 
         case B_BUILD_MAP: {
-            u_submit_list(&build_map_list_menu);
+            ui_submit_list(&build_map_list_menu);
         } break;
         }
     }
 }
     
-void u_main_menu_input(
+void ui_main_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
     if (main_menu_layout.input(events, input)) {
         switch (main_menu_layout.current_open_menu) {
         case B_BROWSE_SERVER: {
-            u_list_input(&servers_list_menu, events, input);
+            ui_list_input(&servers_list_menu, events, input);
         } break;
 
         case B_BUILD_MAP: {
-            u_list_input(&build_map_list_menu, events, input);
+            ui_list_input(&build_map_list_menu, events, input);
         } break;
         }
     }
 }
 
-void u_clear_main_menu() {
+void ui_clear_main_menu() {
     servers_list_menu.selected_item = 0xFFFF;
     main_menu_layout.current_button = B_INVALID_MENU_BUTTON;
     main_menu_layout.current_open_menu = B_INVALID_MENU_BUTTON;

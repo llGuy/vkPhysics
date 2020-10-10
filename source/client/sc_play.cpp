@@ -1,7 +1,7 @@
 #include <common/player.hpp>
 #include "cl_view.hpp"
 #include "nw_client.hpp"
-#include "ui.hpp"
+#include "ui_core.hpp"
 #include "wd_core.hpp"
 #include "sc_play.hpp"
 #include "sc_scene.hpp"
@@ -42,7 +42,7 @@ static void s_handle_input(event_submissions_t *events) {
     switch (submode) {
 
     case S_MENU: {
-        handle_ui_input(events);
+        ui_handle_input(events);
     } break;
 
     case S_IN_GAME: {
@@ -50,7 +50,7 @@ static void s_handle_input(event_submissions_t *events) {
     } break;
 
     case S_PAUSE: {
-        handle_ui_input(events);
+        ui_handle_input(events);
     } break;
 
     default: {
@@ -92,7 +92,7 @@ void sc_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
     dr_draw_game(render, transfer);
 
-    tick_ui(events);
+    ui_tick(events);
     render_submitted_ui(transfer, ui);
 
 
@@ -138,7 +138,7 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
     switch (event->type) {
     case ET_ENTER_GAME_PLAY: {
         // Enter game menu
-        push_ui_panel(USI_GAME_MENU);
+        ui_push_panel(USI_GAME_MENU);
         submode = S_MENU;
 
         cl_change_view_type(GVT_MENU);
@@ -146,7 +146,7 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
 
         // Leaving the server equates to exiting the game play mode
     case ET_LEAVE_SERVER: case ET_EXIT_SCENE: {
-        clear_ui_panels();
+        ui_clear_panels();
 
         submit_event(ET_ENTER_MAIN_MENU, NULL, events);
 
@@ -154,8 +154,8 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
     } break;
 
     case ET_SPAWN: {
-        clear_ui_panels();
-        push_ui_panel(USI_HUD);
+        ui_clear_panels();
+        ui_push_panel(USI_HUD);
 
         cl_change_view_type(GVT_IN_GAME);
 
@@ -164,14 +164,14 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
 
     case ET_PRESSED_ESCAPE: {
         if (submode == S_IN_GAME) {
-            push_ui_panel(USI_GAME_MENU);
+            ui_push_panel(USI_GAME_MENU);
             cl_change_view_type(GVT_MENU);
             submode = S_PAUSE;
 
             LOG_INFO("Going to pause menu\n");
         }
         else {
-            pop_ui_panel();
+            ui_pop_panel();
             cl_change_view_type(GVT_IN_GAME);
             submode = S_IN_GAME;
 
@@ -180,8 +180,8 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
     } break;
 
     case ET_LOCAL_PLAYER_DIED: {
-        clear_ui_panels();
-        push_ui_panel(USI_GAME_MENU);
+        ui_clear_panels();
+        ui_push_panel(USI_GAME_MENU);
 
         cl_change_view_type(GVT_MENU);
 

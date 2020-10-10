@@ -1,10 +1,10 @@
 #include "common/allocators.hpp"
 #include "common/event.hpp"
 #include "common/string.hpp"
-#include "ui.hpp"
+#include "ui_core.hpp"
+#include "ui_menu_layout.hpp"
 #include <cstdio>
 #include <sha1.hpp>
-#include "u_internal.hpp"
 #include <common/meta.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
@@ -34,7 +34,7 @@ static widget_color_t login_color;
 static void s_buttons_init() {
     signup_box.init(RT_LEFT_DOWN, 3.0f, ui_vector2_t(0.07f, 0.2f), ui_vector2_t(0.4f, 0.4f), &panel_box, 0x09090956);
     signup_color.init(0x05050536, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
-    signup_text.init(&signup_box, u_game_font(),
+    signup_text.init(&signup_box, ui_game_font(),
         ui_text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 7, 1.8f);
 
@@ -45,7 +45,7 @@ static void s_buttons_init() {
 
     login_box.init(RT_RIGHT_DOWN, 3.0f, ui_vector2_t(-0.07f, 0.2f), ui_vector2_t(0.4f, 0.4f), &panel_box, 0x09090956);
     login_color.init(0x05050536, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
-    login_text.init(&login_box, u_game_font(),
+    login_text.init(&login_box, ui_game_font(),
         ui_text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 7, 1.8f);
 
@@ -76,7 +76,7 @@ static void s_typing_boxes_init() {
     { // For typing username
         prompt_username_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.4f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         prompt_username_text.init(
-            &prompt_username_box, u_game_font(),
+            &prompt_username_box, ui_game_font(),
             ui_text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f, 0.9f, 25, 1.8f);
 
@@ -88,7 +88,7 @@ static void s_typing_boxes_init() {
         type_username_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.3f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         type_username_color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
         type_username_text.text.init(
-            &type_username_box, u_game_font(),
+            &type_username_box, ui_game_font(),
             ui_text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f, 0.9f, 25, 1.8f);
 
@@ -99,7 +99,7 @@ static void s_typing_boxes_init() {
     { // For typing password
         prompt_password_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.2f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         prompt_password_text.init(
-            &prompt_password_box, u_game_font(),
+            &prompt_password_box, ui_game_font(),
             ui_text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f, 0.9f, 25, 1.8f);
 
@@ -111,7 +111,7 @@ static void s_typing_boxes_init() {
         type_password_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.0f, 0.1f), ui_vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         type_password_color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
         type_password_text.text.init(
-            &type_password_box, u_game_font(),
+            &type_password_box, ui_game_font(),
             ui_text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f, 0.9f, 25, 1.8f);
 
@@ -130,7 +130,7 @@ static bool error_happened;
 static void s_error_section_init() {
     error_box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(0.07f, 0.01f), ui_vector2_t(0.8f, 0.8f), &panel_box, 0x0);
 
-    error_text.init(&error_box, u_game_font(),
+    error_text.init(&error_box, ui_game_font(),
         ui_text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 30, 1.8f);
 
@@ -140,21 +140,21 @@ static void s_error_section_init() {
     }
 }
 
-void u_sign_up_menu_init() {
+void ui_sign_up_menu_init() {
     s_panel_init();
     s_buttons_init();
     s_typing_boxes_init();
     s_error_section_init();
 }
 
-void u_submit_sign_up_menu() {
+void ui_submit_sign_up_menu() {
     push_colored_ui_box(&panel_box);
     push_colored_ui_box(&signup_box);
     push_colored_ui_box(&login_box);
     push_colored_ui_box(&type_password_box);
     push_colored_ui_box(&type_username_box);
     
-    mark_ui_textured_section(u_game_font()->font_img.descriptor);
+    mark_ui_textured_section(ui_game_font()->font_img.descriptor);
 
     push_ui_text(&signup_text);
     push_ui_text(&login_text);
@@ -167,12 +167,12 @@ void u_submit_sign_up_menu() {
         push_ui_text(&error_text);
 }
 
-void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
+void ui_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
     button_t hovering_over = B_INVALID;
     bool hovering = 0;
 
     { // Hover over sign up button
-        if ((hovering = u_hover_over_box(
+        if ((hovering = ui_hover_over_box(
                  &signup_box,
                  input->cursor_pos_x,
                  input->cursor_pos_y)))
@@ -184,7 +184,7 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
     }
 
     { // Hover over sign up button
-        if ((hovering = u_hover_over_box(
+        if ((hovering = ui_hover_over_box(
                  &login_box,
                  input->cursor_pos_x,
                  input->cursor_pos_y)))
@@ -196,7 +196,7 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
     }
 
     { // Hover over username box
-        if ((hovering = u_hover_over_box(
+        if ((hovering = ui_hover_over_box(
                  &type_username_box,
                  input->cursor_pos_x,
                  input->cursor_pos_y)))
@@ -208,7 +208,7 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
     }
 
     { // Hover over password box
-        if ((hovering = u_hover_over_box(
+        if ((hovering = ui_hover_over_box(
                  &type_password_box,
                  input->cursor_pos_x,
                  input->cursor_pos_y)))
@@ -281,7 +281,7 @@ void u_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
         type_password_text.input(input);
 }
 
-void u_handle_sign_up_failed(request_error_t ierror_type) {
+void ui_handle_sign_up_failed(request_error_t ierror_type) {
     error_happened = 1;
     error_type = ierror_type;
 

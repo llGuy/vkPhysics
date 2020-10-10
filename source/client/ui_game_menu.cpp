@@ -1,6 +1,8 @@
 #include <cstddef>
 #include "nw_client.hpp"
-#include "u_internal.hpp"
+#include "ui_menu_layout.hpp"
+#include "ui_game_menu.hpp"
+#include "ui_core.hpp"
 #include <common/event.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
@@ -37,7 +39,7 @@ static void s_menu_layout_spawn_proc(
     submit_event(ET_SPAWN, spawn, events);
 }
 
-void u_game_menu_init() {
+void ui_game_menu_init() {
     menu_click_handler_t procs[] = {
         &s_menu_layout_spawn_proc,
         NULL,
@@ -48,10 +50,10 @@ void u_game_menu_init() {
     const char *widget_icon_paths[] = { NULL, NULL, NULL, NULL };
 
     VkDescriptorSet sets[] = {
-        u_texture(UT_SPAWN_ICON),
-        u_texture(UT_BUILD_ICON),
-        u_texture(UT_SETTINGS_ICON),
-        u_texture(UT_QUIT_ICON),
+        ui_texture(UT_SPAWN_ICON),
+        ui_texture(UT_BUILD_ICON),
+        ui_texture(UT_SETTINGS_ICON),
+        ui_texture(UT_QUIT_ICON),
     };
 
     game_menu_layout.init(
@@ -61,16 +63,16 @@ void u_game_menu_init() {
         B_INVALID_BUTTON);
 }
 
-void u_submit_game_menu() {
+void ui_submit_game_menu() {
     game_menu_layout.submit();
 }
 
-void u_game_menu_input(
+void ui_game_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
     game_menu_layout.input(events, input);
 }
 
-void u_set_play_button_function(play_button_function_t function) {
+void ui_set_play_button_function(play_button_function_t function) {
     // TODO:
 }

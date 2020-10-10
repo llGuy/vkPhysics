@@ -1,5 +1,5 @@
 #include "sc_play.hpp"
-#include "ui.hpp"
+#include "ui_core.hpp"
 #include "dr_rsc.hpp"
 #include "sc_main.hpp"
 #include "sc_scene.hpp"
@@ -38,7 +38,7 @@ void sc_bind_main() {
 }
 
 static void s_handle_input(event_submissions_t *events) {
-    handle_ui_input(events);
+    ui_handle_input(events);
 
     player_t *spect = wd_get_spectator();
     game_input_t *game_input = get_game_input();
@@ -92,7 +92,7 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
     // Update UI
     // Submits quads to a list that will get sent to the GPU
-    tick_ui(events);
+    ui_tick(events);
     // (from renderer module) - submits the quads to the GPU
     render_submitted_ui(transfer, ui);
 
@@ -118,15 +118,15 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 void sc_handle_main_event(void *object, struct event_t *event, struct event_submissions_t *events) {
     switch (event->type) {
     case ET_ENTER_MAIN_MENU: {
-        push_ui_panel(USI_MAIN_MENU);
+        ui_push_panel(USI_MAIN_MENU);
     } break;
 
     case ET_EXIT_MAIN_MENU: {
-        clear_ui_panels();
+        ui_clear_panels();
     } break;
 
     case ET_REQUEST_TO_JOIN_SERVER: {
-        clear_ui_panels();
+        ui_clear_panels();
 
         submit_event(ET_ENTER_GAME_PLAY, NULL, events);
 
@@ -134,12 +134,12 @@ void sc_handle_main_event(void *object, struct event_t *event, struct event_subm
     } break;
 
     case ET_REQUEST_USER_INFORMATION: {
-        clear_ui_panels();
-        push_ui_panel(USI_SIGN_UP);
+        ui_clear_panels();
+        ui_push_panel(USI_SIGN_UP);
     } break;
 
     case ET_ENTER_MAP_CREATOR: {
-        clear_ui_panels();
+        ui_clear_panels();
 
         submit_event(ET_BEGIN_MAP_EDITING, event->data, events);
 

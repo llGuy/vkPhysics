@@ -1,5 +1,5 @@
-#include "ui.hpp"
-#include "u_internal.hpp"
+#include "ui_core.hpp"
+#include "ui_menu_layout.hpp"
 #include <renderer/renderer.hpp>
 
 // HUD for now, just contains a crosshair
@@ -53,7 +53,7 @@ static struct {
     widget_color_t ip_address_color;
 } browse_server_menu;
 
-void u_hud_init() {
+void ui_hud_init() {
     crosshair.init(
         RT_CENTER,
         1.0f,
@@ -62,12 +62,12 @@ void u_hud_init() {
         NULL,
         0xFFFFFFFF);
 
-    crosshair_texture = u_texture(UT_CROSSHAIRS);
+    crosshair_texture = ui_texture(UT_CROSSHAIRS);
 
     crosshair_selection.current_crosshair = 1;
 }
 
-void u_submit_hud() {
+void ui_submit_hud() {
     float unit = (1.0f / 8.0f);
 
     vector2_t start = vector2_t(crosshair_selection.current_crosshair % 8, crosshair_selection.current_crosshair / 8) / 8.0f;

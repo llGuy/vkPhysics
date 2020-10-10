@@ -1,5 +1,5 @@
-#include "ui.hpp"
-#include "u_internal.hpp"
+#include "ui_core.hpp"
+#include "ui_menu_layout.hpp"
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
 
@@ -117,7 +117,7 @@ bool menu_layout_t::input(
     bool hovered_over_button = 0;
 
     for (uint32_t i = 0; i < widget_count; ++i) {
-        bool hovered_over = u_hover_over_box(&widgets[i].box, cursor_x, cursor_y);
+        bool hovered_over = ui_hover_over_box(&widgets[i].box, cursor_x, cursor_y);
 
         color_pair_t pair = widgets[i].color.update(
             MENU_WIDGET_HOVER_COLOR_FADE_SPEED,

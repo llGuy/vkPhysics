@@ -1,9 +1,9 @@
-#include "u_list.hpp"
+#include "ui_list.hpp"
 #include <renderer/input.hpp>
 #include "renderer/renderer.hpp"
 #include <common/allocators.hpp>
 
-void u_list_init(
+void ui_list_init(
     ui_box_t *parent,
     ui_list_t *list,
     uint32_t right_buttons_count,
@@ -29,7 +29,7 @@ void u_list_init(
 
         list->input_text.text.init(
             &list->typing_box,
-            u_game_font(),
+            ui_game_font(),
             ui_text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.9f,
@@ -73,7 +73,7 @@ void u_list_init(
 
             button->text.init(
                 &button->box,
-                u_game_font(),
+                ui_game_font(),
                 ui_text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f,
                 10, 1.8f);
@@ -92,24 +92,24 @@ void u_list_init(
     }
 }
 
-void u_list_clear(ui_list_t *list) {
+void ui_list_clear(ui_list_t *list) {
     if (list->items) {
         list->item_count = 0;
         FL_FREE(list->items);
     }
 }
 
-void u_list_begin(ui_list_t *list, uint32_t count) {
+void ui_list_begin(ui_list_t *list, uint32_t count) {
     list->item_count = 0;
     list->items = FL_MALLOC(ui_list_item_t, count);
 }
 
-void u_list_add(ui_list_t *list, void *data) {
+void ui_list_add(ui_list_t *list, void *data) {
     list->items[list->item_count].data = data;
     list->item_count++;
 }
 
-void u_list_end(ui_list_t *list) {
+void ui_list_end(ui_list_t *list) {
     float server_button_height = 0.1f;
 
     for (uint32_t i = 0; i < list->item_count; ++i) {
@@ -125,7 +125,7 @@ void u_list_end(ui_list_t *list) {
 
         item->text.init(
             &item->box,
-            u_game_font(),
+            ui_game_font(),
             ui_text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.8f,
@@ -142,8 +142,8 @@ void u_list_end(ui_list_t *list) {
     }
 }
 
-void u_submit_list(ui_list_t *list) {
-    mark_ui_textured_section(u_game_font()->font_img.descriptor);
+void ui_submit_list(ui_list_t *list) {
+    mark_ui_textured_section(ui_game_font()->font_img.descriptor);
     push_colored_ui_box(&list->list_box);
 
     for (uint32_t i = 0; i < list->button_count; ++i) {
@@ -160,9 +160,9 @@ void u_submit_list(ui_list_t *list) {
     }
 }
 
-void u_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *input) {
+void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *input) {
     { // For the typing space
-        bool hovered_over_ip_address = u_hover_over_box(&list->typing_box, input->cursor_pos_x, input->cursor_pos_y);
+        bool hovered_over_ip_address = ui_hover_over_box(&list->typing_box, input->cursor_pos_x, input->cursor_pos_y);
         color_pair_t pair = list->typing_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over_ip_address);
 
         list->typing_box.color = pair.current_background;
@@ -181,7 +181,7 @@ void u_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *inp
         for (uint32_t i = 0; i < list->button_count; ++i) {
             ui_list_button_t *button = &list->right_buttons[i];
 
-            bool hovered_over = u_hover_over_box(&button->box, input->cursor_pos_x, input->cursor_pos_y);
+            bool hovered_over = ui_hover_over_box(&button->box, input->cursor_pos_x, input->cursor_pos_y);
             color_pair_t pair = button->color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over);
             button->box.color = pair.current_background;
 
@@ -199,7 +199,7 @@ void u_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *inp
                 item->box.color = MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR;
             }
             else {
-                bool hovered_over = u_hover_over_box(&item->box, input->cursor_pos_x, input->cursor_pos_y);
+                bool hovered_over = ui_hover_over_box(&item->box, input->cursor_pos_x, input->cursor_pos_y);
                 color_pair_t pair = item->button_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over);
                 item->box.color = pair.current_background;
 
