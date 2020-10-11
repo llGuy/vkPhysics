@@ -120,10 +120,12 @@ static void s_update_shadow_box(
 
     z_min = z_min - (z_max - z_min);
 
-    shadow_box->projection = glm::transpose(matrix4_t(2.0f / (x_max - x_min), 0.0f, 0.0f, -(x_max + x_min) / (x_max - x_min),
-                                                      0.0f, 2.0f / (y_max - y_min), 0.0f, -(y_max + y_min) / (y_max - y_min),
-                                                      0.0f, 0.0f, 2.0f / (z_max - z_min), -(z_max + z_min) / (z_max - z_min),
-                                                      0.0f, 0.0f, 0.0f, 1.0f));
+    shadow_box->projection = glm::transpose(
+        matrix4_t(
+            2.0f / (x_max - x_min), 0.0f, 0.0f, -(x_max + x_min) / (x_max - x_min),
+            0.0f, 2.0f / (y_max - y_min), 0.0f, -(y_max + y_min) / (y_max - y_min),
+            0.0f, 0.0f, 2.0f / (z_max - z_min), -(z_max + z_min) / (z_max - z_min),
+            0.0f, 0.0f, 0.0f, 1.0f));
 }
 
 void r_lighting_init() {

@@ -54,8 +54,8 @@ void sc_bind_map_creator() {
 }
 
 // All commands end with an enter, and start with a keybinding
-// CONTROL+A -> add
-// CONTROL+D -> destroy
+// + -> add
+// - -> destroy
 
 // Then, there is a parameter
 // s (sphere), h (hollow sphere), p (plane), m (math equation)
