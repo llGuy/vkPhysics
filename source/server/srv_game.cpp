@@ -1,4 +1,5 @@
 #include "common/event.hpp"
+#include "common/map.hpp"
 #include "srv_main.hpp"
 #include <common/game.hpp>
 #include <common/chunk.hpp>
@@ -109,15 +110,8 @@ void srv_game_init(event_submissions_t *events) {
     player_memory_init();
     chunk_memory_init();
 
-    // generate_sphere(vector3_t(20.0f), 40.0f, 140);
-    // generate_sphere(vector3_t(-40.0f, 40.0f, -40.0f), 20.0f, 140);
-    generate_sphere(vector3_t(-70.0f, 90.0f, 45.0f), 25.0f, 140, GT_ADDITIVE);
-
-    generate_math_equation(
-        vector3_t(0.0f),
-        vector3_t(100.0f),
-        s_bumps,
-        GT_ADDITIVE);
+    // Make this a parameter to the vkPhysics_server program
+    load_map("nucleus.map");
 }
 
 void srv_game_tick() {
