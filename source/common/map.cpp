@@ -1,4 +1,5 @@
 #include "map.hpp"
+#include "common/allocators.hpp"
 #include "common/chunk.hpp"
 #include "common/containers.hpp"
 #include "files.hpp"
@@ -142,11 +143,70 @@ map_t *load_map(const char *path) {
         current_loaded_map->is_new = 1;
     }
 
+    free_file(map_file);
+
     return current_loaded_map;
 }
 
 void save_map(map_t *map) {
     // Serialise stuff
+    char full_path[50] = {};
+    sprintf(full_path, "assets/maps/%s", map->path);
+    file_handle_t map_file = create_file(full_path, FLF_BINARY | FLF_WRITEABLE | FLF_OVERWRITE);
+
+    serialiser_t serialiser = {};
+    serialiser.data_buffer = LN_MALLOC(uint8_t, 1024 * 128);
+    serialiser.data_buffer_head = 0;
+    serialiser.data_buffer_size = 1024 * 128;
+
+    uint32_t chunk_count = 0;
+    chunk_t **chunks = get_active_chunks(&chunk_count);
+
+    serialiser.serialise_string(map->name);
+    uint32_t pointer_to_chunk_count = serialiser.data_buffer_head;
+    serialiser.serialise_uint32(0);
+
+    uint32_t saved_chunk_count = 0;
+    for (uint32_t i = 0; i < chunk_count; ++i) {
+        if (chunks[i]->flags.active_vertices) {
+            ++saved_chunk_count;
+
+            serialiser.serialise_int16(chunks[i]->chunk_coord.x);
+            serialiser.serialise_int16(chunks[i]->chunk_coord.y);
+            serialiser.serialise_int16(chunks[i]->chunk_coord.z);
+
+            for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH; ++v) {
+                uint8_t current_value = chunks[i]->voxels[v];
+
+                if (current_value == 0) {
+                    uint32_t before_head = serialiser.data_buffer_head;
+                    uint32_t zero_count = 0;
+                    for (; chunks[i]->voxels[v] == 0 && zero_count < 5; ++v, ++zero_count) {
+                        serialiser.serialise_uint8(0);
+                    }
+            
+                    if (zero_count == 5) {
+                        for (; chunks[i]->voxels[v] == 0; ++v, ++zero_count); 
+
+                        serialiser.data_buffer_head = before_head;
+                        serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);
+                        serialiser.serialise_uint32(zero_count);
+                    }
+
+                    v -= 1;
+                }
+                else {
+                    serialiser.serialise_uint8(current_value);
+                }
+            }
+        }
+    }
+
+    serialiser.serialise_uint32(saved_chunk_count, &serialiser.data_buffer[pointer_to_chunk_count]);
+
+    write_file(map_file, serialiser.data_buffer, serialiser.data_buffer_head);
+
+    free_file(map_file);
 }
 
 void unload_map(map_t *map) {

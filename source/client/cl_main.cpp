@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <ctime>
 #include "ui_core.hpp"
 #include "dr_rsc.hpp"
@@ -138,6 +139,7 @@ int32_t main(
 void cl_terminate() {
     running = 0;
     submit_event(ET_LEAVE_SERVER, NULL, &events);
+    submit_event(ET_EXIT_SCENE, NULL, &events);
 }
 
 float cl_delta_time() {

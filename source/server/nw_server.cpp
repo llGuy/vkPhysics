@@ -142,7 +142,6 @@ static void s_serialise_chunk(
             for (; current_values->voxel_values[v_index] == 0 && zero_count < 5; ++v_index, ++zero_count) {
                 serialiser->serialise_uint8(0);
             }
-            
 
             if (zero_count == 5) {
                 for (; current_values->voxel_values[v_index] == 0; ++v_index, ++zero_count) {}

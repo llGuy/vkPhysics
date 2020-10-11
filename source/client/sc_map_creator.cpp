@@ -27,6 +27,7 @@ enum submode_t {
 
 static submode_t submode;
 static map_t *map;
+static bool need_to_save;
 static bool started_command;
 
 #define EDIT_BUFFER_MAX_CHAR_COUNT 20
@@ -258,6 +259,8 @@ void sc_map_creator_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCom
 }
 
 static void s_exit_map_editor(event_submissions_t *events) {
+    save_map(map);
+
     unload_map(map);
     wd_clear_world();
 
@@ -301,6 +304,7 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
         }
         else {
             // TODO: Load map contents from file
+            need_to_save = 1;
         }
 
         FL_FREE(event->data);
@@ -313,10 +317,13 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
 
         submode = S_IN_GAME;
         cl_change_view_type(GVT_IN_GAME);
+
+        need_to_save = 1;
     } break;
 
     case ET_EXIT_SCENE: {
         s_exit_map_editor(events);
+        need_to_save = 0;
     } break;
 
     case ET_DONT_CREATE_NEW_MAP: {

@@ -106,7 +106,8 @@ void sc_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
         else
             player = get_player(local_id);
 
-        s_calculate_pos_and_dir(player, &eye_info->position, &eye_info->direction);
+        if (player)
+            s_calculate_pos_and_dir(player, &eye_info->position, &eye_info->direction);
     } break;
 
     case S_MENU: {
