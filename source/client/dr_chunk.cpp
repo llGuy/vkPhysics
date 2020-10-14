@@ -14,7 +14,8 @@ chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_p
 
     memset(chunk_render, 0, sizeof(chunk_render_t));
 
-    uint32_t buffer_size = sizeof(vector3_t) * CHUNK_MAX_VERTICES_PER_CHUNK;
+    // Color of each vertex: uint32_t
+    uint32_t buffer_size = sizeof(chunk_mesh_vertex_t) * CHUNK_MAX_VERTICES_PER_CHUNK;
 
     push_buffer_to_mesh(BT_VERTEX, &chunk_render->mesh);
     mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, &chunk_render->mesh);
@@ -54,7 +55,7 @@ void dr_destroy_chunk_render(chunk_render_t *render) {
     }
 }
 
-static uint8_t s_chunk_edge_voxel_value(
+static voxel_t s_chunk_edge_voxel_value(
     int32_t x,
     int32_t y,
     int32_t z,
@@ -86,7 +87,7 @@ static uint8_t s_chunk_edge_voxel_value(
     *doesnt_exist = (bool)(chunk_ptr == nullptr);
 
     if (*doesnt_exist)
-        return 0;
+        return { 0, 0 };
     
     return chunk_ptr->voxels[get_voxel_index(final_x, final_y, final_z)];
 }
@@ -116,14 +117,16 @@ static const ivector3_t NORMALIZED_CUBE_VERTEX_INDICES[8] = {
 static void s_push_vertex_to_triangle_array(
     uint8_t v0,
     uint8_t v1,
-    vector3_t *vertices,
-    uint8_t *voxel_values,
+    chunk_mesh_vertex_t *vertices,
+    voxel_t *voxel_values,
     uint8_t surface_level,
-    vector3_t *mesh_vertices,
+    chunk_mesh_vertex_t *mesh_vertices,
     uint32_t *vertex_count) {
     float surface_level_f = (float)surface_level;
-    float voxel_value0 = (float)voxel_values[v0];
-    float voxel_value1 = (float)voxel_values[v1];
+    float voxel_value0 = (float)voxel_values[v0].value;
+    float voxel_value1 = (float)voxel_values[v1].value;
+
+    voxel_color_t dominant_color = voxel_values[v1].color;
 
     if (voxel_value0 > voxel_value1) {
         float tmp = voxel_value0;
@@ -133,13 +136,17 @@ static void s_push_vertex_to_triangle_array(
         uint8_t tmp_v = v0;
         v0 = v1;
         v1 = tmp_v;
+
+        dominant_color = voxel_values[v0].color;
     }
 
     float interpolated_voxel_values = lerp(voxel_value0, voxel_value1, surface_level_f);
     
-    vector3_t vertex = interpolate(vertices[v0], vertices[v1], interpolated_voxel_values);
+    vector3_t vertex = interpolate(vertices[v0].position, vertices[v1].position, interpolated_voxel_values);
     
-    mesh_vertices[*(vertex_count)] = vertex;
+    mesh_vertices[*(vertex_count)].position = vertex;
+    // In the shader, we will need to convert this 8-bit color to fully RGB color
+    mesh_vertices[*(vertex_count)].color = (uint32_t)dominant_color;
 
     ++(*vertex_count);
 }
@@ -147,16 +154,16 @@ static void s_push_vertex_to_triangle_array(
 #include <common/triangle_table.inc>
 
 static void s_update_chunk_mesh_voxel_pair(
-    uint8_t *voxel_values,
+    voxel_t *voxel_values,
     uint32_t x,
     uint32_t y,
     uint32_t z,
     uint8_t surface_level,
-    vector3_t *mesh_vertices,
+    chunk_mesh_vertex_t *mesh_vertices,
     uint32_t *vertex_count) {
     uint8_t bit_combination = 0;
     for (uint32_t i = 0; i < 8; ++i) {
-        bool is_over_surface = (voxel_values[i] > surface_level);
+        bool is_over_surface = (voxel_values[i].value > surface_level);
         bit_combination |= is_over_surface << i;
     }
 
@@ -171,9 +178,10 @@ static void s_update_chunk_mesh_voxel_pair(
         edge_pair[edge % 3] = edge_index;
 
         if (edge % 3 == 2) {
-            vector3_t vertices[8] = {};
+            chunk_mesh_vertex_t vertices[8] = {};
             for (uint32_t i = 0; i < 8; ++i) {
-                vertices[i] = NORMALIZED_CUBE_VERTICES[i] + vector3_t(0.5f) + vector3_t((float)x, (float)y, (float)z);
+                vertices[i].position = NORMALIZED_CUBE_VERTICES[i] + vector3_t(0.5f) + vector3_t((float)x, (float)y, (float)z);
+                vertices[i].color = voxel_values[i].color;
             }
 
             for (uint32_t i = 0; i < 3; ++i) {
@@ -198,7 +206,7 @@ static void s_update_chunk_mesh_voxel_pair(
     }
 }
 
-uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector3_t *mesh_vertices) {
+uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, chunk_mesh_vertex_t *mesh_vertices) {
     if (!mesh_vertices)
         mesh_vertices = dr_get_tmp_mesh_verts();
 
@@ -217,7 +225,7 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector
                 
                 uint32_t x = CHUNK_EDGE_LENGTH - 1;
 
-                uint8_t voxel_values[8] = {
+                voxel_t voxel_values[8] = {
                     c->voxels[get_voxel_index(x, y, z)],
                     s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
                     s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
@@ -242,7 +250,7 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector
                 
                 uint32_t y = CHUNK_EDGE_LENGTH - 1;
 
-                uint8_t voxel_values[8] = {
+                voxel_t voxel_values[8] = {
                     c->voxels[get_voxel_index(x, y, z)],
                     s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
                     s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
@@ -268,7 +276,7 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector
                 
                 uint32_t z = CHUNK_EDGE_LENGTH - 1;
 
-                uint8_t voxel_values[8] = {
+                voxel_t voxel_values[8] = {
                     c->voxels[get_voxel_index(x, y, z)],
                     s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
                     s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
@@ -288,7 +296,7 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector
     for (uint32_t z = 0; z < CHUNK_EDGE_LENGTH - 1; ++z) {
         for (uint32_t y = 0; y < CHUNK_EDGE_LENGTH - 1; ++y) {
             for (uint32_t x = 0; x < CHUNK_EDGE_LENGTH - 1; ++x) {
-                uint8_t voxel_values[8] = {
+                voxel_t voxel_values[8] = {
                     c->voxels[get_voxel_index(x, y, z)],
                     c->voxels[get_voxel_index(x + 1, y, z)],
                     c->voxels[get_voxel_index(x + 1, y, z + 1)],
@@ -307,7 +315,7 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector
     return vertex_count;
 }
 
-void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_level, chunk_t *c, vector3_t *mesh_vertices) {
+void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_level, chunk_t *c, chunk_mesh_vertex_t *mesh_vertices) {
     if (!mesh_vertices) {
         mesh_vertices = dr_get_tmp_mesh_verts();
     }
@@ -321,7 +329,7 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
         }
 
         static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
-        uint32_t update_size = vertex_count * sizeof(vector3_t);
+        uint32_t update_size = vertex_count * sizeof(chunk_mesh_vertex_t);
 
         uint32_t loop_count = update_size / MAX_UPDATE_BUFFER_SIZE;
 

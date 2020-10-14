@@ -146,7 +146,7 @@ chunk_modifications_t *deserialise_chunk_modifications(uint32_t *modification_co
 struct voxel_chunk_values_t {
     // Chunk coord
     int16_t x, y, z;
-    uint8_t *voxel_values;
+    voxel_t *voxel_values;
 };
 
 struct packet_chunk_voxels_t {

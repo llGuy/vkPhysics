@@ -23,6 +23,17 @@ struct chunk_history_t {
     int16_t modification_stack[CHUNK_VOXEL_COUNT / 2];
 };
 
+// This is an 8-bit color value ( R R R G G G B B ) - this is what each bit represents
+typedef uint8_t voxel_color_t;
+
+struct voxel_t {
+    voxel_color_t color;
+    uint8_t value;
+};
+
+vector3_t b8_color_to_v3(voxel_color_t color);
+voxel_color_t v3_color_to_b8(const vector3_t &color);
+
 struct chunk_t {
     struct flags_t {
         uint32_t made_modification: 1;
@@ -37,7 +48,7 @@ struct chunk_t {
     ivector3_t xs_bottom_corner;
     ivector3_t chunk_coord;
 
-    uint8_t voxels[CHUNK_VOXEL_COUNT];
+    voxel_t voxels[CHUNK_VOXEL_COUNT];
 
     //chunk_history_t *history;
     chunk_history_t history;
@@ -58,16 +69,17 @@ chunk_t **get_active_chunks(uint32_t *count);
 chunk_t **get_modified_chunks(uint32_t *count);
 // Adds a sphere through modifying voxels
 enum generation_type_t { GT_ADDITIVE, GT_DESTRUCTIVE, GT_INVALID } ;
-void generate_sphere(const vector3_t &ws_center, float ws_radius, float max_value, generation_type_t type);
-void generate_hollow_sphere(const vector3_t &ws_center, float ws_radius, float max_value, generation_type_t type);
-void generate_platform(const vector3_t &position, float width, float depth, generation_type_t type);
-void generate_math_equation(const vector3_t &ws_center, const vector3_t &ws_extent, float(*equation)(float x, float y, float z), generation_type_t type);
+void generate_sphere(const vector3_t &ws_center, float ws_radius, float max_value, generation_type_t type, voxel_color_t color);
+void generate_hollow_sphere(const vector3_t &ws_center, float ws_radius, float max_value, generation_type_t type, voxel_color_t color);
+void generate_platform(const vector3_t &position, float width, float depth, generation_type_t type, voxel_color_t color);
+void generate_math_equation(const vector3_t &ws_center, const vector3_t &ws_extent, float(*equation)(float x, float y, float z), generation_type_t type, voxel_color_t color);
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
 struct terraform_package_t {
     vector3_t ws_position;
     bool ray_hit_terrain;
+    voxel_color_t color;
 };
 
 // This will return a terraforming package to use in the terraform function

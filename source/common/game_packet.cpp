@@ -355,7 +355,7 @@ uint32_t packed_chunk_voxels_size(
     uint32_t final_size = 0;
     final_size += sizeof(packet_chunk_voxels_t::chunk_in_packet_count);
 
-    uint32_t voxel_chunk_values_size = 3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(uint8_t);
+    uint32_t voxel_chunk_values_size = 3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(voxel_t);
 
     final_size += voxel_chunk_values_size * packet->chunk_in_packet_count;
 
@@ -373,7 +373,7 @@ void serialise_packet_chunk_voxels(
         serialiser->serialise_int16(packet->values[i].z);
         // TODO: In future, optimise this, use the fact that the maximum value for a voxel is 254.
         // Make 255 a marker for: no more values that are not 0 or something
-        serialiser->serialise_bytes(packet->values[i].voxel_values, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
+        serialiser->serialise_bytes((uint8_t *)packet->values[i].voxel_values, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(voxel_t));
     }
 }
 
@@ -389,6 +389,6 @@ void deserialise_packet_chunk_voxels(
         packet->values[i].y = serialiser->deserialise_int16();
         packet->values[i].z = serialiser->deserialise_int16();
 
-        packet->values[i].voxel_values = serialiser->deserialise_bytes(NULL, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
+        packet->values[i].voxel_values = (voxel_t *)serialiser->deserialise_bytes(NULL, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(voxel_t));
     }
 }

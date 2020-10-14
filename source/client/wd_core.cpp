@@ -46,7 +46,7 @@ void wd_tick(event_submissions_t *events) {
     // Interpolate between the player snapshots that were sent by the server
     for (uint32_t i = 0; i < get_player_count(); ++i) {
         player_t *player = get_player(i);
-            
+        
         if (player) {
             if (player->flags.is_remote) {
                 wd_player_interp_step(cl_delta_time(), player);

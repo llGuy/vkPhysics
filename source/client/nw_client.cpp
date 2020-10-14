@@ -56,7 +56,9 @@ static void s_start_client(
     //s_acc_predicted_modification_init(&merged_recent_modifications, 0);
     g_net_data.merged_recent_modifications.tick = 0;
     g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count = 0;
-    g_net_data.merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(chunk_modifications_t, NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
+    g_net_data.merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(
+        chunk_modifications_t,
+        NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 
     local_client_info.client_name = data->client_name;
 }
@@ -328,7 +330,7 @@ static void s_revert_history_instance(
 #if 0
             LOG_INFOV("(%i %i %i) Set voxel at index %i to %i\n", cm_ptr->x, cm_ptr->y, cm_ptr->z, vm_ptr->index, (int32_t)vm_ptr->initial_value);
 #endif
-            c_ptr->voxels[vm_ptr->index] = vm_ptr->initial_value;
+            c_ptr->voxels[vm_ptr->index].value = vm_ptr->initial_value;
         }
 
         c_ptr->flags.has_to_update_vertices = 1;
@@ -389,7 +391,7 @@ static void s_correct_chunks(
 #if 0
             printf("(%i %i %i) Setting (%i) to %i\n", c_ptr->chunk_coord.x, c_ptr->chunk_coord.y, c_ptr->chunk_coord.z, vm_ptr->index, (int32_t)vm_ptr->final_value);
 #endif
-            c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+            c_ptr->voxels[vm_ptr->index].value = vm_ptr->final_value;
         }
     }
 }
@@ -403,7 +405,7 @@ static void s_set_voxels_to_final_interpolated_values() {
 
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-            c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+            c_ptr->voxels[vm_ptr->index].value = vm_ptr->final_value;
         }
 
         cm_ptr->modified_voxels_count = 0;
@@ -454,11 +456,11 @@ static void s_create_voxels_that_need_to_be_interpolated(
             for (uint32_t recv_vm_index = 0; recv_vm_index < recv_cm_ptr->modified_voxels_count; ++recv_vm_index) {
                 voxel_modification_t *recv_vm_ptr = &recv_cm_ptr->modifications[recv_vm_index];
                 if (g_net_data.dummy_voxels[recv_vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
-                    if (recv_vm_ptr->final_value != c_ptr->voxels[recv_vm_ptr->index]) {
+                    if (recv_vm_ptr->final_value != c_ptr->voxels[recv_vm_ptr->index].value) {
                         // Was not modified, can push this
                         dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].index = recv_vm_ptr->index;
                         // Initial value is current value of voxel
-                        dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].initial_value = c_ptr->voxels[recv_vm_ptr->index];
+                        dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].initial_value = c_ptr->voxels[recv_vm_ptr->index].value;
                         dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count++].final_value = recv_vm_ptr->final_value;
                         ++count;
                     }
@@ -494,7 +496,7 @@ static void s_create_voxels_that_need_to_be_interpolated(
                     voxel_modification_t *dst_vm_ptr = &dst_cm_ptr->modifications[vm_index];
                     voxel_modification_t *recv_vm_ptr = &recv_cm_ptr->modifications[vm_index];
                     dst_vm_ptr->index = recv_vm_ptr->index;
-                    dst_vm_ptr->initial_value = c_ptr->voxels[recv_vm_ptr->index];
+                    dst_vm_ptr->initial_value = c_ptr->voxels[recv_vm_ptr->index].value;
                     dst_vm_ptr->final_value = recv_vm_ptr->final_value;
                 }
             }
@@ -589,7 +591,7 @@ static void s_handle_incorrect_state(
                 chunk_t *c_ptr = get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
                 for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
                     voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-                    c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+                    c_ptr->voxels[vm_ptr->index].value = vm_ptr->final_value;
                 }
             }
         }
@@ -606,7 +608,7 @@ static void s_handle_incorrect_state(
 
             for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
                 voxel_modification_t *vm_ptr = &cm_ptr->modifications[v_index];
-                c_ptr->voxels[vm_ptr->index] = vm_ptr->final_value;
+                c_ptr->voxels[vm_ptr->index].value = vm_ptr->final_value;
             }
         }
     }
@@ -785,25 +787,25 @@ static void s_receive_packet_chunk_voxels(
             uint8_t current_value = serialiser->deserialise_uint8();
 
             if (current_value == CHUNK_SPECIAL_VALUE) {
-                chunk->voxels[v] = 0;
+                chunk->voxels[v].value = 0;
                 ++v;
 
                 // Repeating zeros
                 uint32_t zero_count = serialiser->deserialise_uint32();
-                chunk->voxels[v + 1] = 0;
-                chunk->voxels[v + 2] = 0;
-                chunk->voxels[v + 3] = 0;
-                chunk->voxels[v + 4] = 0;
+                chunk->voxels[v + 1].value = 0;
+                chunk->voxels[v + 2].value = 0;
+                chunk->voxels[v + 3].value = 0;
+                chunk->voxels[v + 4].value = 0;
 
                 v += 4;
 
                 uint32_t previous_v = v;
                 for (; v < previous_v + zero_count - 5; ++v) {
-                    chunk->voxels[v] = 0;
+                    chunk->voxels[v].value = 0;
                 }
             }
             else {
-                chunk->voxels[v] = current_value;
+                chunk->voxels[v].value = current_value;
                 ++v;
             }
         }

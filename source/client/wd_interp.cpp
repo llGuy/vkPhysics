@@ -21,8 +21,8 @@ void wd_finish_interp_step() {
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-            uint8_t *current_value = &c_ptr->voxels[vm_ptr->index];
-            *current_value = vm_ptr->final_value;
+            voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
+            current_value->value = vm_ptr->final_value;
         }
 
         cm_ptr->modified_voxels_count = 0;
@@ -46,8 +46,8 @@ void wd_chunks_interp_step(float dt) {
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-            uint8_t *current_value = &c_ptr->voxels[vm_ptr->index];
-            float fcurrent_value = (float)(*current_value);
+            voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
+            float fcurrent_value = (float)(current_value->value);
             float initial_value = (float)(vm_ptr->initial_value);
             float final_value = (float)(vm_ptr->final_value);
 
@@ -58,7 +58,7 @@ void wd_chunks_interp_step(float dt) {
             else if (fcurrent_value > 254.0f) {
                 fcurrent_value = 254.0f;
             }
-            *current_value = (uint8_t)fcurrent_value;
+            current_value->value = (uint8_t)fcurrent_value;
         }
     }
 }

@@ -1,10 +1,12 @@
 #version 450
 
 layout(location = 0) in vec3 in_position;
+layout(location = 1) in uint in_color;
 
 layout(location = 0) out VS_DATA {
     vec4 vs_position;
     vec4 ws_position;
+    uint color;
 } out_vs;
 
 layout(push_constant) uniform push_constant_t {
@@ -29,4 +31,5 @@ void main() {
     gl_Position = u_camera_transforms.view_projection * ms_position;
     out_vs.vs_position = u_camera_transforms.view * vec4(ms_position.xyz, 1.0f);
     out_vs.ws_position = ms_position;
+    out_vs.color = in_color;
 }

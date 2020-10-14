@@ -238,7 +238,7 @@ uint32_t fill_chunk_modification_array(
             for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
                 cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
                 cm_ptr->modifications[v_index].initial_value = (uint8_t)h_ptr->modification_pool[cm_ptr->modifications[v_index].index];
-                cm_ptr->modifications[v_index].final_value = (uint8_t)c_ptr->voxels[cm_ptr->modifications[v_index].index];
+                cm_ptr->modifications[v_index].final_value = (uint8_t)c_ptr->voxels[cm_ptr->modifications[v_index].index].value;
             }
 
             ++current;

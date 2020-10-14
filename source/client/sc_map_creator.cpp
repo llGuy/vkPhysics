@@ -86,7 +86,7 @@ static void s_parse_and_generate_sphere(
 
     player_t *spectator = wd_get_spectator();
 
-    generate_sphere(spectator->ws_position, sphere_radius, 140, type);
+    generate_sphere(spectator->ws_position, sphere_radius, 140, type, 0xff);
 }
 
 static void s_parse_and_generate_hollow_sphere(
@@ -99,21 +99,21 @@ static void s_parse_and_generate_hollow_sphere(
 
     player_t *spectator = wd_get_spectator();
 
-    generate_hollow_sphere(spectator->ws_position, sphere_radius, 250, type);
+    generate_hollow_sphere(spectator->ws_position, sphere_radius, 250, type, 0xff);
 }
 
 static void s_parse_and_generate_plane(
     generation_type_t type,
     const char *str,
     uint32_t str_len) {
-    
+    // ...
 }
 
 static void s_parse_and_generate_math_equation(
     generation_type_t type,
     const char *str,
     uint32_t str_len) {
-    
+    // ...
 }
 
 static void s_parse_and_execute_command(

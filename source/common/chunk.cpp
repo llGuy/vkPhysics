@@ -60,6 +60,28 @@ uint32_t get_voxel_index(uint32_t x, uint32_t y, uint32_t z) {
     return z * (CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH) + y * CHUNK_EDGE_LENGTH + x;
 }
 
+enum { B8_R_MAX = 0b111, B8_G_MAX = 0b111, B8_B_MAX = 0b11 };
+
+vector3_t b8_color_to_v3(voxel_color_t color) {
+    uint8_t r_b8 = color >> 5;
+    uint8_t g_b8 = (color >> 2) & 0b111;
+    uint8_t b_b8 = (color) & 0b11;
+
+    float r_f32 = (float)(r_b8) / (float)(B8_R_MAX);
+    float g_f32 = (float)(g_b8) / (float)(B8_G_MAX);
+    float b_f32 = (float)(b_b8) / (float)(B8_B_MAX);
+
+    return vector3_t(r_f32, g_f32, b_f32);
+}
+
+voxel_color_t v3_color_to_b8(const vector3_t &color) {
+    float r = color.r * (float)(B8_R_MAX);
+    float g = color.g * (float)(B8_G_MAX);
+    float b = color.b * (float)(B8_B_MAX);
+
+    return ((uint8_t)r << 5) + ((uint8_t)g << 2) + ((uint8_t)b);
+}
+
 void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &chunk_coord) {
     chunk->xs_bottom_corner = chunk_coord * CHUNK_EDGE_LENGTH;
     chunk->chunk_coord = chunk_coord;
@@ -71,7 +93,7 @@ void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &ch
     chunk->flags.modified_marker = 0;
     chunk->flags.index_of_modification_struct = 0;
 
-    memset(chunk->voxels, 0, sizeof(uint8_t) * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
+    memset(chunk->voxels, 0, sizeof(voxel_t) * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
 
     chunk->history.modification_count = 0;
     memset(chunk->history.modification_pool, CHUNK_SPECIAL_VALUE, CHUNK_VOXEL_COUNT);
@@ -160,7 +182,8 @@ void generate_hollow_sphere(
     const vector3_t &ws_center,
     float ws_radius,
     float max_value,
-    generation_type_t type) {
+    generation_type_t type,
+    voxel_color_t color) {
     float (* generation_proc)(float distance_squared, float radius_squared);
     switch(type) {
     case GT_ADDITIVE: {
@@ -228,10 +251,11 @@ void generate_hollow_sphere(
 
                         //current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
 
-                        uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * max_value);
-                        if (*v < new_value) {
-                            *v = new_value;
+                        if (v->value < new_value) {
+                            v->value = new_value;
+                            v->color = color;
                         }
                     }
                     else {
@@ -247,10 +271,11 @@ void generate_hollow_sphere(
 
                         ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
 
-                        uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * max_value);
-                        if (*v < new_value) {
-                            *v = new_value;
+                        if (v->value < new_value) {
+                            v->value = new_value;
+                            v->color = color;
                         }
                     }
                 }
@@ -263,7 +288,8 @@ void generate_sphere(
     const vector3_t &ws_center,
     float ws_radius,
     float max_value,
-    generation_type_t type) {
+    generation_type_t type,
+    voxel_color_t color) {
     float (* generation_proc)(float distance_squared, float radius_squared);
     switch(type) {
     case GT_ADDITIVE: {
@@ -324,10 +350,11 @@ void generate_sphere(
 
                         //current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
 
-                        uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * max_value);
                         // if (*v < new_value) {
-                            *v = new_value;
+                            v->value = new_value;
+                            v->color = color;
                             // }
                     }
                     else {
@@ -343,10 +370,11 @@ void generate_sphere(
 
                         ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
 
-                        uint8_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * max_value);
                         // if (*v < new_value) {
-                            *v = new_value;
+                            v->value = new_value;
+                            v->color = color;
                             // }
                     }
                 }
@@ -355,7 +383,7 @@ void generate_sphere(
     }
 }
 
-void generate_platform(const vector3_t &position, float width, float depth, generation_type_t type) {
+void generate_platform(const vector3_t &position, float width, float depth, generation_type_t type, voxel_color_t color) {
     uint8_t (* generation_proc)();
     switch (type) {
     case GT_ADDITIVE: {
@@ -382,7 +410,8 @@ void generate_platform(const vector3_t &position, float width, float depth, gene
             chunk->flags.has_to_update_vertices = 1;
             ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
             uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
-            chunk->voxels[index] = generation_proc();
+            chunk->voxels[index].value = generation_proc();
+            chunk->voxels[index].color = color;
         }
     }
 }
@@ -390,8 +419,9 @@ void generate_platform(const vector3_t &position, float width, float depth, gene
 void generate_math_equation(
     const vector3_t &ws_center,
     const vector3_t &extent,
-    float(*equation)(float x, float y, float z),
-    generation_type_t type) {
+    float (* equation)(float x, float y, float z),
+    generation_type_t type,
+    voxel_color_t color) {
     uint8_t (* generation_proc)(float equation_result);
     switch (type) {
     case GT_ADDITIVE: {
@@ -421,7 +451,8 @@ void generate_math_equation(
                     chunk->flags.has_to_update_vertices = 1;
                     ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
                     uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
-                    chunk->voxels[index] = generation_proc(c);
+                    chunk->voxels[index].value = generation_proc(c);
+                    chunk->voxels[index].color = color;
                 }
             }
         }
@@ -451,9 +482,11 @@ terraform_package_t cast_terrain_ray(
 
         if (chunk) {
             ivector3_t local_voxel_coord = space_voxel_to_local_chunk(voxel);
-            if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > CHUNK_SURFACE_LEVEL) {
+            voxel_t *voxel_ptr = &chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)];
+            if (voxel_ptr->value > CHUNK_SURFACE_LEVEL) {
                 package.ray_hit_terrain = 1;
                 package.ws_position = vector3_t(voxel);
+                package.color = voxel_ptr->color;
                 break;
             }
         }
@@ -550,11 +583,11 @@ static bool s_terraform_with_history(
                         }
 
                         uint32_t voxel_index = get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
-                        uint8_t *voxel = &chunk->voxels[voxel_index];
-                        uint8_t voxel_value = *voxel;
+                        voxel_t *voxel = &chunk->voxels[voxel_index];
+                        uint8_t voxel_value = voxel->value;
                         float proportion = 1.0f - (distance_squared / radius_squared);
 
-                        int32_t current_voxel_value = (int32_t)*voxel;
+                        int32_t current_voxel_value = (int32_t)voxel->value;
 
                         int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
 
@@ -571,12 +604,13 @@ static bool s_terraform_with_history(
                         }
 
                         // Didn't add to the history yet
-                        if (*vh == CHUNK_SPECIAL_VALUE && voxel_value != *voxel) {
-                            *vh = *voxel;
+                        if (*vh == CHUNK_SPECIAL_VALUE && voxel_value != voxel->value) {
+                            *vh = voxel->value;
                             chunk->history.modification_stack[chunk->history.modification_count++] = voxel_index;
                         }
                                     
-                        *voxel = voxel_value;
+                        voxel->value = voxel_value;
+                        voxel->color = package.color;
                     }
                 }
             }
@@ -601,9 +635,11 @@ static bool s_terraform_without_history(
 
         if (chunk) {
             ivector3_t local_voxel_coord = space_voxel_to_local_chunk(voxel);
-            if (chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)] > CHUNK_SURFACE_LEVEL) {
+            voxel_t *voxel_ptr = &chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)];
+            if (voxel_ptr->value > CHUNK_SURFACE_LEVEL) {
                 package.ray_hit_terrain = 1;
                 package.ws_position = package.ws_position;
+                package.color = package.color;
 
                 chunk->flags.made_modification = 1;
                 chunk->flags.has_to_update_vertices = 1;
@@ -651,10 +687,10 @@ static bool s_terraform_without_history(
 
                                 uint32_t voxel_index = get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
 
-                                uint8_t *voxel = &chunk->voxels[voxel_index];
+                                voxel_t *voxel = &chunk->voxels[voxel_index];
                                 float proportion = 1.0f - (distance_squared / radius_squared);
 
-                                int32_t current_voxel_value = (int32_t)*voxel;
+                                int32_t current_voxel_value = (int32_t)voxel->value;
 
                                 int32_t new_value = (int32_t)(proportion * coeff * dt * speed) + current_voxel_value;
 
@@ -670,7 +706,8 @@ static bool s_terraform_without_history(
                                     voxel_value = (uint8_t)new_value;
                                 }
 
-                                *voxel = voxel_value;
+                                voxel->value = voxel_value;
+                                voxel->color = package.color;
                             }
                         }
                     }
@@ -750,7 +787,7 @@ static uint8_t s_chunk_edge_voxel_value(
         return 0;
     }
     
-    return chunk_ptr->voxels[get_voxel_index(final_x, final_y, final_z)];
+    return chunk_ptr->voxels[get_voxel_index(final_x, final_y, final_z)].value;
 }
 
 #include "triangle_table.inc"
@@ -892,7 +929,7 @@ static collision_triangle_t *s_get_collision_triangles(
                     ivector3_t cs_coord = space_voxel_to_local_chunk(voxel_coord);
                     
                     if (is_between_chunks) {
-                        voxel_values[0] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y, cs_coord.z)];
+                        voxel_values[0] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y, cs_coord.z)].value;
                         voxel_values[1] = s_chunk_edge_voxel_value(cs_coord.x + 1, cs_coord.y, cs_coord.z, &doesnt_exist, chunk_coord);
                         voxel_values[2] = s_chunk_edge_voxel_value(cs_coord.x + 1, cs_coord.y, cs_coord.z + 1, &doesnt_exist, chunk_coord);
                         voxel_values[3] = s_chunk_edge_voxel_value(cs_coord.x,     cs_coord.y, cs_coord.z + 1, &doesnt_exist, chunk_coord);
@@ -903,15 +940,15 @@ static collision_triangle_t *s_get_collision_triangles(
                         voxel_values[7] = s_chunk_edge_voxel_value(cs_coord.x,     cs_coord.y + 1, cs_coord.z + 1, &doesnt_exist, chunk_coord);
                     }
                     else {
-                        voxel_values[0] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y, cs_coord.z)];
-                        voxel_values[1] = chunk->voxels[get_voxel_index(cs_coord.x + 1, cs_coord.y, cs_coord.z)];
-                        voxel_values[2] = chunk->voxels[get_voxel_index(cs_coord.x + 1, cs_coord.y, cs_coord.z + 1)];
-                        voxel_values[3] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y, cs_coord.z + 1)];
+                        voxel_values[0] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y, cs_coord.z)].value;
+                        voxel_values[1] = chunk->voxels[get_voxel_index(cs_coord.x + 1, cs_coord.y, cs_coord.z)].value;
+                        voxel_values[2] = chunk->voxels[get_voxel_index(cs_coord.x + 1, cs_coord.y, cs_coord.z + 1)].value;
+                        voxel_values[3] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y, cs_coord.z + 1)].value;
                     
-                        voxel_values[4] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y + 1, cs_coord.z)];
-                        voxel_values[5] = chunk->voxels[get_voxel_index(cs_coord.x + 1, cs_coord.y + 1, cs_coord.z)];
-                        voxel_values[6] = chunk->voxels[get_voxel_index(cs_coord.x + 1, cs_coord.y + 1, cs_coord.z + 1)];
-                        voxel_values[7] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y + 1, cs_coord.z + 1)];
+                        voxel_values[4] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y + 1, cs_coord.z)].value;
+                        voxel_values[5] = chunk->voxels[get_voxel_index(cs_coord.x + 1, cs_coord.y + 1, cs_coord.z)].value;
+                        voxel_values[6] = chunk->voxels[get_voxel_index(cs_coord.x + 1, cs_coord.y + 1, cs_coord.z + 1)].value;
+                        voxel_values[7] = chunk->voxels[get_voxel_index(cs_coord.x, cs_coord.y + 1, cs_coord.z + 1)].value;
                     }
 
                     s_push_collision_triangles_vertices(

@@ -3,7 +3,11 @@
 #include <common/constant.hpp>
 #include <common/serialiser.hpp>
 #include <renderer/renderer.hpp>
+#include <common/chunk.hpp>
 #include <common/allocators.hpp>
+#include <vulkan/vulkan_core.h>
+
+#include "dr_chunk.hpp"
 
 static mesh_t meshes[GM_INVALID];
 
@@ -19,7 +23,7 @@ chunk_color_mem_t dr_chunk_colors_g;
 
 static struct tmp_t {
     // These are used temporarily to generate a chunk's mesh
-    vector3_t *mesh_vertices;
+    chunk_mesh_vertex_t *mesh_vertices;
 } tmp;
 
 static void s_create_player_shaders_and_meshes() {
@@ -92,13 +96,35 @@ static void s_create_player_shaders_and_meshes() {
 }
 
 static void s_create_chunk_shaders() {
-    mesh_t chunk_mesh_prototype = {};
-    push_buffer_to_mesh(
-        BT_VERTEX,
-        &chunk_mesh_prototype);
+    // mesh_t chunk_mesh_prototype = {};
+    // push_buffer_to_mesh(
+    //     BT_VERTEX,
+    //     &chunk_mesh_prototype);
 
-    shader_binding_info_t binding_info = create_mesh_binding_info(
-        &chunk_mesh_prototype);
+    // shader_binding_info_t binding_info = create_mesh_binding_info(
+    //     &chunk_mesh_prototype);
+
+    // Need to create special binding for chunk mesh rendering
+    shader_binding_info_t binding_info = {};
+    binding_info.binding_count = 1;
+    binding_info.binding_descriptions = FL_MALLOC(VkVertexInputBindingDescription, binding_info.binding_count);
+
+    binding_info.attribute_count = 2;
+    binding_info.attribute_descriptions = FL_MALLOC(VkVertexInputAttributeDescription, binding_info.attribute_count);
+
+    binding_info.binding_descriptions[0].binding = 0;
+    binding_info.binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    binding_info.binding_descriptions[0].stride = sizeof(vector3_t) + sizeof(uint32_t);
+    
+    binding_info.attribute_descriptions[0].binding = 0;
+    binding_info.attribute_descriptions[0].location = 0;
+    binding_info.attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    binding_info.attribute_descriptions[0].offset = 0;
+
+    binding_info.attribute_descriptions[1].binding = 0;
+    binding_info.attribute_descriptions[1].location = 1;
+    binding_info.attribute_descriptions[1].format = VK_FORMAT_R32_UINT;
+    binding_info.attribute_descriptions[1].offset = sizeof(vector3_t);
 
     const char *shader_paths[] = {
         "shaders/SPV/chunk_mesh.vert.spv",
@@ -133,14 +159,14 @@ void dr_resources_init() {
     s_create_player_shaders_and_meshes();
     s_create_chunk_shaders();
 
-    tmp.mesh_vertices = FL_MALLOC(vector3_t, CHUNK_MAX_VERTICES_PER_CHUNK);
+    tmp.mesh_vertices = FL_MALLOC(chunk_mesh_vertex_t, CHUNK_MAX_VERTICES_PER_CHUNK);
 }
 
 void dr_player_animated_instance_init(animated_instance_t *instance) {
     animated_instance_init(instance, &animations.player_sk, &animations.player_cyc);
 }
 
-vector3_t *dr_get_tmp_mesh_verts() {
+chunk_mesh_vertex_t *dr_get_tmp_mesh_verts() {
     return tmp.mesh_vertices;
 }
 
@@ -162,16 +188,18 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path) {
 
     uint32_t vertex_count = serialiser.deserialise_uint32();
 
-    vector3_t *vertices = LN_MALLOC(vector3_t, vertex_count);
+    chunk_mesh_vertex_t *vertices = LN_MALLOC(chunk_mesh_vertex_t, vertex_count);
 
     for (uint32_t i = 0; i < vertex_count; ++i) {
-        vertices[i] = serialiser.deserialise_vector3();
+        vertices[i].position = serialiser.deserialise_vector3();
+        // Just set to black for now
+        vertices[i].color = (uint32_t)v3_color_to_b8(vector3_t(0.0f));
     }
 
     push_buffer_to_mesh(BT_VERTEX, &res.world_mesh);
     mesh_buffer_t *vtx_buffer = get_mesh_buffer(BT_VERTEX, &res.world_mesh);
     vtx_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(vector3_t) * vertex_count,
+        sizeof(chunk_mesh_vertex_t) * vertex_count,
         vertices,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 

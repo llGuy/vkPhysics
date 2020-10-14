@@ -113,25 +113,25 @@ map_t *load_map(const char *path) {
                 uint8_t current_value = serialiser.deserialise_uint8();
 
                 if (current_value == CHUNK_SPECIAL_VALUE) {
-                    chunk->voxels[v] = 0;
+                    chunk->voxels[v].value = 0;
                     ++v;
 
                     // Repeating zeros
                     uint32_t zero_count = serialiser.deserialise_uint32();
-                    chunk->voxels[v + 1] = 0;
-                    chunk->voxels[v + 2] = 0;
-                    chunk->voxels[v + 3] = 0;
-                    chunk->voxels[v + 4] = 0;
+                    chunk->voxels[v + 1].value = 0;
+                    chunk->voxels[v + 2].value = 0;
+                    chunk->voxels[v + 3].value = 0;
+                    chunk->voxels[v + 4].value = 0;
 
                     v += 4;
 
                     uint32_t previous_v = v;
                     for (; v < previous_v + zero_count - 5; ++v) {
-                        chunk->voxels[v] = 0;
+                        chunk->voxels[v].value = 0;
                     }
                 }
                 else {
-                    chunk->voxels[v] = current_value;
+                    chunk->voxels[v].value = current_value;
                     ++v;
                 }
             }
@@ -176,17 +176,17 @@ void save_map(map_t *map) {
             serialiser.serialise_int16(chunks[i]->chunk_coord.z);
 
             for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH; ++v) {
-                uint8_t current_value = chunks[i]->voxels[v];
+                uint8_t current_value = chunks[i]->voxels[v].value;
 
                 if (current_value == 0) {
                     uint32_t before_head = serialiser.data_buffer_head;
                     uint32_t zero_count = 0;
-                    for (; chunks[i]->voxels[v] == 0 && zero_count < 5; ++v, ++zero_count) {
+                    for (; chunks[i]->voxels[v].value == 0 && zero_count < 5; ++v, ++zero_count) {
                         serialiser.serialise_uint8(0);
                     }
             
                     if (zero_count == 5) {
-                        for (; chunks[i]->voxels[v] == 0; ++v, ++zero_count); 
+                        for (; chunks[i]->voxels[v].value == 0; ++v, ++zero_count); 
 
                         serialiser.data_buffer_head = before_head;
                         serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);

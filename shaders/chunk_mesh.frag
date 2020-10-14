@@ -4,6 +4,7 @@ layout(location = 0) in GS_DATA {
     vec4 vs_position;
     vec4 ws_position;
     vec4 vs_normal;
+    vec4 color;
 } in_fs;
 
 layout(location = 0) out vec4 out_albedo;
@@ -29,7 +30,7 @@ void main() {
     vec3 pointer_diff = vec3(in_fs.ws_position) - vec3(u_chunk_color_data.pointer_position);
     float dist2 = dot(pointer_diff, pointer_diff);
 
-    out_albedo = vec4(u_push_constant.color.rgb, u_push_constant.pbr_info.x);
+    out_albedo = vec4(in_fs.color.rgb, u_push_constant.pbr_info.x);
 
     if (dist2 < u_chunk_color_data.pointer_radius * u_chunk_color_data.pointer_radius) {
         float quot = 1.0f - dist2 / (u_chunk_color_data.pointer_radius * u_chunk_color_data.pointer_radius);

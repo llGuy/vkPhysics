@@ -277,7 +277,9 @@ static void s_chunks_gpu_sync_and_render(
     }
 }
 
-void dr_draw_game(VkCommandBuffer render, VkCommandBuffer transfer) {
+void dr_draw_game(
+    VkCommandBuffer render,
+    VkCommandBuffer transfer) {
     s_players_gpu_sync_and_render(render, VK_NULL_HANDLE, transfer);
     s_chunks_gpu_sync_and_render(render, transfer);
 
@@ -286,7 +288,10 @@ void dr_draw_game(VkCommandBuffer render, VkCommandBuffer transfer) {
     }
 }
 
-void dr_draw_premade_scene(VkCommandBuffer render, VkCommandBuffer transfer, fixed_premade_scene_t *scene) {
+void dr_draw_premade_scene(
+    VkCommandBuffer render,
+    VkCommandBuffer transfer,
+    fixed_premade_scene_t *scene) {
     begin_mesh_submission(
         render,
         dr_get_shader_rsc(GS_CHUNK),

@@ -119,7 +119,7 @@ static bool s_send_packet_connection_handshake(
 }
 
 static constexpr uint32_t maximum_chunks_per_packet() {
-    return ((65507 - sizeof(uint32_t)) / (sizeof(int16_t) * 3 + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH));
+    return ((65507 - sizeof(uint32_t)) / (sizeof(int16_t) * 3 + CHUNK_BYTE_SIZE));
 }
 
 static void s_serialise_chunk(
@@ -133,18 +133,18 @@ static void s_serialise_chunk(
     serialiser->serialise_int16(current_values->y);
     serialiser->serialise_int16(current_values->z);
 
-    for (uint32_t v_index = 0; v_index < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH; ++v_index) {
-        uint8_t current_voxel = current_values->voxel_values[v_index];
+    for (uint32_t v_index = 0; v_index < CHUNK_VOXEL_COUNT; ++v_index) {
+        uint8_t current_voxel = current_values->voxel_values[v_index].value;
         if (current_voxel == 0) {
             uint32_t before_head = serialiser->data_buffer_head;
 
             uint32_t zero_count = 0;
-            for (; current_values->voxel_values[v_index] == 0 && zero_count < 5; ++v_index, ++zero_count) {
+            for (; current_values->voxel_values[v_index].value == 0 && zero_count < 5; ++v_index, ++zero_count) {
                 serialiser->serialise_uint8(0);
             }
 
             if (zero_count == 5) {
-                for (; current_values->voxel_values[v_index] == 0; ++v_index, ++zero_count) {}
+                for (; current_values->voxel_values[v_index].value == 0; ++v_index, ++zero_count) {}
 
                 serialiser->data_buffer_head = before_head;
                 serialiser->serialise_uint8(CHUNK_SPECIAL_VALUE);
@@ -168,7 +168,7 @@ static void s_send_packet_chunk_voxels(
     uint32_t count) {
     packet_header_t header = {};
     header.flags.packet_type = PT_CHUNK_VOXELS;
-    header.flags.total_packet_size = 15 * (3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
+    header.flags.total_packet_size = 15 * (3 * sizeof(int16_t) + CHUNK_BYTE_SIZE);
     header.current_tick = get_current_tick();
     header.current_packet_count = g_net_data.current_packet;
     
@@ -192,7 +192,7 @@ static void s_send_packet_chunk_voxels(
     for (uint32_t i = 0; i < count; ++i) {
         s_serialise_chunk(&serialiser, &chunks_in_packet, values, i);
 
-        if (serialiser.data_buffer_head + 3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH > serialiser.data_buffer_size ||
+        if (serialiser.data_buffer_head + 3 * sizeof(int16_t) + CHUNK_BYTE_SIZE > serialiser.data_buffer_size ||
             i + 1 == count) {
             // Need to send in new packet
             serialiser.serialise_uint32(chunks_in_packet, chunk_count_byte);
@@ -460,7 +460,7 @@ static void s_receive_packet_client_commands(
                         //LOG_INFOV("In chunk (%i %i %i): \n", commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z);
                         chunk_t *c_ptr = get_chunk(ivector3_t(commands.chunk_modifications[i].x, commands.chunk_modifications[i].y, commands.chunk_modifications[i].z));
                         for (uint32_t v = 0; v < commands.chunk_modifications[i].modified_voxels_count; ++v) {
-                            uint8_t initial_value = c_ptr->voxels[commands.chunk_modifications[i].modifications[v].index];
+                            uint8_t initial_value = c_ptr->voxels[commands.chunk_modifications[i].modifications[v].index].value;
                             if (c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index] != CHUNK_SPECIAL_VALUE) {
                                 //initial_value = c_ptr->history.modification_pool[commands.chunk_modifications[i].modifications[v].index];
                             }
@@ -582,7 +582,7 @@ static bool s_check_if_client_has_to_correct_terrain(
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
 
-            uint8_t actual_value = c_ptr->voxels[vm_ptr->index];
+            uint8_t actual_value = c_ptr->voxels[vm_ptr->index].value;
             uint8_t predicted_value = vm_ptr->final_value;
 
             // Just one mistake can completely mess stuff up between the client and server
