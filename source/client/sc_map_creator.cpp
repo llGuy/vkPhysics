@@ -74,7 +74,7 @@ static bool s_push_edit_character(char c) {
 }
 
 enum edit_command_type_t : char { ECT_ADD = 'A', ECT_DESTROY = 'D', ECT_INVALID = 0 };
-enum edit_shape_type_t : char {EST_SPHERE = 's', EST_HOLLOW_SPHERE = 'h', EST_PLANE = 'p', EST_MATH = 'm', EST_INVALID = 0 };
+enum edit_shape_type_t : char { EST_SPHERE = 's', EST_HOLLOW_SPHERE = 'h', EST_PLANE = 'p', EST_MATH = 'm', EST_INVALID = 0 };
 
 static void s_parse_and_generate_sphere(
     generation_type_t type,
@@ -161,6 +161,7 @@ static void s_parse_and_execute_command(
 
 static void s_editor_input(
     float dt) {
+    // ...
 }
 
 static void s_handle_input(event_submissions_t *events) {

@@ -140,8 +140,13 @@ struct packet_game_state_snapshot_t {
 uint32_t packed_game_state_snapshot_size(packet_game_state_snapshot_t *packet);
 void serialise_game_state_snapshot(packet_game_state_snapshot_t *packet, serialiser_t *serialiser);
 void deserialise_game_state_snapshot(packet_game_state_snapshot_t *packet, serialiser_t *serialiser);
-void serialise_chunk_modifications(chunk_modifications_t *modifications, uint32_t modification_count, serialiser_t *serialiser);
-chunk_modifications_t *deserialise_chunk_modifications(uint32_t *modification_count, serialiser_t *serialiser);
+
+enum color_serialisation_type_t { CST_SERIALISE_UNION_COLOR = 0, CST_SERIALISE_SEPARATE_COLOR = 1 };
+
+// color_serialisation_type_t parameter refers to whether to (de)serialise the color value from the colors array
+// or to (de)serialise the color value from the union in the voxel_modification_t struct
+void serialise_chunk_modifications(chunk_modifications_t *modifications, uint32_t modification_count, serialiser_t *serialiser, color_serialisation_type_t);
+chunk_modifications_t *deserialise_chunk_modifications(uint32_t *modification_count, serialiser_t *serialiser, color_serialisation_type_t);
 
 struct voxel_chunk_values_t {
     // Chunk coord

@@ -118,7 +118,7 @@ static bool s_send_packet_connection_handshake(
     }
 }
 
-static constexpr uint32_t maximum_chunks_per_packet() {
+static constexpr uint32_t s_maximum_chunks_per_packet() {
     return ((65507 - sizeof(uint32_t)) / (sizeof(int16_t) * 3 + CHUNK_BYTE_SIZE));
 }
 
@@ -133,20 +133,25 @@ static void s_serialise_chunk(
     serialiser->serialise_int16(current_values->y);
     serialiser->serialise_int16(current_values->z);
 
+    // Do a compression of the chunk values
     for (uint32_t v_index = 0; v_index < CHUNK_VOXEL_COUNT; ++v_index) {
-        uint8_t current_voxel = current_values->voxel_values[v_index].value;
-        if (current_voxel == 0) {
+        voxel_t current_voxel = current_values->voxel_values[v_index];
+        if (current_voxel.value == 0) {
             uint32_t before_head = serialiser->data_buffer_head;
 
+            static constexpr uint32_t MAX_ZERO_COUNT_BEFORE_COMPRESSION = 3;
+
             uint32_t zero_count = 0;
-            for (; current_values->voxel_values[v_index].value == 0 && zero_count < 5; ++v_index, ++zero_count) {
+            for (; current_values->voxel_values[v_index].value == 0 && zero_count < MAX_ZERO_COUNT_BEFORE_COMPRESSION; ++v_index, ++zero_count) {
+                serialiser->serialise_uint8(0);
                 serialiser->serialise_uint8(0);
             }
 
-            if (zero_count == 5) {
+            if (zero_count == MAX_ZERO_COUNT_BEFORE_COMPRESSION) {
                 for (; current_values->voxel_values[v_index].value == 0; ++v_index, ++zero_count) {}
 
                 serialiser->data_buffer_head = before_head;
+                serialiser->serialise_uint8(CHUNK_SPECIAL_VALUE);
                 serialiser->serialise_uint8(CHUNK_SPECIAL_VALUE);
                 serialiser->serialise_uint32(zero_count);
             }
@@ -154,7 +159,8 @@ static void s_serialise_chunk(
             v_index -= 1;
         }
         else {
-            serialiser->serialise_uint8(current_voxel);
+            serialiser->serialise_uint8(current_voxel.value);
+            serialiser->serialise_uint8(current_voxel.color);
         }
     }
 
@@ -168,7 +174,7 @@ static void s_send_packet_chunk_voxels(
     uint32_t count) {
     packet_header_t header = {};
     header.flags.packet_type = PT_CHUNK_VOXELS;
-    header.flags.total_packet_size = 15 * (3 * sizeof(int16_t) + CHUNK_BYTE_SIZE);
+    header.flags.total_packet_size = s_maximum_chunks_per_packet() * (3 * sizeof(int16_t) + CHUNK_BYTE_SIZE);
     header.current_tick = get_current_tick();
     header.current_packet_count = g_net_data.current_packet;
     
@@ -197,7 +203,7 @@ static void s_send_packet_chunk_voxels(
             // Need to send in new packet
             serialiser.serialise_uint32(chunks_in_packet, chunk_count_byte);
             client_chunk_packet_t *packet_to_save = &client->chunk_packets[client->chunk_packet_count++];
-            packet_to_save->chunk_data = FL_MALLOC(uint8_t, serialiser.data_buffer_head);
+            packet_to_save->chunk_data = FL_MALLOC(voxel_t, serialiser.data_buffer_head);
             memcpy(packet_to_save->chunk_data, serialiser.data_buffer, serialiser.data_buffer_head);
             //packet_to_save->chunk_data = serialiser.data_buffer;
             packet_to_save->size = serialiser.data_buffer_head;
@@ -224,7 +230,7 @@ static void s_send_game_state_to_new_client(
         client_t *client = g_net_data.clients.get(client_id);
 
         // Send chunk information
-        uint32_t max_chunks_per_packet = maximum_chunks_per_packet();
+        uint32_t max_chunks_per_packet = s_maximum_chunks_per_packet();
         LOG_INFOV("Maximum chunks per packet: %i\n", max_chunks_per_packet);
 
         voxel_chunk_values_t *voxel_chunks = LN_MALLOC(voxel_chunk_values_t, loaded_chunk_count);
@@ -582,8 +588,11 @@ static bool s_check_if_client_has_to_correct_terrain(
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
 
-            uint8_t actual_value = c_ptr->voxels[vm_ptr->index].value;
+            voxel_t *voxel_ptr = &c_ptr->voxels[vm_ptr->index];
+            uint8_t actual_value = voxel_ptr->value;
             uint8_t predicted_value = vm_ptr->final_value;
+
+            voxel_color_t color = voxel_ptr->color;
 
             // Just one mistake can completely mess stuff up between the client and server
             if (actual_value != predicted_value) {
@@ -593,6 +602,7 @@ static bool s_check_if_client_has_to_correct_terrain(
 
                 // Change the predicted value and send this back to the client, and send this back to the client to correct
                 vm_ptr->final_value = actual_value;
+                vm_ptr->color = color;
 
                 chunk_has_mistake = 1;
             }
@@ -618,7 +628,8 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
     // Up to 300 chunks can be modified between game dispatches
     chunk_modifications_t *modifications = LN_MALLOC(chunk_modifications_t, NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 
-    uint32_t modification_count = fill_chunk_modification_array(modifications);
+    // Don't need the initial values - the client will use its values for voxels as the "initial" values
+    uint32_t modification_count = fill_chunk_modification_array_with_colors(modifications);
 
     snapshot->modified_chunk_count = modification_count;
     snapshot->chunk_modifications = modifications;
@@ -735,7 +746,8 @@ static void s_send_packet_game_state_snapshot() {
 
     // This is the packet for players that need correction
     serialise_game_state_snapshot(&packet, &serialiser);
-    serialise_chunk_modifications(packet.chunk_modifications, packet.modified_chunk_count, &serialiser);
+    // In here, need to serialise chunk modifications with the union for colors, instead of serialising the separate, color array
+    serialise_chunk_modifications(packet.chunk_modifications, packet.modified_chunk_count, &serialiser, CST_SERIALISE_UNION_COLOR);
     
     uint32_t data_head_before = serialiser.data_buffer_head;
     
@@ -745,7 +757,7 @@ static void s_send_packet_game_state_snapshot() {
         if (c->send_corrected_predicted_voxels) {
             // Serialise
             LOG_INFOV("Need to correct %i chunks\n", c->predicted_chunk_mod_count);
-            serialise_chunk_modifications(c->predicted_modifications, c->predicted_chunk_mod_count, &serialiser);
+            serialise_chunk_modifications(c->predicted_modifications, c->predicted_chunk_mod_count, &serialiser, CST_SERIALISE_UNION_COLOR);
         }
         
         if (c->initialised && c->received_first_commands_packet) {
@@ -777,7 +789,7 @@ static void s_send_pending_chunks() {
             client_chunk_packet_t *packet = &c_ptr->chunk_packets[c_ptr->current_chunk_sending];
             serialiser_t serialiser = {};
             serialiser.data_buffer_head = packet->size;
-            serialiser.data_buffer = packet->chunk_data;
+            serialiser.data_buffer = (uint8_t *)packet->chunk_data;
             serialiser.data_buffer_size = packet->size;
             if (send_to_client(&serialiser, c_ptr->address)) {
                 LOG_INFO("Sent chunk packet to client\n");

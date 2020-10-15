@@ -1,4 +1,8 @@
+- Add proper colors to the chunks (get it to work over network) !!!
+- Make sure that union color and array colors don't get mixed!!!
+- Consider replacing SSAO with shadows
+- Optimise this and get rid of the 2 loops (game_packet.cpp: 202)
 - Fix mess with calling UI code from scene code (e.g. whenever a spawn event triggers, don't clear game menu, etc...)
 - Make sure that pressing unpause button doesn't trigger spawn event
 - Make sure that resizing doesn't crash from UI code
-- Consider replacing SSAO with shadows
+- Add trees, etc...

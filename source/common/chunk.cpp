@@ -486,7 +486,7 @@ terraform_package_t cast_terrain_ray(
             if (voxel_ptr->value > CHUNK_SURFACE_LEVEL) {
                 package.ray_hit_terrain = 1;
                 package.ws_position = vector3_t(voxel);
-                package.color = voxel_ptr->color;
+                package.color = v3_color_to_b8(vector3_t(0.1f, 0.1f, 0.1f));
                 break;
             }
         }

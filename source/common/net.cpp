@@ -77,7 +77,8 @@ bool send_to_meta_server(
 
 void acc_predicted_modification_init(accumulated_predicted_modification_t *apm_ptr, uint64_t tick) {
     if (!apm_ptr->acc_predicted_modifications) {
-        apm_ptr->acc_predicted_modifications = (chunk_modifications_t *)g_net_data.chunk_modification_allocator.allocate_arena();
+        apm_ptr->acc_predicted_modifications =
+            (chunk_modifications_t *)g_net_data.chunk_modification_allocator.allocate_arena();
     }
 
     apm_ptr->acc_predicted_chunk_mod_count = 0;
@@ -215,7 +216,7 @@ void unfill_dummy_voxels(
 }
 
 
-uint32_t fill_chunk_modification_array(
+uint32_t fill_chunk_modification_array_with_initial_values(
     chunk_modifications_t *modifications) {
     uint32_t modified_chunk_count = 0;
     chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
@@ -237,8 +238,43 @@ uint32_t fill_chunk_modification_array(
             cm_ptr->modified_voxels_count = h_ptr->modification_count;
             for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
                 cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
-                cm_ptr->modifications[v_index].initial_value = (uint8_t)h_ptr->modification_pool[cm_ptr->modifications[v_index].index];
-                cm_ptr->modifications[v_index].final_value = (uint8_t)c_ptr->voxels[cm_ptr->modifications[v_index].index].value;
+                cm_ptr->modifications[v_index].initial_value = h_ptr->modification_pool[cm_ptr->modifications[v_index].index];
+                cm_ptr->modifications[v_index].final_value = c_ptr->voxels[cm_ptr->modifications[v_index].index].value;
+                cm_ptr->colors[v_index] = c_ptr->voxels[cm_ptr->modifications[v_index].index].color;
+            }
+
+            ++current;
+        }
+    }
+
+    return current;
+}
+
+uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications) {
+    uint32_t modified_chunk_count = 0;
+    chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
+
+    uint32_t current = 0;
+            
+    for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
+        chunk_modifications_t *cm_ptr = &modifications[current];
+        chunk_t *c_ptr = chunks[c_index];
+        chunk_history_t *h_ptr = &chunks[c_index]->history;
+
+        if (h_ptr->modification_count == 0) {
+            // Chunk doesn't actually have modifications, it was just flagged
+        }
+        else {
+            cm_ptr->x = c_ptr->chunk_coord.x;
+            cm_ptr->y = c_ptr->chunk_coord.y;
+            cm_ptr->z = c_ptr->chunk_coord.z;
+            cm_ptr->modified_voxels_count = h_ptr->modification_count;
+            for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
+                cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
+                // Difference is here because the server will just send the voxel values array, not the colors array
+                cm_ptr->modifications[v_index].color = c_ptr->voxels[cm_ptr->modifications[v_index].index].color;
+                cm_ptr->modifications[v_index].final_value = c_ptr->voxels[cm_ptr->modifications[v_index].index].value;
+                cm_ptr->colors[v_index] = c_ptr->voxels[cm_ptr->modifications[v_index].index].color;
             }
 
             ++current;
@@ -252,7 +288,7 @@ accumulated_predicted_modification_t *accumulate_history() {
     accumulated_predicted_modification_t *next_acc = add_acc_predicted_modification();
     acc_predicted_modification_init(next_acc, get_current_tick());
     
-    next_acc->acc_predicted_chunk_mod_count = fill_chunk_modification_array(next_acc->acc_predicted_modifications);
+    next_acc->acc_predicted_chunk_mod_count = fill_chunk_modification_array_with_initial_values(next_acc->acc_predicted_modifications);
 
     if (next_acc->acc_predicted_chunk_mod_count == 0) {
         // Pops item that was just pushed
@@ -287,16 +323,20 @@ void merge_chunk_modifications(
 
             for (uint32_t voxel = 0; voxel < src_modifications->modified_voxels_count; ++voxel) {
                 voxel_modification_t *vm_ptr = &src_modifications->modifications[voxel];
+                voxel_color_t color = src_modifications->colors[voxel];
 
                 if (g_net_data.dummy_voxels[vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
                     // Voxel has not yet been modified, can just push it into array
-                    dst_modifications->modifications[dst_modifications->modified_voxels_count++] = *vm_ptr;
+                    dst_modifications->colors[dst_modifications->modified_voxels_count] = color;
+                    dst_modifications->modifications[dst_modifications->modified_voxels_count] = *vm_ptr;
+                    ++(dst_modifications->modified_voxels_count);
                 }
                 else {
                     // Voxel has been modified
                     uint32_t previous_index = g_net_data.dummy_voxels[vm_ptr->index];
                     // Just update final value
                     dst_modifications->modifications[previous_index].final_value = vm_ptr->final_value;
+                    dst_modifications->colors[previous_index] = color;
                 }
             }
 
@@ -313,6 +353,7 @@ void merge_chunk_modifications(
 
             m->modified_voxels_count = src_modifications->modified_voxels_count;
             memcpy(m->modifications, src_modifications->modifications, sizeof(voxel_modification_t) * m->modified_voxels_count);
+            memcpy(m->colors, src_modifications->colors, sizeof(voxel_color_t) * m->modified_voxels_count);
         }
     }
     

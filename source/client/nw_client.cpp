@@ -583,8 +583,8 @@ static void s_handle_incorrect_state(
         // Now deserialise extra voxel corrections
         if (snapshot->packet_contains_terrain_correction) {
             uint32_t modification_count = 0;
-            // BUG:
-            chunk_modifications_t *modifications = deserialise_chunk_modifications(&modification_count, serialiser);
+
+            chunk_modifications_t *modifications = deserialise_chunk_modifications(&modification_count, serialiser, CST_SERIALISE_UNION_COLOR);
 
             for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {
                 chunk_modifications_t *cm_ptr = &modifications[cm_index];
@@ -592,6 +592,8 @@ static void s_handle_incorrect_state(
                 for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
                     voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
                     c_ptr->voxels[vm_ptr->index].value = vm_ptr->final_value;
+                    // Color will not be stored in the separate color array
+                    c_ptr->voxels[vm_ptr->index].color = vm_ptr->color;
                 }
             }
         }
@@ -609,6 +611,7 @@ static void s_handle_incorrect_state(
             for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
                 voxel_modification_t *vm_ptr = &cm_ptr->modifications[v_index];
                 c_ptr->voxels[vm_ptr->index].value = vm_ptr->final_value;
+                c_ptr->voxels[vm_ptr->index].color = vm_ptr->color;
             }
         }
     }
@@ -721,7 +724,7 @@ static void s_receive_packet_game_state_snapshot(
 
     packet_game_state_snapshot_t packet = {};
     deserialise_game_state_snapshot(&packet, serialiser);
-    packet.chunk_modifications = deserialise_chunk_modifications(&packet.modified_chunk_count, serialiser);
+    packet.chunk_modifications = deserialise_chunk_modifications(&packet.modified_chunk_count, serialiser, CST_SERIALISE_UNION_COLOR);
 
     for (uint32_t i = 0; i < packet.player_data_count; ++i) {
         player_snapshot_t *snapshot = &packet.player_snapshots[i];
@@ -785,27 +788,31 @@ static void s_receive_packet_chunk_voxels(
         
         for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
             uint8_t current_value = serialiser->deserialise_uint8();
+            uint8_t current_color = serialiser->deserialise_uint8();
 
             if (current_value == CHUNK_SPECIAL_VALUE) {
                 chunk->voxels[v].value = 0;
+                chunk->voxels[v].color = 0;
                 ++v;
 
                 // Repeating zeros
                 uint32_t zero_count = serialiser->deserialise_uint32();
                 chunk->voxels[v + 1].value = 0;
+                chunk->voxels[v + 1].color = 0;
                 chunk->voxels[v + 2].value = 0;
-                chunk->voxels[v + 3].value = 0;
-                chunk->voxels[v + 4].value = 0;
+                chunk->voxels[v + 2].color = 0;
 
-                v += 4;
+                v += 2;
 
                 uint32_t previous_v = v;
-                for (; v < previous_v + zero_count - 5; ++v) {
+                for (; v < previous_v + zero_count - 3; ++v) {
                     chunk->voxels[v].value = 0;
+                    chunk->voxels[v].color = 0;
                 }
             }
             else {
                 chunk->voxels[v].value = current_value;
+                chunk->voxels[v].color = current_color;
                 ++v;
             }
         }

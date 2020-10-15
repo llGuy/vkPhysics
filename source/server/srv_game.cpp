@@ -111,7 +111,7 @@ void srv_game_init(event_submissions_t *events) {
     chunk_memory_init();
 
     // Make this a parameter to the vkPhysics_server program
-    load_map("nucleus.map");
+    generate_sphere(vector3_t(0.0f), 30, 180, GT_ADDITIVE, 0b11111111);
 }
 
 void srv_game_tick() {

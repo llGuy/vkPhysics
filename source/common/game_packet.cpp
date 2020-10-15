@@ -129,6 +129,155 @@ void deserialise_player_joined(
     packet->player_info.flags.u32 = serialiser->deserialise_uint32();
 }
 
+static void s_serialise_chunk_modification_meta_info(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    serialiser->serialise_int16(c->x);
+    serialiser->serialise_int16(c->y);
+    serialiser->serialise_int16(c->z);
+    serialiser->serialise_uint32(c->modified_voxels_count);
+}
+
+static void s_serialise_chunk_modification_values_without_colors(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+        voxel_modification_t *v_ptr =  &c->modifications[v];
+        serialiser->serialise_uint16(v_ptr->index);
+        serialiser->serialise_uint8(v_ptr->final_value);
+    }
+}
+
+static void s_serialise_chunk_modification_values_with_colors(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+        voxel_modification_t *v_ptr =  &c->modifications[v];
+        serialiser->serialise_uint16(v_ptr->index);
+        serialiser->serialise_uint8(v_ptr->color);
+        serialiser->serialise_uint8(v_ptr->final_value);
+    }
+}
+
+static void s_serialise_chunk_modification_values_with_initial_values(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+        voxel_modification_t *v_ptr =  &c->modifications[v];
+        serialiser->serialise_uint16(v_ptr->index);
+        serialiser->serialise_uint8(v_ptr->initial_value);
+        serialiser->serialise_uint8(v_ptr->final_value);
+    }
+}
+
+static void s_serialise_chunk_modification_colors_from_array(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+        serialiser->serialise_uint8(c->colors[v]);
+    }
+}
+
+void serialise_chunk_modifications(
+    chunk_modifications_t *modifications,
+    uint32_t modification_count,
+    serialiser_t *serialiser,
+    color_serialisation_type_t cst) {
+    serialiser->serialise_uint32(modification_count);
+    
+    // Yes I know this is stupid because color is a bool
+    if (cst == CST_SERIALISE_SEPARATE_COLOR) {
+        for (uint32_t i = 0; i < modification_count; ++i) {
+            chunk_modifications_t *c = &modifications[i];
+            s_serialise_chunk_modification_meta_info(serialiser, c);
+            s_serialise_chunk_modification_values_without_colors(serialiser, c);
+            s_serialise_chunk_modification_colors_from_array(serialiser, c);
+        }
+    }
+    else {
+        for (uint32_t i = 0; i < modification_count; ++i) {
+            chunk_modifications_t *c = &modifications[i];
+            s_serialise_chunk_modification_meta_info(serialiser, c);
+            s_serialise_chunk_modification_values_with_colors(serialiser, c);
+        }
+    }
+}
+
+static void s_deserialise_chunk_modification_meta_info(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    c->x = serialiser->deserialise_int16();
+    c->y = serialiser->deserialise_int16();
+    c->z = serialiser->deserialise_int16();
+    c->modified_voxels_count = serialiser->deserialise_uint32();
+}
+
+static void s_deserialise_chunk_modification_values_without_colors(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+        voxel_modification_t *v_ptr =  &c->modifications[v];
+        v_ptr->index = serialiser->deserialise_uint16();
+        v_ptr->final_value = serialiser->deserialise_uint8();
+    }
+}
+
+static void s_deserialise_chunk_modification_values_with_colors(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+        voxel_modification_t *v_ptr =  &c->modifications[v];
+        v_ptr->index = serialiser->deserialise_uint16();
+        v_ptr->color = serialiser->deserialise_uint8();
+        v_ptr->final_value = serialiser->deserialise_uint8();
+    }
+}
+
+static void s_deserialise_chunk_modification_values_with_initial_values(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+        voxel_modification_t *v_ptr =  &c->modifications[v];
+        v_ptr->index = serialiser->deserialise_uint16();
+        v_ptr->initial_value = serialiser->deserialise_uint8();
+        v_ptr->final_value = serialiser->deserialise_uint8();
+    }
+}
+
+static void s_deserialise_chunk_modification_colors_from_array(
+    serialiser_t *serialiser,
+    chunk_modifications_t *c) {
+    for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
+        c->colors[v] = serialiser->deserialise_uint8();
+    }
+}
+
+chunk_modifications_t *deserialise_chunk_modifications(
+    uint32_t *modification_count,
+    serialiser_t *serialiser,
+    color_serialisation_type_t color) {
+    *modification_count = serialiser->deserialise_uint32();
+    chunk_modifications_t *chunk_modifications = LN_MALLOC(chunk_modifications_t, *modification_count);
+
+    if (color == CST_SERIALISE_SEPARATE_COLOR) {
+        for (uint32_t i = 0; i < *modification_count; ++i) {
+            chunk_modifications_t *c = &chunk_modifications[i];
+            s_deserialise_chunk_modification_meta_info(serialiser, c);
+            s_deserialise_chunk_modification_values_without_colors(serialiser, c);
+            s_deserialise_chunk_modification_colors_from_array(serialiser, c);
+        }
+    }
+    else {
+        for (uint32_t i = 0; i < *modification_count; ++i) {
+            chunk_modifications_t *c = &chunk_modifications[i];
+            s_deserialise_chunk_modification_meta_info(serialiser, c);
+            s_deserialise_chunk_modification_values_with_colors(serialiser, c);
+        }
+    }
+
+    return chunk_modifications;
+}
+
 uint32_t packed_player_commands_size(
     packet_client_commands_t *commands) {
     uint32_t final_size = 0;
@@ -151,9 +300,17 @@ uint32_t packed_player_commands_size(
 
     final_size += sizeof(packet_client_commands_t::modified_chunk_count);
     for (uint32_t c = 0; c < commands->modified_chunk_count; ++c) {
-        final_size += sizeof(chunk_modifications_t::modified_voxels_count) + sizeof(chunk_modifications_t::x) * 3;
+        // Number of modified voxels in this chunk
+        final_size += sizeof(chunk_modifications_t::modified_voxels_count);
+        // Size of the coordinates of this chunk
+        final_size += + sizeof(chunk_modifications_t::x) * 3;
 
-        final_size += commands->chunk_modifications[c].modified_voxels_count * (sizeof(voxel_modification_t::index) + sizeof(voxel_modification_t::final_value));
+        // Incorporate the size of the actual voxel values
+        uint32_t sizeof_voxel_modification = sizeof(voxel_modification_t::index) + sizeof(voxel_modification_t::initial_value) + sizeof(voxel_modification_t::final_value);
+        final_size += commands->chunk_modifications[c].modified_voxels_count * sizeof_voxel_modification;
+
+        // Incorporate the size of the colors
+        final_size += commands->chunk_modifications[c].modified_voxels_count * sizeof(voxel_color_t);
     }
 
     return final_size;
@@ -186,17 +343,9 @@ void serialise_player_commands(
 
     for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
         chunk_modifications_t *c = &packet->chunk_modifications[i];
-        serialiser->serialise_int16(c->x);
-        serialiser->serialise_int16(c->y);
-        serialiser->serialise_int16(c->z);
-        serialiser->serialise_uint32(c->modified_voxels_count);
-
-        for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
-            voxel_modification_t *v_ptr =  &c->modifications[v];
-            serialiser->serialise_uint16(v_ptr->index);
-            serialiser->serialise_uint8(v_ptr->initial_value);
-            serialiser->serialise_uint8(v_ptr->final_value);
-        }
+        s_serialise_chunk_modification_meta_info(serialiser, c);
+        s_serialise_chunk_modification_values_with_initial_values(serialiser, c);
+        s_serialise_chunk_modification_colors_from_array(serialiser, c);
     }
 }
 
@@ -229,17 +378,9 @@ void deserialise_player_commands(
 
     for (uint32_t i = 0; i < packet->modified_chunk_count; ++i) {
         chunk_modifications_t *c = &packet->chunk_modifications[i];
-        c->x = serialiser->deserialise_int16();
-        c->y = serialiser->deserialise_int16();
-        c->z = serialiser->deserialise_int16();
-        c->modified_voxels_count = serialiser->deserialise_uint32();
-
-        for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
-            voxel_modification_t *v_ptr =  &c->modifications[v];
-            v_ptr->index = serialiser->deserialise_uint16();
-            v_ptr->initial_value = serialiser->deserialise_uint8();
-            v_ptr->final_value = serialiser->deserialise_uint8();
-        }
+        s_deserialise_chunk_modification_meta_info(serialiser, c);
+        s_deserialise_chunk_modification_values_with_initial_values(serialiser, c);
+        s_deserialise_chunk_modification_colors_from_array(serialiser, c);
     }
 }
 
@@ -304,50 +445,6 @@ void deserialise_game_state_snapshot(
         packet->player_snapshots[i].tick = serialiser->deserialise_uint64();
         packet->player_snapshots[i].terraform_tick = serialiser->deserialise_uint64();
     }
-}
-
-void serialise_chunk_modifications(
-    chunk_modifications_t *modifications,
-    uint32_t modification_count,
-    serialiser_t *serialiser) {
-    serialiser->serialise_uint32(modification_count);
-    
-    for (uint32_t i = 0; i < modification_count; ++i) {
-        chunk_modifications_t *c = &modifications[i];
-        serialiser->serialise_int16(c->x);
-        serialiser->serialise_int16(c->y);
-        serialiser->serialise_int16(c->z);
-        serialiser->serialise_uint32(c->modified_voxels_count);
-
-        for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
-            voxel_modification_t *v_ptr =  &c->modifications[v];
-            serialiser->serialise_uint16(v_ptr->index);
-            serialiser->serialise_uint8(v_ptr->final_value);
-        }
-    }
-}
-
-chunk_modifications_t *deserialise_chunk_modifications(
-    uint32_t *modification_count,
-    serialiser_t *serialiser) {
-    *modification_count = serialiser->deserialise_uint32();
-    chunk_modifications_t *chunk_modifications = LN_MALLOC(chunk_modifications_t, *modification_count);
-
-    for (uint32_t i = 0; i < *modification_count; ++i) {
-        chunk_modifications_t *c = &chunk_modifications[i];
-        c->x = serialiser->deserialise_int16();
-        c->y = serialiser->deserialise_int16();
-        c->z = serialiser->deserialise_int16();
-        c->modified_voxels_count = serialiser->deserialise_uint32();
-
-        for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {
-            voxel_modification_t *v_ptr =  &c->modifications[v];
-            v_ptr->index = serialiser->deserialise_uint16();
-            v_ptr->final_value = serialiser->deserialise_uint8();
-        }
-    }
-
-    return chunk_modifications;
 }
 
 uint32_t packed_chunk_voxels_size(

@@ -16,14 +16,21 @@
 struct voxel_modification_t {
     uint16_t index;
     uint8_t final_value;
-    // This does not get sent over network
-    uint8_t initial_value;
+
+    // When the client sends this to the server, initial value will be stored
+    // When the server sends this to the client, color value will be stored
+    union {
+        uint8_t initial_value;
+        uint8_t color;
+    };
 };
 
 struct chunk_modifications_t {
     int16_t x, y, z;
     uint32_t modified_voxels_count;
+    // Due to alignment and padding issues, it's best to store the data like so
     voxel_modification_t modifications[MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK];
+    voxel_color_t colors[MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK];
 
     union {
         uint8_t flags;
@@ -34,7 +41,7 @@ struct chunk_modifications_t {
 };
 
 struct client_chunk_packet_t {
-    uint8_t *chunk_data;
+    voxel_t *chunk_data;
     uint32_t size;
 };
 
@@ -107,6 +114,7 @@ struct net_data_t {
     uint64_t current_packet;
     char *message_buffer;
     stack_container_t<client_t> clients;
+    // This stores the index of the modification in the chunk_modifications_t struct's array
     uint8_t dummy_voxels[CHUNK_VOXEL_COUNT];
     arena_allocator_t chunk_modification_allocator;
     circular_buffer_array_t<
@@ -134,7 +142,8 @@ void flag_modified_chunks(chunk_modifications_t *modifications, uint32_t count);
 void unflag_modified_chunks(chunk_modifications_t *modifications, uint32_t count);
 void fill_dummy_voxels(chunk_modifications_t *modifications);
 void unfill_dummy_voxels(chunk_modifications_t *modifications);
-uint32_t fill_chunk_modification_array(chunk_modifications_t *modifications);
+uint32_t fill_chunk_modification_array_with_initial_values(chunk_modifications_t *modifications);
+uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications);
 accumulated_predicted_modification_t *accumulate_history();
 void merge_chunk_modifications(
     chunk_modifications_t *dst,
