@@ -331,6 +331,7 @@ static void s_revert_history_instance(
             LOG_INFOV("(%i %i %i) Set voxel at index %i to %i\n", cm_ptr->x, cm_ptr->y, cm_ptr->z, vm_ptr->index, (int32_t)vm_ptr->initial_value);
 #endif
             c_ptr->voxels[vm_ptr->index].value = vm_ptr->initial_value;
+            c_ptr->voxels[vm_ptr->index].color = cm_ptr->colors[vm_ptr->index];
         }
 
         c_ptr->flags.has_to_update_vertices = 1;
