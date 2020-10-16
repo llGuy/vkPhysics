@@ -3,9 +3,7 @@
 layout(location = 0) in vec3 in_position;
 
 layout(location = 0) out VS_DATA {
-    vec3 vs_position;
-    vec3 vs_normal;
-    vec2 uvs;
+    float depth;
 } out_vs;
 
 layout(push_constant) uniform push_constant_t {
@@ -35,4 +33,5 @@ layout(set = 0, binding = 0) uniform lighting_t {
 
 void main() {
     gl_Position = u_lighting_transforms.shadow_view_projection * u_push_constant.model * vec4(in_position, 1.0f);
+    out_vs.depth = gl_Position.z / gl_Position.w;
 }

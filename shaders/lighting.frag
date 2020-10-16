@@ -20,7 +20,8 @@ layout(binding = 0, set = 4) uniform sampler2D u_integral_lookup;
 layout(binding = 0, set = 5) uniform samplerCube u_prefilter_map;
 
 // layout(binding = 0, set = 6) uniform sampler2D u_ao;
-layout(binding = 0, set = 6) uniform sampler2D u_shadow_map;
+layout(binding = 0, set = 6) uniform sampler2D u_shadow_map_moment;
+layout(binding = 1, set = 6) uniform sampler2D u_shadow_map_depth;
 
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[10];
@@ -103,8 +104,9 @@ vec3 fresnel_roughness(
     return base + (max(vec3(1.0f - roughness), base) - base) * pow(1.0f - ndotv, 5.0f);
 }
 
+
 // Not being used for the moment
-#if 1
+#if 0
 bool get_shadow_factor(
     vec3 ws_position,
     out float occlusion) {
@@ -115,7 +117,7 @@ bool get_shadow_factor(
     ls_position.xyz /= ls_position.w;
     ls_position.xy = ls_position.xy * 0.5f + 0.5f;
 
-    vec2 texel_size = 1.0f / (textureSize(u_shadow_map, 0));
+    vec2 texel_size = 1.0f / (textureSize(u_shadow_map_moment, 0));
 
     occlusion = 0.0f;
 
@@ -123,7 +125,7 @@ bool get_shadow_factor(
     
     for (int x = int(-pcf_count); x <= int(pcf_count); ++x) {
         for (int y = int(-pcf_count); y <= int(pcf_count); ++y) {
-            float depth = texture(u_shadow_map, ls_position.xy + vec2(x, y) * texel_size).r;
+            float depth = texture(u_shadow_map_moment, ls_position.xy + vec2(x, y) * texel_size).r;
             
             if (ls_position.z - 0.00009f > depth) {
                 occlusion += 0.95f;
@@ -138,24 +140,31 @@ bool get_shadow_factor(
     return occluded;
 }
 #else
-float get_shadow_factor(
-    vec3 ws_position,
-    out float occlusion) {
+
+float linear_step(float low, float high, float v) {
+    return clamp((v - low) / (high - low), 0, 1);
+}
+
+bool get_shadow_factor(vec3 ws_position, out float occlusion) {
+    // Sample from depth map
     vec4 ls_position = u_lighting.shadow_view_projection * vec4(ws_position, 1.0f);
 
     ls_position.xyz /= ls_position.w;
     ls_position.xy = ls_position.xy * 0.5f + 0.5f;
 
-    float depth = texture(u_shadow_map, ls_position.xy).r;
+    vec2 moment = texture(u_shadow_map_moment, ls_position.xy).xy;
 
-    if (ls_position.z - 0.005f > depth) {
-        occlusion = 0.0f;
-        return 0.2f;
-    }
-    else {
-        occlusion = 1.0f;
-        return 1.0f;
-    }
+    // Chebychev's inequality
+    float p = step(ls_position.z, moment.x);
+    float sigma = max(moment.y - moment.x * moment.x, 0.00001f);
+
+    float dist_from_mean = ls_position.z - moment.x;
+
+    float pmax = linear_step(0.4, 1.0, sigma / (sigma + dist_from_mean * dist_from_mean));
+
+    occlusion = min(1.0f, max(pmax, p));
+
+    return false;
 }
 
 #endif
