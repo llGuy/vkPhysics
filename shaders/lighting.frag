@@ -108,7 +108,7 @@ vec3 fresnel_roughness(
 bool get_shadow_factor(
     vec3 ws_position,
     out float occlusion) {
-    float pcf_count = 2.0f;
+    float pcf_count = 3.0f;
     
     vec4 ls_position = u_lighting.shadow_view_projection * vec4(ws_position, 1.0f);
 
@@ -116,7 +116,6 @@ bool get_shadow_factor(
     ls_position.xy = ls_position.xy * 0.5f + 0.5f;
 
     vec2 texel_size = 1.0f / (textureSize(u_shadow_map, 0));
-    //float depth = texture(u_shadow_map, ls_position.xy).r;
 
     occlusion = 0.0f;
 
@@ -126,7 +125,7 @@ bool get_shadow_factor(
         for (int y = int(-pcf_count); y <= int(pcf_count); ++y) {
             float depth = texture(u_shadow_map, ls_position.xy + vec2(x, y) * texel_size).r;
             
-            if (ls_position.z - 0.0009f > depth) {
+            if (ls_position.z - 0.00009f > depth) {
                 occlusion += 0.95f;
                 occluded = true;
             }
@@ -205,7 +204,8 @@ vec3 directional_luminance(
     in vec3 ws_position,
     in vec3 base_reflectivity,
     in float roughness,
-    in float metalness) {
+    in float metalness,
+    in float shadow_factor) {
     vec3 vs_light = -normalize(u_lighting.vs_directional_light.xyz);
     vec3 vs_halfway = normalize(vs_light + vs_view);
 
@@ -216,7 +216,9 @@ vec3 directional_luminance(
     vec3 opposite_light_color = textureLod(u_prefilter_map, -ws_light, 0.0f).rgb;
     float intensity = abs(dot(opposite_light_color, opposite_light_color));
 
-    vec3 radiance = directional_light_color;
+    // When shadow factor = 1, radiance = direction_light_color
+    // When shadow factor = 0, radiance = vec3(1)
+    vec3 radiance = vec3(1) + (directional_light_color - vec3(1)) * shadow_factor;
 
     float ndotv = max(dot(vs_normal, vs_view), 0.000001f);
     float ndotl = max(dot(vs_normal, vs_light), 0.000001f);
@@ -234,7 +236,7 @@ vec3 directional_luminance(
 
     kd *= 1.0f - metalness;
 
-    return (kd * albedo / PI + specular) * radiance * ndotl;
+    return (kd * albedo / PI + specular * shadow_factor) * radiance * ndotl;
 }
 
 vec3 point_luminance(
@@ -319,6 +321,9 @@ void main() {
     
         vec3 l = vec3(0.0f);
 
+        float occluded = 1.0f;
+        bool shadow_factor = get_shadow_factor(ws_position, occluded);
+
         l += directional_luminance(
             albedo,
             vs_normal,
@@ -326,7 +331,8 @@ void main() {
             ws_position,
             base_reflectivity,
             roughness,
-            metalness);
+            metalness,
+            occluded);
 
 #if 1
         for (int i = 0; i < u_lighting.point_light_count; ++i) {
@@ -355,14 +361,9 @@ void main() {
         vec2 brdf = texture(u_integral_lookup, vec2(max(dot(ws_normal, ws_view), 0.0f), roughness)).rg;
         vec3 specular = prefiltered_color * (fresnel * brdf.r + clamp(brdf.g, 0, 1));
 
-        // float ao = texture(u_ao, in_fs.uvs).r;
-        
         vec3 ambient = (diffuse + specular);
-
-        float occluded = 1.0f;
-        bool s = get_shadow_factor(ws_position, occluded);
         
-        color = (ambient + l) * pow(occluded, 10.0f);
+        color = (ambient + l);
     }
 
     out_final_color = vec4(color, 1.0f);
