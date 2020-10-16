@@ -63,14 +63,19 @@ void sc_bind(scene_type_t scene_type) {
     }
 }
 
-void sc_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
+void sc_tick(
+    VkCommandBuffer render,
+    VkCommandBuffer transfer,
+    VkCommandBuffer ui,
+    VkCommandBuffer shadow,
+    event_submissions_t *events) {
     switch (bound_scene) {
     case ST_MAIN_MENU: {
         sc_main_tick(render, transfer, ui, events);
     } break;
 
     case ST_GAME_PLAY: {
-        sc_play_tick(render, transfer, ui, events);
+        sc_play_tick(render, transfer, ui, shadow, events);
     } break;
 
     case ST_MAP_CREATOR: {

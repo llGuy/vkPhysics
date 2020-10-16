@@ -80,7 +80,12 @@ static void s_calculate_pos_and_dir(player_t *player, vector3_t *position, vecto
     }
 }
 
-void sc_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
+void sc_play_tick(
+    VkCommandBuffer render,
+    VkCommandBuffer transfer,
+    VkCommandBuffer ui,
+    VkCommandBuffer shadow,
+    event_submissions_t *events) {
     timestep_begin(cl_delta_time());
 
     s_handle_input(events);
@@ -89,7 +94,7 @@ void sc_play_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     wd_tick(events);
     nw_tick(events);
 
-    dr_draw_game(render, transfer);
+    dr_draw_game(render, transfer, shadow);
 
     ui_tick(events);
     render_submitted_ui(transfer, ui);

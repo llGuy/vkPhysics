@@ -173,6 +173,7 @@ DECLARE_RENDERER_PROC(shader_t, create_3d_shader_shadow,
     uint32_t push_constant_size, VkDescriptorType *descriptor_layout_types,
     uint32_t descriptor_layout_count,
     const char **shader_paths,
+    VkPrimitiveTopology topology,
     VkShaderStageFlags shader_flags);
 
 // NOTE: Very important
@@ -552,12 +553,14 @@ DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_shadow,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
+    VkPrimitiveTopology topology,
     mesh_type_flags_t type);
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_alpha,
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
+    VkPrimitiveTopology topology,
     mesh_type_flags_t type);
 
 DECLARE_RENDERER_PROC(shader_binding_info_t, create_mesh_binding_info,

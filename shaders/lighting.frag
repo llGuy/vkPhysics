@@ -19,8 +19,8 @@ layout(binding = 0, set = 3) uniform samplerCube u_irradiance_map;
 layout(binding = 0, set = 4) uniform sampler2D u_integral_lookup;
 layout(binding = 0, set = 5) uniform samplerCube u_prefilter_map;
 
-layout(binding = 0, set = 6) uniform sampler2D u_ao;
-//layout(binding = 0, set = 7) uniform sampler2D u_shadow_map;
+// layout(binding = 0, set = 6) uniform sampler2D u_ao;
+layout(binding = 0, set = 6) uniform sampler2D u_shadow_map;
 
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[10];
@@ -104,7 +104,7 @@ vec3 fresnel_roughness(
 }
 
 // Not being used for the moment
-#if 0
+#if 1
 bool get_shadow_factor(
     vec3 ws_position,
     out float occlusion) {
@@ -138,6 +138,27 @@ bool get_shadow_factor(
 
     return occluded;
 }
+#else
+float get_shadow_factor(
+    vec3 ws_position,
+    out float occlusion) {
+    vec4 ls_position = u_lighting.shadow_view_projection * vec4(ws_position, 1.0f);
+
+    ls_position.xyz /= ls_position.w;
+    ls_position.xy = ls_position.xy * 0.5f + 0.5f;
+
+    float depth = texture(u_shadow_map, ls_position.xy).r;
+
+    if (ls_position.z - 0.005f > depth) {
+        occlusion = 0.0f;
+        return 0.2f;
+    }
+    else {
+        occlusion = 1.0f;
+        return 1.0f;
+    }
+}
+
 #endif
 
 vec3 round_edge(
@@ -334,17 +355,18 @@ void main() {
         vec2 brdf = texture(u_integral_lookup, vec2(max(dot(ws_normal, ws_view), 0.0f), roughness)).rg;
         vec3 specular = prefiltered_color * (fresnel * brdf.r + clamp(brdf.g, 0, 1));
 
-        float ao = texture(u_ao, in_fs.uvs).r;
+        // float ao = texture(u_ao, in_fs.uvs).r;
         
         vec3 ambient = (diffuse + specular);
 
-        //float occluded = 1.0f;
-        //get_shadow_factor(ws_position, occluded);
+        float occluded = 1.0f;
+        bool s = get_shadow_factor(ws_position, occluded);
         
-        color = (ambient + l) * pow(ao, 10.0f);
+        color = (ambient + l) * pow(occluded, 10.0f);
     }
 
     out_final_color = vec4(color, 1.0f);
+
 
     // Not enabling bloom for the moment
     out_bright_color = vec4(0.0f);

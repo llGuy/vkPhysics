@@ -26,7 +26,19 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path);
 
 enum game_mesh_t { GM_PLAYER, GM_BALL, GM_MERGED, GM_INVALID };
 mesh_t *dr_get_mesh_rsc(game_mesh_t mesh);
-enum game_shader_t { GS_PLAYER, GS_BALL, GS_MERGED_BALL, GS_MERGED_PLAYER, GS_CHUNK, GS_INVALID };
+enum game_shader_t {
+    GS_PLAYER,
+    GS_PLAYER_SHADOW,
+    GS_BALL,
+    GS_BALL_SHADOW,
+    GS_MERGED_BALL,
+    GS_MERGED_BALL_SHADOW,
+    GS_MERGED_PLAYER,
+    GS_MERGED_PLAYER_SHADOW,
+    GS_CHUNK,
+    GS_CHUNK_SHADOW,
+    GS_INVALID
+};
 shader_t *dr_get_shader_rsc(game_shader_t shader);
 
 struct chunk_color_data_t {

@@ -146,6 +146,7 @@ shader_t create_mesh_shader_shadow(
     shader_binding_info_t *binding_info,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
+    VkPrimitiveTopology topology,
     mesh_type_flags_t mesh_type) {
         if (mesh_type == MT_STATIC) {
         VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -155,6 +156,7 @@ shader_t create_mesh_shader_shadow(
             sizeof(mesh_render_data_t),
             &ubo_type, 1,
             shader_paths,
+            topology,
             shader_flags);
     }
     else {
@@ -165,6 +167,7 @@ shader_t create_mesh_shader_shadow(
             sizeof(mesh_render_data_t),
             ubo_types, 2,
             shader_paths,
+            topology,
             shader_flags);
     }
 }
@@ -1455,7 +1458,7 @@ void submit_mesh_shadow(
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
         vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);
 
-        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, mesh->vertex_offset, 0);
+        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, 0, 0);
     }
     else {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);

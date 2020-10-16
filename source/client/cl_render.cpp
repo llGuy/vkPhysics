@@ -1,3 +1,4 @@
+#include "renderer/renderer.hpp"
 #include "sc_scene.hpp"
 #include "fx_post.hpp"
 #include "cl_render.hpp"
@@ -65,8 +66,12 @@ static void s_render() {
     // All data transfers
     submit_secondary_command_buffer(final_command_buffer, current_frame.transfer_command_buffer);
 
-    begin_scene_rendering(final_command_buffer);
+    begin_shadow_rendering(final_command_buffer);
+    submit_secondary_command_buffer(final_command_buffer, current_frame.render_shadow_command_buffer);
+    end_shadow_rendering(final_command_buffer);
+
     // All rendering
+    begin_scene_rendering(final_command_buffer);
     submit_secondary_command_buffer(final_command_buffer, current_frame.render_command_buffer);
     end_scene_rendering(final_command_buffer);
 

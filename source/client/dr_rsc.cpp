@@ -40,11 +40,10 @@ static void s_create_player_shaders_and_meshes() {
         &meshes[GM_MERGED], &merged_sbi);
 
     // Create shaders for the ball mesh
-    const char *static_shader_paths[] = {
-        "shaders/SPV/mesh.vert.spv",
-        "shaders/SPV/mesh.geom.spv",
-        "shaders/SPV/mesh.frag.spv"
-    };
+    const char *static_shader_paths[] =
+        {"shaders/SPV/mesh.vert.spv", "shaders/SPV/mesh.geom.spv", "shaders/SPV/mesh.frag.spv"};
+    const char *static_shadow_shader_paths[] =
+        {"shaders/SPV/mesh_shadow.vert.spv", "shaders/SPV/shadow.frag.spv"};
 
     shaders[GS_BALL] = create_mesh_shader_color(
         &ball_sbi,
@@ -54,12 +53,18 @@ static void s_create_player_shaders_and_meshes() {
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         MT_STATIC);
 
+    shaders[GS_BALL_SHADOW] = create_mesh_shader_shadow(
+        &ball_sbi,
+        static_shadow_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        MT_STATIC);
+
     // Create shaders for the "person" mesh
-    const char *player_shader_paths[] = {
-        "shaders/SPV/skeletal.vert.spv",
-        "shaders/SPV/skeletal.geom.spv",
-        "shaders/SPV/skeletal.frag.spv"
-    };
+    const char *player_shader_paths[] =
+        {"shaders/SPV/skeletal.vert.spv", "shaders/SPV/skeletal.geom.spv", "shaders/SPV/skeletal.frag.spv"};
+    const char *player_shadow_shader_paths[] =
+        {"shaders/SPV/skeletal.vert.spv", "shaders/SPV/shadow.frag.spv"};
 
     shaders[GS_PLAYER] = create_mesh_shader_color(
         &player_sbi,
@@ -69,12 +74,18 @@ static void s_create_player_shaders_and_meshes() {
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         MT_ANIMATED);
 
+    shaders[GS_PLAYER_SHADOW] = create_mesh_shader_shadow(
+        &player_sbi,
+        player_shadow_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        MT_ANIMATED);
+
     // Create shaders for the transition effect between person and ball
-    const char *merged_shader_paths[] = {
-        "shaders/SPV/morph.vert.spv",
-        "shaders/SPV/morph_ball.geom.spv",
-        "shaders/SPV/morph.frag.spv",
-    };
+    const char *merged_shader_paths[] =
+        {"shaders/SPV/morph.vert.spv", "shaders/SPV/morph_ball.geom.spv", "shaders/SPV/morph.frag.spv"};
+    const char *merged_shadow_shader_paths[] =
+        {"shaders/SPV/morph.vert.spv", "shaders/SPV/morph_ball.geom.spv", "shaders/SPV/shadow.frag.spv"};
 
     shaders[GS_MERGED_BALL] = create_mesh_shader_color(
         &merged_sbi,
@@ -84,7 +95,17 @@ static void s_create_player_shaders_and_meshes() {
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
         MT_ANIMATED | MT_MERGED_MESH);
 
+#if 0
+    shaders[GS_MERGED_BALL_SHADOW] = create_mesh_shader_shadow(
+        &merged_sbi,
+        merged_shadow_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
+        MT_ANIMATED | MT_MERGED_MESH);
+#endif
+
     merged_shader_paths[1] = "shaders/SPV/morph_dude.geom.spv";
+    merged_shadow_shader_paths[1] = "shaders/SPV/morph_dude.geom.spv";
 
     shaders[GS_MERGED_PLAYER] = create_mesh_shader_color(
         &merged_sbi,
@@ -93,6 +114,15 @@ static void s_create_player_shaders_and_meshes() {
         VK_CULL_MODE_NONE, 
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
         MT_ANIMATED | MT_MERGED_MESH);
+
+#if 0
+    shaders[GS_MERGED_PLAYER_SHADOW] = create_mesh_shader_shadow(
+        &merged_sbi,
+        merged_shadow_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
+        MT_ANIMATED | MT_MERGED_MESH);
+#endif
 }
 
 static void s_create_chunk_shaders() {

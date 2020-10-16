@@ -800,7 +800,6 @@ static void s_lighting_init() {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
-        //r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -855,8 +854,8 @@ void r_execute_lighting_pass(
         r_diffuse_ibl_irradiance(),
         r_integral_lookup(),
         r_specular_ibl(),
-        ssao_blur_stage.descriptor_set,
-        //shadow_stage.descriptor_set
+        // ssao_blur_stage.descriptor_set,
+        shadow_stage.descriptor_set
     };
     
     vkCmdBindDescriptorSets(
@@ -1511,9 +1510,11 @@ void r_pipeline_init() {
     s_deferred_render_pass_init();
     s_deferred_init();
     
+#if 0
     s_ssao_kernels_init();
     s_ssao_render_pass_init();
     s_ssao_init();
+#endif
 
     s_lighting_render_pass_init();
     s_lighting_init();
@@ -1561,15 +1562,19 @@ void r_handle_resize(
     uint32_t height) {
     // Destroy everything
     destroy_rpipeline_stage(&deferred);
+#if 0
     destroy_rpipeline_stage(&ssao_stage);
     destroy_rpipeline_stage(&ssao_blur_stage);
+#endif
     destroy_rpipeline_stage(&lighting_stage);
     destroy_rpipeline_stage(&motion_blur_stage);
     destroy_rpipeline_stage(&blur_stage);
     destroy_rpipeline_stage(&ui_stage);
     
     s_deferred_init();
+#if 0
     s_ssao_init();
+#endif
     s_lighting_init();
     s_motion_blur_init();
     s_blur_init();

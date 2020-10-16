@@ -882,8 +882,6 @@ void gpu_data_sync(
 void post_process_scene(
     frame_info_t *info,
     VkCommandBuffer ui_command_buffer) {
-    r_execute_ssao_pass(primary_command_buffers[image_index], info->ssao);
-    r_execute_ssao_blur_pass(primary_command_buffers[image_index], info->ssao);
     r_execute_lighting_pass(primary_command_buffers[image_index]);
 
     r_execute_motion_blur_pass(primary_command_buffers[image_index], ui_command_buffer);
@@ -2307,6 +2305,7 @@ shader_t create_3d_shader_shadow(
     VkDescriptorType *descriptor_layout_types,
     uint32_t descriptor_layout_count,
     const char **shader_paths,
+    VkPrimitiveTopology topology,
     VkShaderStageFlags shader_flags) {
     return s_create_3d_shader(
         binding_info,
@@ -2316,7 +2315,7 @@ shader_t create_3d_shader_shadow(
         shader_paths,
         shader_flags,
         r_shadow_stage(),
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        topology,
         VK_CULL_MODE_FRONT_BIT);
 }
 

@@ -50,6 +50,7 @@ static void s_render_person(
 
 static void s_render_ball(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer shadow_render_command_buffer,
     player_t *p) {
     p->render->rotation_speed = p->frame_displacement / calculate_sphere_circumference(PLAYER_SCALE.x) * 360.0f;
     p->render->rotation_angle += p->render->rotation_speed;
@@ -74,6 +75,12 @@ static void s_render_ball(
         render_command_buffer,
         dr_get_mesh_rsc(GM_BALL),
         dr_get_shader_rsc(GS_BALL),
+        &p->render->render_data);
+
+    submit_mesh_shadow(
+        shadow_render_command_buffer,
+        dr_get_mesh_rsc(GM_BALL),
+        dr_get_shader_rsc(GS_BALL_SHADOW),
         &p->render->render_data);
 }
 
@@ -195,7 +202,7 @@ static void s_players_gpu_sync_and_render(
                         s_render_person(render_command_buffer, transfer_command_buffer, p);
                     }
                     else {
-                        s_render_ball(render_command_buffer, p);
+                        s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
                     } 
                     // TODO: Special handling for first person mode
                 }
@@ -208,7 +215,7 @@ static void s_players_gpu_sync_and_render(
                         s_render_person(render_command_buffer, transfer_command_buffer, p);
                     }
                     else {
-                        s_render_ball(render_command_buffer, p);
+                        s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
                     } 
                 }
             }
@@ -279,8 +286,9 @@ static void s_chunks_gpu_sync_and_render(
 
 void dr_draw_game(
     VkCommandBuffer render,
-    VkCommandBuffer transfer) {
-    s_players_gpu_sync_and_render(render, VK_NULL_HANDLE, transfer);
+    VkCommandBuffer transfer,
+    VkCommandBuffer shadow) {
+    s_players_gpu_sync_and_render(render, shadow, transfer);
     s_chunks_gpu_sync_and_render(render, transfer);
 
     if (render != VK_NULL_HANDLE) {

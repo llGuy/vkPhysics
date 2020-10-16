@@ -54,6 +54,7 @@ static void s_run() {
             frame.render_command_buffer,
             frame.transfer_command_buffer,
             frame.ui_command_buffer,
+            frame.render_shadow_command_buffer,
             &events);
 
         // This needs to always happen - quite an important part of the loop

@@ -235,7 +235,7 @@ void sc_map_creator_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCom
     wd_execute_player_actions(wd_get_spectator(), events);
     wd_tick(events);
 
-    dr_draw_game(render, transfer);
+    dr_draw_game(render, transfer, VK_NULL_HANDLE);
 
     ui_tick(events);
     render_submitted_ui(transfer, ui);
