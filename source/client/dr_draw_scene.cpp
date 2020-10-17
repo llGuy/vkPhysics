@@ -9,6 +9,7 @@
 
 static void s_render_person(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     player_t *p) {
     if (p->render->animations.next_bound_cycle != p->animated_state) {
@@ -44,6 +45,13 @@ static void s_render_person(
         render_command_buffer,
         dr_get_mesh_rsc(GM_PLAYER),
         dr_get_shader_rsc(GS_PLAYER),
+        &p->render->render_data,
+        &p->render->animations);
+
+    submit_skeletal_mesh_shadow(
+        render_shadow_command_buffer,
+        dr_get_mesh_rsc(GM_PLAYER),
+        dr_get_shader_rsc(GS_PLAYER_SHADOW),
         &p->render->render_data,
         &p->render->animations);
 }
@@ -199,7 +207,7 @@ static void s_players_gpu_sync_and_render(
                         s_render_transition(render_command_buffer, transfer_command_buffer, p);
                     }
                     else if (p->flags.interaction_mode == PIM_STANDING) {
-                        s_render_person(render_command_buffer, transfer_command_buffer, p);
+                        s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
                     }
                     else {
                         s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
@@ -212,7 +220,7 @@ static void s_players_gpu_sync_and_render(
                         s_render_transition(render_command_buffer, transfer_command_buffer, p);
                     }
                     else if (p->flags.interaction_mode == PIM_STANDING) {
-                        s_render_person(render_command_buffer, transfer_command_buffer, p);
+                        s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
                     }
                     else {
                         s_render_ball(render_command_buffer, render_shadow_command_buffer, p);

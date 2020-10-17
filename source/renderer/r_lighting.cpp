@@ -41,7 +41,7 @@ static void s_shadow_box_init() {
     scene_shadow_box.view = glm::lookAt(vector3_t(0.0f), light_direction, vector3_t(0.0f, 1.0f, 0.0f));
     scene_shadow_box.inverse_view = glm::inverse(scene_shadow_box.view);
     scene_shadow_box.near = 1.0f;
-    scene_shadow_box.far = 50.0f;
+    scene_shadow_box.far = 10.0f;
 }
 
 static void s_update_shadow_box(

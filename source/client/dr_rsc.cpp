@@ -64,7 +64,7 @@ static void s_create_player_shaders_and_meshes() {
     const char *player_shader_paths[] =
         {"shaders/SPV/skeletal.vert.spv", "shaders/SPV/skeletal.geom.spv", "shaders/SPV/skeletal.frag.spv"};
     const char *player_shadow_shader_paths[] =
-        {"shaders/SPV/skeletal.vert.spv", "shaders/SPV/shadow.frag.spv"};
+        {"shaders/SPV/skeletal_shadow.vert.spv", "shaders/SPV/shadow.frag.spv"};
 
     shaders[GS_PLAYER] = create_mesh_shader_color(
         &player_sbi,

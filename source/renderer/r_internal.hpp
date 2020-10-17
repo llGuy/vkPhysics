@@ -132,7 +132,8 @@ VkFramebuffer r_create_framebuffer(
     uint32_t output_layer_count);
 
 void r_rpipeline_descriptor_set_output_init(
-    rpipeline_stage_t *stage);
+    rpipeline_stage_t *stage,
+    bool add_depth = 1);
 
 VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(
     rpipeline_stage_t *stage,

@@ -7,5 +7,5 @@ layout(location = 0) in VS_DATA {
 } in_fs;
 
 void main() {
-    out_moment = vec2(in_fs.depth, in_fs.depth * in_fs.depth);
+    out_moment = vec2(gl_FragCoord.z, gl_FragCoord.z * gl_FragCoord.z);
 }

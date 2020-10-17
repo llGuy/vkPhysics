@@ -21,7 +21,6 @@ layout(binding = 0, set = 5) uniform samplerCube u_prefilter_map;
 
 // layout(binding = 0, set = 6) uniform sampler2D u_ao;
 layout(binding = 0, set = 6) uniform sampler2D u_shadow_map_moment;
-layout(binding = 1, set = 6) uniform sampler2D u_shadow_map_depth;
 
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[10];
@@ -156,7 +155,7 @@ bool get_shadow_factor(vec3 ws_position, out float occlusion) {
 
     // Chebychev's inequality
     float p = step(ls_position.z, moment.x);
-    float sigma = max(moment.y - moment.x * moment.x, 0.00001f);
+    float sigma = max(moment.y - moment.x * moment.x, 0.00002);
 
     float dist_from_mean = ls_position.z - moment.x;
 

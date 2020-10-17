@@ -1793,7 +1793,8 @@ VkFramebuffer r_create_framebuffer(
 }
 
 void r_rpipeline_descriptor_set_output_init(
-    rpipeline_stage_t *stage) {
+    rpipeline_stage_t *stage,
+    bool add_depth) {
     VkImageView *views = ALLOCA(VkImageView, stage->color_attachment_count + 1);
     VkSampler *samplers = ALLOCA(VkSampler, stage->color_attachment_count + 1);
     
@@ -1804,7 +1805,7 @@ void r_rpipeline_descriptor_set_output_init(
         samplers[binding_count] = stage->color_attachments[binding_count].sampler;
     }
 
-    if (stage->depth_attachment) {
+    if (stage->depth_attachment && add_depth) {
         views[binding_count] = stage->depth_attachment->image_view;
         samplers[binding_count] = stage->depth_attachment->sampler;
         

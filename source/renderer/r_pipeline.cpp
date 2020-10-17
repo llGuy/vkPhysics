@@ -215,8 +215,218 @@ static void s_update_previous_output(
     previous_output = output;
 }
 
+enum blur_kernel_size_t { BKS_7 = 7, BKS_9 = 9 };
+
+struct blur_stage_data_t {
+    rpipeline_shader_t shader;
+    rpipeline_stage_t stage;
+    VkDescriptorSet sets[2];
+    VkDescriptorSet current_set;
+    VkExtent2D extent;
+};
+
+static blur_stage_data_t s_create_blur_stage(
+    VkExtent2D extent,
+    VkFormat format,
+    uint32_t kernel_size) {
+    blur_stage_data_t blur = {};
+    blur.stage.color_attachment_count = 1;
+    // Need 2 attachments for ping-pong rendering, but render pass only takes one
+    blur.stage.color_attachments = FL_MALLOC(attachment_t, 2);
+
+    blur.extent = extent;
+
+    VkExtent3D extent3d = {};
+    extent3d.width = blur.extent.width;
+    extent3d.height = blur.extent.height;
+    extent3d.depth = 1;
+    
+    blur.stage.color_attachments[0] = r_create_color_attachment(extent3d, format);
+    blur.stage.color_attachments[1] = r_create_color_attachment(extent3d, format);
+
+    VkAttachmentDescription attachment_description = r_fill_color_attachment_description(
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        format);
+    
+    VkAttachmentReference attachment_reference = {};
+    attachment_reference.attachment = 0;
+    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass_description = {};
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.colorAttachmentCount = blur.stage.color_attachment_count;
+    subpass_description.pColorAttachments = &attachment_reference;
+    subpass_description.pDepthStencilAttachment = NULL;
+
+    VkSubpassDependency dependencies[2] = {};
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    VkRenderPassCreateInfo render_pass_info = {};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = blur.stage.color_attachment_count;
+    render_pass_info.pAttachments = &attachment_description;
+    render_pass_info.dependencyCount = 2;
+    render_pass_info.pDependencies = dependencies;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass_description;
+
+    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &blur.stage.render_pass));
+
+    blur.stage.framebuffers[0] = r_create_framebuffer(
+        blur.stage.color_attachment_count,
+        blur.stage.color_attachments,
+        NULL,
+        blur.stage.render_pass,
+        blur.extent,
+        1);
+
+    blur.stage.framebuffers[1] = r_create_framebuffer(
+        blur.stage.color_attachment_count,
+        blur.stage.color_attachments + 1,
+        NULL,
+        blur.stage.render_pass,
+        blur.extent,
+        1);
+
+    blur.sets[0] = create_image_descriptor_set(
+        blur.stage.color_attachments[0].image_view,
+        blur.stage.color_attachments[0].sampler,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+    blur.current_set = blur.sets[1] = create_image_descriptor_set(
+        blur.stage.color_attachments[1].image_view,
+        blur.stage.color_attachments[1].sampler,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+    blur.stage.descriptor_set = VK_NULL_HANDLE;
+
+    VkDescriptorSetLayout input_layouts[] = {
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+    };
+
+    VkPushConstantRange range = {};
+    range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    range.offset = 0;
+    range.size = 4;
+    
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = sizeof(input_layouts) / sizeof(VkDescriptorSetLayout);
+    pipeline_layout_info.pSetLayouts = input_layouts;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pPushConstantRanges = &range;
+    VkPipelineLayout pipeline_layout;
+    vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
+
+    const char *frag = NULL;
+
+    switch (kernel_size) {
+    case BKS_7: {
+        frag = "shaders/SPV/gauss_blur_k7.frag.spv";
+    } break;
+
+    case BKS_9: {
+        frag = "shaders/SPV/gauss_blur_k9.frag.spv";
+    } break;
+
+    default: {
+        LOG_ERRORV("Invalid blur kernel size: %d", kernel_size);
+        assert(0);
+    } break;
+    }
+    
+    blur.shader = s_create_rendering_pipeline_shader(
+        "shaders/SPV/gauss_blur.vert.spv",
+        frag,
+        &blur.stage,
+        pipeline_layout);
+
+    return blur;
+}
+
+static void s_execute_blur_pass(
+    blur_stage_data_t *blur,
+    VkDescriptorSet input,
+    VkCommandBuffer command_buffer) {
+    VkDescriptorSet inputs[] = {input};
+
+    uint32_t horizontal = true;
+    
+    for (uint32_t i = 0; i < 2; ++i) {
+        if (i > 0) {
+            inputs[0] = blur->sets[!horizontal];
+            blur->current_set = blur->sets[horizontal];
+        }
+        
+        VkClearValue clear_values = {};
+    
+        VkRect2D render_area = {};
+        render_area.extent = blur->extent;
+
+        VkRenderPassBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        begin_info.framebuffer = blur->stage.framebuffers[horizontal];
+        begin_info.renderPass = blur->stage.render_pass;
+        begin_info.clearValueCount = blur->stage.color_attachment_count;
+        begin_info.pClearValues = &clear_values;
+        begin_info.renderArea = render_area;
+
+        vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    
+        VkViewport viewport = {};
+        viewport.width = (float)blur->extent.width;
+        viewport.height = (float)blur->extent.height;
+        viewport.maxDepth = 1;
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+        VkRect2D rect = {};
+        rect.extent = blur->extent;
+        vkCmdSetScissor(command_buffer, 0, 1, &rect);
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, blur->shader.pipeline);
+
+        vkCmdBindDescriptorSets(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            blur->shader.layout,
+            0,
+            sizeof(inputs) / sizeof(VkDescriptorSet),
+            inputs,
+            0,
+            NULL);
+
+        vkCmdPushConstants(
+            command_buffer,
+            blur->shader.layout,
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            0, sizeof(uint32_t),
+            &horizontal);
+
+        vkCmdDraw(command_buffer, 4, 1, 0, 0);
+
+        vkCmdEndRenderPass(command_buffer);
+        
+        horizontal = !horizontal;
+    }
+
+    s_update_previous_output(blur->current_set);
+}
+
 static VkExtent2D shadow_map_extent;
 static rpipeline_stage_t shadow_stage;
+static blur_stage_data_t shadow_blur;
 
 rpipeline_stage_t *r_shadow_stage() {
     return &shadow_stage;
@@ -227,8 +437,8 @@ VkExtent2D r_shadow_extent() {
 }
 
 static void s_shadow_init() {
-    shadow_map_extent.width = 2000;
-    shadow_map_extent.height = 2000;
+    shadow_map_extent.width = 1000;
+    shadow_map_extent.height = 1000;
 
     VkExtent3D extent3d = {};
     extent3d.width = shadow_map_extent.width;
@@ -297,7 +507,12 @@ static void s_shadow_init() {
         shadow_map_extent,
         1);
 
-    r_rpipeline_descriptor_set_output_init(&shadow_stage);
+    r_rpipeline_descriptor_set_output_init(&shadow_stage, 0);
+
+    shadow_blur = s_create_blur_stage(
+        {shadow_map_extent.width / 1, shadow_map_extent.height / 1},
+        VK_FORMAT_R32G32_SFLOAT,
+        BKS_7);
 }
 
 void begin_shadow_rendering(
@@ -324,6 +539,11 @@ void begin_shadow_rendering(
 void end_shadow_rendering(
     VkCommandBuffer command_buffer) {
     vkCmdEndRenderPass(command_buffer);
+
+    s_execute_blur_pass(
+        &shadow_blur,
+        shadow_stage.descriptor_set,
+        command_buffer);
 }
 
 static rpipeline_stage_t deferred;
@@ -815,7 +1035,7 @@ static void s_lighting_init() {
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2),
+        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -871,7 +1091,8 @@ void r_execute_lighting_pass(
         r_integral_lookup(),
         r_specular_ibl(),
         // ssao_blur_stage.descriptor_set,
-        shadow_stage.descriptor_set
+        // shadow_stage.descriptor_set
+        shadow_blur.current_set
     };
     
     vkCmdBindDescriptorSets(
@@ -1078,187 +1299,33 @@ void r_execute_motion_blur_pass(
     s_update_previous_output(motion_blur_stage.descriptor_set);
 }
 
-static rpipeline_shader_t blur_shader;
-static rpipeline_stage_t blur_stage;
-static VkDescriptorSet blur_sets[2];
-static VkDescriptorSet current_set;
-static VkExtent2D blur_extent;
+static blur_stage_data_t scene_blur;
 
-static void s_blur_init() {
-    blur_stage.color_attachment_count = 1;
-    // Need 2 attachments for ping-pong rendering, but render pass only takes one
-    blur_stage.color_attachments = FL_MALLOC(attachment_t, 2);
-
-    blur_extent.width = r_swapchain_extent().width / 2;
-    blur_extent.height = r_swapchain_extent().height / 2;
-
-    VkExtent3D extent3d = {};
-    extent3d.width = blur_extent.width;
-    extent3d.height = blur_extent.height;
-    extent3d.depth = 1;
-    
-    blur_stage.color_attachments[0] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
-    blur_stage.color_attachments[1] = r_create_color_attachment(extent3d, VK_FORMAT_R16G16B16A16_SFLOAT);
-
-    VkAttachmentDescription attachment_description = r_fill_color_attachment_description(
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_FORMAT_R16G16B16A16_SFLOAT);
-    
-    VkAttachmentReference attachment_reference = {};
-    attachment_reference.attachment = 0;
-    attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass_description = {};
-    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass_description.colorAttachmentCount = blur_stage.color_attachment_count;
-    subpass_description.pColorAttachments = &attachment_reference;
-    subpass_description.pDepthStencilAttachment = NULL;
-
-    VkSubpassDependency dependencies[2] = {};
-    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[0].dstSubpass = 0;
-    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    dependencies[1].srcSubpass = 0;
-    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-
-    VkRenderPassCreateInfo render_pass_info = {};
-    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    render_pass_info.attachmentCount = blur_stage.color_attachment_count;
-    render_pass_info.pAttachments = &attachment_description;
-    render_pass_info.dependencyCount = 2;
-    render_pass_info.pDependencies = dependencies;
-    render_pass_info.subpassCount = 1;
-    render_pass_info.pSubpasses = &subpass_description;
-
-    VK_CHECK(vkCreateRenderPass(r_device(), &render_pass_info, NULL, &blur_stage.render_pass));
-
-    blur_stage.framebuffers[0] = r_create_framebuffer(
-        blur_stage.color_attachment_count,
-        blur_stage.color_attachments,
-        NULL,
-        blur_stage.render_pass,
-        blur_extent,
-        1);
-
-    blur_stage.framebuffers[1] = r_create_framebuffer(
-        blur_stage.color_attachment_count,
-        blur_stage.color_attachments + 1,
-        NULL,
-        blur_stage.render_pass,
-        blur_extent,
-        1);
-
-    //r_rpipeline_descriptor_set_output_init(&blur_stage);
-    blur_sets[0] = create_image_descriptor_set(
-        blur_stage.color_attachments[0].image_view,
-        blur_stage.color_attachments[0].sampler,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-    current_set = blur_sets[1] = create_image_descriptor_set(
-        blur_stage.color_attachments[1].image_view,
-        blur_stage.color_attachments[1].sampler,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-    VkDescriptorSetLayout input_layouts[] = {
-        r_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
-    };
-
-    VkPushConstantRange range = {};
-    range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    range.offset = 0;
-    range.size = 4;
-    
-    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
-    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = sizeof(input_layouts) / sizeof(VkDescriptorSetLayout);
-    pipeline_layout_info.pSetLayouts = input_layouts;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pPushConstantRanges = &range;
-    VkPipelineLayout pipeline_layout;
-    vkCreatePipelineLayout(r_device(), &pipeline_layout_info, NULL, &pipeline_layout);
-    
-    blur_shader = s_create_rendering_pipeline_shader(
-        "shaders/SPV/gauss_blur.vert.spv",
-        "shaders/SPV/gauss_blur_k9.frag.spv",
-        &blur_stage,
-        pipeline_layout);
-}
-
-// Blur bright colors
-void r_execute_gaussian_blur_pass(
-    VkCommandBuffer command_buffer) {
-    VkDescriptorSet inputs[] = {
-        motion_blur_stage.descriptor_set
-    };
-
-    uint32_t horizontal = true;
-    
-    for (uint32_t i = 0; i < 2; ++i) {
-        if (i > 0) {
-            inputs[0] = blur_sets[!horizontal];
-            current_set = blur_sets[horizontal];
-        }
-        
-        VkClearValue clear_values = {};
-    
-        VkRect2D render_area = {};
-        render_area.extent = blur_extent;
-
-        VkRenderPassBeginInfo begin_info = {};
-        begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        begin_info.framebuffer = blur_stage.framebuffers[horizontal];
-        begin_info.renderPass = blur_stage.render_pass;
-        begin_info.clearValueCount = blur_stage.color_attachment_count;
-        begin_info.pClearValues = &clear_values;
-        begin_info.renderArea = render_area;
-
-        vkCmdBeginRenderPass(command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
-    
-        VkViewport viewport = {};
-        viewport.width = (float)blur_extent.width;
-        viewport.height = (float)blur_extent.height;
-        viewport.maxDepth = 1;
-        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-
-        VkRect2D rect = {};
-        rect.extent = blur_extent;
-        vkCmdSetScissor(command_buffer, 0, 1, &rect);
-
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, blur_shader.pipeline);
-
-        vkCmdBindDescriptorSets(
-            command_buffer,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            blur_shader.layout,
-            0,
-            sizeof(inputs) / sizeof(VkDescriptorSet),
-            inputs,
-            0,
-            NULL);
-
-        vkCmdPushConstants(
-            command_buffer,
-            blur_shader.layout,
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-            0, sizeof(uint32_t),
-            &horizontal);
-
-        vkCmdDraw(command_buffer, 4, 1, 0, 0);
-
-        vkCmdEndRenderPass(command_buffer);
-        
-        horizontal = !horizontal;
+static void s_destroy_scene_blur_descriptors() {
+    if (scene_blur.sets[0] != VK_NULL_HANDLE) {
+        vkFreeDescriptorSets(r_device(), r_descriptor_pool(), 1, &scene_blur.sets[0]);
+    }
+    if (scene_blur.sets[1] != VK_NULL_HANDLE) {
+        vkFreeDescriptorSets(r_device(), r_descriptor_pool(), 1, &scene_blur.sets[1]);
     }
 
-    s_update_previous_output(current_set);
+    scene_blur.current_set = VK_NULL_HANDLE;
+}
+
+static void s_scene_blur_init() {
+    memset(&scene_blur, 0, sizeof(scene_blur));
+    scene_blur = s_create_blur_stage(
+        {r_swapchain_extent().width / 2, r_swapchain_extent().height / 2},
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        BKS_9);
+}
+
+void r_execute_gaussian_blur_pass(
+    VkCommandBuffer command_buffer) {
+    s_execute_blur_pass(
+        &scene_blur,
+        motion_blur_stage.descriptor_set,
+        command_buffer);
 }
 
 static rpipeline_stage_t ui_stage;
@@ -1535,7 +1602,7 @@ void r_pipeline_init() {
     s_lighting_render_pass_init();
     s_lighting_init();
     
-    s_blur_init();
+    s_scene_blur_init();
 
     s_motion_blur_render_pass_init();
     s_motion_blur_init();
@@ -1584,7 +1651,7 @@ void r_handle_resize(
 #endif
     destroy_rpipeline_stage(&lighting_stage);
     destroy_rpipeline_stage(&motion_blur_stage);
-    destroy_rpipeline_stage(&blur_stage);
+    destroy_rpipeline_stage(&scene_blur.stage);
     destroy_rpipeline_stage(&ui_stage);
     
     s_deferred_init();
@@ -1593,6 +1660,6 @@ void r_handle_resize(
 #endif
     s_lighting_init();
     s_motion_blur_init();
-    s_blur_init();
+    s_scene_blur_init();
     s_ui_stage_init();
 }
