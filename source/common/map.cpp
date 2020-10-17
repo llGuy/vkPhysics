@@ -111,27 +111,31 @@ map_t *load_map(const char *path) {
 
             for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
                 uint8_t current_value = serialiser.deserialise_uint8();
+                uint8_t current_color = serialiser.deserialise_uint8();
 
                 if (current_value == CHUNK_SPECIAL_VALUE) {
                     chunk->voxels[v].value = 0;
+                    chunk->voxels[v].color = 0;
                     ++v;
 
                     // Repeating zeros
                     uint32_t zero_count = serialiser.deserialise_uint32();
                     chunk->voxels[v + 1].value = 0;
+                    chunk->voxels[v + 1].color = 0;
                     chunk->voxels[v + 2].value = 0;
-                    chunk->voxels[v + 3].value = 0;
-                    chunk->voxels[v + 4].value = 0;
+                    chunk->voxels[v + 2].color = 0;
 
-                    v += 4;
+                    v += 2;
 
                     uint32_t previous_v = v;
-                    for (; v < previous_v + zero_count - 5; ++v) {
+                    for (; v < previous_v + zero_count - 3; ++v) {
                         chunk->voxels[v].value = 0;
+                        chunk->voxels[v].color = 0;
                     }
                 }
                 else {
                     chunk->voxels[v].value = current_value;
+                    chunk->voxels[v].color = current_color;
                     ++v;
                 }
             }
@@ -175,28 +179,33 @@ void save_map(map_t *map) {
             serialiser.serialise_int16(chunks[i]->chunk_coord.y);
             serialiser.serialise_int16(chunks[i]->chunk_coord.z);
 
-            for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH; ++v) {
-                uint8_t current_value = chunks[i]->voxels[v].value;
-
-                if (current_value == 0) {
+            for (uint32_t v_index = 0; v_index < CHUNK_VOXEL_COUNT; ++v_index) {
+                voxel_t current_voxel = chunks[i]->voxels[v_index];
+                if (current_voxel.value == 0) {
                     uint32_t before_head = serialiser.data_buffer_head;
+
+                    static constexpr uint32_t MAX_ZERO_COUNT_BEFORE_COMPRESSION = 3;
+
                     uint32_t zero_count = 0;
-                    for (; chunks[i]->voxels[v].value == 0 && zero_count < 5; ++v, ++zero_count) {
+                    for (; chunks[i]->voxels[v_index].value == 0 && zero_count < MAX_ZERO_COUNT_BEFORE_COMPRESSION; ++v_index, ++zero_count) {
+                        serialiser.serialise_uint8(0);
                         serialiser.serialise_uint8(0);
                     }
-            
-                    if (zero_count == 5) {
-                        for (; chunks[i]->voxels[v].value == 0; ++v, ++zero_count); 
+
+                    if (zero_count == MAX_ZERO_COUNT_BEFORE_COMPRESSION) {
+                        for (; chunks[i]->voxels[v_index].value == 0; ++v_index, ++zero_count) {}
 
                         serialiser.data_buffer_head = before_head;
+                        serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);
                         serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);
                         serialiser.serialise_uint32(zero_count);
                     }
 
-                    v -= 1;
+                    v_index -= 1;
                 }
                 else {
-                    serialiser.serialise_uint8(current_value);
+                    serialiser.serialise_uint8(current_voxel.value);
+                    serialiser.serialise_uint8(current_voxel.color);
                 }
             }
         }

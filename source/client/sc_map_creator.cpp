@@ -86,7 +86,7 @@ static void s_parse_and_generate_sphere(
 
     player_t *spectator = wd_get_spectator();
 
-    generate_sphere(spectator->ws_position, sphere_radius, 140, type, 0xff);
+    generate_sphere(spectator->ws_position, sphere_radius, 140, type, 0xa3);
 }
 
 static void s_parse_and_generate_hollow_sphere(
@@ -99,7 +99,7 @@ static void s_parse_and_generate_hollow_sphere(
 
     player_t *spectator = wd_get_spectator();
 
-    generate_hollow_sphere(spectator->ws_position, sphere_radius, 250, type, 0xff);
+    generate_hollow_sphere(spectator->ws_position, sphere_radius, 250, type, 0xa3);
 }
 
 static void s_parse_and_generate_plane(
@@ -228,14 +228,19 @@ static void s_handle_input(event_submissions_t *events) {
     }
 }
 
-void sc_map_creator_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
+void sc_map_creator_tick(
+    VkCommandBuffer render,
+    VkCommandBuffer transfer,
+    VkCommandBuffer ui,
+    VkCommandBuffer render_shadow,
+    event_submissions_t *events) {
     s_handle_input(events);
 
     // The world always gets ticked - when menus get displayed, the world has to keep being simulated
     wd_execute_player_actions(wd_get_spectator(), events);
     wd_tick(events);
 
-    dr_draw_game(render, transfer, VK_NULL_HANDLE);
+    dr_draw_game(render, transfer, render_shadow);
 
     ui_tick(events);
     render_submitted_ui(transfer, ui);

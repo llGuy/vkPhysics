@@ -79,7 +79,7 @@ void sc_tick(
     } break;
 
     case ST_MAP_CREATOR: {
-        sc_map_creator_tick(render, transfer, ui, events);
+        sc_map_creator_tick(render, transfer, ui, shadow, events);
     } break;
 
     default: {
