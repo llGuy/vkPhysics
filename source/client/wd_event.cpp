@@ -92,7 +92,7 @@ static void s_handle_event_spawn(
         p->flags.camera_type = CT_THIRD_PERSON;
 
         p->camera_distance.set(1, 12.0f, 10.0f, 1.0f);
-        p->camera_fov.set(1, 90.0f, 60.0f);
+        p->camera_fov.set(1, 80.0f, 60.0f);
         p->current_camera_up = p->ws_up_vector;
     }
 }

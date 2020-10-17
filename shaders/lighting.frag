@@ -105,11 +105,15 @@ vec3 fresnel_roughness(
 
 
 // Not being used for the moment
-#if 0
+#if 1
+float linear_step(float low, float high, float v) {
+    return clamp((v - low) / (high - low), 0, 1);
+}
+
 bool get_shadow_factor(
     vec3 ws_position,
     out float occlusion) {
-    float pcf_count = 3.0f;
+    float pcf_count = 2.0f;
     
     vec4 ls_position = u_lighting.shadow_view_projection * vec4(ws_position, 1.0f);
 
@@ -120,23 +124,27 @@ bool get_shadow_factor(
 
     occlusion = 0.0f;
 
-    bool occluded = false;
-    
     for (int x = int(-pcf_count); x <= int(pcf_count); ++x) {
         for (int y = int(-pcf_count); y <= int(pcf_count); ++y) {
-            float depth = texture(u_shadow_map_moment, ls_position.xy + vec2(x, y) * texel_size).r;
-            
-            if (ls_position.z - 0.00009f > depth) {
-                occlusion += 0.95f;
-                occluded = true;
-            }
+            vec2 moment = texture(u_shadow_map_moment, ls_position.xy + vec2(x, y) * texel_size).rg;
+
+            // Chebychev's inequality
+            float p = step(ls_position.z, moment.x);
+            float sigma = max(moment.y - moment.x * moment.x, 0.00002);
+
+            float dist_from_mean = (ls_position.z - moment.x);
+
+            float pmax = linear_step(0.3, 1.0, sigma / (sigma + dist_from_mean * dist_from_mean));
+
+            float occ = min(1.0f, max(pmax, p));
+
+            occlusion += occ;
         }
     }
 
     occlusion /= (pcf_count * 2.0f + 1.0f) * (pcf_count * 2.0f + 1.0f);
-    occlusion = 1.0f - occlusion;
 
-    return occluded;
+    return true;
 }
 #else
 
@@ -157,9 +165,9 @@ bool get_shadow_factor(vec3 ws_position, out float occlusion) {
     float p = step(ls_position.z, moment.x);
     float sigma = max(moment.y - moment.x * moment.x, 0.00002);
 
-    float dist_from_mean = ls_position.z - moment.x;
+    float dist_from_mean = (ls_position.z - moment.x);
 
-    float pmax = linear_step(0.4, 1.0, sigma / (sigma + dist_from_mean * dist_from_mean));
+    float pmax = linear_step(0.3, 1.0, sigma / (sigma + dist_from_mean * dist_from_mean));
 
     occlusion = min(1.0f, max(pmax, p));
 

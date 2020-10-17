@@ -161,6 +161,11 @@ static void s_create_chunk_shaders() {
         "shaders/SPV/chunk_mesh.geom.spv",
         "shaders/SPV/chunk_mesh.frag.spv"
     };
+
+    const char *shadow_shader_paths[] = {
+        "shaders/SPV/chunk_mesh_shadow.vert.spv",
+        "shaders/SPV/shadow.frag.spv"
+    };
     
     shaders[GS_CHUNK] = create_mesh_shader_color(
         &binding_info,
@@ -169,6 +174,13 @@ static void s_create_chunk_shaders() {
         VK_CULL_MODE_FRONT_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         MT_STATIC | MT_PASS_EXTRA_UNIFORM_BUFFER);
+
+    shaders[GS_CHUNK_SHADOW] = create_mesh_shader_shadow(
+        &binding_info,
+        shadow_shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        MT_STATIC);
 
     dr_chunk_colors_g.chunk_color.pointer_position = vector4_t(0.0f);
     dr_chunk_colors_g.chunk_color.pointer_color = vector4_t(0.0f);

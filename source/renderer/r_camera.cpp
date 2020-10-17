@@ -24,11 +24,11 @@ cpu_camera_data_t *r_cpu_camera_data() {
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    if (camera_data.fov >= 1.0f && camera_data.fov <= 90.0f)
+    if (camera_data.fov >= 1.0f && camera_data.fov <= 80.0f)
         camera_data.fov -= (float)yoffset;
     if (camera_data.fov <= 1.0f)
         camera_data.fov = 1.0f;
-    if (camera_data.fov >= 90.0f)
+    if (camera_data.fov >= 80.0f)
         camera_data.fov = 45.0f;
 }
 

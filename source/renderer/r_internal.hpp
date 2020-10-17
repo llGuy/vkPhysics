@@ -179,6 +179,7 @@ vector3_t *r_light_direction();
 
 void r_lighting_gpu_sync(
     VkCommandBuffer command_buffer,
+    eye_3d_info_t *eye,
     lighting_info_t *lighting);
 
 void r_environment_init();

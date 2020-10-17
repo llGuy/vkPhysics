@@ -7,5 +7,11 @@ layout(location = 0) in VS_DATA {
 } in_fs;
 
 void main() {
-    out_moment = vec2(gl_FragCoord.z, gl_FragCoord.z * gl_FragCoord.z);
+    float depth = gl_FragCoord.z;
+
+    float dx = dFdx(depth);
+    float dy = dFdy(depth);
+    float sigma = depth * depth + 0.25 * (dx * dx + dy * dy);
+
+    out_moment = vec2(depth, sigma);
 }

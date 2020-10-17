@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "r_internal.hpp"
+#include "renderer/renderer.hpp"
 
 static lighting_data_t lighting_data;
 
@@ -41,7 +42,7 @@ static void s_shadow_box_init() {
     scene_shadow_box.view = glm::lookAt(vector3_t(0.0f), light_direction, vector3_t(0.0f, 1.0f, 0.0f));
     scene_shadow_box.inverse_view = glm::inverse(scene_shadow_box.view);
     scene_shadow_box.near = 1.0f;
-    scene_shadow_box.far = 10.0f;
+    scene_shadow_box.far = 25.0f;
 }
 
 static void s_update_shadow_box(
@@ -162,7 +163,8 @@ void r_lighting_init() {
 }
 
 void r_update_lighting(
-    lighting_info_t *lighting) {
+    lighting_info_t *lighting,
+    eye_3d_info_t *eye) {
     gpu_camera_transforms_t *transforms = r_gpu_camera_data();
     cpu_camera_data_t *camera_data = r_cpu_camera_data();
 
@@ -177,7 +179,7 @@ void r_update_lighting(
     lighting_data.point_light_count = lighting->lights_count;
 
     s_update_shadow_box(
-        glm::radians(camera_data->fov),
+        glm::radians(fmax(eye->fov, 60.0f)),
         transforms->width / transforms->height,
         camera_data->position,
         camera_data->direction,
@@ -209,8 +211,9 @@ void r_update_lighting(
 
 void r_lighting_gpu_sync(
     VkCommandBuffer command_buffer,
+    eye_3d_info_t *eye,
     lighting_info_t *lighting) {
-    r_update_lighting(lighting);
+    r_update_lighting(lighting, eye);
     
     VkBufferMemoryBarrier barrier = create_gpu_buffer_barrier(
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,

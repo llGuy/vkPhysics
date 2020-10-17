@@ -233,6 +233,7 @@ static void s_players_gpu_sync_and_render(
 
 static void s_chunks_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
     const uint32_t max_chunks_loaded_per_frame = 10;
     uint32_t chunks_loaded = 0;
@@ -287,6 +288,12 @@ static void s_chunks_gpu_sync_and_render(
                     &c->render->mesh,
                     dr_get_shader_rsc(GS_CHUNK),
                     &c->render->render_data);
+
+                submit_mesh_shadow(
+                    render_shadow_command_buffer,
+                    &c->render->mesh,
+                    dr_get_shader_rsc(GS_CHUNK_SHADOW),
+                    &c->render->render_data);
             }
         }
     }
@@ -297,7 +304,7 @@ void dr_draw_game(
     VkCommandBuffer transfer,
     VkCommandBuffer shadow) {
     s_players_gpu_sync_and_render(render, shadow, transfer);
-    s_chunks_gpu_sync_and_render(render, transfer);
+    s_chunks_gpu_sync_and_render(render, shadow, transfer);
 
     if (render != VK_NULL_HANDLE) {
         render_environment(render);

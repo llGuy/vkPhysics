@@ -437,8 +437,8 @@ VkExtent2D r_shadow_extent() {
 }
 
 static void s_shadow_init() {
-    shadow_map_extent.width = 1000;
-    shadow_map_extent.height = 1000;
+    shadow_map_extent.width = 1024;
+    shadow_map_extent.height = 1024;
 
     VkExtent3D extent3d = {};
     extent3d.width = shadow_map_extent.width;
@@ -510,7 +510,7 @@ static void s_shadow_init() {
     r_rpipeline_descriptor_set_output_init(&shadow_stage, 0);
 
     shadow_blur = s_create_blur_stage(
-        {shadow_map_extent.width / 1, shadow_map_extent.height / 1},
+        {shadow_map_extent.width, shadow_map_extent.height},
         VK_FORMAT_R32G32_SFLOAT,
         BKS_7);
 }

@@ -17,7 +17,7 @@ float weights[4] = float[](20.0 / 64.0, 15.0 / 64.0, 6.0 / 64.0, 1.0 / 64.0);
 
 void main() {
 #if 1
-    vec2 tex_offset = 1.0f / (textureSize(u_diffuse, 0) * 0.5);
+    vec2 tex_offset = 1.0f / (textureSize(u_diffuse, 0));
 
     vec3 color = texture(u_diffuse, in_fs.uvs).rgb * weights[0];
 
