@@ -118,31 +118,35 @@ bool get_shadow_factor(
     vec4 ls_position = u_lighting.shadow_view_projection * vec4(ws_position, 1.0f);
 
     ls_position.xyz /= ls_position.w;
-    ls_position.xy = ls_position.xy * 0.5f + 0.5f;
+    occlusion = 1.0f;
 
-    vec2 texel_size = 1.0f / (textureSize(u_shadow_map_moment, 0));
+    if (ls_position.z > -1.0f && ls_position.z < 1.0f && ls_position.x > -1.0f && ls_position.x < 1.0f && ls_position.y > -1.0f && ls_position.y < 1.0f) {
+        ls_position.xy = ls_position.xy * 0.5f + 0.5f;
 
-    occlusion = 0.0f;
+        vec2 texel_size = 1.0f / (textureSize(u_shadow_map_moment, 0));
 
-    for (int x = int(-pcf_count); x <= int(pcf_count); ++x) {
-        for (int y = int(-pcf_count); y <= int(pcf_count); ++y) {
-            vec2 moment = texture(u_shadow_map_moment, ls_position.xy + vec2(x, y) * texel_size).rg;
+        occlusion = 0.0f;
 
-            // Chebychev's inequality
-            float p = step(ls_position.z, moment.x);
-            float sigma = max(moment.y - moment.x * moment.x, 0.00002);
+        for (int x = int(-pcf_count); x <= int(pcf_count); ++x) {
+            for (int y = int(-pcf_count); y <= int(pcf_count); ++y) {
+                vec2 moment = texture(u_shadow_map_moment, ls_position.xy + vec2(x, y) * texel_size).rg;
 
-            float dist_from_mean = (ls_position.z - moment.x);
+                // Chebychev's inequality
+                float p = step(ls_position.z, moment.x);
+                float sigma = max(moment.y - moment.x * moment.x, 0.00002);
 
-            float pmax = linear_step(0.3, 1.0, sigma / (sigma + dist_from_mean * dist_from_mean));
+                float dist_from_mean = (ls_position.z - moment.x);
 
-            float occ = min(1.0f, max(pmax, p));
+                float pmax = linear_step(0.3, 1.0, sigma / (sigma + dist_from_mean * dist_from_mean));
 
-            occlusion += occ;
+                float occ = min(1.0f, max(pmax, p));
+
+                occlusion += occ;
+            }
         }
-    }
 
-    occlusion /= (pcf_count * 2.0f + 1.0f) * (pcf_count * 2.0f + 1.0f);
+        occlusion /= (pcf_count * 2.0f + 1.0f) * (pcf_count * 2.0f + 1.0f);
+    }
 
     return true;
 }
