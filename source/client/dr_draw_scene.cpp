@@ -53,6 +53,7 @@ static void s_render_person(
         dr_get_mesh_rsc(GM_PLAYER),
         dr_get_shader_rsc(GS_PLAYER_SHADOW),
         &p->render->render_data,
+        sizeof(mesh_render_data_t),
         &p->render->animations);
 }
 
@@ -89,11 +90,13 @@ static void s_render_ball(
         shadow_render_command_buffer,
         dr_get_mesh_rsc(GM_BALL),
         dr_get_shader_rsc(GS_BALL_SHADOW),
-        &p->render->render_data);
+        &p->render->render_data,
+        sizeof(mesh_render_data_t));
 }
 
 static void s_render_transition(
     VkCommandBuffer render_command_buffer,
+    VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     player_t *p) {
     struct {
@@ -171,6 +174,14 @@ static void s_render_transition(
             &render_data,
             sizeof(render_data),
             &p->render->animations);
+
+        submit_skeletal_mesh_shadow(
+            render_shadow_command_buffer,
+            dr_get_mesh_rsc(GM_MERGED),
+            dr_get_shader_rsc(GS_MERGED_BALL_SHADOW),
+            &render_data,
+            sizeof(render_data),
+            &p->render->animations);
     }
     else {
         // Need to render transition from person to ball
@@ -178,6 +189,14 @@ static void s_render_transition(
             render_command_buffer,
             dr_get_mesh_rsc(GM_MERGED),
             dr_get_shader_rsc(GS_MERGED_PLAYER),
+            &render_data,
+            sizeof(render_data),
+            &p->render->animations);
+
+        submit_skeletal_mesh_shadow(
+            render_shadow_command_buffer,
+            dr_get_mesh_rsc(GM_MERGED),
+            dr_get_shader_rsc(GS_MERGED_PLAYER_SHADOW),
             &render_data,
             sizeof(render_data),
             &p->render->animations);
@@ -204,7 +223,7 @@ static void s_players_gpu_sync_and_render(
                 if ((int32_t)i == (int32_t)wd_get_local_player()) {
                     if (p->switching_shapes) {
                         // Render transition
-                        s_render_transition(render_command_buffer, transfer_command_buffer, p);
+                        s_render_transition(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
                     }
                     else if (p->flags.interaction_mode == PIM_STANDING) {
                         s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
@@ -212,20 +231,13 @@ static void s_players_gpu_sync_and_render(
                     else {
                         s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
                     } 
-                    // TODO: Special handling for first person mode
+                }
+                else if (p->flags.interaction_mode == PIM_STANDING) {
+                    s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
                 }
                 else {
-                    if (p->switching_shapes) {
-                        // Render transition
-                        s_render_transition(render_command_buffer, transfer_command_buffer, p);
-                    }
-                    else if (p->flags.interaction_mode == PIM_STANDING) {
-                        s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
-                    }
-                    else {
-                        s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
-                    } 
-                }
+                    s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
+                } 
             }
         }
     }
@@ -293,7 +305,8 @@ static void s_chunks_gpu_sync_and_render(
                     render_shadow_command_buffer,
                     &c->render->mesh,
                     dr_get_shader_rsc(GS_CHUNK_SHADOW),
-                    &c->render->render_data);
+                    &c->render->render_data,
+                    sizeof(mesh_render_data_t));
             }
         }
     }

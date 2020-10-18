@@ -148,12 +148,17 @@ shader_t create_mesh_shader_shadow(
     VkShaderStageFlags shader_flags,
     VkPrimitiveTopology topology,
     mesh_type_flags_t mesh_type) {
-        if (mesh_type == MT_STATIC) {
+    if (mesh_type == MT_STATIC) {
         VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+        uint32_t push_constant_size = sizeof(mesh_render_data_t);
+        if (mesh_type & MT_MERGED_MESH) {
+            push_constant_size += sizeof(matrix4_t) + sizeof(float);
+        }
     
         return create_3d_shader_shadow(
             binding_info,
-            sizeof(mesh_render_data_t),
+            push_constant_size,
             &ubo_type, 1,
             shader_paths,
             topology,
@@ -161,10 +166,15 @@ shader_t create_mesh_shader_shadow(
     }
     else {
         VkDescriptorType ubo_types[] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
+
+        uint32_t push_constant_size = sizeof(mesh_render_data_t);
+        if (mesh_type & MT_MERGED_MESH) {
+            push_constant_size += sizeof(matrix4_t) + sizeof(float);
+        }
     
         return create_3d_shader_shadow(
             binding_info,
-            sizeof(mesh_render_data_t),
+            push_constant_size,
             ubo_types, 2,
             shader_paths,
             topology,
@@ -1427,7 +1437,8 @@ void submit_mesh_shadow(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t * render_data) {
+    mesh_render_data_t * render_data,
+    uint32_t render_data_size) {
     VkViewport viewport = {};
     viewport.width = (float)r_shadow_extent().width;
     viewport.height = (float)r_shadow_extent().height;
@@ -1452,7 +1463,7 @@ void submit_mesh_shadow(
         0,
         NULL);
 
-    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
+    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data_size, render_data);
 
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -1562,7 +1573,8 @@ void submit_skeletal_mesh_shadow(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t * render_data,
+    void *render_data,
+    uint32_t render_data_size,
     animated_instance_t *instance) {
     VkViewport viewport = {};
     viewport.width = (float)r_shadow_extent().width;
@@ -1589,7 +1601,7 @@ void submit_skeletal_mesh_shadow(
         0,
         NULL);
 
-    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
+    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data_size, render_data);
 
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);

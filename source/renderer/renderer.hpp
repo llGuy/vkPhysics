@@ -585,7 +585,8 @@ DECLARE_VOID_RENDERER_PROC(void, submit_mesh_shadow,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t * render_data);
+    mesh_render_data_t * render_data,
+    uint32_t render_data_size);
 
 DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh,
     VkCommandBuffer command_buffer,
@@ -606,7 +607,8 @@ DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh_shadow,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data,
+    void *render_data,
+    uint32_t render_data_size,
     animated_instance_t *instance);
 
 

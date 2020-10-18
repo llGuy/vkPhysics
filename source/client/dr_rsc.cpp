@@ -85,7 +85,7 @@ static void s_create_player_shaders_and_meshes() {
     const char *merged_shader_paths[] =
         {"shaders/SPV/morph.vert.spv", "shaders/SPV/morph_ball.geom.spv", "shaders/SPV/morph.frag.spv"};
     const char *merged_shadow_shader_paths[] =
-        {"shaders/SPV/morph.vert.spv", "shaders/SPV/morph_ball.geom.spv", "shaders/SPV/shadow.frag.spv"};
+        {"shaders/SPV/morph.vert.spv", "shaders/SPV/morph_ball_shadow.geom.spv", "shaders/SPV/shadow.frag.spv"};
 
     shaders[GS_MERGED_BALL] = create_mesh_shader_color(
         &merged_sbi,
@@ -95,7 +95,7 @@ static void s_create_player_shaders_and_meshes() {
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
         MT_ANIMATED | MT_MERGED_MESH);
 
-#if 0
+#if 1
     shaders[GS_MERGED_BALL_SHADOW] = create_mesh_shader_shadow(
         &merged_sbi,
         merged_shadow_shader_paths,
@@ -105,7 +105,7 @@ static void s_create_player_shaders_and_meshes() {
 #endif
 
     merged_shader_paths[1] = "shaders/SPV/morph_dude.geom.spv";
-    merged_shadow_shader_paths[1] = "shaders/SPV/morph_dude.geom.spv";
+    merged_shadow_shader_paths[1] = "shaders/SPV/morph_dude_shadow.geom.spv";
 
     shaders[GS_MERGED_PLAYER] = create_mesh_shader_color(
         &merged_sbi,
@@ -115,7 +115,7 @@ static void s_create_player_shaders_and_meshes() {
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
         MT_ANIMATED | MT_MERGED_MESH);
 
-#if 0
+#if 1
     shaders[GS_MERGED_PLAYER_SHADOW] = create_mesh_shader_shadow(
         &merged_sbi,
         merged_shadow_shader_paths,

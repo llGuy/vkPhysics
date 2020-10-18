@@ -319,7 +319,7 @@ static blur_stage_data_t s_create_blur_stage(
     VkPushConstantRange range = {};
     range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     range.offset = 0;
-    range.size = 4;
+    range.size = sizeof(uint32_t) + sizeof(vector2_t);
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -359,15 +359,22 @@ static blur_stage_data_t s_create_blur_stage(
 static void s_execute_blur_pass(
     blur_stage_data_t *blur,
     VkDescriptorSet input,
+    const vector2_t &scale,
     VkCommandBuffer command_buffer) {
     VkDescriptorSet inputs[] = {input};
 
-    uint32_t horizontal = true;
+    struct push_constant_t {
+        uint32_t horizontal;
+        vector2_t scale;
+    } push_constant;
+
+    push_constant.horizontal = true;
+    push_constant.scale = scale;
     
     for (uint32_t i = 0; i < 2; ++i) {
         if (i > 0) {
-            inputs[0] = blur->sets[!horizontal];
-            blur->current_set = blur->sets[horizontal];
+            inputs[0] = blur->sets[!push_constant.horizontal];
+            blur->current_set = blur->sets[push_constant.horizontal];
         }
         
         VkClearValue clear_values = {};
@@ -377,7 +384,7 @@ static void s_execute_blur_pass(
 
         VkRenderPassBeginInfo begin_info = {};
         begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        begin_info.framebuffer = blur->stage.framebuffers[horizontal];
+        begin_info.framebuffer = blur->stage.framebuffers[push_constant.horizontal];
         begin_info.renderPass = blur->stage.render_pass;
         begin_info.clearValueCount = blur->stage.color_attachment_count;
         begin_info.pClearValues = &clear_values;
@@ -411,14 +418,14 @@ static void s_execute_blur_pass(
             command_buffer,
             blur->shader.layout,
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-            0, sizeof(uint32_t),
-            &horizontal);
+            0, sizeof(push_constant_t),
+            &push_constant);
 
         vkCmdDraw(command_buffer, 4, 1, 0, 0);
 
         vkCmdEndRenderPass(command_buffer);
         
-        horizontal = !horizontal;
+        push_constant.horizontal = !push_constant.horizontal;
     }
 
     s_update_previous_output(blur->current_set);
@@ -540,9 +547,14 @@ void end_shadow_rendering(
     VkCommandBuffer command_buffer) {
     vkCmdEndRenderPass(command_buffer);
 
+    float blur_output_width = (float)(shadow_map_extent.width / 2);
+    float blur_output_height = (float)(shadow_map_extent.height / 2);
+    vector2_t scale = 1.0f / vector2_t(blur_output_width, blur_output_height);
+
     s_execute_blur_pass(
         &shadow_blur,
         shadow_stage.descriptor_set,
+        scale,
         command_buffer);
 }
 
@@ -1322,9 +1334,13 @@ static void s_scene_blur_init() {
 
 void r_execute_gaussian_blur_pass(
     VkCommandBuffer command_buffer) {
+    float blur_output_width = (float)(r_swapchain_extent().width / 2);
+    float blur_output_height = (float)(r_swapchain_extent().height / 2);
+
     s_execute_blur_pass(
         &scene_blur,
         motion_blur_stage.descriptor_set,
+        1.0f / vector2_t(blur_output_width, blur_output_height),
         command_buffer);
 }
 

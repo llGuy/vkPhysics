@@ -375,6 +375,7 @@ void generate_sphere(
                         // if (*v < new_value) {
                             v->value = new_value;
                             v->color = color;
+
                             // }
                     }
                 }

@@ -8,6 +8,7 @@ layout(location = 0) out vec2 out_final_color;
 
 layout(push_constant) uniform push_constant_t {
     uint horizontal;
+    vec2 scale;
 } u_push_constant;
 
 layout(binding = 0, set = 0) uniform sampler2D u_diffuse;
@@ -17,7 +18,8 @@ float weights[4] = float[](20.0 / 64.0, 15.0 / 64.0, 6.0 / 64.0, 1.0 / 64.0);
 
 void main() {
 #if 1
-    vec2 tex_offset = 1.0f / (textureSize(u_diffuse, 0));
+    // vec2 tex_offset = 1.0f / (textureSize(u_diffuse, 0));
+    vec2 tex_offset = u_push_constant.scale;
 
     vec3 color = texture(u_diffuse, in_fs.uvs).rgb * weights[0];
 
