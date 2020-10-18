@@ -45,15 +45,14 @@ static void s_render_person(
         render_command_buffer,
         dr_get_mesh_rsc(GM_PLAYER),
         dr_get_shader_rsc(GS_PLAYER),
-        &p->render->render_data,
+        {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE},
         &p->render->animations);
 
     submit_skeletal_mesh_shadow(
         render_shadow_command_buffer,
         dr_get_mesh_rsc(GM_PLAYER),
         dr_get_shader_rsc(GS_PLAYER_SHADOW),
-        &p->render->render_data,
-        sizeof(mesh_render_data_t),
+        {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE},
         &p->render->animations);
 }
 
@@ -84,14 +83,13 @@ static void s_render_ball(
         render_command_buffer,
         dr_get_mesh_rsc(GM_BALL),
         dr_get_shader_rsc(GS_BALL),
-        &p->render->render_data);
+        {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE});
 
     submit_mesh_shadow(
         shadow_render_command_buffer,
         dr_get_mesh_rsc(GM_BALL),
         dr_get_shader_rsc(GS_BALL_SHADOW),
-        &p->render->render_data,
-        sizeof(mesh_render_data_t));
+        {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE});
 }
 
 static void s_render_transition(
@@ -171,16 +169,14 @@ static void s_render_transition(
             render_command_buffer,
             dr_get_mesh_rsc(GM_MERGED),
             dr_get_shader_rsc(GS_MERGED_BALL),
-            &render_data,
-            sizeof(render_data),
+            {&render_data, sizeof(render_data)},
             &p->render->animations);
 
         submit_skeletal_mesh_shadow(
             render_shadow_command_buffer,
             dr_get_mesh_rsc(GM_MERGED),
             dr_get_shader_rsc(GS_MERGED_BALL_SHADOW),
-            &render_data,
-            sizeof(render_data),
+            {&render_data, sizeof(render_data)},
             &p->render->animations);
     }
     else {
@@ -189,16 +185,14 @@ static void s_render_transition(
             render_command_buffer,
             dr_get_mesh_rsc(GM_MERGED),
             dr_get_shader_rsc(GS_MERGED_PLAYER),
-            &render_data,
-            sizeof(render_data),
+            {&render_data, sizeof(render_data)},
             &p->render->animations);
 
         submit_skeletal_mesh_shadow(
             render_shadow_command_buffer,
             dr_get_mesh_rsc(GM_MERGED),
             dr_get_shader_rsc(GS_MERGED_PLAYER_SHADOW),
-            &render_data,
-            sizeof(render_data),
+            {&render_data, sizeof(render_data)},
             &p->render->animations);
     }
 }
@@ -299,14 +293,13 @@ static void s_chunks_gpu_sync_and_render(
                     render_command_buffer,
                     &c->render->mesh,
                     dr_get_shader_rsc(GS_CHUNK),
-                    &c->render->render_data);
+                    {&c->render->render_data, DEF_MESH_RENDER_DATA_SIZE});
 
                 submit_mesh_shadow(
                     render_shadow_command_buffer,
                     &c->render->mesh,
                     dr_get_shader_rsc(GS_CHUNK_SHADOW),
-                    &c->render->render_data,
-                    sizeof(mesh_render_data_t));
+                    {&c->render->render_data, DEF_MESH_RENDER_DATA_SIZE});
             }
         }
     }
@@ -337,5 +330,5 @@ void dr_draw_premade_scene(
         render,
         &scene->world_mesh,
         dr_get_shader_rsc(GS_CHUNK),
-        &scene->world_render_data);
+        {&scene->world_render_data, DEF_MESH_RENDER_DATA_SIZE});
 }

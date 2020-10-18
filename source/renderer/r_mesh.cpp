@@ -1418,8 +1418,8 @@ void submit_mesh(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data) {
-    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
+    const buffer_t &render_data) {
+    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data.size, render_data.p);
     
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -1437,8 +1437,7 @@ void submit_mesh_shadow(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t * render_data,
-    uint32_t render_data_size) {
+    const buffer_t &render_data) {
     VkViewport viewport = {};
     viewport.width = (float)r_shadow_extent().width;
     viewport.height = (float)r_shadow_extent().height;
@@ -1463,7 +1462,7 @@ void submit_mesh_shadow(
         0,
         NULL);
 
-    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data_size, render_data);
+    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data.size, render_data.p);
 
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -1481,7 +1480,7 @@ void submit_skeletal_mesh(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data,
+    const buffer_t &render_data,
     animated_instance_t *instance) {
     VkViewport viewport = {};
     viewport.width = (float)r_swapchain_extent().width;
@@ -1508,54 +1507,7 @@ void submit_skeletal_mesh(
         0,
         NULL);
 
-    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, sizeof(mesh_render_data_t), render_data);
-
-    
-    if (mesh_has_buffer(BT_INDICES, mesh)) {
-        vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
-        vkCmdBindIndexBuffer(command_buffer, mesh->index_buffer, mesh->index_offset, mesh->index_type);
-
-        vkCmdDrawIndexed(command_buffer, mesh->index_count, 1, mesh->first_index, 0, 0);
-    }
-    else {
-        vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
-        vkCmdDraw(command_buffer, mesh->vertex_count, 1, mesh->vertex_offset, 0);
-    }
-}
-
-void submit_skeletal_mesh(
-    VkCommandBuffer command_buffer,
-    mesh_t *mesh,
-    shader_t *shader,
-    void *render_data,
-    uint32_t render_data_size,
-    animated_instance_t *instance) {
-    VkViewport viewport = {};
-    viewport.width = (float)r_swapchain_extent().width;
-    viewport.height = (float)r_swapchain_extent().height;
-    viewport.maxDepth = 1;
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-
-    VkRect2D rect = {};
-    rect.extent = r_swapchain_extent();
-    vkCmdSetScissor(command_buffer, 0, 1, &rect);
-    
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline);
-
-    VkDescriptorSet camera_transforms = r_camera_transforms_uniform();
-    VkDescriptorSet descriptor_sets[] = {camera_transforms, instance->descriptor_set};
-
-    vkCmdBindDescriptorSets(
-        command_buffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        shader->layout,
-        0,
-        2,
-        descriptor_sets,
-        0,
-        NULL);
-
-    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data_size, render_data);
+    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data.size, render_data.p);
     
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -1573,8 +1525,7 @@ void submit_skeletal_mesh_shadow(
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    void *render_data,
-    uint32_t render_data_size,
+    const buffer_t &render_data,
     animated_instance_t *instance) {
     VkViewport viewport = {};
     viewport.width = (float)r_shadow_extent().width;
@@ -1601,7 +1552,7 @@ void submit_skeletal_mesh_shadow(
         0,
         NULL);
 
-    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data_size, render_data);
+    vkCmdPushConstants(command_buffer, shader->layout, shader->flags, 0, render_data.size, render_data.p);
 
     if (mesh_has_buffer(BT_INDICES, mesh)) {
         vkCmdBindVertexBuffers(command_buffer, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);

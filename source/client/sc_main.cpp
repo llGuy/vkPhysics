@@ -85,7 +85,7 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
     // Submit the mesh
     begin_mesh_submission(render, dr_get_shader_rsc(GS_CHUNK), dr_chunk_colors_g.chunk_color_set);
-    submit_mesh(render, &scene.world_mesh, dr_get_shader_rsc(GS_CHUNK), &scene.world_render_data);
+    submit_mesh(render, &scene.world_mesh, dr_get_shader_rsc(GS_CHUNK), {&scene.world_render_data, DEF_MESH_RENDER_DATA_SIZE});
 
     render_environment(render);
 

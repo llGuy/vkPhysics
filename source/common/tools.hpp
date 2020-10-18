@@ -21,3 +21,8 @@ inline void free_debug(
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
+struct buffer_t {
+    void *p;
+    size_t size;
+};

@@ -527,6 +527,8 @@ struct mesh_render_data_t {
     int32_t texture_index;
 };
 
+#define DEF_MESH_RENDER_DATA_SIZE (sizeof(mesh_render_data_t))
+
 // By default, a uniform buffer is added for camera transforms
 // If STATIC is chosen, no extra descriptors will be added to shader information
 // If ANIMATED is chosen, 1 extra uniform buffer will be added for joint transforms
@@ -579,36 +581,27 @@ DECLARE_VOID_RENDERER_PROC(void, submit_mesh,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data);
+    const buffer_t &render_data);
 
 DECLARE_VOID_RENDERER_PROC(void, submit_mesh_shadow,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t * render_data,
-    uint32_t render_data_size);
+    const buffer_t &render_data);
 
+// Submits skeletal mesh
 DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    mesh_render_data_t *render_data,
-    animated_instance_t *instance);
-
-DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh,
-    VkCommandBuffer command_buffer,
-    mesh_t *mesh,
-    shader_t *shader,
-    void *render_data,
-    uint32_t render_data_size,
+    const buffer_t &render_data,
     animated_instance_t *instance);
 
 DECLARE_VOID_RENDERER_PROC(void, submit_skeletal_mesh_shadow,
     VkCommandBuffer command_buffer,
     mesh_t *mesh,
     shader_t *shader,
-    void *render_data,
-    uint32_t render_data_size,
+    const buffer_t &render_data,
     animated_instance_t *instance);
 
 
