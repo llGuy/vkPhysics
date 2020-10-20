@@ -139,8 +139,8 @@ int32_t main(
 
 void cl_terminate() {
     running = 0;
-    submit_event(ET_LEAVE_SERVER, NULL, &events);
     submit_event(ET_EXIT_SCENE, NULL, &events);
+    submit_event(ET_LEAVE_SERVER, NULL, &events);
 }
 
 float cl_delta_time() {

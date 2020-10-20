@@ -172,47 +172,46 @@ void save_map(map_t *map) {
 
     uint32_t saved_chunk_count = 0;
     for (uint32_t i = 0; i < chunk_count; ++i) {
-        if (chunks[i]->flags.active_vertices) {
-            ++saved_chunk_count;
+        ++saved_chunk_count;
 
-            serialiser.serialise_int16(chunks[i]->chunk_coord.x);
-            serialiser.serialise_int16(chunks[i]->chunk_coord.y);
-            serialiser.serialise_int16(chunks[i]->chunk_coord.z);
+        serialiser.serialise_int16(chunks[i]->chunk_coord.x);
+        serialiser.serialise_int16(chunks[i]->chunk_coord.y);
+        serialiser.serialise_int16(chunks[i]->chunk_coord.z);
 
-            for (uint32_t v_index = 0; v_index < CHUNK_VOXEL_COUNT; ++v_index) {
-                voxel_t current_voxel = chunks[i]->voxels[v_index];
-                if (current_voxel.value == 0) {
-                    uint32_t before_head = serialiser.data_buffer_head;
+        for (uint32_t v_index = 0; v_index < CHUNK_VOXEL_COUNT; ++v_index) {
+            voxel_t current_voxel = chunks[i]->voxels[v_index];
+            if (current_voxel.value == 0) {
+                uint32_t before_head = serialiser.data_buffer_head;
 
-                    static constexpr uint32_t MAX_ZERO_COUNT_BEFORE_COMPRESSION = 3;
+                static constexpr uint32_t MAX_ZERO_COUNT_BEFORE_COMPRESSION = 3;
 
-                    uint32_t zero_count = 0;
-                    for (; chunks[i]->voxels[v_index].value == 0 && zero_count < MAX_ZERO_COUNT_BEFORE_COMPRESSION; ++v_index, ++zero_count) {
-                        serialiser.serialise_uint8(0);
-                        serialiser.serialise_uint8(0);
-                    }
-
-                    if (zero_count == MAX_ZERO_COUNT_BEFORE_COMPRESSION) {
-                        for (; chunks[i]->voxels[v_index].value == 0; ++v_index, ++zero_count) {}
-
-                        serialiser.data_buffer_head = before_head;
-                        serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);
-                        serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);
-                        serialiser.serialise_uint32(zero_count);
-                    }
-
-                    v_index -= 1;
+                uint32_t zero_count = 0;
+                for (; chunks[i]->voxels[v_index].value == 0 && zero_count < MAX_ZERO_COUNT_BEFORE_COMPRESSION; ++v_index, ++zero_count) {
+                    serialiser.serialise_uint8(0);
+                    serialiser.serialise_uint8(0);
                 }
-                else {
-                    serialiser.serialise_uint8(current_voxel.value);
-                    serialiser.serialise_uint8(current_voxel.color);
+
+                if (zero_count == MAX_ZERO_COUNT_BEFORE_COMPRESSION) {
+                    for (; chunks[i]->voxels[v_index].value == 0; ++v_index, ++zero_count) {}
+
+                    serialiser.data_buffer_head = before_head;
+                    serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);
+                    serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);
+                    serialiser.serialise_uint32(zero_count);
                 }
+
+                v_index -= 1;
+            }
+            else {
+                serialiser.serialise_uint8(current_voxel.value);
+                serialiser.serialise_uint8(current_voxel.color);
             }
         }
     }
 
     serialiser.serialise_uint32(saved_chunk_count, &serialiser.data_buffer[pointer_to_chunk_count]);
 
+    LOG_INFOV("Saved map (%d chunks) - byte size: %d\n", saved_chunk_count, serialiser.data_buffer_head);
     write_file(map_file, serialiser.data_buffer, serialiser.data_buffer_head);
 
     free_file(map_file);
