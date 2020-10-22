@@ -65,11 +65,11 @@ static void s_browse_server_menu_init() {
                 effect_data->triggers[0].next_event_data = event_data;
                 submit_event(ET_BEGIN_FADE, effect_data, events);
             }
-            else if (list->is_typing) {
+            else if (list->typing_box.is_typing) {
                 event_data_request_to_join_server_t *data = FL_MALLOC(event_data_request_to_join_server_t, 1);
 
                 memset(data, 0, sizeof(event_data_request_to_join_server_t));
-                data->ip_address = list->input_text.get_string();
+                data->ip_address = list->typing_box.input_text.get_string();
                 // Need to close the main menu, and start a fade effect
 
                 event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
@@ -82,12 +82,12 @@ static void s_browse_server_menu_init() {
                 submit_event(ET_BEGIN_FADE, effect_data, events);
             }
 
-            list->is_typing = 0;
+            list->typing_box.is_typing = 0;
         },
 
         [] (ui_list_t *list, event_submissions_t *events) {
             submit_event(ET_REQUEST_REFRESH_SERVER_PAGE, NULL, events);
-            list->is_typing = 0;
+            list->typing_box.is_typing = 0;
         }
     };
 
@@ -140,14 +140,14 @@ static void s_build_map_menu_init() {
                 effect_data->triggers[0].next_event_data = event_data;
                 submit_event(ET_BEGIN_FADE, effect_data, events);
             }
-            else if (list->is_typing) {
+            else if (list->typing_box.is_typing) {
                 // Code for the "Edit" button
-                const char *path = list->input_text.get_string();
+                const char *path = list->typing_box.input_text.get_string();
 
                 event_enter_map_creator_t *data = FL_MALLOC(event_enter_map_creator_t, 1);
                 memset(data, 0, sizeof(event_enter_map_creator_t));
                 data->map_name = NULL;
-                data->map_path = list->input_text.get_string();
+                data->map_path = list->typing_box.input_text.get_string();
 
                 event_begin_fade_effect_t *effect_data = FL_MALLOC(event_begin_fade_effect_t, 1);
                 effect_data->dest_value = 0.0f;

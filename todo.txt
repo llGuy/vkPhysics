@@ -1,4 +1,3 @@
-- Fix map exporter
 - Make color selector in map editor
 - Make sure that we store the initial value of the colors in case of prediction errors
 - Optimise this and get rid of the 2 loops (game_packet.cpp: 202)

@@ -5,6 +5,7 @@
 #include <common/map.hpp>
 #include <renderer/input.hpp>
 #include <renderer/renderer.hpp>
+#include "client/ui_hud.hpp"
 #include "ui_core.hpp"
 #include "cl_main.hpp"
 #include "fx_post.hpp"
@@ -34,6 +35,8 @@ static bool started_command;
 
 static uint32_t edit_char_count;
 static char edit_buffer[EDIT_BUFFER_MAX_CHAR_COUNT] = {};
+static voxel_color_t current_color;
+static bool display_text_in_minibuffer;
 
 void sc_map_creator_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_PRESSED_ESCAPE, listener, events);
@@ -43,6 +46,7 @@ void sc_map_creator_init(listener_t listener, event_submissions_t *events) {
 
     edit_char_count = 0;
     started_command = 0;
+    display_text_in_minibuffer = 0;
 }
 
 void sc_bind_map_creator() {
@@ -73,7 +77,7 @@ static bool s_push_edit_character(char c) {
     }
 }
 
-enum edit_command_type_t : char { ECT_ADD = 'A', ECT_DESTROY = 'D', ECT_INVALID = 0 };
+enum edit_command_type_t : char { ECT_ADD = '+', ECT_DESTROY = '-', ECT_INVALID = 0 };
 enum edit_shape_type_t : char { EST_SPHERE = 's', EST_HOLLOW_SPHERE = 'h', EST_PLANE = 'p', EST_MATH = 'm', EST_INVALID = 0 };
 
 static void s_parse_and_generate_sphere(
@@ -179,6 +183,9 @@ static void s_handle_input(event_submissions_t *events) {
                 s_parse_and_execute_command(edit_buffer, edit_char_count);
                 edit_char_count = 0;
                 memset(edit_buffer, 0, sizeof(char) * EDIT_BUFFER_MAX_CHAR_COUNT);
+                ui_minibuffer_update_text("");
+
+                display_text_in_minibuffer = 0;
             }
             else {
                 for (uint32_t i = 0; i < raw_input->char_count; ++i) {
@@ -188,8 +195,12 @@ static void s_handle_input(event_submissions_t *events) {
                             edit_char_count = 0;
                             LOG_INFO("Exceeded edit characters limit\n");
 
+                            display_text_in_minibuffer = 0;
+
                             break;
                         }
+
+                        ui_minibuffer_update_text(edit_buffer);
                     }
                 }
             }
@@ -200,12 +211,16 @@ static void s_handle_input(event_submissions_t *events) {
                     switch(raw_input->char_stack[i]) {
                     case '+': {
                         started_command = 1;
-                        s_push_edit_character('A');
+                        s_push_edit_character('+');
+                        display_text_in_minibuffer = 1;
+                        ui_minibuffer_update_text(edit_buffer);
                         LOG_INFO("Starting additive edit command\n");
                     } break;
                     case '-': {
                         started_command = 1;
-                        s_push_edit_character('D');
+                        s_push_edit_character('-');
+                        display_text_in_minibuffer = 1;
+                        ui_minibuffer_update_text(edit_buffer);
                         LOG_INFO("Starting destructive edit command\n");
                     } break;
                     }
@@ -311,6 +326,8 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
         else {
             // TODO: Load map contents from file
             need_to_save = 1;
+            ui_begin_minibuffer();
+            ui_push_panel(USI_HUD);
         }
 
         FL_FREE(event->data);
@@ -320,14 +337,18 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
         // Add map to map names
         add_map_name(map->name, map->path);
         ui_pop_panel();
+        ui_push_panel(USI_HUD);
 
         submode = S_IN_GAME;
         cl_change_view_type(GVT_IN_GAME);
 
         need_to_save = 1;
+
+        ui_begin_minibuffer();
     } break;
 
     case ET_EXIT_SCENE: {
+        ui_end_minibuffer();
         s_exit_map_editor(events);
         need_to_save = 0;
     } break;

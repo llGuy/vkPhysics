@@ -20,16 +20,22 @@ struct ui_list_item_t {
     void *data;
 };
 
+struct typing_box_t {
+    bool is_typing;
+    ui_box_t box;
+    ui_input_text_t input_text;
+    widget_color_t color;
+};
+
+void ui_submit_typing_box(typing_box_t *box);
+
 struct ui_list_t {
     // On the right of the right of the list, there will a number of buttons to press
     ui_list_button_t *right_buttons;
     uint32_t button_count;
 
     // On the left side of the list, there will be a little box to type something
-    bool is_typing;
-    ui_box_t typing_box;
-    ui_input_text_t input_text;
-    widget_color_t typing_color;
+    typing_box_t typing_box;
 
     // Filling up most of the list, there will be the actual list where you can click on items
     ui_box_t list_box;

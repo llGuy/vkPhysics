@@ -19,7 +19,7 @@ void ui_list_init(
     }
 
     { // Initialise the typing box
-        list->typing_box.init(
+        list->typing_box.box.init(
             RT_LEFT_DOWN,
             6.0f,
             ui_vector2_t(0.02f, 0.03f),
@@ -27,8 +27,8 @@ void ui_list_init(
             parent,
             0x09090936);
 
-        list->input_text.text.init(
-            &list->typing_box,
+        list->typing_box.input_text.text.init(
+            &list->typing_box.box,
             ui_game_font(),
             ui_text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
@@ -36,15 +36,15 @@ void ui_list_init(
             18,
             1.8f);
 
-        list->typing_color.init(
+        list->typing_box.color.init(
             0x09090936,
             MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR,
             0xFFFFFFFF,
             0xFFFFFFFF);
 
-        list->input_text.text_color = 0xFFFFFFFF;
-        list->input_text.cursor_position = 0;
-        list->is_typing = 0;
+        list->typing_box.input_text.text_color = 0xFFFFFFFF;
+        list->typing_box.input_text.cursor_position = 0;
+        list->typing_box.is_typing = 0;
     }
 
     { // Set default values for the list items
@@ -142,6 +142,12 @@ void ui_list_end(ui_list_t *list) {
     }
 }
 
+void ui_submit_typing_box(typing_box_t *box) {
+    push_colored_ui_box(&box->box);
+    mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+    push_ui_input_text(1, 0, 0xFFFFFFFF, &box->input_text);
+}
+
 void ui_submit_list(ui_list_t *list) {
     mark_ui_textured_section(ui_game_font()->font_img.descriptor);
     push_colored_ui_box(&list->list_box);
@@ -151,8 +157,7 @@ void ui_submit_list(ui_list_t *list) {
         push_colored_ui_box(&list->right_buttons[i].box);
     }
 
-    push_ui_input_text(1, 0, 0xFFFFFFFF, &list->input_text);
-    push_colored_ui_box(&list->typing_box);
+    ui_submit_typing_box(&list->typing_box);
 
     for (uint32_t i = 0; i < list->item_count; ++i) {
         push_colored_ui_box(&list->items[i].box);
@@ -162,19 +167,19 @@ void ui_submit_list(ui_list_t *list) {
 
 void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *input) {
     { // For the typing space
-        bool hovered_over_ip_address = ui_hover_over_box(&list->typing_box, input->cursor_pos_x, input->cursor_pos_y);
-        color_pair_t pair = list->typing_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over_ip_address);
+        bool hovered_over_ip_address = ui_hover_over_box(&list->typing_box.box, input->cursor_pos_x, input->cursor_pos_y);
+        color_pair_t pair = list->typing_box.color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over_ip_address);
 
-        list->typing_box.color = pair.current_background;
+        list->typing_box.box.color = pair.current_background;
 
         if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_ip_address) {
-            list->is_typing = 1;
+            list->typing_box.is_typing = 1;
 
             list->selected_item = 0xFFFF;
         }
 
-        if (list->is_typing)
-            list->input_text.input(input);
+        if (list->typing_box.is_typing)
+            list->typing_box.input_text.input(input);
     }
 
     { // For the buttons to the right of the screen
@@ -206,7 +211,7 @@ void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *in
                 if (hovered_over && input->buttons[BT_MOUSE_LEFT].instant) {
                     list->selected_item = i;
 
-                    list->is_typing = 0;
+                    list->typing_box.is_typing = 0;
                 }
             }
         }

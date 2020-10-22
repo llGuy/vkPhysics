@@ -437,30 +437,32 @@ void render_textured_quads(
         for (uint32_t current_section = 0; current_section < textured_list.section_count; ++current_section) {
             vertex_section_t *section = &textured_list.sections[current_section];
                 
-            vkCmdBindDescriptorSets(
-                command_buffer,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                textured_quads_shader.layout,
-                0,
-                1,
-                &textured_list.textures[current_section],
-                0,
-                NULL);
+            if (section->section_size) {
+                vkCmdBindDescriptorSets(
+                    command_buffer,
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    textured_quads_shader.layout,
+                    0,
+                    1,
+                    &textured_list.textures[current_section],
+                    0,
+                    NULL);
 
-            VkDeviceSize zero = 0;
-            vkCmdBindVertexBuffers(
-                command_buffer,
-                0,
-                1,
-                &textured_list.vtx_buffer.buffer,
-                &zero);
+                VkDeviceSize zero = 0;
+                vkCmdBindVertexBuffers(
+                    command_buffer,
+                    0,
+                    1,
+                    &textured_list.vtx_buffer.buffer,
+                    &zero);
 
-            vkCmdDraw(
-                command_buffer,
-                section->section_size,
-                1,
-                section->section_start,
-                0);
+                vkCmdDraw(
+                    command_buffer,
+                    section->section_size,
+                    1,
+                    section->section_start,
+                    0);
+            }
         }
     }
 }

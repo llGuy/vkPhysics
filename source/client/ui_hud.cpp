@@ -1,10 +1,16 @@
+#include "ui_list.hpp"
+#include "ui_hud.hpp"
 #include "ui_core.hpp"
 #include "ui_menu_layout.hpp"
+#include <cstring>
 #include <renderer/renderer.hpp>
 
 // HUD for now, just contains a crosshair
 static ui_box_t crosshair;
 static VkDescriptorSet crosshair_texture;
+
+static bool display_minibuffer;
+static typing_box_t minibuffer;
 
 static struct {
     uint32_t current_crosshair;
@@ -65,6 +71,36 @@ void ui_hud_init() {
     crosshair_texture = ui_texture(UT_CROSSHAIRS);
 
     crosshair_selection.current_crosshair = 1;
+
+    display_minibuffer = 0;
+
+    // Actually initialise minibuffer UI components
+    minibuffer.box.init(
+        RT_LEFT_DOWN,
+        13.0f,
+        ui_vector2_t(0.02f, 0.03f),
+        ui_vector2_t(0.6f, 0.17f),
+        NULL,
+        0x09090936);
+
+    minibuffer.input_text.text.init(
+        &minibuffer.box,
+        ui_game_font(),
+        ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+        0.8f,
+        0.7f,
+        38,
+        1.8f);
+
+    minibuffer.color.init(
+        0x09090936,
+        MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR,
+        0xFFFFFFFF,
+        0xFFFFFFFF);
+
+    minibuffer.input_text.text_color = 0xFFFFFFFF;
+    minibuffer.input_text.cursor_position = 0;
+    minibuffer.is_typing = 0;
 }
 
 void ui_submit_hud() {
@@ -79,4 +115,34 @@ void ui_submit_hud() {
     mark_ui_textured_section(crosshair_texture);
 
     push_textured_ui_box(&crosshair, crosshair_selection.uvs);
+
+    ui_submit_minibuffer();
+}
+
+void ui_begin_minibuffer() {
+    display_minibuffer = 1;
+}
+
+void ui_end_minibuffer() {
+    display_minibuffer = 0;
+}
+
+void ui_minibuffer_update_text(const char *text) {
+    if (display_minibuffer) {
+        uint32_t str_length = strlen(text);
+        for (uint32_t i = 0; i < str_length; ++i) {
+            minibuffer.input_text.text.colors[i] = minibuffer.input_text.text_color;
+            minibuffer.input_text.text.characters[i] = text[i];
+        }
+
+        minibuffer.input_text.cursor_position = str_length;
+        minibuffer.input_text.text.char_count = str_length;
+        minibuffer.input_text.text.null_terminate();
+    }
+}
+
+void ui_submit_minibuffer() {
+    if (display_minibuffer) {
+        ui_submit_typing_box(&minibuffer);
+    }
 }

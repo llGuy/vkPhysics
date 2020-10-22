@@ -174,6 +174,8 @@ void save_map(map_t *map) {
     for (uint32_t i = 0; i < chunk_count; ++i) {
         ++saved_chunk_count;
 
+        uint32_t before_chunk_ptr = serialiser.data_buffer_head;
+
         serialiser.serialise_int16(chunks[i]->chunk_coord.x);
         serialiser.serialise_int16(chunks[i]->chunk_coord.y);
         serialiser.serialise_int16(chunks[i]->chunk_coord.z);
@@ -193,6 +195,12 @@ void save_map(map_t *map) {
 
                 if (zero_count == MAX_ZERO_COUNT_BEFORE_COMPRESSION) {
                     for (; chunks[i]->voxels[v_index].value == 0; ++v_index, ++zero_count) {}
+
+                    if (zero_count == CHUNK_VOXEL_COUNT) {
+                        serialiser.data_buffer_head = before_chunk_ptr;
+                        --saved_chunk_count;
+                        break;
+                    }
 
                     serialiser.data_buffer_head = before_head;
                     serialiser.serialise_uint8(CHUNK_SPECIAL_VALUE);
