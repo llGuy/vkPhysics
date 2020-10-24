@@ -82,6 +82,10 @@ voxel_color_t v3_color_to_b8(const vector3_t &color) {
     return ((uint8_t)r << 5) + ((uint8_t)g << 2) + ((uint8_t)b);
 }
 
+voxel_color_t b8v_color_to_b8(uint8_t r, uint8_t g, uint8_t b) {
+    return (r << 5) + (g << 2) + b;
+}
+
 void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &chunk_coord) {
     chunk->xs_bottom_corner = chunk_coord * CHUNK_EDGE_LENGTH;
     chunk->chunk_coord = chunk_coord;
@@ -463,7 +467,8 @@ void generate_math_equation(
 terraform_package_t cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
-    float max_reach) {
+    float max_reach,
+    voxel_color_t color) {
     vector3_t vs_position = ws_ray_start;
     vector3_t vs_dir = ws_ray_direction;
 
@@ -475,6 +480,7 @@ terraform_package_t cast_terrain_ray(
 
     terraform_package_t package = {};
     package.ray_hit_terrain = 0;
+    package.color = color;
 
     for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
         ivector3_t voxel = space_world_to_voxel(vs_position);
@@ -487,7 +493,7 @@ terraform_package_t cast_terrain_ray(
             if (voxel_ptr->value > CHUNK_SURFACE_LEVEL) {
                 package.ray_hit_terrain = 1;
                 package.ws_position = vector3_t(voxel);
-                package.color = v3_color_to_b8(vector3_t(0.0f, 0.5f, 1.0f));
+                
                 break;
             }
         }
@@ -639,8 +645,6 @@ static bool s_terraform_without_history(
             voxel_t *voxel_ptr = &chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)];
             if (voxel_ptr->value > CHUNK_SURFACE_LEVEL) {
                 package.ray_hit_terrain = 1;
-                package.ws_position = package.ws_position;
-                package.color = package.color;
 
                 chunk->flags.made_modification = 1;
                 chunk->flags.has_to_update_vertices = 1;

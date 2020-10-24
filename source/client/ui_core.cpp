@@ -79,6 +79,7 @@ static void s_ui_textures_init() {
     ui_textures[UT_QUIT_ICON] = create_texture("assets/textures/gui/quit_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     ui_textures[UT_SPAWN_ICON] = create_texture("assets/textures/gui/spawn_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     ui_textures[UT_CROSSHAIRS] = create_texture("assets/textures/gui/crosshair.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_COLOR_TABLE] = create_texture("assets/textures/gui/color_table.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
 void ui_init(
@@ -131,6 +132,10 @@ void ui_handle_input(
 
         case USI_POPUP: {
             ui_popup_input(events, raw_input);
+        } break;
+
+        case USI_HUD: {
+            ui_hud_input(events, raw_input);
         } break;
 
         default: {

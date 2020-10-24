@@ -33,6 +33,7 @@ struct voxel_t {
 
 vector3_t b8_color_to_v3(voxel_color_t color);
 voxel_color_t v3_color_to_b8(const vector3_t &color);
+voxel_color_t b8v_color_to_b8(uint8_t r, uint8_t g, uint8_t b);
 
 struct chunk_t {
     struct flags_t {
@@ -83,7 +84,7 @@ struct terraform_package_t {
 };
 
 // This will return a terraforming package to use in the terraform function
-terraform_package_t cast_terrain_ray(const vector3_t &ws_ray_start, const vector3_t &ws_ray_direction, float max_reach);
+terraform_package_t cast_terrain_ray(const vector3_t &ws_ray_start, const vector3_t &ws_ray_direction, float max_reach, voxel_color_t color);
 // Terraforms at a position that was specified in the terraform package
 bool terraform(terraform_type_t type, terraform_package_t package, float radius, float speed, float dt);
 

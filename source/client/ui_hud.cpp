@@ -1,7 +1,13 @@
+#include "client/ui_hover.hpp"
+#include "common/event.hpp"
 #include "ui_list.hpp"
+#include <common/allocators.hpp>
 #include "ui_hud.hpp"
 #include "ui_core.hpp"
+#include <common/event.hpp>
 #include "ui_menu_layout.hpp"
+#include <renderer/input.hpp>
+#include <common/log.hpp>
 #include <cstring>
 #include <renderer/renderer.hpp>
 
@@ -11,6 +17,9 @@ static VkDescriptorSet crosshair_texture;
 
 static bool display_minibuffer;
 static typing_box_t minibuffer;
+
+static bool display_color_table;
+static menu_widget_t table_widget;
 
 static struct {
     uint32_t current_crosshair;
@@ -101,6 +110,8 @@ void ui_hud_init() {
     minibuffer.input_text.text_color = 0xFFFFFFFF;
     minibuffer.input_text.cursor_position = 0;
     minibuffer.is_typing = 0;
+
+    ui_color_table_init();
 }
 
 void ui_submit_hud() {
@@ -117,6 +128,7 @@ void ui_submit_hud() {
     push_textured_ui_box(&crosshair, crosshair_selection.uvs);
 
     ui_submit_minibuffer();
+    ui_submit_color_table();
 }
 
 void ui_begin_minibuffer() {
@@ -144,5 +156,73 @@ void ui_minibuffer_update_text(const char *text) {
 void ui_submit_minibuffer() {
     if (display_minibuffer) {
         ui_submit_typing_box(&minibuffer);
+    }
+}
+
+void ui_color_table_init() {
+    display_color_table = 0;
+
+    table_widget.box.init(
+        RT_CENTER,
+        1.0f,
+        ui_vector2_t(0.0f, 0.0f),
+        ui_vector2_t(0.7f, 0.7f),
+        NULL,
+        MENU_WIDGET_NOT_HOVERED_OVER_BACKGROUND_COLOR);
+
+    table_widget.image_box.init(
+        RT_CENTER,
+        1.0f,
+        ui_vector2_t(0.0f, 0.0f),
+        ui_vector2_t(0.9f, 0.9f),
+        &table_widget.box,
+        0x000000FF);
+}
+
+void ui_begin_color_table() {
+    display_color_table = 1;
+}
+
+void ui_end_color_table() {
+    display_color_table = 0;
+}
+
+void ui_submit_color_table() {
+    if (display_color_table) {
+        push_colored_ui_box(&table_widget.box);
+        mark_ui_textured_section(ui_texture(UT_COLOR_TABLE));
+        push_textured_ui_box(&table_widget.image_box);
+    }
+}
+
+void ui_hud_input(event_submissions_t *events, raw_input_t *input) {
+    if (display_color_table) {
+        if (input->buttons[BT_MOUSE_LEFT].instant) {
+            vector2_t color = vector2_t(0.0f);
+
+            // Check where user clicked
+            if (ui_hover_over_box(
+                    &table_widget.image_box,
+                    vector2_t(input->cursor_pos_x, input->cursor_pos_y),
+                    &color)) {
+                color.y = 1.0f - color.y;
+
+                // Red
+                float r_x = floor(fmod(color.x * 16.0f, 8.0f));
+
+                // Green
+                float g_y = floor(fmod(color.y * 16.0f, 8.0f));
+
+                // Blue
+                float b = floor(color.x * 2.0f) + floor(color.y * 2.0f) * 2.0f;
+
+                event_map_editor_chose_color_t *data = FL_MALLOC(event_map_editor_chose_color_t, 1);
+                data->r = (uint8_t)r_x;
+                data->g = (uint8_t)g_y;
+                data->b = (uint8_t)b;
+
+                submit_event(ET_MAP_EDITOR_CHOSE_COLOR, data, events);
+            }
+        }
     }
 }

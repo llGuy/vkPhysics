@@ -90,6 +90,8 @@ enum event_type_t {
     ET_CREATE_NEW_MAP,
     ET_DONT_CREATE_NEW_MAP,
 
+    ET_MAP_EDITOR_CHOSE_COLOR,
+
     ET_INVALID_EVENT_TYPE
 };
 
@@ -207,6 +209,10 @@ struct event_meta_request_error_t {
 struct event_enter_map_creator_t {
     const char *map_path;
     const char *map_name;
+};
+
+struct event_map_editor_chose_color_t {
+    uint8_t r, g, b;
 };
 
 typedef void(*listener_callback_t)(

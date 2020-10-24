@@ -167,7 +167,7 @@ void ui_submit_list(ui_list_t *list) {
 
 void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *input) {
     { // For the typing space
-        bool hovered_over_ip_address = ui_hover_over_box(&list->typing_box.box, input->cursor_pos_x, input->cursor_pos_y);
+        bool hovered_over_ip_address = ui_hover_over_box(&list->typing_box.box, vector2_t(input->cursor_pos_x, input->cursor_pos_y));
         color_pair_t pair = list->typing_box.color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over_ip_address);
 
         list->typing_box.box.color = pair.current_background;
@@ -186,7 +186,7 @@ void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *in
         for (uint32_t i = 0; i < list->button_count; ++i) {
             ui_list_button_t *button = &list->right_buttons[i];
 
-            bool hovered_over = ui_hover_over_box(&button->box, input->cursor_pos_x, input->cursor_pos_y);
+            bool hovered_over = ui_hover_over_box(&button->box, vector2_t(input->cursor_pos_x, input->cursor_pos_y));
             color_pair_t pair = button->color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over);
             button->box.color = pair.current_background;
 
@@ -204,7 +204,7 @@ void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *in
                 item->box.color = MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR;
             }
             else {
-                bool hovered_over = ui_hover_over_box(&item->box, input->cursor_pos_x, input->cursor_pos_y);
+                bool hovered_over = ui_hover_over_box(&item->box, vector2_t(input->cursor_pos_x, input->cursor_pos_y));
                 color_pair_t pair = item->button_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over);
                 item->box.color = pair.current_background;
 

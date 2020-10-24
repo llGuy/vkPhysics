@@ -33,4 +33,8 @@ struct widget_color_t {
         bool hovered_on);
 };
 
-bool ui_hover_over_box(struct ui_box_t *box, float cursor_x, float cursor_y);
+// Relative position will be from 0 -> 1
+bool ui_hover_over_box(
+    struct ui_box_t *box,
+    const vector2_t &cursor_position,
+    vector2_t *relative_position = NULL);

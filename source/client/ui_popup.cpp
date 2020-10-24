@@ -258,8 +258,7 @@ void ui_popup_input(event_submissions_t *events, raw_input_t *input) {
             case PST_BUTTON_SINGLE: {
                 if ((hovering = ui_hover_over_box(
                     &section->s_button.button.box,
-                    input->cursor_pos_x,
-                    input->cursor_pos_y))) {
+                    vector2_t(input->cursor_pos_x, input->cursor_pos_y)))) {
                     input_proc = section->s_button.button.handle_press_proc;
                 }
 
@@ -272,8 +271,7 @@ void ui_popup_input(event_submissions_t *events, raw_input_t *input) {
                 for (uint32_t j = 0; j < 2; ++j) {
                     if ((hovering = ui_hover_over_box(
                         &section->d_button.buttons[j].box,
-                        input->cursor_pos_x,
-                        input->cursor_pos_y))) {
+                        vector2_t(input->cursor_pos_x, input->cursor_pos_y)))) {
                         input_proc = section->d_button.buttons[j].handle_press_proc;
                     }
 
@@ -286,8 +284,7 @@ void ui_popup_input(event_submissions_t *events, raw_input_t *input) {
             case PST_INPUT: {
                 if ((hovering = ui_hover_over_box(
                     &section->input.box,
-                    input->cursor_pos_x,
-                    input->cursor_pos_y))) {
+                    vector2_t(input->cursor_pos_x, input->cursor_pos_y)))) {
                     input_proc = [](ui_popup_t *popup, event_submissions_t *) {
                         popup->current_typing_section = popup->dummy;
                     };

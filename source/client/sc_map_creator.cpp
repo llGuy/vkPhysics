@@ -43,6 +43,7 @@ void sc_map_creator_init(listener_t listener, event_submissions_t *events) {
     subscribe_to_event(ET_BEGIN_MAP_EDITING, listener, events);
     subscribe_to_event(ET_CREATE_NEW_MAP, listener, events);
     subscribe_to_event(ET_DONT_CREATE_NEW_MAP, listener, events);
+    subscribe_to_event(ET_MAP_EDITOR_CHOSE_COLOR, listener, events);
 
     edit_char_count = 0;
     started_command = 0;
@@ -90,7 +91,7 @@ static void s_parse_and_generate_sphere(
 
     player_t *spectator = wd_get_spectator();
 
-    generate_sphere(spectator->ws_position, sphere_radius, 140, type, 0x00);
+    generate_sphere(spectator->ws_position, sphere_radius, 140, type, current_color);
 }
 
 static void s_parse_and_generate_hollow_sphere(
@@ -103,7 +104,7 @@ static void s_parse_and_generate_hollow_sphere(
 
     player_t *spectator = wd_get_spectator();
 
-    generate_hollow_sphere(spectator->ws_position, sphere_radius, 250, type, 0x00);
+    generate_hollow_sphere(spectator->ws_position, sphere_radius, 250, type, current_color);
 }
 
 static void s_parse_and_generate_plane(
@@ -169,6 +170,8 @@ static void s_editor_input(
 }
 
 static void s_handle_input(event_submissions_t *events) {
+    static bool display_color_table = 0;
+
     switch (submode) {
 
     case S_IN_GAME: {
@@ -223,13 +226,30 @@ static void s_handle_input(event_submissions_t *events) {
                         ui_minibuffer_update_text(edit_buffer);
                         LOG_INFO("Starting destructive edit command\n");
                     } break;
+                    case 'c': {
+                        display_color_table = !display_color_table;
+
+                        if (display_color_table) {
+                            ui_begin_color_table();
+                            cl_change_view_type(GVT_MENU);
+                        }
+                        else {
+                            ui_end_color_table();
+                            cl_change_view_type(GVT_IN_GAME);
+                        }
+                    } break;
                     }
 
                     raw_input->char_stack[i] = 0;
                 }
             }
 
-            wd_game_input(cl_delta_time());
+            if (!display_color_table) {
+                wd_game_input(cl_delta_time());
+            }
+            else {
+                ui_handle_input(events);
+            }
         }
     } break;
 
@@ -349,6 +369,7 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
 
     case ET_EXIT_SCENE: {
         ui_end_minibuffer();
+        ui_end_color_table();
         s_exit_map_editor(events);
         need_to_save = 0;
     } break;
@@ -376,6 +397,19 @@ void sc_handle_map_creator_event(void *object, event_t *event, event_submissions
             cl_change_view_type(GVT_IN_GAME);
             submode = S_IN_GAME;
         }
+    } break;
+
+    case ET_MAP_EDITOR_CHOSE_COLOR: {
+        event_map_editor_chose_color_t *data = (event_map_editor_chose_color_t *)event->data;
+        current_color = b8v_color_to_b8(data->r, data->g, data->b);
+
+        vector3_t v3_color = b8_color_to_v3(current_color);
+
+        LOG_INFOV("%f %f %f\n", v3_color.r, v3_color.g, v3_color.b);
+
+        wd_get_spectator()->terraform_package.color = current_color;
+
+        FL_FREE(data);
     } break;
 
     default: {

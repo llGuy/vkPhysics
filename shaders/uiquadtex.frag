@@ -10,5 +10,6 @@ layout(location = 0) in VS_DATA {
 layout(binding = 0, set = 0) uniform sampler2D u_texture;
 
 void main(void) {
-    final_color = vec4(fs_in.color.rgb, texture(u_texture, fs_in.uvs).a);
+    vec4 color = texture(u_texture, fs_in.uvs);
+    final_color = vec4(fs_in.color.rgb + color.rgb, color.a);
 }

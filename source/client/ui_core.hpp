@@ -26,6 +26,7 @@ enum ui_texture_t {
     UT_QUIT_ICON,
     UT_SPAWN_ICON,
     UT_CROSSHAIRS,
+    UT_COLOR_TABLE,
     UT_INVALID_TEXTURE
 };
 

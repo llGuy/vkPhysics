@@ -44,9 +44,9 @@ void widget_color_t::start_interpolation(
 
 bool ui_hover_over_box(
     ui_box_t *box,
-    float cursor_x,
-    float cursor_y) {
-    vector2_t cursor = convert_pixel_to_ndc(vector2_t(cursor_x, cursor_y));
+    const vector2_t &cursor_position,
+    vector2_t *relative_position) {
+    vector2_t cursor = convert_pixel_to_ndc(cursor_position);
 
     vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
     vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
@@ -58,10 +58,15 @@ bool ui_hover_over_box(
 
     if (x_min < cursor.x && x_max > cursor.x
         && y_min < cursor.y && y_max > cursor.y) {
-        return(true);
+        if (relative_position)
+            *relative_position = vector2_t(
+                (cursor.x - x_min) / normalized_size.x,
+                (cursor.y - y_min) / normalized_size.y);
+
+        return true;
     }
     else {
-        return(false);
+        return false;
     }
 }
 

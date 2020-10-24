@@ -174,7 +174,8 @@ static void s_execute_player_triggers(
     player->terraform_package = cast_terrain_ray(
         player->ws_position,
         player->ws_view_direction,
-        10.0f);
+        10.0f,
+        player->terraform_package.color);
 
     if (player_actions->trigger_left) {
         terraform(

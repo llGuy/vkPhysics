@@ -171,11 +171,12 @@ void ui_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
     button_t hovering_over = B_INVALID;
     bool hovering = 0;
 
+    vector2_t cursor_position = vector2_t(input->cursor_pos_x, input->cursor_pos_y);
+
     { // Hover over sign up button
         if ((hovering = ui_hover_over_box(
                  &signup_box,
-                 input->cursor_pos_x,
-                 input->cursor_pos_y)))
+                 cursor_position)))
             hovering_over = B_SIGNUP;
 
         color_pair_t color = signup_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovering);
@@ -186,8 +187,7 @@ void ui_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
     { // Hover over sign up button
         if ((hovering = ui_hover_over_box(
                  &login_box,
-                 input->cursor_pos_x,
-                 input->cursor_pos_y)))
+                 cursor_position)))
             hovering_over = B_LOGIN;
 
         color_pair_t color = login_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovering);
@@ -198,8 +198,7 @@ void ui_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
     { // Hover over username box
         if ((hovering = ui_hover_over_box(
                  &type_username_box,
-                 input->cursor_pos_x,
-                 input->cursor_pos_y)))
+                 cursor_position)))
             hovering_over = B_USERNAME;
 
         color_pair_t color = type_username_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovering);
@@ -210,8 +209,7 @@ void ui_sign_up_menu_input(event_submissions_t *events, raw_input_t *input) {
     { // Hover over password box
         if ((hovering = ui_hover_over_box(
                  &type_password_box,
-                 input->cursor_pos_x,
-                 input->cursor_pos_y)))
+                 cursor_position)))
             hovering_over = B_PASSWORD;
 
         color_pair_t color = type_password_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovering);
