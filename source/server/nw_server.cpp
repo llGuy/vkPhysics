@@ -122,12 +122,14 @@ static constexpr uint32_t s_maximum_chunks_per_packet() {
     return ((65507 - sizeof(uint32_t)) / (sizeof(int16_t) * 3 + CHUNK_BYTE_SIZE));
 }
 
-static void s_serialise_chunk(
+static bool s_serialise_chunk(
     serialiser_t *serialiser,
     uint32_t *chunks_in_packet,
     voxel_chunk_values_t *values,
     uint32_t i) {
     voxel_chunk_values_t *current_values = &values[i];
+
+    uint32_t before_chunk_ptr = serialiser->data_buffer_head;
 
     serialiser->serialise_int16(current_values->x);
     serialiser->serialise_int16(current_values->y);
@@ -150,6 +152,13 @@ static void s_serialise_chunk(
             if (zero_count == MAX_ZERO_COUNT_BEFORE_COMPRESSION) {
                 for (; current_values->voxel_values[v_index].value == 0; ++v_index, ++zero_count) {}
 
+                if (zero_count == CHUNK_VOXEL_COUNT) {
+                    LOG_INFO("Whole chunk is empty...\n");
+                    serialiser->data_buffer_head = before_chunk_ptr;
+                    
+                    return 0;
+                }
+
                 serialiser->data_buffer_head = before_head;
                 serialiser->serialise_uint8(CHUNK_SPECIAL_VALUE);
                 serialiser->serialise_uint8(CHUNK_SPECIAL_VALUE);
@@ -165,6 +174,8 @@ static void s_serialise_chunk(
     }
 
     *chunks_in_packet = *chunks_in_packet + 1;
+
+    return 1;
 }
 
 // PT_CHUNK_VOXELS
