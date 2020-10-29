@@ -1,8 +1,10 @@
+#include "common/math.hpp"
 #include "renderer.hpp"
 #include <GLFW/glfw3.h>
 #include "r_internal.hpp"
 #include <vulkan/vulkan.h>
 #include <common/tools.hpp>
+#include <common/log.hpp>
 
 static gpu_buffer_t transforms_uniform_buffer;
 static VkDescriptorSet descriptor_set;
@@ -134,4 +136,122 @@ void r_camera_gpu_sync(
         0, NULL);
 
     transforms.previous_view_projection = transforms.view_projection;
+}
+
+void create_frustum(
+    frustum_t *frustum,
+    const vector3_t &p,
+    const vector3_t &d,
+    const vector3_t &u,
+    float fov,
+    float aspect,
+    float near,
+    float far) {
+    frustum->position = p;
+    frustum->direction = d;
+
+    vector3_t right = glm::normalize(glm::cross(d, u));
+
+    frustum->up = glm::normalize(glm::cross(right, frustum->direction));
+    frustum->fov = fov;
+    frustum->near = near;
+    frustum->far = far;
+
+    float far_width_half = far * tan(fov);
+    float near_width_half = near * tan(fov);
+    float far_height_half = far_width_half / aspect;
+    float near_height_half = near_width_half / aspect;
+
+    frustum->vertex[FLT] = p + d * far - right * far_width_half + frustum->up * far_height_half;
+    frustum->vertex[FLB] = p + d * far - right * far_width_half - frustum->up * far_height_half;
+    frustum->vertex[FRT] = p + d * far + right * far_width_half + frustum->up * far_height_half;
+    frustum->vertex[FRB] = p + d * far + right * far_width_half - frustum->up * far_height_half;
+
+    frustum->vertex[NLT] = p + d * near - right * near_width_half + frustum->up * near_height_half;
+    frustum->vertex[NLB] = p + d * near - right * near_width_half - frustum->up * near_height_half;
+    frustum->vertex[NRT] = p + d * near + right * near_width_half + frustum->up * near_height_half;
+    frustum->vertex[NRB] = p + d * near + right * near_width_half - frustum->up * near_height_half;
+
+    frustum->planes[NEAR].point = frustum->vertex[NRB];
+    frustum->planes[NEAR].normal = d;
+    frustum->planes[NEAR].plane_constant = compute_plane_constant(&frustum->planes[NEAR]);
+
+    frustum->planes[FAR].point = frustum->vertex[FLT];
+    frustum->planes[FAR].normal = -d;
+    frustum->planes[FAR].plane_constant = compute_plane_constant(&frustum->planes[FAR]);
+
+    frustum->planes[LEFT].point = frustum->vertex[FLT];
+    frustum->planes[LEFT].normal =
+        glm::cross(
+            glm::normalize(frustum->vertex[FLT] - frustum->vertex[FLB]),
+            glm::normalize(frustum->vertex[NLB] - frustum->vertex[FLB]));
+    frustum->planes[LEFT].plane_constant = compute_plane_constant(&frustum->planes[LEFT]);
+
+    frustum->planes[RIGHT].point = frustum->vertex[FRT];
+    frustum->planes[RIGHT].normal =
+        -glm::cross(
+            glm::normalize(frustum->vertex[FRT] - frustum->vertex[FRB]),
+            glm::normalize(frustum->vertex[NRB] - frustum->vertex[FRB]));
+    frustum->planes[RIGHT].plane_constant = compute_plane_constant(&frustum->planes[RIGHT]);
+
+    frustum->planes[BOTTOM].point = frustum->vertex[FLB];
+    frustum->planes[BOTTOM].normal =
+        glm::cross(
+            glm::normalize(frustum->vertex[FRB] - frustum->vertex[NRB]),
+            glm::normalize(frustum->vertex[NLB] - frustum->vertex[NRB]));
+    frustum->planes[BOTTOM].plane_constant = compute_plane_constant(&frustum->planes[BOTTOM]);
+
+    frustum->planes[TOP].point = frustum->vertex[FLT];
+    frustum->planes[TOP].normal =
+        -glm::cross(
+            glm::normalize(frustum->vertex[FRT] - frustum->vertex[NRT]),
+            glm::normalize(frustum->vertex[NLT] - frustum->vertex[NRT]));
+    frustum->planes[TOP].plane_constant = compute_plane_constant(&frustum->planes[TOP]);
+}
+
+bool frustum_check_point(
+    frustum_t *frustum,
+    const vector3_t &point) {
+    for (uint32_t i = 0; i < 6; ++i) {
+        float point_dot_normal = glm::dot(point, frustum->planes[i].normal);
+        if (point_dot_normal + frustum->planes[i].plane_constant < 0.0f) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool frustum_check_cube(
+    frustum_t *frustum,
+    const vector3_t &point,
+    float radius) {
+    static vector3_t cube_vertices[8] = {};
+
+    cube_vertices[0] = point + vector3_t(-radius, -radius, -radius);
+    cube_vertices[1] = point + vector3_t(-radius, -radius, +radius);
+    cube_vertices[2] = point + vector3_t(+radius, -radius, +radius);
+    cube_vertices[3] = point + vector3_t(+radius, -radius, -radius);
+
+    cube_vertices[4] = point + vector3_t(-radius, +radius, -radius);
+    cube_vertices[5] = point + vector3_t(-radius, +radius, +radius);
+    cube_vertices[6] = point + vector3_t(+radius, +radius, +radius);
+    cube_vertices[7] = point + vector3_t(+radius, +radius, -radius);
+
+    for (uint32_t p = 0; p < 6; ++p) {
+        bool cube_is_inside = false;
+
+        for (uint32_t v = 0; v < 8; ++v) {
+            if (glm::dot(cube_vertices[v], frustum->planes[p].normal) + frustum->planes[p].plane_constant >= 0.0f) {
+                cube_is_inside = true;
+                break;
+            }
+        }
+
+        if (!cube_is_inside) {
+            return false;
+        }
+    }
+
+    return true;
 }

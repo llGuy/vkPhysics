@@ -1,9 +1,11 @@
 #include "dr_rsc.hpp"
 #include "cl_main.hpp"
+#include "sc_scene.hpp"
 #include "dr_chunk.hpp"
 #include "dr_player.hpp"
 #include "wd_predict.hpp"
 #include "dr_draw_scene.hpp"
+#include <renderer/input.hpp>
 #include <common/player.hpp>
 #include <renderer/renderer.hpp>
 
@@ -238,6 +240,7 @@ static void s_players_gpu_sync_and_render(
 }
 
 static void s_chunks_gpu_sync_and_render(
+    frustum_t *frustum,
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
@@ -273,6 +276,8 @@ static void s_chunks_gpu_sync_and_render(
     chunk_t **chunks = get_active_chunks(&chunk_count);
     uint8_t surface_level = CHUNK_SURFACE_LEVEL;
 
+    const eye_3d_info_t *eye_info = sc_get_eye_info();
+
     for (uint32_t i = 0; i < chunk_count; ++i) {
         chunk_t *c = chunks[i];
         if (c) {
@@ -289,11 +294,16 @@ static void s_chunks_gpu_sync_and_render(
             }
         
             if (c->flags.active_vertices) {
-                submit_mesh(
-                    render_command_buffer,
-                    &c->render->mesh,
-                    dr_get_shader_rsc(GS_CHUNK),
-                    {&c->render->render_data, DEF_MESH_RENDER_DATA_SIZE});
+                // Make sure that the chunk is in the view of the frustum
+                vector3_t chunk_center = vector3_t((c->chunk_coord * 16)) + vector3_t(8.0f);
+                vector3_t diff = chunk_center - eye_info->position;
+                if (frustum_check_cube(frustum, chunk_center, 8.0f) || glm::dot(diff, diff) < 32.0f * 32.0f) {
+                    submit_mesh(
+                        render_command_buffer,
+                        &c->render->mesh,
+                        dr_get_shader_rsc(GS_CHUNK),
+                        {&c->render->render_data, DEF_MESH_RENDER_DATA_SIZE});
+                }
 
                 submit_mesh_shadow(
                     render_shadow_command_buffer,
@@ -309,8 +319,26 @@ void dr_draw_game(
     VkCommandBuffer render,
     VkCommandBuffer transfer,
     VkCommandBuffer shadow) {
+    const eye_3d_info_t *eye_info = sc_get_eye_info();
+    swapchain_information_t swapchain_info = {};
+    swapchain_information(&swapchain_info);
+
+    float aspect_ratio = (float)swapchain_info.width / (float)swapchain_info.height;
+
+    // Get view frustum for culling
+    frustum_t frustum = {};
+    create_frustum(
+        &frustum,
+        eye_info->position,
+        eye_info->direction,
+        eye_info->up,
+        glm::radians(eye_info->fov),
+        aspect_ratio,
+        eye_info->near,
+        eye_info->far);
+
     s_players_gpu_sync_and_render(render, shadow, transfer);
-    s_chunks_gpu_sync_and_render(render, shadow, transfer);
+    s_chunks_gpu_sync_and_render(&frustum, render, shadow, transfer);
 
     if (render != VK_NULL_HANDLE) {
         render_environment(render);

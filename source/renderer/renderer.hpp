@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <vulkan/vulkan.h>
+#include <common/math.hpp>
 #include <common/tools.hpp>
 #include <vulkan/vulkan_core.h>
 
@@ -861,3 +862,50 @@ DECLARE_POINTER_RENDERER_PROC(font_t *, load_font,
 // FADE EFFECT SUPPORT ////////////////////////////////////////////////////////
 DECLARE_VOID_RENDERER_PROC(void, set_main_screen_brightness,
     float brightness);
+
+enum frustum_corner_t {
+    FLT, FLB,
+    FRT, FRB,
+    NLT, NLB,
+    NRT, NRB
+};    
+
+enum frustum_plane_t {
+    NEAR, FAR,
+    LEFT, RIGHT,
+    TOP, BOTTOM
+};
+
+struct frustum_t {
+    vector3_t vertex[8];
+    plane_t planes[6];
+
+    vector3_t position;
+    vector3_t direction;
+    vector3_t up;
+    // Radians
+    float fov;
+    float aspect;
+    float near;
+    float far;
+};
+
+// FOV needs to be in radians
+DECLARE_VOID_RENDERER_PROC(void, create_frustum,
+    frustum_t *frustum,
+    const vector3_t &p,
+    const vector3_t &d,
+    const vector3_t &u,
+    float fov,
+    float aspect,
+    float near,
+    float far);
+
+DECLARE_RENDERER_PROC(bool, frustum_check_point,
+    frustum_t *frustum,
+    const vector3_t &point);
+
+DECLARE_RENDERER_PROC(bool, frustum_check_cube,
+    frustum_t *frustum,
+    const vector3_t &center,
+    float radius);

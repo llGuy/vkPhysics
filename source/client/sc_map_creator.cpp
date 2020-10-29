@@ -275,11 +275,6 @@ void sc_map_creator_tick(
     wd_execute_player_actions(wd_get_spectator(), events);
     wd_tick(events);
 
-    dr_draw_game(render, transfer, render_shadow);
-
-    ui_tick(events);
-    render_submitted_ui(transfer, ui);
-
     eye_3d_info_t *eye_info = sc_get_eye_info();
     player_t *player = NULL;
 
@@ -293,6 +288,11 @@ void sc_map_creator_tick(
     eye_info->dt = cl_delta_time();
     eye_info->direction = player->ws_view_direction;
     eye_info->position = player->ws_position;
+
+    dr_draw_game(render, transfer, render_shadow);
+
+    ui_tick(events);
+    render_submitted_ui(transfer, ui);
 
     lighting_info_t *light_info = sc_get_lighting_info();
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);

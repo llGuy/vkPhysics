@@ -160,3 +160,20 @@ inline float calculate_sphere_circumference(
     float radius) {
     return(2.0f * 3.1415f * radius);
 }
+
+struct plane_t {
+    float plane_constant;
+    vector3_t normal;
+    vector3_t point;
+};
+
+inline float compute_plane_constant(
+    plane_t *plane) {
+    return -glm::dot(plane->point, plane->normal);
+}
+
+inline float compute_point_to_plane_dist(
+    plane_t *plane,
+    const vector3_t &point) {
+    return glm::dot(point, plane->normal) + plane->plane_constant;
+}

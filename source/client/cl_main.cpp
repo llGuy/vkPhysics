@@ -97,6 +97,11 @@ static void s_parse_command_line_args(
 int32_t main(
     int32_t argc,
     char *argv[]) {
+
+    frustum_t test = {};
+    create_frustum(&test, vector3_t(0.0f), vector3_t(0.0f, 0.0f, -1.0f), vector3_t(0.0f, 1.0f, 0.0f), 0.0f, 1.0f, 0.1f, 1.0f);
+
+
     global_linear_allocator_init((uint32_t)megabytes(30));
     srand(time(NULL));
     core_listener = set_listener_callback(cl_game_event_listener, NULL, &events);

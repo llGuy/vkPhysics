@@ -67,7 +67,7 @@ static void s_update_shadow_box(
     vector3_t center_far = ws_position + ws_direction * far;
     
     vector3_t right_view_ax = glm::normalize(glm::cross(ws_direction, ws_up));
-    vector3_t up_view_ax = glm::normalize(glm::cross(ws_direction, right_view_ax));
+    vector3_t up_view_ax = -glm::normalize(glm::cross(ws_direction, right_view_ax));
 
     float far_width_half = far_width / 2.0f;
     float near_width_half = near_width / 2.0f;

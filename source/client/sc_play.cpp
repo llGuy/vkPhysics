@@ -94,12 +94,6 @@ void sc_play_tick(
     wd_tick(events);
     nw_tick(events);
 
-    dr_draw_game(render, transfer, shadow);
-
-    ui_tick(events);
-    render_submitted_ui(transfer, ui);
-
-
     eye_3d_info_t *eye_info = sc_get_eye_info();
     player_t *player = NULL;
     int32_t local_id = wd_get_local_player();
@@ -123,13 +117,21 @@ void sc_play_tick(
     } break;
     }
 
-
     eye_info->up = player->current_camera_up;
 
     eye_info->fov = player->camera_fov.current;
     eye_info->near = 0.01f;
     eye_info->far = 10000.0f;
     eye_info->dt = cl_delta_time();
+
+
+    // Render what's in the 3D scene
+    dr_draw_game(render, transfer, shadow);
+
+
+
+    ui_tick(events);
+    render_submitted_ui(transfer, ui);
 
     lighting_info_t *light_info = sc_get_lighting_info();
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
