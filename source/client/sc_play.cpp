@@ -22,6 +22,7 @@ enum submode_t {
 };
 
 static submode_t submode;
+static bool is_first_person;
 
 void sc_play_init(listener_t listener, event_submissions_t *events) {
     // Nothing to do here
@@ -59,7 +60,34 @@ static void s_handle_input(event_submissions_t *events) {
 }
 
 static void s_calculate_pos_and_dir(player_t *player, vector3_t *position, vector3_t *direction) {
-    *position = player->ws_position - player->ws_view_direction * player->camera_distance.current * PLAYER_SCALE.x;
+    // For first person camera
+    float camera_distance = player->camera_distance.current;
+    bool render_player = 1;
+
+    if (player->flags.interaction_mode == PIM_STANDING) {
+        if (player->switching_shapes) {
+            float progress = player->shape_switching_time / SHAPE_SWITCH_ANIMATION_TIME;
+            camera_distance = (1.0f - progress) * camera_distance;
+
+            if (progress > 0.8f) {
+                render_player = 0;
+            }
+        }
+        else {
+            camera_distance = 0;
+            render_player = 0;
+        }
+    }
+    else if (player->flags.interaction_mode == PIM_BALL) {
+        if (player->switching_shapes) {
+            float progress = player->shape_switching_time / SHAPE_SWITCH_ANIMATION_TIME;
+            camera_distance = progress * camera_distance;
+        }
+    }
+
+    is_first_person = !render_player;
+
+    *position = player->ws_position - player->ws_view_direction * camera_distance * PLAYER_SCALE.x;
     *position += player->current_camera_up * PLAYER_SCALE * 2.0f;
     *direction = player->ws_view_direction;
 
@@ -198,4 +226,8 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
     default: {
     } break;
     }
+}
+
+bool sc_is_in_first_person() {
+    return is_first_person;
 }

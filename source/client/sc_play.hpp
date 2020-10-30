@@ -13,3 +13,4 @@ void sc_play_tick(
     VkCommandBuffer shadow,
     event_submissions_t *events);
 void sc_handle_play_event(void *object, event_t *event, event_submissions_t *events);
+bool sc_is_in_first_person();

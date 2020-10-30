@@ -1,3 +1,4 @@
+#include "client/sc_play.hpp"
 #include "dr_rsc.hpp"
 #include "cl_main.hpp"
 #include "sc_scene.hpp"
@@ -217,16 +218,18 @@ static void s_players_gpu_sync_and_render(
                 p->render->render_data.pbr_info.y = 0.1f;
 
                 if ((int32_t)i == (int32_t)wd_get_local_player()) {
-                    if (p->switching_shapes) {
-                        // Render transition
-                        s_render_transition(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
+                    if (!sc_is_in_first_person()) {
+                        if (p->switching_shapes) {
+                            // Render transition
+                            s_render_transition(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
+                        }
+                        else if (p->flags.interaction_mode == PIM_STANDING) {
+                            s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
+                        }
+                        else {
+                            s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
+                        } 
                     }
-                    else if (p->flags.interaction_mode == PIM_STANDING) {
-                        s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
-                    }
-                    else {
-                        s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
-                    } 
                 }
                 else if (p->flags.interaction_mode == PIM_STANDING) {
                     s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
