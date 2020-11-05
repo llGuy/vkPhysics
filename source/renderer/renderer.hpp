@@ -6,7 +6,6 @@
 #include <common/tools.hpp>
 #include <vulkan/vulkan_core.h>
 
-typedef int32_t result_t;
 typedef void(*surface_proc_t)(struct VkInstance_T *instance, struct VkSurfaceKHR_T **surface, void *window);
 
 // (For server application - just console application), we aren't linking with the renderer static library

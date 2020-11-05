@@ -150,6 +150,7 @@ enum player_animated_state_t {
 };
 
 struct player_t {
+
     player_flags_t flags;
 
     // Character name of player
@@ -220,6 +221,7 @@ struct player_t {
 
     uint32_t selected_weapon;
     weapon_t weapons[WT_INVALID_WEAPON];
+
 };
 
 player_t *add_player();

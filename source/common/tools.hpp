@@ -26,3 +26,5 @@ struct buffer_t {
     void *p;
     size_t size;
 };
+
+enum class result_t : uint32_t { FAILURE = 0, SUCCESS = 1 };

@@ -7,18 +7,54 @@
 static float dt;
 static uint64_t current_tick;
 
+static game_mode_t game_mode;
+static uint32_t team_count;
+static team_t *teams;
+static const char *current_map_path;
+static map_t *current_map_data;
+
 void game_memory_init() {
     current_tick = 0;
     load_map_names();
+    game_mode = game_mode_t::INVALID;
 }
 
-void game_begin(game_initiate_info_t *info) {
-    // And do some various things depending on the game_info_t
-    // Like loading a map or something
+void game_configure_game_mode(game_mode_t mode) {
+    game_mode = mode;
 }
 
-void game_end() {
-    
+void game_configure_map(const char *map_path) {
+    current_map_path = map_path;
+}
+
+void game_configure_team_count(uint32_t count) {
+    team_count = count;
+    teams = FL_MALLOC(team_t, team_count);
+    memset(teams, 0, sizeof(team_t) * team_count);
+}
+
+void game_configure_team(
+    uint32_t team_id,
+    team_color_t color,
+    uint32_t player_count) {
+    team_t *t = &teams[team_id];
+    t->init(color, player_count);
+}
+
+void game_start() {
+    if (current_map_path)
+        current_map_data = load_map(current_map_path);
+
+    current_tick = 0;
+}
+
+void game_stop() {
+    // Deinitialise everything in the game, unload map, etc...
+    unload_map(current_map_data);
+    current_map_data = NULL;
+    game_mode = game_mode_t::INVALID;
+    team_count = 0;
+    FL_FREE(teams);
 }
 
 void join_game() {

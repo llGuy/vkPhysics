@@ -9,22 +9,8 @@ template <
     typename T,
     uint32_t Bucket_Count,
     uint32_t Bucket_Size,
-    uint32_t Bucket_Search_Count> struct hash_table_t {
-    enum { UNINITIALISED_HASH = 0xFFFFFFFF };
-    enum { ITEM_POUR_LIMIT    = Bucket_Search_Count };
-
-    struct item_t {
-        uint32_t hash = UNINITIALISED_HASH;
-        T value = T();
-    };
-
-    struct bucket_t {
-        uint32_t bucket_usage_count = 0;
-        item_t items[Bucket_Size] = {};
-    };
-
-    bucket_t buckets[Bucket_Count] = {};
-
+    uint32_t Bucket_Search_Count> class hash_table_t {
+public:
     void init() {
         for (uint32_t bucket_index = 0; bucket_index < Bucket_Count; ++bucket_index) {
             for (uint32_t item_index = 0; item_index < Bucket_Size; ++item_index) {
@@ -112,6 +98,22 @@ template <
 
         return NULL;
     }
+
+private:
+    enum { UNINITIALISED_HASH = 0xFFFFFFFF };
+    enum { ITEM_POUR_LIMIT    = Bucket_Search_Count };
+
+    struct item_t {
+        uint32_t hash = UNINITIALISED_HASH;
+        T value = T();
+    };
+
+    struct bucket_t {
+        uint32_t bucket_usage_count = 0;
+        item_t items[Bucket_Size] = {};
+    };
+
+    bucket_t buckets[Bucket_Count] = {};
 };
 
 // Makes it so that when items are deleted, the array indices of all other items don't change

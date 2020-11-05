@@ -112,7 +112,15 @@ void srv_game_init(event_submissions_t *events) {
 
     // Make this a parameter to the vkPhysics_server program
     // generate_sphere(vector3_t(0.0f), 30, 180, GT_ADDITIVE, 0b11111111);
-    load_map("nucleus.map");
+    // load_map("nucleus.map");
+
+    game_configure_game_mode(game_mode_t::DEATHMATCH);
+    game_configure_map("nucleus.map");
+    game_configure_team_count(2);
+    game_configure_team(0, team_color_t::BLUE, 10);
+    game_configure_team(1, team_color_t::RED, 10);
+
+    game_start();
 }
 
 void srv_game_tick() {
