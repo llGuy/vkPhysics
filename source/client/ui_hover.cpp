@@ -12,11 +12,8 @@ void widget_color_t::init(
     unhovered_foreground = iunhovered_foreground;
     hovered_foreground = ihovered_foreground;
 
-    vector4_t current_background = ui32b_color_to_vec4(unhovered_background);
-    background_color.current = vector3_t(current_background);
-
-    vector4_t current_foreground = ui32b_color_to_vec4(unhovered_foreground);
-    foreground_color.current = vector3_t(current_foreground);
+    background_color.current = ui32b_color_to_vec4(unhovered_background);
+    foreground_color.current = ui32b_color_to_vec4(unhovered_foreground);
 
     is_hovered_on = 0;
 }
@@ -117,7 +114,7 @@ color_pair_t widget_color_t::update(
             background_color.current.r,
             background_color.current.g,
             background_color.current.b,
-            ((float)0x36) / 255.0f);
+            background_color.current.a);
 
         result.current_background = vec4_color_to_ui32b(current_background);
 
@@ -125,7 +122,7 @@ color_pair_t widget_color_t::update(
             foreground_color.current.r,
             foreground_color.current.g,
             foreground_color.current.b,
-            ((float)0x36) / 255.0f);
+            background_color.current.a);
 
         result.current_foreground = vec4_color_to_ui32b(current_icon);
     }
@@ -133,8 +130,8 @@ color_pair_t widget_color_t::update(
         result.current_foreground = next_icon;
         result.current_background = next_background;
 
-        background_color.current = vector3_t(ui32b_color_to_vec4(next_background));
-        foreground_color.current = vector3_t(ui32b_color_to_vec4(next_icon));
+        background_color.current = ui32b_color_to_vec4(next_background);
+        foreground_color.current = ui32b_color_to_vec4(next_icon);
     }
 
     return result;

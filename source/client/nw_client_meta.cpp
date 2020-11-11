@@ -240,7 +240,11 @@ void nw_request_available_servers() {
     send_request(R_AVAILABLE_SERVERS, data);
 }
 
-void nw_stop_request_thread() {
+void nw_notify_meta_disconnection() {
     send_request(R_QUIT, NULL);
+}
+
+void nw_stop_request_thread() {
     join_meta_thread();
 }
+

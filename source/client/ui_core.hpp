@@ -27,6 +27,7 @@ enum ui_texture_t {
     UT_SPAWN_ICON,
     UT_CROSSHAIRS,
     UT_COLOR_TABLE,
+    UT_TEAM_SELECT,
     UT_INVALID_TEXTURE
 };
 

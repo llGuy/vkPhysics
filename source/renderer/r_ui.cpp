@@ -513,15 +513,15 @@ static ivector2_t get_px_cursor_position(
     ivector2_t px_cursor_position;
     switch(text->relative_to) {
     case ui_text_t::font_stream_box_relative_to_t::TOP: {
-            uint32_t px_box_top = box->px_position.iy + box->px_current_size.iy;
-            px_cursor_position = ivector2_t(x_start + box->px_position.ix, px_box_top - (uint32_t)(text->y_start * (float)px_char_width));
-            break;
-        }
+        uint32_t px_box_top = box->px_position.iy + box->px_current_size.iy;
+        px_cursor_position = ivector2_t(x_start + box->px_position.ix, px_box_top - (uint32_t)(text->y_start * (float)px_char_width));
+        break;
+    }
     case ui_text_t::font_stream_box_relative_to_t::BOTTOM: {
-            uint32_t px_box_bottom = box->px_position.iy;
-            px_cursor_position = ivector2_t(x_start + box->px_position.ix, px_box_bottom + ((uint32_t)(text->y_start * (float)(px_char_width)) + px_char_height));
-            break;
-        }
+        uint32_t px_box_bottom = box->px_position.iy;
+        px_cursor_position = ivector2_t(x_start + box->px_position.ix, px_box_bottom + ((uint32_t)(text->y_start * (float)(px_char_width)) + px_char_height));
+        break;
+    }
     }
     return(px_cursor_position);
 }

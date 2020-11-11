@@ -131,6 +131,8 @@ union player_flags_t {
         uint32_t contact: 1;
         uint32_t moving: 1;
         uint32_t flashing_light: 1;
+        // Contain the team color
+        uint32_t team_color: 5;
     };
 
     uint32_t u32;

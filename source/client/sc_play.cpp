@@ -1,5 +1,6 @@
 #include <common/player.hpp>
 #include "cl_view.hpp"
+#include "common/chunk.hpp"
 #include "nw_client.hpp"
 #include "ui_core.hpp"
 #include "wd_core.hpp"
@@ -34,8 +35,15 @@ void sc_play_init(listener_t listener, event_submissions_t *events) {
 }
 
 void sc_bind_play() {
+    player_t *spect = wd_get_spectator();
+    spect->ws_position = vector3_t(-2500.0f, -1000.0f, 5000.0f);
+    spect->ws_view_direction = glm::normalize(-spect->ws_position);
+    spect->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+
     fx_disable_blur();
     fx_enable_ssao();
+
+     track_modification_history();
 }
 
 static void s_handle_input(event_submissions_t *events) {

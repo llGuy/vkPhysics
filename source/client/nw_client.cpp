@@ -108,8 +108,12 @@ static void s_receive_packet_connection_handshake(
     packet_connection_handshake_t handshake = {};
     deserialise_connection_handshake(&handshake, serialiser);
 
+    // Initialise the teams on the client side
+    game_set_teams(handshake.team_count, handshake.team_infos);
+
     LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
 
+    // Dispatch event to initialise all the players
     event_enter_server_t *data = FL_MALLOC(event_enter_server_t, 1);
     data->info_count = handshake.player_count;
     data->infos = FL_MALLOC(player_init_info_t, data->info_count);
@@ -975,6 +979,24 @@ static void s_send_packet_connection_request(
     }
 }
 
+// PT_TEAM_SELECT_REQUEST
+static void s_send_packet_team_select_request(team_color_t color) {
+    serialiser_t serialiser = {};
+    serialiser.init(100);
+
+    packet_header_t header = {};
+    header.current_tick = get_current_tick();
+    header.current_packet_count = g_net_data.current_packet;
+    header.client_id = current_client_id;
+    header.flags.packet_type = PT_TEAM_SELECT_REQUEST;
+    header.flags.total_packet_size = packed_packet_header_size() + sizeof(uint32_t);
+
+    serialise_packet_header(&header, &serialiser);
+    serialiser.serialise_uint32((uint32_t)color);
+
+    send_to_game_server(&serialiser, bound_server_address);
+}
+
 // PT_CLIENT_DISCONNECT
 static void s_send_packet_client_disconnect() {
     serialiser_t serialiser = {};
@@ -1063,8 +1085,14 @@ static void s_net_event_listener(
         nw_request_login(data->username, data->password);
     } break;
 
+    case ET_SEND_SERVER_TEAM_SELECT_REQUEST: {
+        event_send_server_team_select_request_t *data = (event_send_server_team_select_request_t *)event->data;
+
+        s_send_packet_team_select_request(data->color);
+    } break;
+
     case ET_CLOSED_WINDOW: {
-        nw_stop_request_thread();
+        nw_notify_meta_disconnection();
     } break;
 
     }
@@ -1080,6 +1108,7 @@ void nw_init(event_submissions_t *events) {
     subscribe_to_event(ET_ATTEMPT_SIGN_UP, net_listener_id, events);
     subscribe_to_event(ET_CLOSED_WINDOW, net_listener_id, events);
     subscribe_to_event(ET_ATTEMPT_LOGIN, net_listener_id, events);
+    subscribe_to_event(ET_SEND_SERVER_TEAM_SELECT_REQUEST, net_listener_id, events);
 
     socket_api_init();
 

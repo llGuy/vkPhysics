@@ -804,7 +804,7 @@ struct ui_text_t {
     char characters[500] = {};
     uint32_t char_count = 0;
 
-    enum font_stream_box_relative_to_t { TOP, BOTTOM /* add CENTER in the future */ };
+    enum font_stream_box_relative_to_t { TOP, BOTTOM, CENTER };
 
     font_stream_box_relative_to_t relative_to;
 

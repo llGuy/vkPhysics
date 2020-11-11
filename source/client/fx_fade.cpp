@@ -6,7 +6,7 @@
 #include <renderer/renderer.hpp>
 #include <common/allocators.hpp>
 
-static smooth_linear_interpolation_t current_screen_brightness;
+static linear_interpolation_f32_t current_screen_brightness;
 
 static event_begin_fade_effect_t data;
 

@@ -1,3 +1,4 @@
+#include "common/game.hpp"
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
 #include "wd_event.hpp"
@@ -49,6 +50,8 @@ static void s_handle_event_enter_server(
             player->remote_snapshots.init();
             player->elapsed = 0.0f;
         }
+
+        game_add_player_to_team(player);
 
         player->render = dr_player_render_init();
         dr_player_animated_instance_init(&player->render->animations);

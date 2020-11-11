@@ -56,6 +56,8 @@ void sc_bind_map_creator() {
 
     // Set local player to the spectator
     wd_set_local_player(-1);
+
+    stop_track_modification_history();
 }
 
 // All commands end with an enter, and start with a keybinding

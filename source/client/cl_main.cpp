@@ -139,6 +139,8 @@ int32_t main(
     dispatch_events(&events);
     dispatch_events(&events);
 
+    nw_stop_request_thread();
+
     return 0;
 }
 

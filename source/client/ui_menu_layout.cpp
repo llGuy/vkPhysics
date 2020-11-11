@@ -122,7 +122,9 @@ bool menu_layout_t::input(
         color_pair_t pair = widgets[i].color.update(
             MENU_WIDGET_HOVER_COLOR_FADE_SPEED,
             hovered_over);
-if (hovered_over) {current_button = i;
+
+        if (hovered_over) {
+            current_button = i;
             hovered_over_button = 1;
             widgets[i].hovered_on = 1;
         }

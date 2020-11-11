@@ -95,6 +95,14 @@ static bool s_send_packet_connection_handshake(
         }
     }
 
+    uint32_t team_count = 0;
+    team_t *teams = get_teams(&team_count);
+    connection_handshake.team_count = team_count;
+    connection_handshake.team_infos = LN_MALLOC(team_info_t, team_count);
+    for (uint32_t i = 0; i < team_count; ++i) {
+        connection_handshake.team_infos[i] = teams[i].make_team_info();
+    }
+
     packet_header_t header = {};
     header.current_tick = get_current_tick();
     header.flags.total_packet_size = packed_packet_header_size() + packed_connection_handshake_size(&connection_handshake);

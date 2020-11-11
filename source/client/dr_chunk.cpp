@@ -115,6 +115,7 @@ static const ivector3_t NORMALIZED_CUBE_VERTEX_INDICES[8] = {
 };
 
 static void s_push_vertex_to_triangle_array(
+    voxel_color_t color,
     uint8_t v0,
     uint8_t v1,
     chunk_mesh_vertex_t *vertices,
@@ -126,8 +127,6 @@ static void s_push_vertex_to_triangle_array(
     float voxel_value0 = (float)voxel_values[v0].value;
     float voxel_value1 = (float)voxel_values[v1].value;
 
-    voxel_color_t dominant_color = voxel_values[v1].color;
-
     if (voxel_value0 > voxel_value1) {
         float tmp = voxel_value0;
         voxel_value0 = voxel_value1;
@@ -136,8 +135,6 @@ static void s_push_vertex_to_triangle_array(
         uint8_t tmp_v = v0;
         v0 = v1;
         v1 = tmp_v;
-
-        dominant_color = voxel_values[v0].color;
     }
 
     float interpolated_voxel_values = lerp(voxel_value0, voxel_value1, surface_level_f);
@@ -146,7 +143,7 @@ static void s_push_vertex_to_triangle_array(
     
     mesh_vertices[*(vertex_count)].position = vertex;
     // In the shader, we will need to convert this 8-bit color to fully RGB color
-    mesh_vertices[*(vertex_count)].color = (uint32_t)dominant_color;
+    mesh_vertices[*(vertex_count)].color = (uint32_t)color;
 
     ++(*vertex_count);
 }
@@ -178,26 +175,35 @@ static void s_update_chunk_mesh_voxel_pair(
         edge_pair[edge % 3] = edge_index;
 
         if (edge % 3 == 2) {
+            voxel_color_t color;
+            uint32_t dominant_voxel = 0;
+
             chunk_mesh_vertex_t vertices[8] = {};
             for (uint32_t i = 0; i < 8; ++i) {
                 vertices[i].position = NORMALIZED_CUBE_VERTICES[i] + vector3_t(0.5f) + vector3_t((float)x, (float)y, (float)z);
                 vertices[i].color = voxel_values[i].color;
+
+                if (voxel_values[i].value > voxel_values[dominant_voxel].value) {
+                    dominant_voxel = i;
+                }
             }
+
+            color = voxel_values[dominant_voxel].color;
 
             for (uint32_t i = 0; i < 3; ++i) {
                 switch(edge_pair[i]) {
-                case 0: { s_push_vertex_to_triangle_array(0, 1, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 1: { s_push_vertex_to_triangle_array(1, 2, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 2: { s_push_vertex_to_triangle_array(2, 3, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 3: { s_push_vertex_to_triangle_array(3, 0, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 4: { s_push_vertex_to_triangle_array(4, 5, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 5: { s_push_vertex_to_triangle_array(5, 6, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 6: { s_push_vertex_to_triangle_array(6, 7, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 7: { s_push_vertex_to_triangle_array(7, 4, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 8: { s_push_vertex_to_triangle_array(0, 4, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 9: { s_push_vertex_to_triangle_array(1, 5, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 10: { s_push_vertex_to_triangle_array(2, 6, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
-                case 11: { s_push_vertex_to_triangle_array(3, 7, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 0: { s_push_vertex_to_triangle_array(color, 0, 1, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 1: { s_push_vertex_to_triangle_array(color, 1, 2, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 2: { s_push_vertex_to_triangle_array(color, 2, 3, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 3: { s_push_vertex_to_triangle_array(color, 3, 0, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 4: { s_push_vertex_to_triangle_array(color, 4, 5, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 5: { s_push_vertex_to_triangle_array(color, 5, 6, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 6: { s_push_vertex_to_triangle_array(color, 6, 7, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 7: { s_push_vertex_to_triangle_array(color, 7, 4, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 8: { s_push_vertex_to_triangle_array(color, 0, 4, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 9: { s_push_vertex_to_triangle_array(color, 1, 5, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 10: { s_push_vertex_to_triangle_array(color, 2, 6, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
+                case 11: { s_push_vertex_to_triangle_array(color, 3, 7, vertices, voxel_values, surface_level, mesh_vertices, vertex_count); } break;
                 }
             }
         }

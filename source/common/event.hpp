@@ -1,6 +1,7 @@
 #pragma once
 
 #include "meta.hpp"
+#include "team.hpp"
 #include "tools.hpp"
 
 // Engine events
@@ -64,6 +65,8 @@ enum event_type_t {
     ET_PAUSE,
     ET_UNPAUSE,
     ET_LOCAL_PLAYER_DIED,
+
+    ET_SEND_SERVER_TEAM_SELECT_REQUEST,
 
     // ----------------------------- REDUNDANT FOR NOW (not doing any AI testing)
     ET_BEGIN_AI_TRAINING,
@@ -213,6 +216,10 @@ struct event_enter_map_creator_t {
 
 struct event_map_editor_chose_color_t {
     uint8_t r, g, b;
+};
+
+struct event_send_server_team_select_request_t {
+    team_color_t color;
 };
 
 typedef void(*listener_callback_t)(

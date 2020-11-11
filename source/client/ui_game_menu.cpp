@@ -1,4 +1,5 @@
 #include <cstddef>
+#include "client/ui_team_select.hpp"
 #include "nw_client.hpp"
 #include "ui_menu_layout.hpp"
 #include "ui_game_menu.hpp"
@@ -51,7 +52,7 @@ void ui_game_menu_init() {
 
     VkDescriptorSet sets[] = {
         ui_texture(UT_SPAWN_ICON),
-        ui_texture(UT_BUILD_ICON),
+        ui_texture(UT_TEAM_SELECT),
         ui_texture(UT_SETTINGS_ICON),
         ui_texture(UT_QUIT_ICON),
     };
@@ -61,16 +62,45 @@ void ui_game_menu_init() {
         widget_icon_paths,
         sets,
         B_INVALID_BUTTON);
+
+    ui_team_select_init(&game_menu_layout);
+}
+
+void ui_init_game_menu_for_server() {
+    ui_update_team_roster_layout(&game_menu_layout);
+    ui_update_team_roster_display_text(&game_menu_layout);
 }
 
 void ui_submit_game_menu() {
     game_menu_layout.submit();
+
+    enum { TEAM_SELECT = 1, SETTINGS = 2 };
+
+    if (game_menu_layout.menu_opened()) {
+        switch (game_menu_layout.current_open_menu) {
+        case TEAM_SELECT: {
+            ui_submit_team_select();
+        } break;
+
+        case SETTINGS: {
+            // Render the settings page
+        } break;
+        }
+    }
 }
 
 void ui_game_menu_input(
     event_submissions_t *events,
     raw_input_t *input) {
-    game_menu_layout.input(events, input);
+    if (game_menu_layout.input(events, input)) {
+        enum { TEAM_SELECT = 1, SETTINGS = 2 };
+
+        switch (game_menu_layout.current_open_menu) {
+        case TEAM_SELECT: {
+            ui_team_select_input(input, events);
+        } break;
+        }
+    }
 }
 
 void ui_set_play_button_function(play_button_function_t function) {

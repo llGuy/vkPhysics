@@ -6,7 +6,13 @@
 #include "common/containers.hpp"
 #include "tools.hpp"
 
-enum team_color_t { BLUE, RED, YELLOW, GREEN, PURPLE };
+enum team_color_t { INVALID, BLUE, RED, YELLOW, GREEN, PURPLE, COUNT };
+
+struct team_info_t {
+    team_color_t color;
+    uint32_t player_count;
+    uint32_t max_players;
+};
 
 class team_t {
 public:
@@ -14,10 +20,14 @@ public:
 
     void init(
         team_color_t color,
-        uint32_t max_player_count);
+        uint32_t max_player_count,
+        uint32_t player_count);
+
+    result_t add_player(uint32_t player_id);
 
     bool is_full() const;
-    result_t add_player(uint32_t player_id);
+    team_info_t make_team_info() const;
+    uint32_t player_count() const;
 private:
     hash_table_t<uint32_t, 30, 5, 5> player_id_to_index_;
     team_color_t color_;
@@ -25,3 +35,5 @@ private:
     uint32_t player_count_;
     uint32_t *players_;
 };
+
+const char *team_color_to_string(team_color_t color);

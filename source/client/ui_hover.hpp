@@ -14,8 +14,8 @@ struct widget_color_t {
 
     bool is_hovered_on;
 
-    smooth_linear_interpolation_v3_t background_color;
-    smooth_linear_interpolation_v3_t foreground_color;
+    linear_interpolation_v4_t background_color;
+    linear_interpolation_v4_t foreground_color;
 
     void init(
         uint32_t unhovered_background,

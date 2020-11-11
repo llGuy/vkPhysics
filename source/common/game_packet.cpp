@@ -70,6 +70,13 @@ void serialise_connection_handshake(
         serialiser->serialise_float32(full_game_state->player_infos[i].default_speed);
         serialiser->serialise_uint32(full_game_state->player_infos[i].flags.u32);
     }
+
+    serialiser->serialise_uint32(full_game_state->team_count);
+    for (uint32_t i = 0; i < full_game_state->team_count; ++i) {
+        serialiser->serialise_uint32(full_game_state->team_infos[i].color);
+        serialiser->serialise_uint32(full_game_state->team_infos[i].player_count);
+        serialiser->serialise_uint32(full_game_state->team_infos[i].max_players);
+    }
 }
 
 void deserialise_connection_handshake(
@@ -88,6 +95,14 @@ void deserialise_connection_handshake(
         full_game_state->player_infos[i].ws_next_random_position = serialiser->deserialise_vector3();
         full_game_state->player_infos[i].default_speed = serialiser->deserialise_float32();
         full_game_state->player_infos[i].flags.u32 = serialiser->deserialise_uint32();
+    }
+
+    full_game_state->team_count = serialiser->deserialise_uint32();
+    full_game_state->team_infos = LN_MALLOC(team_info_t, full_game_state->team_count);
+    for (uint32_t i = 0; i < full_game_state->team_count; ++i) {
+        full_game_state->team_infos[i].color = (team_color_t)serialiser->deserialise_uint32();
+        full_game_state->team_infos[i].player_count = serialiser->deserialise_uint32();
+        full_game_state->team_infos[i].max_players = serialiser->deserialise_uint32();
     }
 }
 

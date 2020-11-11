@@ -34,7 +34,7 @@ struct menu_layout_t {
     ui_box_t main_box;
 
     ui_box_t current_menu;
-    smooth_linear_interpolation_t menu_slider;
+    linear_interpolation_f32_t menu_slider;
     bool menu_in_out_transition;
     float menu_slider_x_max_size, menu_slider_y_max_size;
 

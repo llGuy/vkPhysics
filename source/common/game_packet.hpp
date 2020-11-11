@@ -1,6 +1,8 @@
 #pragma once
 
 #include "net.hpp"
+#include "team.hpp"
+#include "game.hpp"
 
 // PACKET TYPES ///////////////////////////////////////////////////////////////
 enum packet_type_t {
@@ -10,6 +12,10 @@ enum packet_type_t {
     PT_CONNECTION_HANDSHAKE,
     // Server sends to clients when a new player joins
     PT_PLAYER_JOINED,
+    // When a client clicks on a team to join
+    PT_TEAM_SELECT_REQUEST,
+    // When a player has joined / changed teams
+    PT_PLAYER_TEAM_CHANGE,
     // Client sends to server when wishing to disconnect
     PT_CLIENT_DISCONNECT,
     // Server sends to clients when player has disconnected
@@ -81,6 +87,9 @@ struct packet_connection_handshake_t {
 
     uint32_t player_count;
     full_player_info_t *player_infos;
+
+    uint32_t team_count;
+    team_info_t *team_infos;
 };
 
 uint32_t packed_connection_handshake_size(packet_connection_handshake_t *game_state);

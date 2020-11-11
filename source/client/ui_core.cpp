@@ -1,4 +1,5 @@
 #include <cstddef>
+#include "client/ui_team_select.hpp"
 #include "ui_popup.hpp"
 #include "ui_core.hpp"
 #include "ui_main_menu.hpp"
@@ -33,6 +34,8 @@ static void s_ui_event_listener(
         ui_game_menu_init();
         ui_sign_up_menu_init();
         ui_hud_init();
+
+        ui_init_game_menu_for_server();
     } break;
 
     case ET_SPAWN: {
@@ -50,6 +53,10 @@ static void s_ui_event_listener(
     case ET_SIGN_UP_SUCCESS: case ET_LOGIN_SUCCESS: {
         ui_clear_panels();
         ui_push_panel(USI_MAIN_MENU);
+    } break;
+
+    case ET_ENTER_SERVER: {
+        ui_init_game_menu_for_server();
     } break;
 
     default: {
@@ -80,6 +87,7 @@ static void s_ui_textures_init() {
     ui_textures[UT_SPAWN_ICON] = create_texture("assets/textures/gui/spawn_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     ui_textures[UT_CROSSHAIRS] = create_texture("assets/textures/gui/crosshair.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     ui_textures[UT_COLOR_TABLE] = create_texture("assets/textures/gui/color_table.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_TEAM_SELECT] = create_texture("assets/textures/gui/team.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
 void ui_init(
@@ -96,6 +104,7 @@ void ui_init(
     subscribe_to_event(ET_META_REQUEST_ERROR, ui_listener, events);
     subscribe_to_event(ET_SIGN_UP_SUCCESS, ui_listener, events);
     subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
+    subscribe_to_event(ET_ENTER_SERVER, ui_listener, events);
 
     global_font = load_font(
         "assets/font/fixedsys.fnt",
