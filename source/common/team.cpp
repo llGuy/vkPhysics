@@ -6,27 +6,40 @@ void team_t::init(
     uint32_t max_player_count,
     uint32_t player_count) {
     color_ = color;
-    max_team_player_count_ = max_player_count;
-    player_count_ = player_count;
-    players_ = FL_MALLOC(uint32_t, max_player_count);
+    players_.init(max_player_count);
     player_id_to_index_.init();
+    player_count_ = 0;
 }
 
 bool team_t::is_full() const {
-    return (player_count_ == max_team_player_count_);
+    return (player_count_ == players_.max_size);
 }
 
 result_t team_t::add_player(uint32_t player_id) {
-    if (player_count_ < max_team_player_count_) {
-        // Add the index to this player to the hash map
-        player_id_to_index_.insert(player_id, player_count_);
+    if (player_count_ < players_.max_size) {
+        uint32_t idx = players_.add();
 
-        players_[player_count_++] = player_id;
+        // Add the index to this player to the hash map
+        player_id_to_index_.insert(player_id, idx);
+
+        *players_.get(idx) = player_id;
+
+        player_count_++;
+
         return result_t::SUCCESS;
     }
     else {
         return result_t::FAILURE;
     }
+}
+
+void team_t::remove_player(uint32_t player_id) {
+    uint32_t *idx = player_id_to_index_.get(player_id);
+    players_.remove(*idx);
+    player_count_--;
+
+    // Remove from hash map
+    player_id_to_index_.remove(player_id);
 }
 
 const char *team_color_to_string(team_color_t color) {
@@ -54,7 +67,7 @@ const char *team_color_to_string(team_color_t color) {
 }
 
 team_info_t team_t::make_team_info() const {
-    return { color_, player_count_, max_team_player_count_ };
+    return { color_, player_count_, players_.max_size };
 }
 
 uint32_t team_t::player_count() const {

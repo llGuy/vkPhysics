@@ -164,10 +164,8 @@ void ui_team_select_input(raw_input_t *raw_input, event_submissions_t *events) {
                 submit_event(ET_SEND_SERVER_TEAM_SELECT_REQUEST, d, events);
 
                 player_t *p = get_player(wd_get_local_player());
-                // Need to set team color
-                p->flags.team_color = color;
 
-                game_add_player_to_team(p, color);
+                game_change_player_team(p, color);
 
                 ui_init_game_menu_for_server();
             }

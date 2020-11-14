@@ -917,6 +917,8 @@ void end_frame(
     vkCmdBeginRenderPass(primary_command_buffers[image_index], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
     r_execute_final_pass(primary_command_buffers[image_index]);
+
+#if 1
     if (info->debug_window) {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -936,6 +938,7 @@ void end_frame(
 
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), primary_command_buffers[image_index]);
     }
+#endif
 
     vkCmdEndRenderPass(primary_command_buffers[image_index]);
 

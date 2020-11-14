@@ -27,7 +27,7 @@ void game_set_teams(
     uint32_t team_count,
     team_info_t *team_infos);
 
-// Team color will be encoded in the player's flags
+void game_change_player_team(player_t *player, team_color_t color);
 void game_add_player_to_team(player_t *player, team_color_t color);
 bool game_check_team_joinable(team_color_t color);
 

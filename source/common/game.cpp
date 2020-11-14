@@ -84,6 +84,23 @@ void game_set_teams(
     }
 }
 
+void game_change_player_team(player_t *player, team_color_t color) {
+    if (player->flags.team_color != color) {
+        if (color > team_color_t::INVALID && color < team_color_t::COUNT) {
+            if (player->flags.team_color != team_color_t::INVALID) {
+                // Remove player from the other team
+                team_color_t previous_team = (team_color_t)player->flags.team_color;
+                uint32_t prev_idx = team_color_to_index[previous_team];
+                teams[prev_idx].remove_player(player->local_id);
+            }
+
+            uint32_t index = team_color_to_index[color];
+            teams[index].add_player(player->local_id);
+            player->flags.team_color = color;
+        }
+    }
+}
+
 void game_add_player_to_team(player_t *player, team_color_t color) {
     if (color > team_color_t::INVALID && color < team_color_t::COUNT) {
         uint32_t index = team_color_to_index[color];
