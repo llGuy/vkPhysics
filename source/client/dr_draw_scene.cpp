@@ -232,12 +232,17 @@ static void s_players_gpu_sync_and_render(
                         } 
                     }
                 }
-                else if (p->flags.interaction_mode == PIM_STANDING) {
-                    s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
-                }
                 else {
-                    s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
-                } 
+                    if (p->switching_shapes) {
+                        s_render_transition(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
+                    }
+                    else if (p->flags.interaction_mode == PIM_STANDING) {
+                        s_render_person(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
+                    }
+                    else {
+                        s_render_ball(render_command_buffer, render_shadow_command_buffer, p);
+                    } 
+                }
             }
         }
     }

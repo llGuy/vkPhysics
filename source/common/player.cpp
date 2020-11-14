@@ -134,10 +134,8 @@ void push_player_actions(player_t *player, player_action_t *action, bool overrid
     }
 }
 
-static void s_handle_shape_switch(
-    player_t *player,
-    player_action_t *actions) {
-    if (actions->switch_shapes) {
+void handle_shape_switch(player_t *player, bool switch_shapes, float dt) {
+    if (switch_shapes) {
         // If already switching shapes
         if (player->switching_shapes)
             player->shape_switching_time = SHAPE_SWITCH_ANIMATION_TIME - player->shape_switching_time;
@@ -153,7 +151,7 @@ static void s_handle_shape_switch(
             player->switching_shapes = 1;
 
             // Need to set animation to the "STOP" animation if the velocity exceeds a certain value
-            if (player->frame_displacement / actions->dt > 4.0f)
+            if (player->frame_displacement / dt > 4.0f)
                 player->animated_state = PAS_STOP_FAST;
         }
     }
@@ -568,7 +566,7 @@ static void s_check_player_dead(
 
 void execute_action(player_t *player, player_action_t *action) {
     // Shape switching can happen regardless of the interaction mode
-    s_handle_shape_switch(player, action);
+    handle_shape_switch(player, action->switch_shapes, action->dt);
 
     switch (player->flags.interaction_mode) {
             

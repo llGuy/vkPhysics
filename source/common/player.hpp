@@ -236,3 +236,4 @@ void fill_player_info(player_t *player, player_init_info_t *info);
 void push_player_actions(player_t *player, player_action_t *action, bool override_adt);
 // If false was returned, the player died
 void execute_action(player_t *player, player_action_t *action);
+void handle_shape_switch(player_t *p, bool switch_shapes, float dt);

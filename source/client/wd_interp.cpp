@@ -1,5 +1,6 @@
 #include "wd_interp.hpp"
 #include "common/constant.hpp"
+#include "common/player.hpp"
 #include <common/net.hpp>
 
 static chunks_to_interpolate_t chunks_to_interpolate;
@@ -118,7 +119,16 @@ void wd_player_interp_step(
         // Just so that it's not zero
         p->ws_velocity = p->ws_position - previous_position;
         p->flags.contact = middle_snapshot->contact;
+
+        bool switch_shapes = (p->flags.interaction_mode != middle_snapshot->interaction_mode);
+
+        if (switch_shapes) {
+            LOG_INFOV("Switching shapes: %d to %d\n", p->flags.interaction_mode, middle_snapshot->interaction_mode);
+        }
+
+        handle_shape_switch(p, switch_shapes, dt);
         p->flags.interaction_mode = middle_snapshot->interaction_mode;
+
         p->animated_state = (player_animated_state_t)middle_snapshot->animated_state;
 
         if (p->flags.contact == PCS_ON_GROUND) {
