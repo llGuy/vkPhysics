@@ -504,3 +504,17 @@ void deserialise_packet_chunk_voxels(
         packet->values[i].voxel_values = (voxel_t *)serialiser->deserialise_bytes(NULL, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(voxel_t));
     }
 }
+
+uint32_t packed_player_team_change_size() {
+    return sizeof(packet_player_team_change_t::client_id) + sizeof(packet_player_team_change_t::color);
+}
+
+void serialise_packet_player_team_change(packet_player_team_change_t *packet, serialiser_t *serialiser) {
+    serialiser->serialise_uint16(packet->client_id);
+    serialiser->serialise_uint16(packet->color);
+}
+    
+void deserialise_packet_player_team_change(packet_player_team_change_t *packet, serialiser_t *serialiser) {
+    packet->client_id = serialiser->deserialise_uint16();
+    packet->color = serialiser->deserialise_uint16();
+}

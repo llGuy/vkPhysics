@@ -171,3 +171,12 @@ struct packet_chunk_voxels_t {
 uint32_t packed_chunk_voxels_size(packet_chunk_voxels_t *packet);
 void serialise_packet_chunk_voxels(packet_chunk_voxels_t *packet, serialiser_t *serialiser);
 void deserialise_packet_chunk_voxels(packet_chunk_voxels_t *packet, serialiser_t *serialiser);
+
+struct packet_player_team_change_t {
+    uint16_t client_id;
+    uint16_t color;
+};
+
+uint32_t packed_player_team_change_size();
+void serialise_packet_player_team_change(packet_player_team_change_t *packet, serialiser_t *serialiser);
+void deserialise_packet_player_team_change(packet_player_team_change_t *packet, serialiser_t *serialiser);

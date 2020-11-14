@@ -1,3 +1,5 @@
+#include "common/player.hpp"
+#include "common/team.hpp"
 #include "server/nw_server_meta.hpp"
 #include "srv_main.hpp"
 #include "nw_server.hpp"
@@ -508,6 +510,49 @@ static void s_receive_packet_client_commands(
     }
 }
 
+static void s_receive_packet_team_select_request(
+    serialiser_t *serialiser,
+    uint16_t client_id,
+    uint64_t tick,
+    event_submissions_t *events) {
+    team_color_t color = (team_color_t)serialiser->deserialise_uint32();
+
+    if (game_check_team_joinable(color)) {
+        int32_t local_id = translate_client_to_local_id(client_id);
+        player_t *p = get_player(local_id);
+
+        LOG_INFOV("Player %s just joined team %s\n", p->name, team_color_to_string(color));
+
+        // Able to join team
+        game_add_player_to_team(p, color);
+
+        serialiser_t out_serialiser = {};
+        out_serialiser.init(20);
+
+        packet_header_t header = {};
+        header.current_tick = get_current_tick();
+        header.current_packet_count = g_net_data.current_packet;
+        header.flags.total_packet_size = packed_packet_header_size() + packed_player_team_change_size();
+
+        packet_player_team_change_t change = {};
+        change.client_id = client_id;
+        change.color = (uint16_t)color;
+
+        serialise_packet_header(&header, &out_serialiser);
+        serialise_packet_player_team_change(&change, &out_serialiser);
+
+        // Send to all players
+        for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
+            send_to_client(&out_serialiser, g_net_data.clients.get(i)->address);
+        }
+    }
+    else {
+        // Unable to join team
+        // Mark player as having made an error
+        // TODO
+    }
+}
+
 static bool s_check_if_client_has_to_correct_state(
     player_t *p,
     client_t *c) {
@@ -884,6 +929,14 @@ static void s_tick_server(
 
             case PT_CLIENT_COMMANDS: {
                 s_receive_packet_client_commands(
+                    &in_serialiser,
+                    header.client_id,
+                    header.current_tick,
+                    events);
+            } break;
+
+            case PT_TEAM_SELECT_REQUEST: {
+                s_receive_packet_team_select_request(
                     &in_serialiser,
                     header.client_id,
                     header.current_tick,

@@ -1,12 +1,16 @@
 #include "client/ui_core.hpp"
+#include "client/ui_game_menu.hpp"
 #include "client/ui_hover.hpp"
+#include "client/wd_predict.hpp"
 #include "common/event.hpp"
+#include "common/player.hpp"
 #include "renderer/renderer.hpp"
 #include "ui_popup.hpp"
 #include <common/team.hpp>
 #include "ui_menu_layout.hpp"
 #include "ui_team_select.hpp"
 #include <common/game.hpp>
+#include <cstdio>
 #include <renderer/input.hpp>
 #include "ui_hover.hpp"
 
@@ -65,7 +69,7 @@ void ui_update_team_roster_layout(
     float scale = 1.0f / (float)team_count;
 
     for (uint32_t i = 0; i < team_count; ++i) {
-        team_color_t color = team_color_t::INVALID;
+        team_color_t color = teams[i].make_team_info().color;
         uint32_t rgb_hovered;
         uint32_t rgb_unhovered;
 
@@ -91,6 +95,8 @@ void ui_update_team_roster_layout(
         buttons[i].box.init(RT_LEFT_DOWN, 0.75f, {i * scale, 0.0f}, {scale, 1.0f}, &main_box, rgb_unhovered);
         buttons[i].text_box.init(RT_RELATIVE_CENTER, 2.0f, {0.0f, 0.1f}, {0.5f, 0.5f}, &buttons[i].box, 0);
         buttons[i].button_color.init(rgb_unhovered, rgb_hovered, 0, 0xFF);
+
+        buttons[i].color = color;
     }
 }
 
@@ -102,6 +108,8 @@ void ui_update_team_roster_display_text(menu_layout_t *layout) {
 
     for (uint32_t i = 0; i < button_count; ++i) {
         team_info_t info = teams[i].make_team_info();
+        sprintf(buf, "%d / %d", info.player_count, info.max_players);
+
         buttons[i].player_count_text.init(&buttons[i].text_box, ui_game_font(), ui_text_t::BOTTOM, 0.1f, 0.1f, 7, 1.3f);
         buttons[i].player_count_text.draw_string(buf, 0xFFFFFFFF);
     }
@@ -113,8 +121,6 @@ void ui_submit_team_select() {
     push_ui_text(&head_text);
 
     for (uint32_t i = 0; i < button_count; ++i) {
-        LOG_INFOV("%d: %X\n", i, buttons[i].box.color);
-
         push_colored_ui_box(&buttons[i].box);
         push_ui_text(&buttons[i].player_count_text);
     }
@@ -156,6 +162,14 @@ void ui_team_select_input(raw_input_t *raw_input, event_submissions_t *events) {
                 event_send_server_team_select_request_t *d = FL_MALLOC(event_send_server_team_select_request_t, 1);
                 d->color = color;
                 submit_event(ET_SEND_SERVER_TEAM_SELECT_REQUEST, d, events);
+
+                player_t *p = get_player(wd_get_local_player());
+                // Need to set team color
+                p->flags.team_color = color;
+
+                game_add_player_to_team(p, color);
+
+                ui_init_game_menu_for_server();
             }
         }
     }

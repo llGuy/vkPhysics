@@ -66,7 +66,7 @@ bool wd_am_i_in_server() {
 }
 
 void wd_clear_world() {
-   clear_players();
+    clear_players();
 
     uint32_t chunk_count;
     chunk_t **chunks = get_active_chunks(&chunk_count);

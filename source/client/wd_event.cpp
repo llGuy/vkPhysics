@@ -36,6 +36,8 @@ static void s_handle_event_enter_server(
         fill_player_info(player, &data->infos[i]);
 
         if (player->flags.is_local) {
+            wd_set_local_player(player->local_id);
+
             player->cached_player_action_count = 0;
             player->cached_player_actions = FL_MALLOC(player_action_t, PLAYER_MAX_ACTIONS_COUNT * 2);
 
@@ -51,7 +53,7 @@ static void s_handle_event_enter_server(
             player->elapsed = 0.0f;
         }
 
-        game_add_player_to_team(player);
+        game_add_player_to_team(player, (team_color_t)player->flags.team_color);
 
         player->render = dr_player_render_init();
         dr_player_animated_instance_init(&player->render->animations);
@@ -91,7 +93,6 @@ static void s_handle_event_spawn(
     p->ws_velocity = vector3_t(0.0f);
 
     if (p->flags.is_local) {
-        wd_set_local_player(p->local_id);
         p->flags.camera_type = CT_THIRD_PERSON;
 
         p->camera_distance.set(1, 12.0f, 10.0f, 1.0f);

@@ -84,11 +84,11 @@ void game_set_teams(
     }
 }
 
-void game_add_player_to_team(player_t *player) {
-    team_color_t color = (team_color_t)player->flags.team_color;
+void game_add_player_to_team(player_t *player, team_color_t color) {
     if (color > team_color_t::INVALID && color < team_color_t::COUNT) {
         uint32_t index = team_color_to_index[color];
         teams[index].add_player(player->local_id);
+        player->flags.team_color = color;
     }
 }
 

@@ -826,6 +826,16 @@ static void s_receive_packet_chunk_voxels(
     chunks_to_receive -= loaded_chunk_count;
 }
 
+static void s_receive_player_team_change(
+    serialiser_t *serialiser,
+    event_submissions_t *events) {
+    packet_player_team_change_t packet = {};
+    deserialise_packet_player_team_change(&packet, serialiser);
+
+    // If client ID == local client ID, don't do anything
+    // Otherwise, update ui roster and add player to team
+}
+
 static void s_check_incoming_game_server_packets(
     event_submissions_t *events) {
     raw_input_t *input = get_raw_input();
@@ -899,6 +909,12 @@ static void s_check_incoming_game_server_packets(
 
             case PT_CHUNK_VOXELS: {
                 s_receive_packet_chunk_voxels(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            case PT_PLAYER_TEAM_CHANGE: {
+                s_receive_player_team_change(
                     &in_serialiser,
                     events);
             } break;

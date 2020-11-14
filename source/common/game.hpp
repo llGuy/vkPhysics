@@ -28,7 +28,7 @@ void game_set_teams(
     team_info_t *team_infos);
 
 // Team color will be encoded in the player's flags
-void game_add_player_to_team(player_t *player);
+void game_add_player_to_team(player_t *player, team_color_t color);
 bool game_check_team_joinable(team_color_t color);
 
 void timestep_begin(float dt);
