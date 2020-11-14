@@ -72,6 +72,7 @@ static bool s_send_packet_connection_handshake(
                 player_flags_t flags = {};
                 flags.u32 = player_info->info.flags;
                 flags.is_local = 1;
+                flags.team_color = team_color_t::INVALID;
 
                 info->flags = flags;
             }
@@ -83,11 +84,11 @@ static bool s_send_packet_connection_handshake(
                 info->ws_position = p->ws_position;
                 info->ws_view_direction = p->ws_view_direction;
                 info->ws_up_vector = p->ws_up_vector;
-                info->ws_next_random_position = player_info->info.next_random_spawn_position;
+                info->ws_next_random_position = p->next_random_spawn_position;
                 info->default_speed = p->default_speed;
 
                 player_flags_t flags = {};
-                flags.u32 = player_info->info.flags;
+                flags.u32 = p->flags.u32;
                 flags.is_local = 0;
                 
                 info->flags = flags;
@@ -163,7 +164,6 @@ static bool s_serialise_chunk(
                 for (; current_values->voxel_values[v_index].value == 0; ++v_index, ++zero_count) {}
 
                 if (zero_count == CHUNK_VOXEL_COUNT) {
-                    LOG_INFO("Whole chunk is empty...\n");
                     serialiser->data_buffer_head = before_chunk_ptr;
                     
                     return 0;
@@ -189,7 +189,7 @@ static bool s_serialise_chunk(
 }
 
 // PT_CHUNK_VOXELS
-static void s_send_packet_chunk_voxels(
+static uint32_t s_prepare_packet_chunk_voxels(
     client_t *client,
     voxel_chunk_values_t *values,
     uint32_t count) {
@@ -216,8 +216,12 @@ static void s_send_packet_chunk_voxels(
     uint32_t index = clients_to_send_chunks_to.add();
     clients_to_send_chunks_to[index] = client->client_id;
 
+    uint32_t total_chunks_to_send = 0;
+
     for (uint32_t i = 0; i < count; ++i) {
-        s_serialise_chunk(&serialiser, &chunks_in_packet, values, i);
+        if (s_serialise_chunk(&serialiser, &chunks_in_packet, values, i)) {
+            ++total_chunks_to_send;
+        }
 
         if (serialiser.data_buffer_head + 3 * sizeof(int16_t) + CHUNK_BYTE_SIZE > serialiser.data_buffer_size ||
             i + 1 == count) {
@@ -235,6 +239,8 @@ static void s_send_packet_chunk_voxels(
     }
 
     client->current_chunk_sending = 0;
+
+    return total_chunks_to_send;
 }
 
 // Sends handshake, and starts sending voxels
@@ -244,37 +250,35 @@ static void s_send_game_state_to_new_client(
     uint32_t loaded_chunk_count = 0;
     chunk_t **chunks = get_active_chunks(&loaded_chunk_count);
 
-    if (s_send_packet_connection_handshake(
+    client_t *client = g_net_data.clients.get(client_id);
+
+    // Send chunk information
+    uint32_t max_chunks_per_packet = s_maximum_chunks_per_packet();
+    LOG_INFOV("Maximum chunks per packet: %i\n", max_chunks_per_packet);
+
+    voxel_chunk_values_t *voxel_chunks = LN_MALLOC(voxel_chunk_values_t, loaded_chunk_count);
+
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < loaded_chunk_count; ++i) {
+        chunk_t *c = chunks[i];
+        if (c) {
+            voxel_chunks[count].x = c->chunk_coord.x;
+            voxel_chunks[count].y = c->chunk_coord.y;
+            voxel_chunks[count].z = c->chunk_coord.z;
+
+            voxel_chunks[count].voxel_values = c->voxels;
+
+            ++count;
+        }
+    }
+
+    // Cannot send all of these at the same bloody time
+    uint32_t chunks_to_send = s_prepare_packet_chunk_voxels(client, voxel_chunks, loaded_chunk_count);
+
+    s_send_packet_connection_handshake(
         client_id,
         player_info,
-        loaded_chunk_count)) {
-        client_t *client = g_net_data.clients.get(client_id);
-
-        // Send chunk information
-        uint32_t max_chunks_per_packet = s_maximum_chunks_per_packet();
-        LOG_INFOV("Maximum chunks per packet: %i\n", max_chunks_per_packet);
-
-        voxel_chunk_values_t *voxel_chunks = LN_MALLOC(voxel_chunk_values_t, loaded_chunk_count);
-
-        uint32_t count = 0;
-        for (uint32_t i = 0; i < loaded_chunk_count; ++i) {
-            chunk_t *c = chunks[i];
-            if (c) {
-                voxel_chunks[count].x = c->chunk_coord.x;
-                voxel_chunks[count].y = c->chunk_coord.y;
-                voxel_chunks[count].z = c->chunk_coord.z;
-
-                voxel_chunks[count].voxel_values = c->voxels;
-
-                ++count;
-            }
-        }
-
-        loaded_chunk_count = count;
-
-        // Cannot send all of these at the same bloody time
-        s_send_packet_chunk_voxels(client, voxel_chunks, loaded_chunk_count);
-    }
+        chunks_to_send);
 }
 
 // PT_PLAYER_JOINED
@@ -539,6 +543,7 @@ static void s_receive_packet_team_select_request(
         packet_header_t header = {};
         header.current_tick = get_current_tick();
         header.current_packet_count = g_net_data.current_packet;
+        header.flags.packet_type = PT_PLAYER_TEAM_CHANGE;
         header.flags.total_packet_size = packed_packet_header_size() + packed_player_team_change_size();
 
         packet_player_team_change_t change = {};

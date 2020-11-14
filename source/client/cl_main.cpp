@@ -114,7 +114,6 @@ int32_t main(
     game_input_settings_init();
     renderer_init();
     fx_fader_init();
-    ui_init(&events);
     nw_init(&events);
 
     s_open();
@@ -123,6 +122,7 @@ int32_t main(
 
     dr_resources_init();
     wd_init(&events);
+    ui_init(&events);
 
     // Initialise scenes
     sc_scenes_init(&events);

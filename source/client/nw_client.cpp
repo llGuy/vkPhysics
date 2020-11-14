@@ -1,4 +1,5 @@
 #include "cl_main.hpp"
+#include "client/ui_game_menu.hpp"
 #include "common/chunk.hpp"
 #include "common/player.hpp"
 #include "nw_client.hpp"
@@ -840,6 +841,9 @@ static void s_receive_player_team_change(
         int32_t p_id = translate_client_to_local_id(packet.client_id);
 
         game_change_player_team(get_player(p_id), (team_color_t)packet.color);
+
+        // Update the text on the game menu
+        ui_init_game_menu_for_server();
     }
 }
 
