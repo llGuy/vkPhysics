@@ -19,10 +19,5 @@ For now, an engine which will hopefully become a real-time multiplayer game!
 
 ## Screenshots
 
-### Terrain deformation
-
+![photo](/assets/screenshots/ingame.png)
 ![photo](/assets/screenshots/opening_screen.png)
-
-### Graphics rendering tests
-
-![photo](/assets/screenshots/screenshot.png)
