@@ -39,5 +39,5 @@ private:
 };
 
 const char *team_color_to_string(team_color_t color);
-vector4_t team_color_to_v4(team_color_t color);
+vector4_t team_color_to_v4(team_color_t color, float alpha = 1.0f);
 voxel_color_t team_color_to_voxel_color(team_color_t color);

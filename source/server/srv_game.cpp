@@ -120,8 +120,8 @@ void srv_game_init(event_submissions_t *events) {
     game_configure_game_mode(game_mode_t::DEATHMATCH);
     game_configure_map("ice.map");
     game_configure_team_count(2);
-    game_configure_team(0, team_color_t::BLUE, 10);
-    game_configure_team(1, team_color_t::RED, 10);
+    game_configure_team(0, team_color_t::PURPLE, 10);
+    game_configure_team(1, team_color_t::YELLOW, 10);
 
     game_start();
 }

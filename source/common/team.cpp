@@ -75,26 +75,26 @@ uint32_t team_t::player_count() const {
     return player_count_;
 }
 
-vector4_t team_color_to_v4(team_color_t color) {
+vector4_t team_color_to_v4(team_color_t color, float alpha) {
     switch (color) {
     case team_color_t::BLUE: {
-        return vector4_t(0.0f, 0.0f, 1.0f, 1.0f);
+        return vector4_t(50.0f / 256.0f, 50.0f / 256.0f, 204.0f / 256.0f, alpha);
     } break;
 
     case team_color_t::RED: {
-        return vector4_t(1.0f, 0.0f, 0.0f, 1.0f);
+        return vector4_t(256.0f / 256.0f, 50.0f / 256.0f, 50.0f / 256.0f, alpha);
     } break;
 
     case team_color_t::GREEN: {
-        return vector4_t(0.0f, 1.0f, 0.0f, 1.0f);
+        return vector4_t(50.0f / 256.0f, 153.0f / 256.0f, 50.0f / 256.0f, alpha);
     } break;
 
     case team_color_t::PURPLE: {
-        return vector4_t(1.0f, 0.0f, 1.0f, 1.0f);
+        return vector4_t(153.0f / 256.0f, 50.0f / 256.0f, 153.0f / 256.0f, alpha);
     } break;
 
     case team_color_t::YELLOW: {
-        return vector4_t(1.0f, 1.0f, 0.0f, 1.0f);
+        return vector4_t(256.0f / 256.0f, 256.0f / 256.0f, 50.0f / 256.0f, alpha);
     } break;
     }
 }

@@ -2,6 +2,7 @@
 #include "client/ui_game_menu.hpp"
 #include "client/ui_hover.hpp"
 #include "client/wd_predict.hpp"
+#include "common/chunk.hpp"
 #include "common/event.hpp"
 #include "common/player.hpp"
 #include "renderer/renderer.hpp"
@@ -75,22 +76,8 @@ void ui_update_team_roster_layout(
 
         team_info_t info = teams[i].make_team_info();
 
-        switch (info.color) {
-        case team_color_t::RED: {
-            rgb_hovered = 0xEE0000CC;
-            rgb_unhovered = 0xFF0000AA;
-        } break;
-
-        case team_color_t::BLUE: {
-            rgb_hovered = 0x0000EECC;
-            rgb_unhovered = 0x0000FFAA;
-        } break;
-
-        case team_color_t::PURPLE: {
-            rgb_hovered = 0xEE00EECC;
-            rgb_unhovered = 0xFF00FFAA;
-        } break;
-        }
+        rgb_hovered = vec4_color_to_ui32b(team_color_to_v4(info.color, 0.9f));
+        rgb_unhovered = vec4_color_to_ui32b(team_color_to_v4(info.color, 0.9f) * 0.8f);
 
         buttons[i].box.init(RT_LEFT_DOWN, 0.75f, {i * scale, 0.0f}, {scale, 1.0f}, &main_box, rgb_unhovered);
         buttons[i].text_box.init(RT_RELATIVE_CENTER, 2.0f, {0.0f, 0.1f}, {0.5f, 0.5f}, &buttons[i].box, 0);
