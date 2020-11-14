@@ -172,6 +172,8 @@ void ui_team_select_input(raw_input_t *raw_input, event_submissions_t *events) {
                     ui_unlock_spawn_button();
                 }
 
+                p->terraform_package.color = team_color_to_voxel_color(color);
+
                 if (p->flags.alive_state == PAS_ALIVE) {
                     // Trigger a dead event
                     wd_kill_local_player(events);

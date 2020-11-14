@@ -1,4 +1,5 @@
 #include "client/sc_play.hpp"
+#include "common/team.hpp"
 #include "dr_rsc.hpp"
 #include "cl_main.hpp"
 #include "sc_scene.hpp"
@@ -161,7 +162,7 @@ static void s_render_transition(
 
     render_data.second_model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(PLAYER_SCALE);
 
-    render_data.color = vector4_t(1.0f);
+    render_data.color = p->render->render_data.color;
     render_data.pbr_info.x = 0.1f;
     render_data.pbr_info.y = 0.1f;
     render_data.progression = p->shape_switching_time / SHAPE_SWITCH_ANIMATION_TIME;
@@ -213,7 +214,7 @@ static void s_players_gpu_sync_and_render(
                     p->render = dr_player_render_init();
                 }
 
-                p->render->render_data.color = vector4_t(1.0f);
+                p->render->render_data.color = team_color_to_v4((team_color_t)p->flags.team_color);
                 p->render->render_data.pbr_info.x = 0.1f;
                 p->render->render_data.pbr_info.y = 0.1f;
 

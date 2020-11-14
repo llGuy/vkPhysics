@@ -524,7 +524,14 @@ static void s_receive_packet_team_select_request(
         LOG_INFOV("Player %s just joined team %s\n", p->name, team_color_to_string(color));
 
         // Able to join team
-        game_add_player_to_team(p, color);
+        game_change_player_team(p, color);
+
+        // If the player is alive
+        if (p->flags.alive_state == PAS_ALIVE) {
+            p->flags.alive_state = PAS_DEAD;
+        }
+
+        p->terraform_package.color = team_color_to_voxel_color(color);
 
         serialiser_t out_serialiser = {};
         out_serialiser.init(20);
