@@ -32,6 +32,9 @@ void menu_layout_t::init(
 
         menu_widget_t *widget = &widgets[i];
 
+        // By default, don't lock buttons
+        widget->locked = 0;
+
         widget->box.init(
             RT_RIGHT_UP,
             1.0f,
@@ -117,23 +120,29 @@ bool menu_layout_t::input(
     bool hovered_over_button = 0;
 
     for (uint32_t i = 0; i < widget_count; ++i) {
-        bool hovered_over = ui_hover_over_box(&widgets[i].box, vector2_t(cursor_x, cursor_y));
-
-        color_pair_t pair = widgets[i].color.update(
-            MENU_WIDGET_HOVER_COLOR_FADE_SPEED,
-            hovered_over);
-
-        if (hovered_over) {
-            current_button = i;
-            hovered_over_button = 1;
-            widgets[i].hovered_on = 1;
+        if (widgets[i].locked) {
+            widgets[i].box.color = MENU_WIDGET_LOCKED_BACKGROUND_COLOR;
+            widgets[i].image_box.color = MENU_WIDGET_LOCKED_ICON_COLOR;
         }
         else {
-            widgets[i].hovered_on = 0;
-        }
+            bool hovered_over = ui_hover_over_box(&widgets[i].box, vector2_t(cursor_x, cursor_y));
 
-        widgets[i].image_box.color = pair.current_foreground;
-        widgets[i].box.color = pair.current_background;
+            color_pair_t pair = widgets[i].color.update(
+                MENU_WIDGET_HOVER_COLOR_FADE_SPEED,
+                hovered_over);
+
+            if (hovered_over) {
+                current_button = i;
+                hovered_over_button = 1;
+                widgets[i].hovered_on = 1;
+            }
+            else {
+                widgets[i].hovered_on = 0;
+            }
+
+            widgets[i].image_box.color = pair.current_foreground;
+            widgets[i].box.color = pair.current_background;
+        }
     }
 
     if (!hovered_over_button) {
@@ -141,13 +150,15 @@ bool menu_layout_t::input(
     }
 
     if (input->buttons[BT_MOUSE_LEFT].instant && current_button != widget_count) {
-        menu_click_handler_t proc = procs[current_button];
-        if (proc) {
-            proc(events);
-        }
-        else {
-            open_menu(
-                current_button);
+        if (!widgets[current_button].locked) {
+            menu_click_handler_t proc = procs[current_button];
+            if (proc) {
+                proc(events);
+            }
+            else {
+                open_menu(
+                    current_button);
+            }
         }
     }
 
@@ -205,4 +216,14 @@ void menu_layout_t::open_menu(
             0.0f,
             MENU_SLIDER_SPEED);
     }
+}
+
+void menu_layout_t::lock_button(
+    uint32_t button) {
+    widgets[button].locked = 1;
+}
+
+void menu_layout_t::unlock_button(
+    uint32_t button) {
+    widgets[button].locked = 0;
 }

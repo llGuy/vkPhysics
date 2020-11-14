@@ -1,5 +1,6 @@
 #include "cl_main.hpp"
 #include "common/chunk.hpp"
+#include "common/player.hpp"
 #include "nw_client.hpp"
 #include "wd_interp.hpp"
 #include "wd_predict.hpp"
@@ -834,6 +835,12 @@ static void s_receive_player_team_change(
 
     // If client ID == local client ID, don't do anything
     // Otherwise, update ui roster and add player to team
+
+    if (packet.client_id != nw_get_local_client_index()) {
+        int32_t p_id = translate_client_to_local_id(packet.client_id);
+
+        game_change_player_team(get_player(p_id), (team_color_t)packet.color);
+    }
 }
 
 static void s_check_incoming_game_server_packets(

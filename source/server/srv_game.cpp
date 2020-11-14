@@ -46,6 +46,9 @@ static void s_handle_event_player_disconnected(
     player_t *p = get_player(local_id);
             
     if (p) {
+        // Remove player from the team as well
+        game_remove_player_from_team(p);
+
         remove_player(p->local_id);
     }
 

@@ -109,6 +109,14 @@ void game_add_player_to_team(player_t *player, team_color_t color) {
     }
 }
 
+void game_remove_player_from_team(player_t *player) {
+    if (player->flags.team_color != team_color_t::INVALID) {
+        team_color_t previous_team = (team_color_t)player->flags.team_color;
+        uint32_t prev_idx = team_color_to_index[previous_team];
+        teams[prev_idx].remove_player(player->local_id);
+    }
+}
+
 bool game_check_team_joinable(team_color_t color) {
     // Make sure that player count in team == min(player counts of teams)
     uint32_t min_player_count = teams[0].player_count();

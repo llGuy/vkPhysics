@@ -63,6 +63,8 @@ void ui_game_menu_init() {
         sets,
         B_INVALID_BUTTON);
 
+    game_menu_layout.lock_button(B_SPAWN);
+
     ui_team_select_init(&game_menu_layout);
 }
 
@@ -105,4 +107,12 @@ void ui_game_menu_input(
 
 void ui_set_play_button_function(play_button_function_t function) {
     // TODO:
+}
+
+void ui_lock_spawn_button() {
+    game_menu_layout.lock_button(B_SPAWN);
+}
+
+void ui_unlock_spawn_button() {
+    game_menu_layout.unlock_button(B_SPAWN);
 }

@@ -167,7 +167,15 @@ void ui_team_select_input(raw_input_t *raw_input, event_submissions_t *events) {
 
                 game_change_player_team(p, color);
 
-                ui_init_game_menu_for_server();
+                { // Update UI components
+                    ui_init_game_menu_for_server();
+                    ui_unlock_spawn_button();
+                }
+
+                if (p->flags.alive_state == PAS_ALIVE) {
+                    // Trigger a dead event
+                    wd_kill_local_player(events);
+                }
             }
         }
     }

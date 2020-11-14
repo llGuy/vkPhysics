@@ -14,11 +14,14 @@ struct menu_widget_t {
     widget_color_t color;
 
     bool hovered_on;
+    bool locked;
 };
 
 #define MAX_MENU_WIDGETS 4
 
 #define MENU_WIDGET_NOT_HOVERED_OVER_ICON_COLOR 0xFFFFFF36
+#define MENU_WIDGET_LOCKED_BACKGROUND_COLOR 0x09090936
+#define MENU_WIDGET_LOCKED_ICON_COLOR 0x090909CC
 #define MENU_WIDGET_NOT_HOVERED_OVER_BACKGROUND_COLOR 0x16161636
 #define MENU_WIDGET_HOVERED_OVER_ICON_COLOR MENU_WIDGET_NOT_HOVERED_OVER_ICON_COLOR
 #define MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR 0x76767636
@@ -62,5 +65,11 @@ struct menu_layout_t {
     bool menu_opened();
 
     void open_menu(
+        uint32_t button);
+
+    void lock_button(
+        uint32_t button);
+
+    void unlock_button(
         uint32_t button);
 };

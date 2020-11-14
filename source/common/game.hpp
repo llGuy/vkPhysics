@@ -29,6 +29,7 @@ void game_set_teams(
 
 void game_change_player_team(player_t *player, team_color_t color);
 void game_add_player_to_team(player_t *player, team_color_t color);
+void game_remove_player_from_team(player_t *player);
 bool game_check_team_joinable(team_color_t color);
 
 void timestep_begin(float dt);
