@@ -38,10 +38,6 @@ static void s_ui_event_listener(
         ui_init_game_menu_for_server();
     } break;
 
-    case ET_SPAWN: {
-        
-    } break;
-
     case ET_META_REQUEST_ERROR: {
         event_meta_request_error_t *data = (event_meta_request_error_t *)event->data;
 
@@ -57,6 +53,14 @@ static void s_ui_event_listener(
 
     case ET_ENTER_SERVER: {
         ui_init_game_menu_for_server();
+    } break;
+
+    case ET_SPAWN: {
+        ui_lock_spawn_button();
+    } break;
+
+    case ET_LOCAL_PLAYER_DIED: {
+        ui_unlock_spawn_button();
     } break;
 
     default: {
@@ -105,6 +109,8 @@ void ui_init(
     subscribe_to_event(ET_SIGN_UP_SUCCESS, ui_listener, events);
     subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
     subscribe_to_event(ET_ENTER_SERVER, ui_listener, events);
+    subscribe_to_event(ET_SPAWN, ui_listener, events);
+    subscribe_to_event(ET_LOCAL_PLAYER_DIED, ui_listener, events);
 
     global_font = load_font(
         "assets/font/fixedsys.fnt",

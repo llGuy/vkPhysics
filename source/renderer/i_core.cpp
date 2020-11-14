@@ -221,11 +221,8 @@ input_interface_data_t input_interface_init() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    // int32_t width = vidmode->width / 2;
-    // int32_t height = vidmode->height / 2;
-
-    int32_t width = 600;
-    int32_t height = 400;
+    int32_t width = vidmode->width / 2;
+    int32_t height = vidmode->height / 2;
 
     window = glfwCreateWindow(width, height, application_name, NULL, NULL);
 
