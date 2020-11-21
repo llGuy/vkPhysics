@@ -10,8 +10,8 @@ static listener_t game_listener;
 void spawn_player(uint32_t client_id) {
     LOG_INFOV("Client %i spawned\n", client_id);
 
-    int32_t local_id = translate_client_to_local_id(client_id);
-    player_t *p = get_player(local_id);
+    int32_t local_id = g_game->client_to_local_id(client_id);
+    player_t *p = g_game->get_player(local_id);
     p->ws_position = p->next_random_spawn_position;
     p->ws_view_direction = glm::normalize(-p->ws_position);
     // Calculate up vector
@@ -32,7 +32,7 @@ void spawn_player(uint32_t client_id) {
 static void s_handle_event_new_player(event_t *event) {
     event_new_player_t *data = (event_new_player_t *)event->data;
 
-    player_t *player = add_player();
+    player_t *player = g_game->add_player();
     fill_player_info(player, &data->info);
 
     FL_FREE(event->data);
@@ -42,14 +42,14 @@ static void s_handle_event_player_disconnected(
     event_t *event) {
     event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
-    int32_t local_id = translate_client_to_local_id(data->client_id);
-    player_t *p = get_player(local_id);
+    int32_t local_id = g_game->client_to_local_id(data->client_id);
+    player_t *p = g_game->get_player(local_id);
             
     if (p) {
         // Remove player from the team as well
-        game_remove_player_from_team(p);
+        g_game->remove_player_from_team(p);
 
-        remove_player(p->local_id);
+        g_game->remove_player(p->local_id);
     }
 
     FL_FREE(event->data);
@@ -110,25 +110,24 @@ void srv_game_init(event_submissions_t *events) {
     subscribe_to_event(ET_PLAYER_DISCONNECTED, game_listener, events);
     subscribe_to_event(ET_SPAWN, game_listener, events);
 
-    player_memory_init();
-    chunk_memory_init();
+    g_game->init_memory();
 
     // Make this a parameter to the vkPhysics_server program
     // generate_sphere(vector3_t(0.0f), 30, 180, GT_ADDITIVE, 0b11111111);
     // load_map("nucleus.map");
 
-    game_configure_game_mode(game_mode_t::DEATHMATCH);
-    game_configure_map("ice.map");
-    game_configure_team_count(2);
-    game_configure_team(0, team_color_t::PURPLE, 10);
-    game_configure_team(1, team_color_t::YELLOW, 10);
+    g_game->configure_game_mode(game_mode_t::DEATHMATCH);
+    g_game->configure_map("ice.map");
+    g_game->configure_team_count(2);
+    g_game->configure_team(0, team_color_t::PURPLE, 10);
+    g_game->configure_team(1, team_color_t::YELLOW, 10);
 
-    game_start();
+    g_game->start_session();
 }
 
 void srv_game_tick() {
-    for (uint32_t i = 0; i < get_player_count(); ++i) {
-        player_t *player = get_player(i);
+    for (uint32_t i = 0; i < g_game->players.data_count; ++i) {
+        player_t *player = g_game->get_player(i);
 
         if (player) {
             if (player->flags.alive_state == PAS_ALIVE) {

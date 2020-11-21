@@ -17,7 +17,7 @@ struct chunk_render_t {
 };
 
 // Temporary, just for refactoring
-[[nodiscard]] chunk_render_t *dr_chunk_render_init(const struct chunk_t *c, const vector3_t &ws_position);
+chunk_render_t *dr_chunk_render_init(const struct chunk_t *c, const vector3_t &ws_position);
 void dr_destroy_chunk_render(chunk_render_t *render);
 uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector3_t *mesh_vertices);
 // Updates gpu buffers, etc...

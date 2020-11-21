@@ -3,10 +3,6 @@
 #include "tools.hpp"
 #include "constant.hpp"
 
-void chunk_memory_init();
-// If on client, client will have to take care of clearing the rendering resources
-void clear_chunks();
-
 ivector3_t space_world_to_voxel(const vector3_t &ws_position);
 ivector3_t space_voxel_to_chunk(const ivector3_t &vs_position);
 vector3_t space_chunk_to_world(const ivector3_t &chunk_coord);
@@ -58,16 +54,9 @@ struct chunk_t {
 };
 
 void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &chunk_coord);
+uint32_t hash_chunk_coord(const ivector3_t &coord);
 // If on client side, client will have to handle destroying the rendering resources of the chunk
 void destroy_chunk(chunk_t *chunk);
-// When this is called, if the chunk wasn't create before, create it
-chunk_t *get_chunk(const ivector3_t &coord);
-// If the chunk doesn't exist, return NULL
-chunk_t *access_chunk(const ivector3_t &coord);
-// The amount of loaded chunks
-chunk_t **get_active_chunks(uint32_t *count);
-// The amount of chunks that were modified in the last timestep
-chunk_t **get_modified_chunks(uint32_t *count);
 // Adds a sphere through modifying voxels
 enum generation_type_t { GT_ADDITIVE, GT_DESTRUCTIVE, GT_INVALID } ;
 void generate_sphere(const vector3_t &ws_center, float ws_radius, float max_value, generation_type_t type, voxel_color_t color);
@@ -78,7 +67,10 @@ void generate_math_equation(const vector3_t &ws_center, const vector3_t &ws_exte
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
 struct terraform_package_t {
+    // Voxel position
     vector3_t ws_position;
+    // Triangle contact point in world space
+    vector3_t ws_contact_point;
     bool ray_hit_terrain;
     voxel_color_t color;
 };
@@ -132,7 +124,4 @@ struct terrain_collision_t {
 
 // This will perform a collide and slide physics thingy
 vector3_t collide_and_slide(terrain_collision_t *collision);
-
-void track_modification_history();
-void stop_track_modification_history();
-void reset_modification_tracker();
+void check_ray_terrain_collision(terrain_collision_t *collision);

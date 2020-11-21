@@ -27,6 +27,9 @@ static struct tmp_t {
 } tmp;
 
 static void s_create_player_shaders_and_meshes() {
+    shader_binding_info_t bullet_sbi = {};
+    load_mesh_external(dr_get_mesh_rsc(GM_BULLET), &bullet_sbi, "assets/models/bullet.mesh");
+
     // Load the animation data for the player "person" mesh
     load_skeleton(&animations.player_sk, "assets/models/player.skeleton");
     load_animation_cycles(&animations.player_cyc, "assets/models/player.animations.link", "assets/models/player.animations");

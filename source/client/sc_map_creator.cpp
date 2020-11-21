@@ -15,6 +15,7 @@
 #include "wd_spectate.hpp"
 #include "dr_draw_scene.hpp"
 #include "sc_map_creator.hpp"
+#include <common/game.hpp>
 
 #include <common/player.hpp>
 #include <cstddef>
@@ -57,7 +58,7 @@ void sc_bind_map_creator() {
     // Set local player to the spectator
     wd_set_local_player(-1);
 
-    stop_track_modification_history();
+    g_game->flags.track_history = 0;
 }
 
 // All commands end with an enter, and start with a keybinding

@@ -3,12 +3,12 @@
 #include "common/chunk.hpp"
 #include "common/containers.hpp"
 #include "files.hpp"
-#include <bits/stdint-uintn.h>
 #include <string.h>
 #include <stdio.h>
 #include "string.hpp"
 #include "constant.hpp"
 #include "serialiser.hpp"
+#include <common/game.hpp>
 
 static file_handle_t map_names_file;
 static map_names_t map_names;
@@ -88,26 +88,26 @@ map_t *load_map(const char *path) {
             int16_t y = serialiser.deserialise_int16();
             int16_t z = serialiser.deserialise_int16();
 
-            chunk_t *chunk = get_chunk(ivector3_t(x, y, z));
+            chunk_t *chunk = g_game->get_chunk(ivector3_t(x, y, z));
             chunk->flags.has_to_update_vertices = 1;
 
             // Also force update surrounding chunks
-            get_chunk(ivector3_t(x + 1, y, z))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x - 1, y, z))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x, y + 1, z))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x, y - 1, z))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x, y, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x, y, z - 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x + 1, y, z))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x - 1, y, z))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x, y + 1, z))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x, y - 1, z))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x, y, z + 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x, y, z - 1))->flags.has_to_update_vertices = 1;
         
-            get_chunk(ivector3_t(x + 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x + 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x + 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x + 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x + 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x + 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x + 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x + 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
 
-            get_chunk(ivector3_t(x - 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x - 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x - 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x - 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x - 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x - 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x - 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
+            g_game->get_chunk(ivector3_t(x - 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
 
             for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
                 uint8_t current_value = serialiser.deserialise_uint8();
@@ -164,7 +164,7 @@ void save_map(map_t *map) {
     serialiser.data_buffer_size = 1024 * 128;
 
     uint32_t chunk_count = 0;
-    chunk_t **chunks = get_active_chunks(&chunk_count);
+    chunk_t **chunks = g_game->get_active_chunks(&chunk_count);
 
     serialiser.serialise_string(map->name);
     uint32_t pointer_to_chunk_count = serialiser.data_buffer_head;

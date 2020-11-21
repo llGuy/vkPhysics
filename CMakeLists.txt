@@ -77,6 +77,8 @@ if(CURL_FOUND)
 else(CURL_FOUND)
   message("Didn't find curl - using bundled curl")
 
+  set(CURL_LIBRARIES "")
+
   if (WIN32)
     message("On Windows, can use bundled curl binaries")
     include_directories("${CMAKE_SOURCE_DIR}/dependencies/curl/x64/include")

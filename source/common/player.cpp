@@ -4,77 +4,9 @@
 #include "constant.hpp"
 #include <glm/gtx/projection.hpp>
 
-// The list in which all the players will be in
-static stack_container_t<player_t *> players;
-static int16_t client_to_local_id_map[PLAYER_MAX_COUNT];
-
-static void s_nullify_player_memory() {
-    for (uint32_t i = 0; i < PLAYER_MAX_COUNT; ++i) {
-        players.data[i] = NULL;
-    }
-}
-
-void player_memory_init() {
-    players.init(PLAYER_MAX_COUNT);
-    s_nullify_player_memory();
-
-    for (uint32_t i = 0; i < PLAYER_MAX_COUNT; ++i) {
-        client_to_local_id_map[i] = -1;
-    }
-}
-
-player_t *add_player() {
-    uint32_t player_index = players.add();
-    players[player_index] = FL_MALLOC(player_t, 1);
-    player_t *player_ptr = players[player_index];
-    memset(player_ptr, 0, sizeof(player_t));
-    player_ptr->local_id = player_index;
-
-    return player_ptr;
-}
-
-void remove_player(uint32_t local_id) {
-    player_t *p = players[local_id];
-    if (p) {
-        if (p->render) {
-            FL_FREE(p->render);
-        }
-
-        players[local_id] = NULL;
-        // TODO: Free const char *name?
-        players.remove(local_id);
-
-        FL_FREE(p);
-    }
-}
-
-void clear_players() {
-    for (uint32_t i = 0; i < players.data_count; ++i) {
-        remove_player(i);
-    }
-
-    players.clear();
-
-    for (uint32_t i = 0; i < PLAYER_MAX_COUNT; ++i) {
-        client_to_local_id_map[i] = -1;
-    }
-}
-
-int32_t translate_client_to_local_id(uint16_t client_id) {
-    return client_to_local_id_map[client_id];
-}
-
-player_t *get_player(int32_t local_id) {
-    if (local_id >= 0) {
-        return players[local_id];
-    }
-    else {
-        return NULL;
-    }
-}
-
-uint32_t get_player_count() {
-    return players.data_count;
+static void s_init_player_weapons(player_t *p) {
+    p->weapons[0].init(40, 40, firing_type_t::SEMI_AUTOMATIC, bullet_type_t::PROJECTILE, weapon_type_t::ROCKS, 0.3f);
+    p->weapons[1].init(0, 0, firing_type_t::INVALID, bullet_type_t::INVALID, weapon_type_t::TERRAFORMER, 0);
 }
 
 static void s_set_default_values(
@@ -88,6 +20,10 @@ static void s_set_default_values(
     player->next_random_spawn_position = init_info->next_random_spawn_position;
     player->ball_speed = 0.0f;
     player->ws_velocity = vector3_t(0.0f);
+
+    // FOR NOW: just have the default weapon setup
+    player->selected_weapon = 0;
+    s_init_player_weapons(player);
 }
 
 void fill_player_info(player_t *player, player_init_info_t *init_info) {
@@ -95,7 +31,7 @@ void fill_player_info(player_t *player, player_init_info_t *init_info) {
         player->name = init_info->client_name;
         player->client_id = init_info->client_id;
         // Now the network module can use w_get_player_from_client_id to get access to player directly
-        client_to_local_id_map[init_info->client_id] = player->local_id;
+        g_game->client_to_local_id_map[init_info->client_id] = player->local_id;
     }
 
     s_set_default_values(init_info, player);
@@ -157,7 +93,7 @@ void handle_shape_switch(player_t *player, bool switch_shapes, float dt) {
     }
 
     if (player->switching_shapes)
-        player->shape_switching_time += get_game_timestep_delta();
+        player->shape_switching_time += g_game->dt;
 
     if (player->shape_switching_time > PLAYER_SHAPE_SWITCH_DURATION) {
         player->shape_switching_time = 0.0f;
@@ -165,36 +101,53 @@ void handle_shape_switch(player_t *player, bool switch_shapes, float dt) {
     }
 }
 
+static void s_handle_weapon_switch(
+    player_t *player,
+    player_action_t *actions) {
+    if (actions->switch_weapons) {
+        if (actions->next_weapon == 0b111) {
+            // Just cycle through to next weapon
+            player->selected_weapon = (player->selected_weapon + 1) % player->weapon_count;
+        }
+        else if (actions->next_weapon < player->weapon_count) {
+            player->selected_weapon = actions->next_weapon;
+        }
+    }
+}
+
 // Special abilities like 
 static void s_execute_player_triggers(
     player_t *player,
     player_action_t *player_actions) {
-    player->terraform_package = cast_terrain_ray(
-        player->ws_position,
-        player->ws_view_direction,
-        10.0f,
-        player->terraform_package.color);
+    s_handle_weapon_switch(player, player_actions);
 
-    if (player_actions->trigger_left) {
-        terraform(
-            TT_DESTROY,
-            player->terraform_package,
-            PLAYER_TERRAFORMING_RADIUS,
-            PLAYER_TERRAFORMING_SPEED,
-            player_actions->accumulated_dt);
-    }
-    if (player_actions->trigger_right) {
-        terraform(
-            TT_BUILD,
-            player->terraform_package,
-            PLAYER_TERRAFORMING_RADIUS,
-            PLAYER_TERRAFORMING_SPEED,
-            player_actions->accumulated_dt);
-    }
+    #if 0
+    switch (player->weapons[player->selected_weapon].type) {
+    case weapon_type_t::ROCKS: {
+        
+    } break;
 
-    if (player_actions->flashlight) {
-        player->flags.flashing_light ^= 1;
+        // Special case
+    case weapon_type_t::TERRAFORMER: {
+        #endif
+        player->terraform_package = cast_terrain_ray(
+            compute_player_view_position(player),
+            player->ws_view_direction,
+            10.0f,
+            player->terraform_package.color);
+
+        if (player_actions->trigger_left)
+            terraform(TT_DESTROY, player->terraform_package, PLAYER_TERRAFORMING_RADIUS, PLAYER_TERRAFORMING_SPEED, player_actions->accumulated_dt);
+        if (player_actions->trigger_right)
+            terraform(TT_BUILD, player->terraform_package, PLAYER_TERRAFORMING_RADIUS, PLAYER_TERRAFORMING_SPEED, player_actions->accumulated_dt);
+
+        if (player_actions->flashlight) {
+            player->flags.flashing_light ^= 1;
+        }
+        #if 0
+    } break;
     }
+    #endif
 }
 
 static void s_execute_player_direction_change(
@@ -537,7 +490,7 @@ static void s_check_player_dead(
             for (uint32_t i = 0; i < ray_step_count; ++i) {
                 ivector3_t chunk_coord = space_voxel_to_chunk(space_world_to_voxel(current_ray_position));
 
-                chunk_t *c = access_chunk(chunk_coord);
+                chunk_t *c = g_game->access_chunk(chunk_coord);
                 if (c) {
                     // Might not die, reset timer
                     player->death_checker = 0.0f;
@@ -601,4 +554,8 @@ void execute_action(player_t *player, player_action_t *action) {
     } break;
 
     }
+}
+
+vector3_t compute_player_view_position(player_t *p) {
+    return p->ws_position + p->ws_up_vector * PLAYER_SCALE * 2.0f;
 }

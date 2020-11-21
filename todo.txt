@@ -1,7 +1,9 @@
-- Add proper first person mode
 - Fix mess with calling UI code from scene code (e.g. whenever a spawn event triggers, don't clear game menu, etc...)
-- Make sure that pressing unpause button doesn't trigger spawn event
 - Replace GLFW with SDL
-- Refactor renderer
+- Refactor renderer (actually refactor EVERYTHING)
 - Add audio
+- Fix terrain pointer
+- Fix frustum culling weirdness
+- Fix shadows
+- ADD THE FUCKING WEAPONS
 - Add trees, etc...

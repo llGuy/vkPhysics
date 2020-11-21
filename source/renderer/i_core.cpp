@@ -390,6 +390,11 @@ void game_input_settings_init() {
     bound_key_mouse_buttons[GIAT_TRIGGER5].bound_button = BT_E;
     bound_key_mouse_buttons[GIAT_TRIGGER6].bound_button = BT_LEFT_SHIFT;
     bound_key_mouse_buttons[GIAT_TRIGGER7].bound_button = BT_G;
+
+    bound_key_mouse_buttons[GIAT_TRIGGER8].bound_button = BT_Q;
+    bound_key_mouse_buttons[GIAT_NUMBER0].bound_button = BT_ONE;
+    bound_key_mouse_buttons[GIAT_NUMBER1].bound_button = BT_TWO;
+    bound_key_mouse_buttons[GIAT_NUMBER2].bound_button = BT_THREE;
 }
 
 static game_input_t game_input;
@@ -407,7 +412,6 @@ static void s_set_button_action_state(
     game_input.actions[action].instant = raw_key_mouse_input->instant;
     game_input.actions[action].release = raw_key_mouse_input->release;
 }
-
 
 void translate_raw_to_game_input() {
     for (uint32_t action = 0; action < GIAT_INVALID_ACTION; ++action) {

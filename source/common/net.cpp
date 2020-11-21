@@ -182,7 +182,7 @@ void flag_modified_chunks(
     uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         chunk_modifications_t *m_ptr = &modifications[i];
-        chunk_t *c_ptr = get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
+        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
         c_ptr->flags.modified_marker = 1;
         c_ptr->flags.index_of_modification_struct = i;
     }
@@ -193,7 +193,7 @@ void unflag_modified_chunks(
     uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         chunk_modifications_t *m_ptr = &modifications[i];
-        chunk_t *c_ptr = get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
+        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
         c_ptr->flags.modified_marker = 0;
         c_ptr->flags.index_of_modification_struct = 0;
     }
@@ -219,7 +219,7 @@ void unfill_dummy_voxels(
 uint32_t fill_chunk_modification_array_with_initial_values(
     chunk_modifications_t *modifications) {
     uint32_t modified_chunk_count = 0;
-    chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
+    chunk_t **chunks = g_game->get_modified_chunks(&modified_chunk_count);
 
     uint32_t current = 0;
             
@@ -252,7 +252,7 @@ uint32_t fill_chunk_modification_array_with_initial_values(
 
 uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications) {
     uint32_t modified_chunk_count = 0;
-    chunk_t **chunks = get_modified_chunks(&modified_chunk_count);
+    chunk_t **chunks = g_game->get_modified_chunks(&modified_chunk_count);
 
     uint32_t current = 0;
             
@@ -286,7 +286,7 @@ uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifi
 
 accumulated_predicted_modification_t *accumulate_history() {
     accumulated_predicted_modification_t *next_acc = add_acc_predicted_modification();
-    acc_predicted_modification_init(next_acc, get_current_tick());
+    acc_predicted_modification_init(next_acc, g_game->current_tick);
     
     next_acc->acc_predicted_chunk_mod_count = fill_chunk_modification_array_with_initial_values(next_acc->acc_predicted_modifications);
 
@@ -311,7 +311,7 @@ void merge_chunk_modifications(
     for (uint32_t i = 0; i < src_count; ++i) {
         chunk_modifications_t *src_modifications = &src[i];
 
-        chunk_t *chunk = get_chunk(ivector3_t(src_modifications->x, src_modifications->y, src_modifications->z));
+        chunk_t *chunk = g_game->get_chunk(ivector3_t(src_modifications->x, src_modifications->y, src_modifications->z));
 
         // Chunk has been terraformed on before (between previous game state dispatch and next one)
         if (chunk->flags.modified_marker) {

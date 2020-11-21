@@ -4,14 +4,15 @@
 #include "event.hpp"
 #include "chunk.hpp"
 #include "tools.hpp"
+#include "weapon.hpp"
 #include "constant.hpp"
 #include "containers.hpp"
-
-void player_memory_init();
 
 // There can be multiple of these (can be sent over network)
 struct player_action_t {
     union {
+
+
         struct {
             uint16_t move_forward: 1;
             uint16_t move_left: 1;
@@ -25,6 +26,9 @@ struct player_action_t {
             uint16_t switch_shapes: 1;
             uint16_t flashlight: 1;
             uint16_t dead: 1;
+            uint16_t switch_weapons: 1;
+            // All 1s is an invalid weapon. The player is just cycling through weapons
+            uint16_t next_weapon: 3;
         };
 
         uint16_t bytes;
@@ -104,21 +108,6 @@ enum camera_type_t {
 };
 
 #define SHAPE_SWITCH_ANIMATION_TIME 0.3f
-
-enum weapon_type_t {
-    WT_TERRAFORMER,
-    WT_ROCKS,
-    WT_INVALID_WEAPON
-};
-
-struct weapon_t {
-    weapon_type_t type;
-
-    uint32_t clip_max_size;
-    uint32_t clip_size;
-    uint32_t max_ammunition;
-    uint32_t ammunition;
-};
 
 union player_flags_t {
     struct {
@@ -211,29 +200,21 @@ struct player_t {
     // This needs to be in the player_render_t struct
     bool switching_shapes;
     float shape_switching_time;
-    // float shape_animation_time;
 
     float frame_displacement;
-    // float rotation_speed;
-    // float rotation_angle;
-
-    // matrix4_t rolling_matrix;
 
     vector3_t jump_vector;
 
+    uint32_t weapon_count;
     uint32_t selected_weapon;
-    weapon_t weapons[WT_INVALID_WEAPON];
+    // 2 weapons maximum (add more in future if needed)
+    weapon_t weapons[3];
 
 };
 
-player_t *add_player();
-void remove_player(uint32_t local_id);
-void clear_players();
-int32_t translate_client_to_local_id(uint16_t client_id);
-player_t *get_player(int32_t local_id);
-uint32_t get_player_count();
 void fill_player_info(player_t *player, player_init_info_t *info);
 void push_player_actions(player_t *player, player_action_t *action, bool override_adt);
 // If false was returned, the player died
 void execute_action(player_t *player, player_action_t *action);
 void handle_shape_switch(player_t *p, bool switch_shapes, float dt);
+vector3_t compute_player_view_position(player_t *p);

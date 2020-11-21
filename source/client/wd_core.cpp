@@ -22,11 +22,10 @@ void wd_init(event_submissions_t *events) {
     world_listener = set_listener_callback(wd_world_event_listener, NULL, events);
     wd_subscribe_to_events(world_listener, events);
 
-    player_memory_init();
+    g_game->init_memory();
     wd_create_spectator();
     wd_set_local_player(-1);
 
-    chunk_memory_init();
     wd_interp_init();
 
     flags.in_meta_menu = 1;
@@ -44,8 +43,8 @@ void wd_tick(event_submissions_t *events) {
     wd_chunks_interp_step(cl_delta_time());
 
     // Interpolate between the player snapshots that were sent by the server
-    for (uint32_t i = 0; i < get_player_count(); ++i) {
-        player_t *player = get_player(i);
+    for (uint32_t i = 0; i < g_game->players.data_count; ++i) {
+        player_t *player = g_game->get_player(i);
         
         if (player) {
             if (player->flags.is_remote) {
@@ -66,10 +65,10 @@ bool wd_am_i_in_server() {
 }
 
 void wd_clear_world() {
-    clear_players();
+    g_game->clear_players();
 
     uint32_t chunk_count;
-    chunk_t **chunks = get_active_chunks(&chunk_count);
+    chunk_t **chunks = g_game->get_active_chunks(&chunk_count);
 
     for (uint32_t i = 0; i < chunk_count; ++i) {
         // Destroy the chunk's rendering resources
@@ -83,5 +82,5 @@ void wd_clear_world() {
         chunks[i] = NULL;
     }
 
-    clear_chunks();
+    g_game->clear_chunks();
 }

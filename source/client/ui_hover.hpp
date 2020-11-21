@@ -17,6 +17,8 @@ struct widget_color_t {
     linear_interpolation_v4_t background_color;
     linear_interpolation_v4_t foreground_color;
 
+    widget_color_t() = default;
+
     void init(
         uint32_t unhovered_background,
         uint32_t hovered_background,

@@ -92,13 +92,27 @@ enum game_input_action_type_t {
     GIAT_MOVE_LEFT,
     GIAT_MOVE_BACK,
     GIAT_MOVE_RIGHT,
+
+    // Whatever is the "shoot" action for a weapon (default: mouse left)
     GIAT_TRIGGER1,
+    // Whatever the other ability of a weapon is (default: mouse right)
     GIAT_TRIGGER2,
+    // Unused
     GIAT_TRIGGER3,
+    // Jump
     GIAT_TRIGGER4,
+    // Switch shapes
     GIAT_TRIGGER5,
+    // Crouch
     GIAT_TRIGGER6,
+    // Unused
     GIAT_TRIGGER7,
+
+    // Switch weapons
+    GIAT_TRIGGER8,
+    GIAT_NUMBER0,
+    GIAT_NUMBER1,
+    GIAT_NUMBER2,
     // Invalid
     GIAT_INVALID_ACTION };
 

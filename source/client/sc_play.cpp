@@ -43,7 +43,7 @@ void sc_bind_play() {
     fx_disable_blur();
     fx_enable_ssao();
 
-     track_modification_history();
+    g_game->flags.track_history = 1;
 }
 
 static void s_handle_input(event_submissions_t *events) {
@@ -122,7 +122,7 @@ void sc_play_tick(
     VkCommandBuffer ui,
     VkCommandBuffer shadow,
     event_submissions_t *events) {
-    timestep_begin(cl_delta_time());
+    g_game->timestep_begin(cl_delta_time());
 
     s_handle_input(events);
 
@@ -139,7 +139,7 @@ void sc_play_tick(
         if (local_id == -1)
             player = wd_get_spectator();
         else
-            player = get_player(local_id);
+            player = g_game->get_player(local_id);
 
         if (player)
             s_calculate_pos_and_dir(player, &eye_info->position, &eye_info->direction);
@@ -174,7 +174,7 @@ void sc_play_tick(
     light_info->lights_count = 0;
 
     // Increments the current tick number
-    timestep_end();
+    g_game->timestep_end();
 }
 
 void sc_handle_play_event(void *object, event_t *event, event_submissions_t *events) {

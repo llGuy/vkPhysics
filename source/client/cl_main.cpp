@@ -110,7 +110,7 @@ int32_t main(
     cl_subscribe_to_events(core_listener, &events);
 
     s_parse_command_line_args(argc, argv);
-    game_memory_init();
+    game_allocate();
     game_input_settings_init();
     renderer_init();
     fx_fader_init();

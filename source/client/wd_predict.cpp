@@ -21,7 +21,7 @@ int32_t wd_get_local_player() {
 
 static player_t *s_get_local_player() {
     if (local_player >= 0) {
-        return get_player(local_player);
+        return g_game->get_player(local_player);
     }
     else {
         return NULL;
@@ -63,7 +63,19 @@ void wd_handle_local_player_input(float dt) {
     if (game_input->actions[GIAT_TRIGGER7].instant == BS_DOWN)
         actions.flashlight = 1;
 
-    actions.tick = get_current_tick();
+    if (game_input->actions[GIAT_TRIGGER8].instant == BS_DOWN) {
+        actions.switch_weapons = 1;
+        actions.next_weapon = 0b111;
+    }
+
+    for (uint32_t i = 0; i < 3; ++i) {
+        if (game_input->actions[GIAT_NUMBER0 + i].instant == BS_DOWN) {
+            actions.switch_weapons = 1;
+            actions.next_weapon = i;
+        }
+    }
+
+    actions.tick = g_game->current_tick;
     
     player_t *local_player_ptr = s_get_local_player();
 

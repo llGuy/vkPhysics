@@ -1,4 +1,5 @@
 #include "dr_rsc.hpp"
+#include <common/game.hpp>
 #include "dr_chunk.hpp"
 #include "renderer/renderer.hpp"
 #include <common/log.hpp>
@@ -82,7 +83,7 @@ static voxel_t s_chunk_edge_voxel_value(
         chunk_coord.y + chunk_coord_offset_y,
         chunk_coord.z + chunk_coord_offset_z);
 
-    chunk_t *chunk_ptr = access_chunk(coord);
+    chunk_t *chunk_ptr = g_game->access_chunk(coord);
     
     *doesnt_exist = (bool)(chunk_ptr == nullptr);
 
@@ -218,9 +219,9 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, chunk_
 
     uint32_t vertex_count = 0;
 
-    chunk_t *x_superior = access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z));
-    chunk_t *y_superior = access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z));
-    chunk_t *z_superior = access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1));
+    chunk_t *x_superior = g_game->access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z));
+    chunk_t *y_superior = g_game->access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z));
+    chunk_t *z_superior = g_game->access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1));
     
     bool doesnt_exist = 0;
     if (x_superior) {

@@ -50,8 +50,8 @@ void ui_team_select_init(
 
 void ui_update_team_roster_layout(
     menu_layout_t *layout) {
-    uint32_t team_count = 0;
-    team_t *teams = get_teams(&team_count);
+    uint32_t team_count = g_game->team_count;
+    team_t *teams = g_game->teams;
 
     button_count = team_count;
 
@@ -90,8 +90,8 @@ void ui_update_team_roster_layout(
 void ui_update_team_roster_display_text(menu_layout_t *layout) {
     char buf[10] = {};
 
-    uint32_t team_count = 0;
-    team_t *teams = get_teams(&team_count);
+    uint32_t team_count = g_game->team_count;
+    team_t *teams = g_game->teams;
 
     for (uint32_t i = 0; i < button_count; ++i) {
         team_info_t info = teams[i].make_team_info();
@@ -142,7 +142,7 @@ void ui_team_select_input(raw_input_t *raw_input, event_submissions_t *events) {
             // Check if we can join this team (if it is full compared to the other teams)
             team_color_t color = buttons[team].color;
 
-            if (game_check_team_joinable(color)) {
+            if (g_game->check_team_joinable(color)) {
                 // Submit even saying that player just joined team
                 LOG_INFO("Local client trying to join team\n");
 
@@ -150,9 +150,9 @@ void ui_team_select_input(raw_input_t *raw_input, event_submissions_t *events) {
                 d->color = color;
                 submit_event(ET_SEND_SERVER_TEAM_SELECT_REQUEST, d, events);
 
-                player_t *p = get_player(wd_get_local_player());
+                player_t *p = g_game->get_player(wd_get_local_player());
 
-                game_change_player_team(p, color);
+                g_game->change_player_team(p, color);
 
                 { // Update UI components
                     ui_init_game_menu_for_server();

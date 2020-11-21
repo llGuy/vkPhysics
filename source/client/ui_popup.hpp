@@ -12,33 +12,35 @@ struct popup_button_t {
     widget_color_t color;
     const char *button_string;
     void (* handle_press_proc)(struct ui_popup_t *, event_submissions_t *);
+
+    popup_button_t() = default;
 };
 
 struct popup_section_t {
     popup_section_type_t type;
 
-    union {
-        struct {
-            popup_button_t buttons[2];
-        } d_button;
+    struct {
+        popup_button_t buttons[2];
+    } d_button;
 
-        struct {
-            popup_button_t button;
-        } s_button;
+    struct {
+        popup_button_t button;
+    } s_button;
 
-        struct {
-            ui_text_t text;
-            // Invisible
-            ui_box_t box;
-            const char *string;
-        } text;
+    struct {
+        ui_text_t text;
+        // Invisible
+        ui_box_t box;
+        const char *string;
+    } text;
 
-        struct {
-            ui_box_t box;
-            ui_input_text_t input;
-            widget_color_t color;
-        } input;
-    };
+    struct {
+        ui_box_t box;
+        ui_input_text_t input;
+        widget_color_t color;
+    } input;
+
+    popup_section_t() = default;
 };
 
 #define MAX_SECTIONS_IN_POPUP 8

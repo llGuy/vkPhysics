@@ -34,7 +34,7 @@ static void s_run() {
     while (running) {
         s_begin_time();
 
-        timestep_begin(dt);
+        g_game->timestep_begin(dt);
 
         dispatch_events(&events);
 
@@ -43,7 +43,7 @@ static void s_run() {
         srv_game_tick();
         nw_tick(&events);
 
-        timestep_end();
+        g_game->timestep_end();
 
         // Sleep to not kill CPU usage
         time_stamp_t current = current_time();
@@ -77,7 +77,7 @@ int32_t main(
 
     nw_init(&events);
 
-    game_memory_init();
+    game_allocate();
     srv_game_init(&events);
 
     s_run();

@@ -1,39 +1,8 @@
 #include "math.hpp"
+#include "game.hpp"
 #include "chunk.hpp"
 #include "constant.hpp"
 #include "containers.hpp"
-
-static stack_container_t<chunk_t *> chunks;
-
-static hash_table_t<uint32_t, 300, 30, 10> chunk_indices;
-
-static uint32_t max_modified_chunks;
-
-static uint32_t modified_chunk_count;
-
-static chunk_t **modified_chunks;
-
-static struct {
-    uint8_t track_history: 1;
-} flags;
-
-void chunk_memory_init() {
-    chunk_indices.init();
-    chunks.init(CHUNK_MAX_LOADED_COUNT);
-
-    max_modified_chunks = CHUNK_MAX_LOADED_COUNT / 2;
-    modified_chunk_count = 0;
-    modified_chunks = FL_MALLOC(chunk_t *, max_modified_chunks);
-
-    flags.track_history = 1;
-}
-
-void clear_chunks() {
-    if (chunks.data_count) {
-        chunks.clear();
-        chunk_indices.clear();
-    }
-}
 
 ivector3_t space_world_to_voxel(const vector3_t &ws_position) {
     return (ivector3_t)(glm::floor(ws_position));
@@ -109,7 +78,7 @@ void destroy_chunk(chunk_t *chunk) {
     FL_FREE(chunk);
 }
 
-static uint32_t s_hash_chunk_coord(
+uint32_t hash_chunk_coord(
     const ivector3_t &coord) {
     // static std::hash<glm::ivec3> hasher;
 
@@ -135,51 +104,24 @@ static uint32_t s_hash_chunk_coord(
     return (uint32_t)hasher.value;
 }
 
-chunk_t *get_chunk(
-    const ivector3_t &coord) {
-    uint32_t hash = s_hash_chunk_coord(coord);
-    uint32_t *index = chunk_indices.get(hash);
-    
-    if (index) {
-        // Chunk was already added
-        return chunks[*index];
+template <typename T>
+static void s_iterate_3d(
+    const ivector3_t &center,
+    uint32_t radius,
+    T to_apply) {
+    int32_t start_z = center.z - (int32_t)radius;
+    int32_t start_y = center.y - (int32_t)radius;
+    int32_t start_x = center.x - (int32_t)radius;
+
+    int32_t diameter = (int32_t)radius * 2 + 1;
+
+    for (int32_t z = start_z; z < start_z + diameter; ++z) {
+        for (int32_t y = start_y; y < start_y + diameter; ++y) {
+            for (int32_t x = start_x; x < start_x + diameter; ++x) {
+                to_apply(x, y, z);
+            }
+        }
     }
-    else {
-        uint32_t i = chunks.add();
-        chunk_t *&chunk = chunks[i];
-        chunk = FL_MALLOC(chunk_t, 1);
-        chunk_init(chunk, i, coord);
-
-        chunk_indices.insert(hash, i);
-
-        return chunk;
-    }
-}
-
-chunk_t *access_chunk(
-    const ivector3_t &coord) {
-    uint32_t hash = s_hash_chunk_coord(coord);
-    uint32_t *index = chunk_indices.get(hash);
-
-    if (index) {
-        // Chunk was already added
-        return chunks[*index];
-    }
-    else {
-        return NULL;
-    }
-}
-
-chunk_t **get_active_chunks(
-    uint32_t *count) {
-    *count = chunks.data_count;
-    return chunks.data;
-}
-
-chunk_t **get_modified_chunks(
-    uint32_t *count) {
-    *count = modified_chunk_count;
-    return modified_chunks;
 }
 
 void generate_hollow_sphere(
@@ -217,7 +159,7 @@ void generate_hollow_sphere(
 
     ivector3_t current_chunk_coord = space_voxel_to_chunk(vs_center);
 
-    chunk_t *current_chunk = get_chunk(
+    chunk_t *current_chunk = g_game->get_chunk(
         current_chunk_coord);
 
     current_chunk->flags.has_to_update_vertices = 1;
@@ -244,7 +186,6 @@ void generate_hollow_sphere(
                     ivector3_t c = space_voxel_to_chunk(vs_position);
 
                     ivector3_t chunk_origin_diff = vs_position - current_chunk_coord * (int32_t)CHUNK_EDGE_LENGTH;
-                    //if (c.x == current_chunk_coord.x && c.y == current_chunk_coord.y && c.z == current_chunk_coord.z) {
                     if (chunk_origin_diff.x >= 0 && chunk_origin_diff.x < 16 &&
                         chunk_origin_diff.y >= 0 && chunk_origin_diff.y < 16 &&
                         chunk_origin_diff.z >= 0 && chunk_origin_diff.z < 16) {
@@ -252,8 +193,6 @@ void generate_hollow_sphere(
                         float proportion = generation_proc(distance_squared, smaller_radius_squared);
 
                         ivector3_t voxel_coord = chunk_origin_diff;
-
-                        //current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
 
                         voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
                         uint8_t new_value = (uint32_t)((proportion) * max_value);
@@ -266,7 +205,7 @@ void generate_hollow_sphere(
                         ivector3_t c = space_voxel_to_chunk(vs_position);
 
                         // In another chunk, need to switch current_chunk pointer
-                        current_chunk = get_chunk(c);
+                        current_chunk = g_game->get_chunk(c);
                         current_chunk_coord = c;
 
                         current_chunk->flags.has_to_update_vertices = 1;
@@ -317,7 +256,7 @@ void generate_sphere(
 
     ivector3_t current_chunk_coord = space_voxel_to_chunk(vs_center);
 
-    chunk_t *current_chunk = get_chunk(
+    chunk_t *current_chunk = g_game->get_chunk(
         current_chunk_coord);
 
     current_chunk->flags.has_to_update_vertices = 1;
@@ -365,7 +304,7 @@ void generate_sphere(
                         ivector3_t c = space_voxel_to_chunk(vs_position);
 
                         // In another chunk, need to switch current_chunk pointer
-                        current_chunk = get_chunk(c);
+                        current_chunk = g_game->get_chunk(c);
                         current_chunk_coord = c;
 
                         current_chunk->flags.has_to_update_vertices = 1;
@@ -411,7 +350,7 @@ void generate_platform(const vector3_t &position, float width, float depth, gene
         for (int32_t x = position.x - width / 2; x < position.x + width / 2; ++x) {
             ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
             ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
-            chunk_t *chunk = get_chunk(chunk_coord);
+            chunk_t *chunk = g_game->get_chunk(chunk_coord);
             chunk->flags.has_to_update_vertices = 1;
             ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
             uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
@@ -452,7 +391,7 @@ void generate_math_equation(
                 if (c > 0.0f) {
                     ivector3_t voxel_coord = ivector3_t((float)x, (float)y, (float)z);
                     ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
-                    chunk_t *chunk = get_chunk(chunk_coord);
+                    chunk_t *chunk = g_game->get_chunk(chunk_coord);
                     chunk->flags.has_to_update_vertices = 1;
                     ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
                     uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
@@ -472,7 +411,7 @@ terraform_package_t cast_terrain_ray(
     vector3_t vs_position = ws_ray_start;
     vector3_t vs_dir = ws_ray_direction;
 
-    static const float PRECISION = 1.0f / 10.0f;
+    static const float PRECISION = 1.0f / 15.0f;
     
     vector3_t vs_step = vs_dir * max_reach * PRECISION;
 
@@ -485,29 +424,31 @@ terraform_package_t cast_terrain_ray(
     for (; glm::dot(vs_position - ws_ray_start, vs_position - ws_ray_start) < max_reach_squared; vs_position += vs_step) {
         ivector3_t voxel = space_world_to_voxel(vs_position);
         ivector3_t chunk_coord = space_voxel_to_chunk(voxel);
-        chunk_t *chunk = access_chunk(chunk_coord);
+        chunk_t *chunk = g_game->access_chunk(chunk_coord);
 
         if (chunk) {
             ivector3_t local_voxel_coord = space_voxel_to_local_chunk(voxel);
             voxel_t *voxel_ptr = &chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)];
-            if (voxel_ptr->value > CHUNK_SURFACE_LEVEL) {
+
+            terrain_collision_t collision = {};
+            collision.ws_size = vector3_t(0.1f);
+            collision.ws_position = vs_position;
+            collision.ws_velocity = vs_dir;
+            collision.es_position = collision.ws_position / collision.ws_size;
+            collision.es_velocity = collision.ws_velocity / collision.ws_size;
+
+            check_ray_terrain_collision(&collision);
+
+            if (collision.detected) {
                 package.ray_hit_terrain = 1;
-                package.ws_position = vector3_t(voxel);
-                
+                package.ws_contact_point = collision.es_contact_point * collision.ws_size;
+                package.ws_position = glm::round(package.ws_contact_point);
                 break;
             }
         }
     }
 
     return package;
-}
-
-void track_modification_history() {
-    flags.track_history = 1;
-}
-
-void stop_track_modification_history() {
-    flags.track_history = 0;
 }
 
 static bool s_terraform_with_history(
@@ -519,11 +460,11 @@ static bool s_terraform_with_history(
     if (package.ray_hit_terrain) {
         ivector3_t voxel = space_world_to_voxel(package.ws_position);
         ivector3_t chunk_coord = space_voxel_to_chunk(voxel);
-        chunk_t *chunk = access_chunk(chunk_coord);
+        chunk_t *chunk = g_game->access_chunk(chunk_coord);
 
         if (!chunk->flags.made_modification) {
             // Push this chunk onto list of modified chunks
-            modified_chunks[modified_chunk_count++] = chunk;
+            g_game->modified_chunks[g_game->modified_chunk_count++] = chunk;
         }
                     
         chunk->flags.made_modification = 1;
@@ -568,13 +509,13 @@ static bool s_terraform_with_history(
                             current_local_coord.z < 0 || current_local_coord.z >= 16) {
                             // If the current voxel coord is out of bounds, switch chunks
                             ivector3_t chunk_coord = space_voxel_to_chunk(current_voxel);
-                            chunk_t *new_chunk = get_chunk(chunk_coord);
+                            chunk_t *new_chunk = g_game->get_chunk(chunk_coord);
 
                             chunk = new_chunk;
 
                             if (!chunk->flags.made_modification) {
                                 // Push this chunk onto list of modified chunks
-                                modified_chunks[modified_chunk_count++] = chunk;
+                                g_game->modified_chunks[g_game->modified_chunk_count++] = chunk;
                             }
                                         
                             chunk->flags.made_modification = 1;
@@ -638,7 +579,7 @@ static bool s_terraform_without_history(
     if (package.ray_hit_terrain) {
         ivector3_t voxel = space_world_to_voxel(package.ws_position);
         ivector3_t chunk_coord = space_voxel_to_chunk(voxel);
-        chunk_t *chunk = access_chunk(chunk_coord);
+        chunk_t *chunk = g_game->access_chunk(chunk_coord);
 
         if (chunk) {
             ivector3_t local_voxel_coord = space_voxel_to_local_chunk(voxel);
@@ -681,7 +622,7 @@ static bool s_terraform_without_history(
                                     current_local_coord.z < 0 || current_local_coord.z >= 16) {
                                     // If the current voxel coord is out of bounds, switch chunks
                                     ivector3_t chunk_coord = space_voxel_to_chunk(current_voxel);
-                                    chunk_t *new_chunk = get_chunk(chunk_coord);
+                                    chunk_t *new_chunk = g_game->get_chunk(chunk_coord);
 
                                     chunk = new_chunk;
                                     chunk->flags.made_modification = 1;
@@ -727,7 +668,7 @@ static bool s_terraform_without_history(
 }
 
 bool terraform(terraform_type_t type, terraform_package_t package, float radius, float speed, float dt) {
-    if (flags.track_history) {
+    if (g_game->flags.track_history) {
         return s_terraform_with_history(
             type,
             package,
@@ -743,21 +684,6 @@ bool terraform(terraform_type_t type, terraform_package_t package, float radius,
             speed,
             dt);
     }
-}
-
-void reset_modification_tracker() {
-    for (uint32_t i = 0; i < modified_chunk_count; ++i) {
-        chunk_t *c = modified_chunks[i];
-        c->flags.made_modification = 0;
-
-        for (int32_t v = 0; v < c->history.modification_count; ++v) {
-            c->history.modification_pool[c->history.modification_stack[v]] = CHUNK_SPECIAL_VALUE;
-        }
-
-        c->history.modification_count = 0;
-    }
-
-    modified_chunk_count = 0;
 }
 
 static uint8_t s_chunk_edge_voxel_value(
@@ -782,7 +708,7 @@ static uint8_t s_chunk_edge_voxel_value(
         chunk_coord_offset_z = 1;
     }
 
-    chunk_t *chunk_ptr = access_chunk(
+    chunk_t *chunk_ptr = g_game->access_chunk(
         ivector3_t(chunk_coord.x + chunk_coord_offset_x,
                    chunk_coord.y + chunk_coord_offset_y,
                    chunk_coord.z + chunk_coord_offset_z));
@@ -924,7 +850,7 @@ static collision_triangle_t *s_get_collision_triangles(
             for (int32_t x = bounding_cube_min.x; x < bounding_cube_max.x; ++x) {
                 ivector3_t voxel_coord = ivector3_t(x, y, z);
                 ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
-                chunk_t *chunk = access_chunk(chunk_coord);
+                chunk_t *chunk = g_game->access_chunk(chunk_coord);
 
                 if (chunk) {
                     bool doesnt_exist = 0;
@@ -1259,10 +1185,7 @@ vector3_t collide_and_slide(
     terrain_collision_t *collision) {
     // Get intersecting triangles
     uint32_t triangle_count = 0;
-    collision_triangle_t *triangles = s_get_collision_triangles(
-        &triangle_count,
-        collision->ws_position,
-        collision->ws_size);
+    collision_triangle_t *triangles = s_get_collision_triangles(&triangle_count, collision->ws_position, collision->ws_size);
 
     if (collision->recurse > 5) {
         return collision->es_position;
@@ -1349,5 +1272,21 @@ vector3_t collide_and_slide(
         }
 
         return collide_and_slide(collision);
+    }
+}
+
+void check_ray_terrain_collision(terrain_collision_t *collision) {
+    uint32_t triangle_count = 0;
+    collision_triangle_t *triangles = s_get_collision_triangles(&triangle_count, collision->ws_position, collision->ws_size);
+
+    for (uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
+        collision_triangle_t *triangle = &triangles[triangle_index];
+
+        for (uint32_t i = 0; i < 3; ++i) {
+            triangle->vertices[i] /= collision->ws_size;
+        }
+
+        // Check collision with this triangle (now is ellipsoid space)
+        s_collided_with_triangle(collision, triangle);
     }
 }

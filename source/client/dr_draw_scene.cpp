@@ -1,4 +1,5 @@
 #include "client/sc_play.hpp"
+#include <common/game.hpp>
 #include "common/team.hpp"
 #include "dr_rsc.hpp"
 #include "cl_main.hpp"
@@ -137,7 +138,7 @@ static void s_render_transition(
     float rotation_angle = atan2(dir_z, dir_x);
 
     matrix4_t rot_matrix = glm::rotate(-rotation_angle, vector3_t(0.0f, 1.0f, 0.0f));
-    // render_data.first_model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(w_get_player_scale());
+    // render_data.first_model = glm::translate(p->ws_position) * normal_rotation_matrix * glm::scale(w_g_game->get_player_scale());
     render_data.first_model = glm::translate(p->ws_position) *
         normal_rotation_matrix *
         p->render->animations.cycles->rotation *
@@ -206,8 +207,8 @@ static void s_players_gpu_sync_and_render(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer) {
-    for (uint32_t i = 0; i < get_player_count(); ++i) {
-        player_t *p = get_player(i);
+    for (uint32_t i = 0; i < g_game->players.data_count; ++i) {
+        player_t *p = g_game->get_player(i);
         if (p) {
             if (p->flags.alive_state == PAS_ALIVE) {
                 if (!p->render) {
@@ -265,7 +266,7 @@ static void s_chunks_gpu_sync_and_render(
         dr_chunk_colors_g.chunk_color.pointer_radius = 0.0f;
     }
 
-    dr_chunk_colors_g.chunk_color.pointer_position = vector4_t(current_terraform_package->ws_position, 1.0f);
+    dr_chunk_colors_g.chunk_color.pointer_position = vector4_t(current_terraform_package->ws_contact_point, 1.0f);
     dr_chunk_colors_g.chunk_color.pointer_color = vector4_t(0.0f, 1.0f, 1.0f, 1.0f);
 
     update_gpu_buffer(
@@ -282,7 +283,7 @@ static void s_chunks_gpu_sync_and_render(
         dr_chunk_colors_g.chunk_color_set);
 
     uint32_t chunk_count;
-    chunk_t **chunks = get_active_chunks(&chunk_count);
+    chunk_t **chunks = g_game->get_active_chunks(&chunk_count);
     uint8_t surface_level = CHUNK_SURFACE_LEVEL;
 
     const eye_3d_info_t *eye_info = sc_get_eye_info();

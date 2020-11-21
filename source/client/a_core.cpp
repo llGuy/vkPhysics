@@ -121,7 +121,7 @@ void tick_ai() {
         }
 
         neat_entity_t *n_ent = &universe.entities[ai->ai_id];
-        player_t *p = get_player(ai->player_id);
+        player_t *p = g_game->get_player(ai->player_id);
 
         inputs[0] = p->ws_position.x;
         inputs[1] = p->ws_position.y;
