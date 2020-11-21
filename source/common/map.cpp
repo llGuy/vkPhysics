@@ -20,6 +20,7 @@ void load_map_names() {
     map_names_file = create_file("assets/maps/map_names", FLF_TEXT);
     file_contents_t contents = read_file(map_names_file);
 
+    uint32_t byte_counter = 0;
     char *p = (char *)contents.data;
 
     char map_name[40] = {};
@@ -27,7 +28,8 @@ void load_map_names() {
 
     map_names.count = 0;
 
-    while (p && map_names.count < MAX_MAP_COUNT) {
+    while (p && (p - (char *)contents.data) < contents.size && 
+        map_names.count < MAX_MAP_COUNT) {
         p = skip_to(p, '\"');
 
         char *end_of_name = skip_to(p, '\"');
