@@ -1,4 +1,5 @@
 #include "weapon.hpp"
+#include "constant.hpp"
 #include "common/containers.hpp"
 
 void weapon_t::init(
@@ -20,6 +21,7 @@ void weapon_t::init(
     ammo_left = max_ammo - max_clip_size;
 
     elapsed = 0.0f;
+    recoil_time = 1.0f / rps;
     ready = 1;
 }
 
@@ -32,4 +34,9 @@ void weapon_t::weapon_reload() {
         clip_size = max_clip_size;
         ammo_left -= max_clip_size;
     }
+}
+
+void tick_rock(rock_t *rock, float dt) {
+    rock->position += rock->direction * dt;
+    rock->direction -= rock->up * dt * GRAVITY_ACCELERATION;
 }

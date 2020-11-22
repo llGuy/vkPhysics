@@ -5,5 +5,5 @@
 - Fix terrain pointer
 - Fix frustum culling weirdness
 - Fix shadows
-- ADD THE FUCKING WEAPONS
+- ADD THE WEAPONS
 - Add trees, etc...

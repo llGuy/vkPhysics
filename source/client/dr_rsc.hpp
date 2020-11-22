@@ -26,6 +26,7 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path);
 
 enum game_mesh_t { GM_PLAYER, GM_BALL, GM_MERGED, GM_BULLET, GM_INVALID };
 mesh_t *dr_get_mesh_rsc(game_mesh_t mesh);
+
 enum game_shader_t {
     GS_PLAYER,
     GS_PLAYER_SHADOW,

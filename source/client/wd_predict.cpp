@@ -160,3 +160,6 @@ void wd_kill_local_player(struct event_submissions_t *events) {
 struct terraform_package_t *wd_get_local_terraform_package() {
     return &local_current_terraform_package;
 }
+
+void wd_predict_projectiles() {
+}

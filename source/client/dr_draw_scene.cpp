@@ -325,6 +325,33 @@ static void s_chunks_gpu_sync_and_render(
     }
 }
 
+static void s_projectiles_gpu_sync_and_render(
+    VkCommandBuffer render,
+    VkCommandBuffer shadow,
+    VkCommandBuffer transfer) {
+    for (uint32_t i = 0; i < g_game->local_rocks.data_count; ++i) {
+        mesh_render_data_t data = {};
+        data.color = vector4_t(0.0f);
+        data.model = glm::translate(g_game->local_rocks[i].position) * glm::scale(vector3_t(0.2f));
+        data.pbr_info.x = 0.5f;
+        data.pbr_info.y = 0.5f;
+
+        begin_mesh_submission(render, dr_get_shader_rsc(GS_BALL));
+
+        submit_mesh(
+            render,
+            dr_get_mesh_rsc(GM_BALL),
+            dr_get_shader_rsc(GS_BALL),
+            {&data, DEF_MESH_RENDER_DATA_SIZE});
+
+        submit_mesh_shadow(
+            shadow,
+            dr_get_mesh_rsc(GM_BALL),
+            dr_get_shader_rsc(GS_BALL_SHADOW),
+            {&data, DEF_MESH_RENDER_DATA_SIZE});
+    }
+}
+
 void dr_draw_game(
     VkCommandBuffer render,
     VkCommandBuffer transfer,
@@ -349,6 +376,7 @@ void dr_draw_game(
 
     s_players_gpu_sync_and_render(render, shadow, transfer);
     s_chunks_gpu_sync_and_render(&frustum, render, shadow, transfer);
+    s_projectiles_gpu_sync_and_render(render, shadow, transfer);
 
     if (render != VK_NULL_HANDLE) {
         render_environment(render);
@@ -361,12 +389,14 @@ void dr_draw_premade_scene(
     fixed_premade_scene_t *scene) {
     begin_mesh_submission(
         render,
-        dr_get_shader_rsc(GS_CHUNK),
+        dr_get_shader_rsc(GS_BALL),
         dr_chunk_colors_g.chunk_color_set);
+
+    scene->world_render_data.color = vector4_t(0.0f);
 
     submit_mesh(
         render,
         &scene->world_mesh,
-        dr_get_shader_rsc(GS_CHUNK),
+        dr_get_shader_rsc(GS_BALL),
         {&scene->world_render_data, DEF_MESH_RENDER_DATA_SIZE});
 }

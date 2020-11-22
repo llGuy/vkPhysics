@@ -35,19 +35,27 @@ struct weapon_t {
     weapon_type_t type;
 
     float rounds_per_sec;
+    float recoil_time;
     float elapsed;
     bool ready;
 };
 
 // All the different types of projectiles which will deal damage (e.g. rocks, exploding rocks, etc...)
 struct rock_t {
+    struct {
+        uint32_t active: 1;
+        uint32_t spawned_locally: 1;
+    } flags;
+
     vector3_t position;
     vector3_t direction;
+    vector3_t up;
 };
 
 // TODO
 struct exploding_rock_t {
     vector3_t position;
+    //....
 };
 
 // Initialise all the memory to contain the rocks / bullets which will deal damage
@@ -57,3 +65,4 @@ void spawn_rock(
     const vector3_t &position,
     const vector3_t &start_direction);
 
+void tick_rock(rock_t *rock, float dt);

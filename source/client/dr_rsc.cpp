@@ -233,39 +233,16 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path) {
 
     uint32_t vertex_count = serialiser.deserialise_uint32();
 
-    compressed_chunk_mesh_vertex_t *vertices = LN_MALLOC(compressed_chunk_mesh_vertex_t, vertex_count);
+    vector3_t *vertices = LN_MALLOC(vector3_t, vertex_count);
 
     for (uint32_t i = 0; i < vertex_count; ++i) {
-        vector3_t vertex = serialiser.deserialise_vector3();
-        uint8_t color = 0;
-
-        vector3_t floor_of_vertex = glm::min(glm::floor(vertex), vector3_t(15.0f));
-        ivector3_t ifloor_of_vertex = ivector3_t(floor_of_vertex);
-
-        vector3_t normalized_vertex = (vertex - floor_of_vertex);
-        ivector3_t inormalized_vertex = ivector3_t((vertex - floor_of_vertex) * 255.0f);
-    
-        uint32_t low = 0;
-        uint32_t high = 0;
-
-        low += (ifloor_of_vertex.x << 28);
-        low += (ifloor_of_vertex.y << 24);
-        low += (ifloor_of_vertex.z << 20);
-        low += (inormalized_vertex.x << 12);
-        low += (inormalized_vertex.y << 4);
-        low += inormalized_vertex.z >> 4;
-
-        high += inormalized_vertex.z << 28;
-        high += color << 20;
-
-        vertices[i].low = low;
-        vertices[i].high = high;
+        vertices[i] = serialiser.deserialise_vector3();
     }
 
     push_buffer_to_mesh(BT_VERTEX, &res.world_mesh);
     mesh_buffer_t *vtx_buffer = get_mesh_buffer(BT_VERTEX, &res.world_mesh);
     vtx_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(compressed_chunk_mesh_vertex_t) * vertex_count,
+        sizeof(vector3_t) * vertex_count,
         vertices,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 

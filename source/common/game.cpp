@@ -1,3 +1,4 @@
+#include "common/constant.hpp"
 #include "common/containers.hpp"
 #include "map.hpp"
 #include "game.hpp"
@@ -49,6 +50,11 @@ void game_t::init_memory() {
         modified_chunks = FL_MALLOC(chunk_t *, max_modified_chunks);
 
         flags.track_history = 1;
+    }
+
+    { // Projectiles
+        local_rocks.init(PROJECTILE_MAX_LOCAL_ROCK_COUNT);
+        remote_rocks.init(PROJECTILE_MAX_REMOTE_ROCK_COUNT);
     }
 }
 
@@ -218,10 +224,17 @@ player_t *game_t::get_player(int32_t local_id) {
 
 void game_t::spawn_rock(
     const vector3_t &position,
-    const vector3_t &start_direction) {
-    rock_t r = { position, start_direction };
-    uint32_t idx = rocks.add();
-    rocks[idx] = r;
+    const vector3_t &start_direction,
+    const vector3_t &up) {
+    rock_t r = {};
+    r.flags.active = 1;
+    r.flags.spawned_locally = 1;
+    r.position = position;
+    r.direction = start_direction * PROJECTILE_ROCK_SPEED;
+    r.up = up;
+
+    uint32_t idx = local_rocks.add();
+    local_rocks[idx] = r;
 }
 
 void game_t::clear_chunks() {

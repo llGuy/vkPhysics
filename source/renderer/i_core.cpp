@@ -278,17 +278,14 @@ void poll_input_events(event_submissions_t *submissions) {
 
     sdelta_time = get_current_time() - current_time;
 
-    const float MAX_FRAME_TIME = 1.0f / 60.0f;
+    const float FRAME_TIME = 1.0f / 100.0f;
 
-#if 0
-    if (sdelta_time > MAX_FRAME_TIME) {
-        // This is just for debugging
-        sdelta_time = MAX_FRAME_TIME;
-    }
-    else {
-        double wait_time = (MAX_FRAME_TIME - sdelta_time);
+#if 1
+    if (sdelta_time < FRAME_TIME) {
+        double wait_time = (FRAME_TIME - sdelta_time);
+
         sleep_seconds(wait_time);
-        sdelta_time = MAX_FRAME_TIME;
+        sdelta_time = FRAME_TIME;
     }
 #endif
 

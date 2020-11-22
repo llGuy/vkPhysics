@@ -5,7 +5,8 @@
 #include <glm/gtx/projection.hpp>
 
 static void s_init_player_weapons(player_t *p) {
-    p->weapons[0].init(40, 40, firing_type_t::SEMI_AUTOMATIC, bullet_type_t::PROJECTILE, weapon_type_t::ROCKS, 0.3f);
+    p->weapon_count = 2;
+    p->weapons[0].init(40, 40, firing_type_t::SEMI_AUTOMATIC, bullet_type_t::PROJECTILE, weapon_type_t::ROCKS, 5.0f);
     p->weapons[1].init(0, 0, firing_type_t::INVALID, bullet_type_t::INVALID, weapon_type_t::TERRAFORMER, 0);
 }
 
@@ -22,6 +23,7 @@ static void s_set_default_values(
     player->ws_velocity = vector3_t(0.0f);
 
     // FOR NOW: just have the default weapon setup
+
     player->selected_weapon = 0;
     s_init_player_weapons(player);
 }
@@ -99,7 +101,7 @@ void handle_shape_switch(player_t *player, bool switch_shapes, float dt) {
         player->shape_switching_time = 0.0f;
         player->switching_shapes = 0;
     }
-}
+} 
 
 static void s_handle_weapon_switch(
     player_t *player,
@@ -108,9 +110,11 @@ static void s_handle_weapon_switch(
         if (actions->next_weapon == 0b111) {
             // Just cycle through to next weapon
             player->selected_weapon = (player->selected_weapon + 1) % player->weapon_count;
+            LOG_INFOV("Player chose weapon: %d\n", player->selected_weapon);
         }
         else if (actions->next_weapon < player->weapon_count) {
             player->selected_weapon = actions->next_weapon;
+            LOG_INFOV("Player chose weapon: %d\n", player->selected_weapon);
         }
     }
 }
@@ -121,15 +125,25 @@ static void s_execute_player_triggers(
     player_action_t *player_actions) {
     s_handle_weapon_switch(player, player_actions);
 
-    #if 0
-    switch (player->weapons[player->selected_weapon].type) {
+    weapon_t *weapon = &player->weapons[player->selected_weapon];
+
+    switch (weapon->type) {
     case weapon_type_t::ROCKS: {
-        
+        // Spawn rock
+        if (player_actions->trigger_left && weapon->elapsed > weapon->recoil_time) {
+            weapon->elapsed = 0.0f;
+
+            g_game->spawn_rock(
+                compute_player_view_position(player),
+                player->ws_view_direction,
+                player->ws_up_vector);
+        }
+
+        player->terraform_package.ray_hit_terrain = 0;
     } break;
 
         // Special case
     case weapon_type_t::TERRAFORMER: {
-        #endif
         player->terraform_package = cast_terrain_ray(
             compute_player_view_position(player),
             player->ws_view_direction,
@@ -144,10 +158,8 @@ static void s_execute_player_triggers(
         if (player_actions->flashlight) {
             player->flags.flashing_light ^= 1;
         }
-        #if 0
     } break;
     }
-    #endif
 }
 
 static void s_execute_player_direction_change(
@@ -392,9 +404,9 @@ static void s_execute_standing_player_movement(
     }
 
     force_values_t forces = {};
-    forces.friction = 9.0f;
-    forces.movement_acceleration = 8.0f;
-    forces.gravity = 10.0f;
+    forces.friction = 5.0f;
+    forces.movement_acceleration = 8.5f;
+    forces.gravity = GRAVITY_ACCELERATION;
     forces.maximum_walking_speed = player->default_speed * 0.8;
 
     s_resolve_player_movement(
@@ -553,6 +565,10 @@ void execute_action(player_t *player, player_action_t *action) {
     default: {
     } break;
 
+    }
+
+    for (uint32_t i = 0; i < player->weapon_count; ++i) {
+        player->weapons[i].elapsed += action->dt;
     }
 }
 

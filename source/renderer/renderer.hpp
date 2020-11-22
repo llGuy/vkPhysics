@@ -572,6 +572,7 @@ DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_alpha,
     const char **shader_paths,
     VkShaderStageFlags shader_flags,
     VkPrimitiveTopology topology,
+
     mesh_type_flags_t type);
 
 DECLARE_RENDERER_PROC(shader_binding_info_t, create_mesh_binding_info,

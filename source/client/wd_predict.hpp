@@ -10,3 +10,5 @@ void wd_execute_player_actions(struct player_t *player, struct event_submissions
 void wd_predict_state(struct event_submissions_t *events);
 void wd_kill_local_player(struct event_submissions_t *events);
 struct terraform_package_t *wd_get_local_terraform_package();
+
+void wd_predict_projectiles();

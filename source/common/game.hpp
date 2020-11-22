@@ -46,7 +46,10 @@ struct game_t {
     } flags;
 
     // Rocks //////////////////////////////////////////////////////////////////
-    stack_container_t<rock_t> rocks;
+    // Rocks that were spawned locally (and that need to be "predicted")
+    stack_container_t<rock_t> local_rocks;
+    // Rocks that were spawned remotely (and that need to be "interpolated")
+    stack_container_t<rock_t> remote_rocks;
 
 
 
@@ -91,7 +94,8 @@ struct game_t {
 
     void spawn_rock(
         const vector3_t &position,
-        const vector3_t &start_direction);
+        const vector3_t &start_direction,
+        const vector3_t &up);
 
     void clear_chunks();
 

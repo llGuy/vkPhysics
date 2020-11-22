@@ -1,5 +1,6 @@
 #include "wd_core.hpp"
 #include "cl_main.hpp"
+#include "common/weapon.hpp"
 #include "wd_event.hpp"
 #include "dr_chunk.hpp"
 #include "wd_interp.hpp"
@@ -54,6 +55,26 @@ void wd_tick(event_submissions_t *events) {
     }
 
     wd_predict_state(events);
+
+    { // Local and remote projectiles (basically predicting the state)
+        for (uint32_t i = 0; i < g_game->local_rocks.data_count; ++i) {
+            rock_t *rock = &g_game->local_rocks[i];
+
+            if (rock->flags.active) {
+                tick_rock(rock, g_game->dt);
+
+                // Check if there was collision with players
+            }
+        }
+
+        for (uint32_t i = 0; i < g_game->remote_rocks.data_count; ++i) {
+            rock_t *rock = &g_game->remote_rocks[i];
+
+            if (rock->flags.active) {
+                tick_rock(rock, g_game->dt);
+            }
+        }
+    }
 }
 
 void wd_set_i_am_in_server(bool b) {
