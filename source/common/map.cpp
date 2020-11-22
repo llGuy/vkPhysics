@@ -30,6 +30,12 @@ void load_map_names() {
 
     while (p && (p - (char *)contents.data) < contents.size && 
         map_names.count < MAX_MAP_COUNT) {
+        { // Check if we hit the keyword end
+            if (!memcmp(p, "end", 3)) {
+                break;
+            }
+        }
+
         p = skip_to(p, '\"');
 
         char *end_of_name = skip_to(p, '\"');
