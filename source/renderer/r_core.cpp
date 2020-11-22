@@ -1150,10 +1150,26 @@ VkDeviceMemory allocate_gpu_buffer_memory(
     return memory;
 }
 
+void * map_gpu_memory(
+    VkDeviceMemory memory,
+    uint32_t size,
+    uint32_t offset) {
+    void *ptr;
+    vkMapMemory(r_device(), memory, offset, size, 0, &ptr);
+
+    return ptr;
+}
+
+void unmap_gpu_memory(
+    VkDeviceMemory memory) {
+    vkUnmapMemory(r_device(), memory);
+}
+
 gpu_buffer_t create_gpu_buffer(
     uint32_t size,
     void *data,
-    VkBufferUsageFlags usage) {
+    VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags memory_flags) {
     VkBufferCreateInfo buffer_info = {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = size;
@@ -1165,7 +1181,7 @@ gpu_buffer_t create_gpu_buffer(
 
     VkDeviceMemory memory = allocate_gpu_buffer_memory(
         buffer,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        memory_flags);
 
     gpu_buffer_t gpu_buffer = {};
     gpu_buffer.buffer = buffer;
@@ -1957,7 +1973,8 @@ texture_t create_texture(
     gpu_buffer_t staging = create_gpu_buffer(
         pixel_component_size * x * y * channels,
         pixels,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     VkCommandBuffer command_buffer = begin_single_time_command_buffer();
 

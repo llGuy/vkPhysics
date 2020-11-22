@@ -89,6 +89,14 @@ DECLARE_RENDERER_PROC(VkDeviceMemory, allocate_gpu_buffer_memory,
     VkBuffer buffer,
     VkMemoryPropertyFlags properties);
 
+DECLARE_RENDERER_PROC(void *, map_gpu_memory,
+    VkDeviceMemory memory,
+    uint32_t size,
+    uint32_t offset);
+
+DECLARE_VOID_RENDERER_PROC(void, unmap_gpu_memory,
+    VkDeviceMemory memory);
+
 struct gpu_buffer_t {
     VkBuffer buffer;
     VkDeviceMemory memory;
@@ -99,7 +107,8 @@ struct gpu_buffer_t {
 DECLARE_RENDERER_PROC(gpu_buffer_t, create_gpu_buffer,
     uint32_t size,
     void *data,
-    VkBufferUsageFlags usage);
+    VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags memory_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 DECLARE_VOID_RENDERER_PROC(void, update_gpu_buffer,
     VkCommandBuffer command_buffer,

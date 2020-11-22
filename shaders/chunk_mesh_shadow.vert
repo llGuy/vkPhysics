@@ -1,7 +1,7 @@
 #version 450
 
-layout(location = 0) in vec3 in_position;
-layout(location = 1) in uint in_color;
+layout(location = 0) in uint in_low;
+layout(location = 1) in uint in_high;
 
 layout(location = 0) out VS_DATA {
     float depth;
@@ -33,6 +33,18 @@ layout(set = 0, binding = 0) uniform lighting_t {
 } u_lighting_transforms;
 
 void main() {
-    gl_Position = u_lighting_transforms.shadow_view_projection * u_push_constant.model * vec4(in_position, 1.0f);
+    uint ix = in_low >> 28;
+    uint iy = (in_low >> 24) & 15;
+    uint iz = (in_low >> 20) & 15;
+
+    uint inormalized_x = (in_low >> 12) & 255;
+    uint inormalized_y = (in_low >> 4) & 255;
+    uint inormalized_z = ((in_low) & 15) << 4;
+    inormalized_z += (in_high >> 28);
+
+    vec3 position = vec3(float(ix), float(iy), float(iz));
+    position += vec3(float(inormalized_x), float(inormalized_y), float(inormalized_z)) / 255.0f;
+
+    gl_Position = u_lighting_transforms.shadow_view_projection * u_push_constant.model * vec4(position, 1.0f);
     out_vs.depth = gl_Position.z / gl_Position.w;
 }

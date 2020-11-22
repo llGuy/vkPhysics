@@ -6,7 +6,7 @@
 // Shaders, meshes, etc...
 void dr_resources_init();
 void dr_player_animated_instance_init(struct animated_instance_t *instance);
-struct chunk_mesh_vertex_t *dr_get_tmp_mesh_verts();
+struct compressed_chunk_mesh_vertex_t *dr_get_tmp_mesh_verts();
 
 struct fixed_premade_scene_t {
     struct {

@@ -16,7 +16,7 @@ chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_p
     memset(chunk_render, 0, sizeof(chunk_render_t));
 
     // Color of each vertex: uint32_t
-    uint32_t buffer_size = sizeof(chunk_mesh_vertex_t) * CHUNK_MAX_VERTICES_PER_CHUNK;
+    uint32_t buffer_size = sizeof(compressed_chunk_mesh_vertex_t) * CHUNK_MAX_VERTICES_PER_CHUNK;
 
     push_buffer_to_mesh(BT_VERTEX, &chunk_render->mesh);
     mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, &chunk_render->mesh);
@@ -119,10 +119,10 @@ static void s_push_vertex_to_triangle_array(
     voxel_color_t color,
     uint8_t v0,
     uint8_t v1,
-    chunk_mesh_vertex_t *vertices,
+    uncompressed_chunk_mesh_vertex_t *vertices,
     voxel_t *voxel_values,
     uint8_t surface_level,
-    chunk_mesh_vertex_t *mesh_vertices,
+    compressed_chunk_mesh_vertex_t *mesh_vertices,
     uint32_t *vertex_count) {
     float surface_level_f = (float)surface_level;
     float voxel_value0 = (float)voxel_values[v0].value;
@@ -141,10 +141,34 @@ static void s_push_vertex_to_triangle_array(
     float interpolated_voxel_values = lerp(voxel_value0, voxel_value1, surface_level_f);
     
     vector3_t vertex = interpolate(vertices[v0].position, vertices[v1].position, interpolated_voxel_values);
+
+    vector3_t floor_of_vertex = glm::min(glm::floor(vertex), vector3_t(15.0f));
+    ivector3_t ifloor_of_vertex = ivector3_t(floor_of_vertex);
+
+    vector3_t normalized_vertex = (vertex - floor_of_vertex);
+    ivector3_t inormalized_vertex = ivector3_t((vertex - floor_of_vertex) * 255.0f);
     
+    uint32_t low = 0;
+    uint32_t high = 0;
+
+    low += (ifloor_of_vertex.x << 28);
+    low += (ifloor_of_vertex.y << 24);
+    low += (ifloor_of_vertex.z << 20);
+    low += (inormalized_vertex.x << 12);
+    low += (inormalized_vertex.y << 4);
+    low += inormalized_vertex.z >> 4;
+
+    high += inormalized_vertex.z << 28;
+    high += color << 20;
+
+    mesh_vertices[*(vertex_count)].low = low;
+    mesh_vertices[*(vertex_count)].high = high;
+
+#if 0
     mesh_vertices[*(vertex_count)].position = vertex;
     // In the shader, we will need to convert this 8-bit color to fully RGB color
     mesh_vertices[*(vertex_count)].color = (uint32_t)color;
+#endif
 
     ++(*vertex_count);
 }
@@ -157,7 +181,7 @@ static void s_update_chunk_mesh_voxel_pair(
     uint32_t y,
     uint32_t z,
     uint8_t surface_level,
-    chunk_mesh_vertex_t *mesh_vertices,
+    compressed_chunk_mesh_vertex_t *mesh_vertices,
     uint32_t *vertex_count) {
     uint8_t bit_combination = 0;
     for (uint32_t i = 0; i < 8; ++i) {
@@ -179,7 +203,7 @@ static void s_update_chunk_mesh_voxel_pair(
             voxel_color_t color;
             uint32_t dominant_voxel = 0;
 
-            chunk_mesh_vertex_t vertices[8] = {};
+            uncompressed_chunk_mesh_vertex_t vertices[8] = {};
             for (uint32_t i = 0; i < 8; ++i) {
                 vertices[i].position = NORMALIZED_CUBE_VERTICES[i] + vector3_t(0.5f) + vector3_t((float)x, (float)y, (float)z);
                 vertices[i].color = voxel_values[i].color;
@@ -213,7 +237,7 @@ static void s_update_chunk_mesh_voxel_pair(
     }
 }
 
-uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, chunk_mesh_vertex_t *mesh_vertices) {
+uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, compressed_chunk_mesh_vertex_t *mesh_vertices) {
     if (!mesh_vertices)
         mesh_vertices = dr_get_tmp_mesh_verts();
 
@@ -322,7 +346,7 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, chunk_
     return vertex_count;
 }
 
-void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_level, chunk_t *c, chunk_mesh_vertex_t *mesh_vertices) {
+void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_level, chunk_t *c, compressed_chunk_mesh_vertex_t *mesh_vertices) {
     if (!mesh_vertices) {
         mesh_vertices = dr_get_tmp_mesh_verts();
     }
@@ -336,7 +360,10 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
         }
 
         static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
-        uint32_t update_size = vertex_count * sizeof(chunk_mesh_vertex_t);
+        uint32_t update_size = vertex_count * sizeof(compressed_chunk_mesh_vertex_t);
+
+        printf("################\n");
+        LOG_INFOV("Updated chunk (%i %i %i): %d vertices\n", c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z, vertex_count);
 
         uint32_t loop_count = update_size / MAX_UPDATE_BUFFER_SIZE;
 
@@ -353,6 +380,8 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
                 pointer,
                 &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
 
+            LOG_INFOV("Updated chunk (%i %i %i): %d out of %d bytes\n", c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z, MAX_UPDATE_BUFFER_SIZE, update_size);
+
             copied += MAX_UPDATE_BUFFER_SIZE;
             pointer += MAX_UPDATE_BUFFER_SIZE;
             to_copy_left -= MAX_UPDATE_BUFFER_SIZE;
@@ -366,7 +395,11 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
                 to_copy_left,
                 pointer,
                 &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
+
+            LOG_INFOV("Updated chunk (%i %i %i): %d out of %d bytes\n", c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z, to_copy_left, update_size);
         }
+
+        printf("\n");
         
         c->render->mesh.vertex_count = vertex_count;
     }

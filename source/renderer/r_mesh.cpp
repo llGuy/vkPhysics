@@ -275,14 +275,16 @@ static void s_load_sphere(
     indices_gpu_buffer->gpu_buffer = create_gpu_buffer(
         sizeof(uint32_t) * index_count,
         indices,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     push_buffer_to_mesh(BT_VERTEX, mesh);
     mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, mesh);
     vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
         sizeof(vector3_t) * vertex_count,
         positions,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     // push_buffer_to_mesh(BT_UVS, mesh);
     // mesh_buffer_t *uvs_gpu_buffer = get_mesh_buffer(BT_UVS, mesh);
@@ -355,14 +357,16 @@ static void s_load_cube(
     indices_gpu_buffer->gpu_buffer = create_gpu_buffer(
         sizeof(uint32_t) * index_count,
         indices,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     push_buffer_to_mesh(BT_VERTEX, mesh);
     mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, mesh);
     vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
         sizeof(vector3_t) * vertex_count,
         vertices,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     if (binding_info) {
         *binding_info = create_mesh_binding_info(mesh);

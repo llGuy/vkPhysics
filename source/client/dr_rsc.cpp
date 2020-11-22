@@ -23,7 +23,7 @@ chunk_color_mem_t dr_chunk_colors_g;
 
 static struct tmp_t {
     // These are used temporarily to generate a chunk's mesh
-    chunk_mesh_vertex_t *mesh_vertices;
+    compressed_chunk_mesh_vertex_t *mesh_vertices;
 } tmp;
 
 static void s_create_player_shaders_and_meshes() {
@@ -147,17 +147,17 @@ static void s_create_chunk_shaders() {
 
     binding_info.binding_descriptions[0].binding = 0;
     binding_info.binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    binding_info.binding_descriptions[0].stride = sizeof(vector3_t) + sizeof(uint32_t);
+    binding_info.binding_descriptions[0].stride = sizeof(uint32_t) + sizeof(uint32_t);
     
     binding_info.attribute_descriptions[0].binding = 0;
     binding_info.attribute_descriptions[0].location = 0;
-    binding_info.attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    binding_info.attribute_descriptions[0].format = VK_FORMAT_R32_UINT;
     binding_info.attribute_descriptions[0].offset = 0;
 
     binding_info.attribute_descriptions[1].binding = 0;
     binding_info.attribute_descriptions[1].location = 1;
     binding_info.attribute_descriptions[1].format = VK_FORMAT_R32_UINT;
-    binding_info.attribute_descriptions[1].offset = sizeof(vector3_t);
+    binding_info.attribute_descriptions[1].offset = sizeof(uint32_t);
 
     const char *shader_paths[] = {
         "shaders/SPV/chunk_mesh.vert.spv",
@@ -204,14 +204,14 @@ void dr_resources_init() {
     s_create_player_shaders_and_meshes();
     s_create_chunk_shaders();
 
-    tmp.mesh_vertices = FL_MALLOC(chunk_mesh_vertex_t, CHUNK_MAX_VERTICES_PER_CHUNK);
+    tmp.mesh_vertices = FL_MALLOC(compressed_chunk_mesh_vertex_t, CHUNK_MAX_VERTICES_PER_CHUNK);
 }
 
 void dr_player_animated_instance_init(animated_instance_t *instance) {
     animated_instance_init(instance, &animations.player_sk, &animations.player_cyc);
 }
 
-chunk_mesh_vertex_t *dr_get_tmp_mesh_verts() {
+compressed_chunk_mesh_vertex_t *dr_get_tmp_mesh_verts() {
     return tmp.mesh_vertices;
 }
 
@@ -233,18 +233,39 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path) {
 
     uint32_t vertex_count = serialiser.deserialise_uint32();
 
-    chunk_mesh_vertex_t *vertices = LN_MALLOC(chunk_mesh_vertex_t, vertex_count);
+    compressed_chunk_mesh_vertex_t *vertices = LN_MALLOC(compressed_chunk_mesh_vertex_t, vertex_count);
 
     for (uint32_t i = 0; i < vertex_count; ++i) {
-        vertices[i].position = serialiser.deserialise_vector3();
-        // Just set to black for now
-        vertices[i].color = (uint32_t)v3_color_to_b8(vector3_t(0.0f));
+        vector3_t vertex = serialiser.deserialise_vector3();
+        uint8_t color = 0;
+
+        vector3_t floor_of_vertex = glm::min(glm::floor(vertex), vector3_t(15.0f));
+        ivector3_t ifloor_of_vertex = ivector3_t(floor_of_vertex);
+
+        vector3_t normalized_vertex = (vertex - floor_of_vertex);
+        ivector3_t inormalized_vertex = ivector3_t((vertex - floor_of_vertex) * 255.0f);
+    
+        uint32_t low = 0;
+        uint32_t high = 0;
+
+        low += (ifloor_of_vertex.x << 28);
+        low += (ifloor_of_vertex.y << 24);
+        low += (ifloor_of_vertex.z << 20);
+        low += (inormalized_vertex.x << 12);
+        low += (inormalized_vertex.y << 4);
+        low += inormalized_vertex.z >> 4;
+
+        high += inormalized_vertex.z << 28;
+        high += color << 20;
+
+        vertices[i].low = low;
+        vertices[i].high = high;
     }
 
     push_buffer_to_mesh(BT_VERTEX, &res.world_mesh);
     mesh_buffer_t *vtx_buffer = get_mesh_buffer(BT_VERTEX, &res.world_mesh);
     vtx_buffer->gpu_buffer = create_gpu_buffer(
-        sizeof(chunk_mesh_vertex_t) * vertex_count,
+        sizeof(compressed_chunk_mesh_vertex_t) * vertex_count,
         vertices,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 

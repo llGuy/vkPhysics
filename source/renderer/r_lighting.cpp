@@ -154,7 +154,8 @@ void r_lighting_init() {
     light_uniform_buffer = create_gpu_buffer(
         sizeof(lighting_data_t),
         &lighting_data,
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     
     light_descriptor_set = create_buffer_descriptor_set(
         light_uniform_buffer.buffer,

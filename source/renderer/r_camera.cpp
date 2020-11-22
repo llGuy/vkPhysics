@@ -65,7 +65,8 @@ void r_camera_init(void *window) {
     transforms_uniform_buffer = create_gpu_buffer(
         sizeof(gpu_camera_transforms_t),
         &transforms,
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     descriptor_set = create_buffer_descriptor_set(
         transforms_uniform_buffer.buffer,

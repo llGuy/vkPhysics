@@ -395,7 +395,7 @@ static void s_execute_standing_player_movement(
     forces.friction = 9.0f;
     forces.movement_acceleration = 8.0f;
     forces.gravity = 10.0f;
-    forces.maximum_walking_speed = player->default_speed * 0.5f;
+    forces.maximum_walking_speed = player->default_speed * 0.8;
 
     s_resolve_player_movement(
         player,

@@ -4,13 +4,23 @@
 
 typedef mesh_render_data_t chunk_render_data_t;
 
-struct chunk_mesh_vertex_t {
+struct uncompressed_chunk_mesh_vertex_t {
     vector3_t position;
     uint32_t color;
 };
 
+struct compressed_chunk_mesh_vertex_t {
+    // 12 bits for the coordinate of the nearest voxel
+    // 20 bits: 8 (normalized x of the vertex), 8 (normalized y of the vertex), 4 (first 4 bits of z)
+    uint32_t low;
+    // 4 bits for the second half of z, and 8 bits for the color
+    uint32_t high;
+    // Find way to avoid wasting 20 bits !
+};
+
 struct chunk_render_t {
     mesh_t mesh;
+
     chunk_render_data_t render_data;
 
     uint32_t id;
@@ -25,4 +35,4 @@ void dr_update_chunk_draw_rsc(
     VkCommandBuffer command_buffer,
     uint8_t surface_level,
     chunk_t *c,
-    chunk_mesh_vertex_t *verts = NULL);
+    compressed_chunk_mesh_vertex_t *verts = NULL);
