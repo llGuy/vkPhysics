@@ -161,6 +161,8 @@ static void s_meta_thread() {
 
         case R_QUIT: {
             quit = 1;
+
+            return;
         } break;
         }
 
@@ -168,9 +170,11 @@ static void s_meta_thread() {
 
         printf("META: Finished this job\n");;
 
+#if 0
         if (quit) {
             break;
         }
+#endif
 
         shared.doing_job = 0;
 

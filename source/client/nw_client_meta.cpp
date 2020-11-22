@@ -21,6 +21,8 @@ static const char *path_to_user_meta_info = "assets/.user_meta";
 
 void nw_init_meta_connection() {
     begin_meta_client_thread();
+
+    current_username = NULL;
 }
 
 void nw_set_path_to_user_meta_info(const char *path) {
@@ -242,6 +244,7 @@ void nw_request_available_servers() {
 
 void nw_notify_meta_disconnection() {
     send_request(R_QUIT, NULL);
+    LOG_INFO("Telling meta server we disconnected\n");
 }
 
 void nw_stop_request_thread() {
