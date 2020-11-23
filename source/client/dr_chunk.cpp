@@ -362,9 +362,6 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
         static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
         uint32_t update_size = vertex_count * sizeof(compressed_chunk_mesh_vertex_t);
 
-        printf("################\n");
-        LOG_INFOV("Updated chunk (%i %i %i): %d vertices\n", c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z, vertex_count);
-
         uint32_t loop_count = update_size / MAX_UPDATE_BUFFER_SIZE;
 
         typedef char copy_byte_t;
@@ -380,8 +377,6 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
                 pointer,
                 &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
 
-            LOG_INFOV("Updated chunk (%i %i %i): %d out of %d bytes\n", c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z, MAX_UPDATE_BUFFER_SIZE, update_size);
-
             copied += MAX_UPDATE_BUFFER_SIZE;
             pointer += MAX_UPDATE_BUFFER_SIZE;
             to_copy_left -= MAX_UPDATE_BUFFER_SIZE;
@@ -395,12 +390,8 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
                 to_copy_left,
                 pointer,
                 &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
-
-            LOG_INFOV("Updated chunk (%i %i %i): %d out of %d bytes\n", c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z, to_copy_left, update_size);
         }
 
-        printf("\n");
-        
         c->render->mesh.vertex_count = vertex_count;
     }
     else {

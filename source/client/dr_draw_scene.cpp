@@ -369,7 +369,7 @@ void dr_draw_game(
         eye_info->position,
         eye_info->direction,
         eye_info->up,
-        glm::radians(eye_info->fov),
+        glm::radians(eye_info->fov / 2.0f),
         aspect_ratio,
         eye_info->near,
         eye_info->far);

@@ -227,6 +227,8 @@ bool frustum_check_cube(
     frustum_t *frustum,
     const vector3_t &point,
     float radius) {
+    return 1;
+
     static vector3_t cube_vertices[8] = {};
 
     cube_vertices[0] = point + vector3_t(-radius, -radius, -radius);

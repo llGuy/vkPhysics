@@ -57,6 +57,7 @@ void sc_bind_map_creator() {
 
     // Set local player to the spectator
     wd_set_local_player(-1);
+    wd_get_spectator()->current_camera_up = wd_get_spectator()->ws_up_vector = glm::normalize(vector3_t(1.0f, 1.0f, 1.0f));
 
     g_game->flags.track_history = 0;
 }
