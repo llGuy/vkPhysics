@@ -61,9 +61,23 @@ void wd_tick(event_submissions_t *events) {
             rock_t *rock = &g_game->local_rocks[i];
 
             if (rock->flags.active) {
-                tick_rock(rock, g_game->dt);
+                // Check if there was collision with players or terrain
+                terrain_collision_t collision = {};
+                collision.ws_size = vector3_t(0.2f);
+                collision.ws_position = rock->position;
+                collision.ws_velocity = rock->direction;
+                collision.es_position = collision.ws_position / collision.ws_size;
+                collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
-                // Check if there was collision with players
+                check_ray_terrain_collision(&collision);
+                if (collision.detected) {
+                    LOG_INFO("Detected collision\n");
+                    rock->flags.active = 0;
+
+                    g_game->local_rocks.remove(i);
+                }
+
+                tick_rock(rock, g_game->dt);
             }
         }
 
