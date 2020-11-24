@@ -146,4 +146,28 @@ void srv_game_tick() {
             }
         }
     }
+
+    // Still need to update all the things that update despite entities (projectiles)
+    for (uint32_t i = 0; i < g_game->local_rocks.data_count; ++i) {
+        rock_t *rock = &g_game->local_rocks[i];
+
+        if (rock->flags.active) {
+            terrain_collision_t collision = {};
+            collision.ws_size = vector3_t(0.2f);
+            collision.ws_position = rock->position;
+            collision.ws_velocity = rock->direction;
+            collision.es_position = collision.ws_position / collision.ws_size;
+            collision.es_velocity = collision.ws_velocity / collision.ws_size;
+
+            check_ray_terrain_collision(&collision);
+            if (collision.detected) {
+                LOG_INFO("Detected collision\n");
+                rock->flags.active = 0;
+
+                g_game->local_rocks.remove(i);
+            }
+
+            tick_rock(rock, g_game->dt);
+        }
+    }
 }

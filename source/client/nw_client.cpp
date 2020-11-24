@@ -542,6 +542,22 @@ static void s_clear_outdated_modifications_from_history(
     }
 }
 
+static void s_add_projectiles_from_snapshot(
+    packet_game_state_snapshot_t *snapshot) {
+    for (uint32_t i = 0; i < snapshot->rock_count; ++i) {
+        rock_snapshot_t *rock_snapshot = &snapshot->rock_snapshots[i];
+
+        if (rock_snapshot->client_id != current_client_id) {
+            // Spawn this rock
+            g_game->spawn_rock(
+                rock_snapshot->client_id,
+                rock_snapshot->position,
+                rock_snapshot->direction,
+                rock_snapshot->up);
+        }
+    }
+}
+
 static void s_handle_incorrect_state(
     client_t *c,
     player_t *p,
@@ -694,6 +710,8 @@ static void s_handle_local_player_snapshot(
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser,
     event_submissions_t *events) {
+    s_add_projectiles_from_snapshot(packet);
+
     // TODO: Watch out for this:
     if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
         debug_log("\tClient has to do a correction\n", 1);

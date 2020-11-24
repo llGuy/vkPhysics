@@ -7,3 +7,4 @@
 - Fix shadows
 - ADD THE WEAPONS
 - Add trees, etc...
+- Make sure that if client has tried connecting to server before the server started, that the server doesn't accept ANY packets from that client

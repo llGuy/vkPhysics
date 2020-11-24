@@ -419,6 +419,14 @@ uint32_t packed_game_state_snapshot_size(
 
     final_size += player_snapshot_size * packet->player_data_count;
 
+    uint32_t rock_snapshot_size =
+        sizeof(rock_snapshot_t::position) +
+        sizeof(rock_snapshot_t::direction) +
+        sizeof(rock_snapshot_t::up) +
+        sizeof(rock_snapshot_t::client_id);
+
+    final_size += rock_snapshot_size * packet->rock_count;
+
     return final_size;
 }
 
@@ -438,6 +446,14 @@ void serialise_game_state_snapshot(
         serialiser->serialise_float32(packet->player_snapshots[i].frame_displacement);
         serialiser->serialise_uint64(packet->player_snapshots[i].tick);
         serialiser->serialise_uint64(packet->player_snapshots[i].terraform_tick);
+    }
+
+    serialiser->serialise_uint32(packet->rock_count);
+    for (uint32_t i = 0; i < packet->rock_count; ++i) {
+        serialiser->serialise_vector3(packet->rock_snapshots[i].position);
+        serialiser->serialise_vector3(packet->rock_snapshots[i].direction);
+        serialiser->serialise_vector3(packet->rock_snapshots[i].up);
+        serialiser->serialise_uint16(packet->rock_snapshots[i].client_id);
     }
 }
 
@@ -459,6 +475,16 @@ void deserialise_game_state_snapshot(
         packet->player_snapshots[i].frame_displacement = serialiser->deserialise_float32();
         packet->player_snapshots[i].tick = serialiser->deserialise_uint64();
         packet->player_snapshots[i].terraform_tick = serialiser->deserialise_uint64();
+    }
+
+    packet->rock_count = serialiser->deserialise_uint32();
+    packet->rock_snapshots = LN_MALLOC(rock_snapshot_t, packet->rock_count);
+
+    for (uint32_t i = 0; i < packet->rock_count; ++i) {
+        packet->rock_snapshots[i].position = serialiser->deserialise_vector3();
+        packet->rock_snapshots[i].direction = serialiser->deserialise_vector3();
+        packet->rock_snapshots[i].up = serialiser->deserialise_vector3();
+        packet->rock_snapshots[i].client_id = serialiser->deserialise_uint16();
     }
 }
 

@@ -55,6 +55,11 @@ void game_t::init_memory() {
     { // Projectiles
         local_rocks.init(PROJECTILE_MAX_LOCAL_ROCK_COUNT);
         remote_rocks.init(PROJECTILE_MAX_REMOTE_ROCK_COUNT);
+
+        newly_spawned_rock_count = 0;
+        for (uint32_t i = 0; i < 50; ++i) {
+            newly_spawned_rocks[i] = 0;
+        }
     }
 }
 
@@ -223,6 +228,7 @@ player_t *game_t::get_player(int32_t local_id) {
 }
 
 void game_t::spawn_rock(
+    uint16_t client_id,
     const vector3_t &position,
     const vector3_t &start_direction,
     const vector3_t &up) {
@@ -230,11 +236,18 @@ void game_t::spawn_rock(
     r.flags.active = 1;
     r.flags.spawned_locally = 1;
     r.position = position;
-    r.direction = start_direction * PROJECTILE_ROCK_SPEED;
+    r.direction = start_direction;
     r.up = up;
+    r.client_id = client_id;
 
     uint32_t idx = local_rocks.add();
     local_rocks[idx] = r;
+
+    newly_spawned_rocks[newly_spawned_rock_count++] = idx;
+}
+
+void game_t::clear_newly_spawned_rocks() {
+    newly_spawned_rock_count = 0;
 }
 
 void game_t::clear_chunks() {

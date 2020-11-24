@@ -50,6 +50,8 @@ struct game_t {
     stack_container_t<rock_t> local_rocks;
     // Rocks that were spawned remotely (and that need to be "interpolated")
     stack_container_t<rock_t> remote_rocks;
+    uint32_t newly_spawned_rock_count;
+    uint32_t newly_spawned_rocks[50];
 
 
 
@@ -93,9 +95,12 @@ struct game_t {
     player_t *get_player(int32_t local_id);
 
     void spawn_rock(
+        uint16_t client_id,
         const vector3_t &position,
         const vector3_t &start_direction,
         const vector3_t &up);
+
+    void clear_newly_spawned_rocks();
 
     void clear_chunks();
 

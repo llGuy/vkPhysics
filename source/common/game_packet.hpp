@@ -141,6 +141,10 @@ struct packet_game_state_snapshot_t {
     uint32_t player_data_count;
     player_snapshot_t *player_snapshots;
 
+    // All the projectiles that have been spawned
+    uint32_t rock_count;
+    rock_snapshot_t *rock_snapshots;
+
     // Total chunk modifications that occured in the entire world
     uint32_t modified_chunk_count;
     chunk_modifications_t *chunk_modifications;

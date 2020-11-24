@@ -134,8 +134,9 @@ static void s_execute_player_triggers(
             weapon->elapsed = 0.0f;
 
             g_game->spawn_rock(
+                player->client_id,
                 compute_player_view_position(player),
-                player->ws_view_direction,
+                player->ws_view_direction * PROJECTILE_ROCK_SPEED,
                 player->ws_up_vector);
         }
 

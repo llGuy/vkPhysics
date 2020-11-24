@@ -89,6 +89,8 @@ void wd_tick(event_submissions_t *events) {
             }
         }
     }
+
+    g_game->clear_newly_spawned_rocks();
 }
 
 void wd_set_i_am_in_server(bool b) {

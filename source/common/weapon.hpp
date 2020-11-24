@@ -40,6 +40,13 @@ struct weapon_t {
     bool ready;
 };
 
+struct rock_snapshot_t {
+    vector3_t position;
+    vector3_t direction;
+    vector3_t up;
+    uint16_t client_id;
+};
+
 // All the different types of projectiles which will deal damage (e.g. rocks, exploding rocks, etc...)
 struct rock_t {
     struct {
@@ -50,6 +57,8 @@ struct rock_t {
     vector3_t position;
     vector3_t direction;
     vector3_t up;
+    // The ID of the client who spawned this rock
+    uint16_t client_id;
 };
 
 // TODO
