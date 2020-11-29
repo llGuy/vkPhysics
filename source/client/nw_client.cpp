@@ -235,6 +235,11 @@ static void s_fill_predicted_data(
     packet->ws_final_view_direction = p->ws_view_direction;
     packet->ws_final_up_vector = p->ws_up_vector;
     packet->ws_final_velocity = p->ws_velocity;
+
+    /* Add the projectiles that the client spawned so that the server can check whether
+     * the client "ACTUALLY" spawned those rocks (prevent hacking)
+     */
+    // ^^^^^^^^^^^^^^^^^^^^^ IS THIS REALLY NECESSARY
 }
 
 static void s_fill_with_accumulated_chunk_modifications(
@@ -319,6 +324,9 @@ static void s_send_packet_client_commands() {
     
             p->cached_player_action_count = 0;
             c->waiting_on_correction = 0;
+
+            // Clear projectiles
+            g_game->rocks.clear_recent();
         }
     }
 }
@@ -549,11 +557,11 @@ static void s_add_projectiles_from_snapshot(
 
         if (rock_snapshot->client_id != current_client_id) {
             // Spawn this rock
-            g_game->spawn_rock(
-                rock_snapshot->client_id,
+            g_game->rocks.spawn(
                 rock_snapshot->position,
                 rock_snapshot->direction,
-                rock_snapshot->up);
+                rock_snapshot->up,
+                rock_snapshot->client_id);
         }
     }
 }

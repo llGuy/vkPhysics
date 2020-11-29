@@ -329,10 +329,10 @@ static void s_projectiles_gpu_sync_and_render(
     VkCommandBuffer render,
     VkCommandBuffer shadow,
     VkCommandBuffer transfer) {
-    for (uint32_t i = 0; i < g_game->local_rocks.data_count; ++i) {
+    for (uint32_t i = 0; i < g_game->rocks.list.data_count; ++i) {
         mesh_render_data_t data = {};
         data.color = vector4_t(0.0f);
-        data.model = glm::translate(g_game->local_rocks[i].position) * glm::scale(vector3_t(0.2f));
+        data.model = glm::translate(g_game->rocks.list[i].position) * glm::scale(vector3_t(0.2f));
         data.pbr_info.x = 0.5f;
         data.pbr_info.y = 0.5f;
 

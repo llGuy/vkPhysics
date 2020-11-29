@@ -148,8 +148,8 @@ void srv_game_tick() {
     }
 
     // Still need to update all the things that update despite entities (projectiles)
-    for (uint32_t i = 0; i < g_game->local_rocks.data_count; ++i) {
-        rock_t *rock = &g_game->local_rocks[i];
+    for (uint32_t i = 0; i < g_game->rocks.list.data_count; ++i) {
+        rock_t *rock = &g_game->rocks.list[i];
 
         if (rock->flags.active) {
             terrain_collision_t collision = {};
@@ -164,7 +164,7 @@ void srv_game_tick() {
                 LOG_INFO("Detected collision\n");
                 rock->flags.active = 0;
 
-                g_game->local_rocks.remove(i);
+                g_game->rocks.list.remove(i);
             }
 
             tick_rock(rock, g_game->dt);

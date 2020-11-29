@@ -719,12 +719,12 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
 
 static void s_add_projectiles_to_game_state_snapshot(
     packet_game_state_snapshot_t *snapshot) {
-    snapshot->rock_count = g_game->newly_spawned_rock_count;
+    snapshot->rock_count = g_game->rocks.recent_count;
     snapshot->rock_snapshots = LN_MALLOC(rock_snapshot_t, snapshot->rock_count);
 
     for (uint32_t i = 0; i < snapshot->rock_count; ++i) {
-        uint32_t new_rock_idx = g_game->newly_spawned_rocks[i];
-        rock_t *rock = g_game->local_rocks.get(new_rock_idx);
+        uint32_t new_rock_idx = g_game->rocks.recent[i];
+        rock_t *rock = g_game->rocks.list.get(new_rock_idx);
 
         snapshot->rock_snapshots[i].client_id = rock->client_id;
         snapshot->rock_snapshots[i].position = rock->position;
@@ -747,7 +747,7 @@ static void s_send_packet_game_state_snapshot() {
 
     s_add_projectiles_to_game_state_snapshot(&packet);
     // Need to clear the "newly spawned rocks" stack
-    g_game->clear_newly_spawned_rocks();
+    g_game->rocks.clear_recent();
     
     for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
         client_t *c = &g_net_data.clients[i];

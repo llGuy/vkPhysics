@@ -1,6 +1,9 @@
 #pragma once
 
 #include "tools.hpp"
+#include "containers.hpp"
+
+#include <utility>
 
 enum class firing_type_t { AUTOMATIC, SEMI_AUTOMATIC, INVALID };
 enum class bullet_type_t { PROJECTILE, HITSCAN, INVALID };
@@ -59,6 +62,17 @@ struct rock_t {
     vector3_t up;
     // The ID of the client who spawned this rock
     uint16_t client_id;
+
+    rock_t() = default;
+
+    rock_t(
+        const vector3_t &p,
+        const vector3_t &d,
+        const vector3_t &u,
+        uint16_t cid)
+        : position(p), direction(d), up(u), client_id(cid) {
+        flags.active = 1;
+    }
 };
 
 // TODO
@@ -75,3 +89,38 @@ void spawn_rock(
     const vector3_t &start_direction);
 
 void tick_rock(rock_t *rock, float dt);
+
+template <typename T, uint32_t MAX_NEW_PROJECTILES_PER_FRAME>
+struct projectile_tracker_t {
+    stack_container_t<T> list;
+
+    // Projectiles that were spawned in the past frame
+    uint32_t recent_count;
+    uint32_t recent[MAX_NEW_PROJECTILES_PER_FRAME];
+
+    void init() {
+         // Projectiles
+        list.init(MAX_NEW_PROJECTILES_PER_FRAME);
+
+        recent_count = 0;
+        for (uint32_t i = 0; i < 50; ++i) {
+            recent[i] = 0;
+        }
+    }
+
+    template <typename ...Constr /* Constructor parameters */>
+    T *spawn(Constr &&...params) {
+        // Add the projectile to the list
+        uint32_t idx = list.add();
+        T *p = &list[idx];
+        *p = T(std::forward<Constr>(params)...);
+
+        recent[recent_count++] = idx;
+
+        return p;
+    }
+
+    void clear_recent() {
+        recent_count = 0;
+    }
+};

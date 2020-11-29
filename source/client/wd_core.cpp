@@ -57,8 +57,8 @@ void wd_tick(event_submissions_t *events) {
     wd_predict_state(events);
 
     { // Local and remote projectiles (basically predicting the state)
-        for (uint32_t i = 0; i < g_game->local_rocks.data_count; ++i) {
-            rock_t *rock = &g_game->local_rocks[i];
+        for (uint32_t i = 0; i < g_game->rocks.list.data_count; ++i) {
+            rock_t *rock = &g_game->rocks.list[i];
 
             if (rock->flags.active) {
                 // Check if there was collision with players or terrain
@@ -74,23 +74,13 @@ void wd_tick(event_submissions_t *events) {
                     LOG_INFO("Detected collision\n");
                     rock->flags.active = 0;
 
-                    g_game->local_rocks.remove(i);
+                    g_game->rocks.list.remove(i);
                 }
 
                 tick_rock(rock, g_game->dt);
             }
         }
-
-        for (uint32_t i = 0; i < g_game->remote_rocks.data_count; ++i) {
-            rock_t *rock = &g_game->remote_rocks[i];
-
-            if (rock->flags.active) {
-                tick_rock(rock, g_game->dt);
-            }
-        }
     }
-
-    g_game->clear_newly_spawned_rocks();
 }
 
 void wd_set_i_am_in_server(bool b) {

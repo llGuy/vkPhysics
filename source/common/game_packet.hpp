@@ -130,6 +130,9 @@ struct packet_client_commands_t {
     
     uint32_t modified_chunk_count;
     chunk_modifications_t *chunk_modifications;
+
+    uint32_t new_rocks_count;
+    rock_snapshot_t *spawned_rocks;
 };
 
 uint32_t packed_player_commands_size(packet_client_commands_t *commands);

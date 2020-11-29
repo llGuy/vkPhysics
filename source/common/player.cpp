@@ -133,11 +133,11 @@ static void s_execute_player_triggers(
         if (player_actions->trigger_left && weapon->elapsed > weapon->recoil_time) {
             weapon->elapsed = 0.0f;
 
-            g_game->spawn_rock(
-                player->client_id,
+            g_game->rocks.spawn(
                 compute_player_view_position(player),
                 player->ws_view_direction * PROJECTILE_ROCK_SPEED,
-                player->ws_up_vector);
+                player->ws_up_vector,
+                player->client_id);
         }
 
         player->terraform_package.ray_hit_terrain = 0;
