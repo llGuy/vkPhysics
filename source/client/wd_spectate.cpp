@@ -13,6 +13,7 @@ void wd_create_spectator() {
     spectator->flags.interaction_mode = PIM_FLOATING;
     spectator->camera_fov.current = 60.0f;
     spectator->current_camera_up = vector3_t(0.0f, 1.0f, 0.0f);
+    spectator->idx_in_chunk_list = -1;
 }
 
 player_t *wd_get_spectator() {

@@ -1,7 +1,9 @@
 #pragma once
 
+#include "common/containers.hpp"
 #include "tools.hpp"
 #include "constant.hpp"
+#include <bits/stdint-uintn.h>
 
 ivector3_t space_world_to_voxel(const vector3_t &ws_position);
 ivector3_t space_voxel_to_chunk(const ivector3_t &vs_position);
@@ -46,6 +48,9 @@ struct chunk_t {
     ivector3_t chunk_coord;
 
     voxel_t voxels[CHUNK_VOXEL_COUNT];
+
+    // uint8_t because anyway, player index won't go beyond 50
+    stack_container_t<uint8_t> players_in_chunk;
 
     //chunk_history_t *history;
     chunk_history_t history;

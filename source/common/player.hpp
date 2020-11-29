@@ -210,6 +210,12 @@ struct player_t {
     // 2 weapons maximum (add more in future if needed)
     weapon_t weapons[3];
 
+    // Current chunk in which the player is in
+    ivector3_t chunk_coord;
+    // Index of the player in chunk_t::players_in_chunk
+    // If idx_in_chunk_list == -1, the player hasn't been added to a chunk
+    int32_t idx_in_chunk_list;
+
 };
 
 void fill_player_info(player_t *player, player_init_info_t *info);

@@ -72,6 +72,8 @@ void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &ch
     memset(chunk->history.modification_pool, CHUNK_SPECIAL_VALUE, CHUNK_VOXEL_COUNT);
 
     chunk->render = NULL;
+
+    chunk->players_in_chunk.init(PLAYER_MAX_COUNT);
 }
 
 void destroy_chunk(chunk_t *chunk) {

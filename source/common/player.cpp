@@ -3,6 +3,7 @@
 #include "player.hpp"
 #include "constant.hpp"
 #include <glm/gtx/projection.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 static void s_init_player_weapons(player_t *p) {
     p->weapon_count = 2;
@@ -21,6 +22,7 @@ static void s_set_default_values(
     player->next_random_spawn_position = init_info->next_random_spawn_position;
     player->ball_speed = 0.0f;
     player->ws_velocity = vector3_t(0.0f);
+    player->idx_in_chunk_list = -1;
 
     // FOR NOW: just have the default weapon setup
 
@@ -570,6 +572,54 @@ void execute_action(player_t *player, player_action_t *action) {
 
     for (uint32_t i = 0; i < player->weapon_count; ++i) {
         player->weapons[i].elapsed += action->dt;
+    }
+
+    // If the player has been added to a chunk that hadn't been created at the time
+    if (player->idx_in_chunk_list == -1) {
+        chunk_t *c = g_game->access_chunk(player->chunk_coord);
+
+        if (c) {
+            uint32_t idx = c->players_in_chunk.add();
+            c->players_in_chunk[idx] = player->local_id;
+            player->idx_in_chunk_list = idx;
+
+            printf("Chunk %s has just been created\n", glm::to_string(player->chunk_coord).c_str());
+        }
+    }
+
+    // Update the chunk in which the player is in
+    ivector3_t new_chunk_coord = space_voxel_to_chunk(space_world_to_voxel(player->ws_position));
+
+    if (
+        new_chunk_coord.x != player->chunk_coord.x ||
+        new_chunk_coord.y != player->chunk_coord.y ||
+        new_chunk_coord.z != player->chunk_coord.z) {
+        // Chunk is different
+
+        // Remove player from previous chunk
+        if (player->idx_in_chunk_list != -1) {
+            chunk_t *c = g_game->access_chunk(player->chunk_coord);
+            c->players_in_chunk.remove(player->idx_in_chunk_list);
+
+            player->idx_in_chunk_list = -1;
+
+            printf("Removed player from %s\n", glm::to_string(player->chunk_coord).c_str());
+        }
+
+        player->chunk_coord = new_chunk_coord;
+
+        chunk_t *c = g_game->access_chunk(new_chunk_coord);
+
+        if (c) {
+            uint32_t idx = c->players_in_chunk.add();
+            c->players_in_chunk[idx] = player->local_id;
+            player->idx_in_chunk_list = idx;
+
+            printf("Player entered a new chunk which has been initialised: %s\n", glm::to_string(new_chunk_coord).c_str());
+        }
+        else {
+            printf("Player entered a new chunk which hasn't been initialised: %s\n", glm::to_string(new_chunk_coord).c_str());
+        }
     }
 }
 
