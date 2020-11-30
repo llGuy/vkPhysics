@@ -317,7 +317,7 @@ static void s_resolve_player_movement(
     s_apply_forces(player, actions, force_values, (movement_resolution_flags_t)flags, acceleration);
 
     terrain_collision_t collision = {};
-    collision.ws_size = PLAYER_SCALE;
+    collision.ws_size = vector3_t(PLAYER_SCALE);
     collision.ws_position = player->ws_position;
     collision.ws_velocity = player->ws_velocity * actions->dt;
     collision.es_position = collision.ws_position / collision.ws_size;
@@ -447,7 +447,7 @@ static void s_accelerate_meteorite_player(
 
     vector3_t final_velocity = player->ws_velocity * actions->dt;
 
-    vector3_t player_scale = PLAYER_SCALE;
+    vector3_t player_scale = vector3_t(PLAYER_SCALE);
 
     terrain_collision_t collision = {};
     collision.ws_size = player_scale;
@@ -574,6 +574,10 @@ void execute_action(player_t *player, player_action_t *action) {
         player->weapons[i].elapsed += action->dt;
     }
 
+    update_player_chunk_status(player);
+}
+
+void update_player_chunk_status(player_t *player) {
     // If the player has been added to a chunk that hadn't been created at the time
     if (player->idx_in_chunk_list == -1) {
         chunk_t *c = g_game->access_chunk(player->chunk_coord);
@@ -582,8 +586,6 @@ void execute_action(player_t *player, player_action_t *action) {
             uint32_t idx = c->players_in_chunk.add();
             c->players_in_chunk[idx] = player->local_id;
             player->idx_in_chunk_list = idx;
-
-            printf("Chunk %s has just been created\n", glm::to_string(player->chunk_coord).c_str());
         }
     }
 
@@ -602,8 +604,6 @@ void execute_action(player_t *player, player_action_t *action) {
             c->players_in_chunk.remove(player->idx_in_chunk_list);
 
             player->idx_in_chunk_list = -1;
-
-            printf("Removed player from %s\n", glm::to_string(player->chunk_coord).c_str());
         }
 
         player->chunk_coord = new_chunk_coord;
@@ -614,15 +614,51 @@ void execute_action(player_t *player, player_action_t *action) {
             uint32_t idx = c->players_in_chunk.add();
             c->players_in_chunk[idx] = player->local_id;
             player->idx_in_chunk_list = idx;
-
-            printf("Player entered a new chunk which has been initialised: %s\n", glm::to_string(new_chunk_coord).c_str());
-        }
-        else {
-            printf("Player entered a new chunk which hasn't been initialised: %s\n", glm::to_string(new_chunk_coord).c_str());
         }
     }
 }
 
-vector3_t compute_player_view_position(player_t *p) {
+vector3_t compute_player_view_position(const player_t *p) {
     return p->ws_position + p->ws_up_vector * PLAYER_SCALE * 2.0f;
+}
+
+bool collide_sphere_with_player(
+    const player_t *p,
+    const vector3_t &center,
+    float radius) {
+    if (p->flags.interaction_mode == PIM_STANDING ||
+        p->flags.interaction_mode == PIM_FLOATING) {
+        float player_height = PLAYER_SCALE * 2.0f;
+
+        // Check collision with 2 spheres
+        float sphere_scale = player_height * 0.25f;
+        vector3_t body_low = p->ws_position + (p->ws_up_vector * player_height * 0.25f);
+        vector3_t body_high = p->ws_position + (p->ws_up_vector * player_height * 0.75f);
+
+        vector3_t body_low_diff = body_low - center;
+        vector3_t body_high_diff = body_high - center;
+
+        float dist2_low = glm::dot(body_low_diff, body_low_diff);
+        float dist2_high = glm::dot(body_high_diff, body_high_diff);
+
+        float dist_min = radius + player_height * 0.25f;
+        float dist_min2 = dist_min * dist_min;
+
+        if (dist2_low < dist_min2 || dist2_high < dist_min2) {
+            return true;
+        }
+    }
+    else {
+        float dist_min = radius + PLAYER_SCALE;
+        float dist_min2 = dist_min * dist_min;
+
+        vector3_t diff = p->ws_position - center;
+        float dist_to_player2 = glm::dot(diff, diff);
+
+        if (dist_to_player2 < dist_min2) {
+            return true;
+        }
+    }
+
+    return false;
 }

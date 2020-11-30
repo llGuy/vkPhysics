@@ -95,7 +95,7 @@ static void s_calculate_pos_and_dir(player_t *player, vector3_t *position, vecto
 
     is_first_person = !render_player;
 
-    *position = player->ws_position - player->ws_view_direction * camera_distance * PLAYER_SCALE.x;
+    *position = player->ws_position - player->ws_view_direction * camera_distance * PLAYER_SCALE;
     *position += player->current_camera_up * PLAYER_SCALE * 2.0f;
     *direction = player->ws_view_direction;
 

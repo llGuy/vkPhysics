@@ -1,6 +1,7 @@
 #include "weapon.hpp"
 #include "constant.hpp"
-#include "common/containers.hpp"
+#include "game.hpp"
+#include "containers.hpp"
 
 void weapon_t::init(
     uint32_t max_ammunition,
@@ -39,4 +40,49 @@ void weapon_t::weapon_reload() {
 void tick_rock(rock_t *rock, float dt) {
     rock->position += rock->direction * dt;
     rock->direction -= rock->up * dt * GRAVITY_ACCELERATION;
+}
+
+bool check_projectile_players_collision(rock_t *rock, int32_t *dst_player) {
+    // Check if there was collision with players or terrain
+    ivector3_t chunk_coord = space_voxel_to_chunk(space_world_to_voxel(rock->position));
+    chunk_t *c = g_game->access_chunk(chunk_coord);
+
+    if (c) {
+        for (uint32_t i = 0; i < c->players_in_chunk.data_count; ++i) {
+            uint8_t player_local_id = c->players_in_chunk[i];
+
+            player_t *p = g_game->get_player(player_local_id);
+
+            if (p->client_id != rock->client_id) {
+                if (collide_sphere_with_player(p, rock->position, 0.2f)) {
+                    // Collision!
+                    LOG_INFO("Collided with player\n");
+                    *dst_player = (int32_t)player_local_id;
+
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+bool check_projectile_terrain_collision(rock_t *rock) {
+    terrain_collision_t collision = {};
+    collision.ws_size = vector3_t(0.2f);
+    collision.ws_position = rock->position;
+    collision.ws_velocity = rock->direction;
+    collision.es_position = collision.ws_position / collision.ws_size;
+    collision.es_velocity = collision.ws_velocity / collision.ws_size;
+
+    check_ray_terrain_collision(&collision);
+    if (collision.detected) {
+        LOG_INFO("Detected collision\n");
+
+        return true;
+    }
+    else {
+        return false;
+    }
 }

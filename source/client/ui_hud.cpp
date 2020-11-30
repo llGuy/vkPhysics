@@ -15,6 +15,16 @@
 static ui_box_t crosshair;
 static VkDescriptorSet crosshair_texture;
 
+static struct {
+    ui_box_t box;
+    ui_text_t text;
+} health_display;
+
+static struct {
+    ui_box_t box;
+    ui_text_t text;
+} ammo_display;
+
 static bool display_minibuffer;
 static typing_box_t minibuffer;
 

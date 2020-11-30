@@ -124,3 +124,6 @@ struct projectile_tracker_t {
         recent_count = 0;
     }
 };
+
+bool check_projectile_players_collision(rock_t *rock, int32_t *dst_player);
+bool check_projectile_terrain_collision(rock_t *rock);

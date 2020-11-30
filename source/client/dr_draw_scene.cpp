@@ -43,7 +43,7 @@ static void s_render_person(
     p->render->render_data.model = glm::translate(p->ws_position) *
         normal_rotation_matrix *
         p->render->animations.cycles->rotation *
-        glm::scale(PLAYER_SCALE) *
+        glm::scale(vector3_t(PLAYER_SCALE)) *
         p->render->animations.cycles->scale;
 
     submit_skeletal_mesh(
@@ -65,7 +65,7 @@ static void s_render_ball(
     VkCommandBuffer render_command_buffer,
     VkCommandBuffer shadow_render_command_buffer,
     player_t *p) {
-    p->render->rotation_speed = p->frame_displacement / calculate_sphere_circumference(PLAYER_SCALE.x) * 360.0f;
+    p->render->rotation_speed = p->frame_displacement / calculate_sphere_circumference(PLAYER_SCALE) * 360.0f;
     p->render->rotation_angle += p->render->rotation_speed;
 
     if (p->render->rotation_angle > 360.0f) {
@@ -81,7 +81,7 @@ static void s_render_ball(
         p->render->rolling_matrix = rolling_rotation;
     }
 
-    p->render->render_data.model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(PLAYER_SCALE);
+    p->render->render_data.model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(vector3_t(PLAYER_SCALE));
 
     begin_mesh_submission(render_command_buffer, dr_get_shader_rsc(GS_BALL));
     submit_mesh(
@@ -142,10 +142,10 @@ static void s_render_transition(
     render_data.first_model = glm::translate(p->ws_position) *
         normal_rotation_matrix *
         p->render->animations.cycles->rotation *
-        glm::scale(PLAYER_SCALE) *
+        glm::scale(vector3_t(PLAYER_SCALE)) *
         p->render->animations.cycles->scale;
 
-    p->render->rotation_speed = p->frame_displacement / calculate_sphere_circumference(PLAYER_SCALE.x) * 360.0f;
+    p->render->rotation_speed = p->frame_displacement / calculate_sphere_circumference(PLAYER_SCALE) * 360.0f;
     p->render->rotation_angle += p->render->rotation_speed;
 
     if (p->render->rotation_angle > 360.0f) {
@@ -161,7 +161,7 @@ static void s_render_transition(
         p->render->rolling_matrix = rolling_rotation;
     }
 
-    render_data.second_model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(PLAYER_SCALE);
+    render_data.second_model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(vector3_t(PLAYER_SCALE));
 
     render_data.color = p->render->render_data.color;
     render_data.pbr_info.x = 0.1f;

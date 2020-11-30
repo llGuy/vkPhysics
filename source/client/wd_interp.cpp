@@ -137,6 +137,8 @@ void wd_player_interp_step(
         }
 
         p->flags.alive_state = middle_snapshot->alive_state;
+
+        update_player_chunk_status(p);
     }
 }
 

@@ -61,19 +61,19 @@ void wd_tick(event_submissions_t *events) {
             rock_t *rock = &g_game->rocks.list[i];
 
             if (rock->flags.active) {
-                // Check if there was collision with players or terrain
-                terrain_collision_t collision = {};
-                collision.ws_size = vector3_t(0.2f);
-                collision.ws_position = rock->position;
-                collision.ws_velocity = rock->direction;
-                collision.es_position = collision.ws_position / collision.ws_size;
-                collision.es_velocity = collision.ws_velocity / collision.ws_size;
+                int32_t player_local_id;
+                bool collided_with_player = check_projectile_players_collision(rock, &player_local_id);
+                bool collided_with_terrain = check_projectile_terrain_collision(rock);
 
-                check_ray_terrain_collision(&collision);
-                if (collision.detected) {
-                    LOG_INFO("Detected collision\n");
+                if (collided_with_player) {
                     rock->flags.active = 0;
+                    g_game->rocks.list.remove(i);
 
+                    // Player need to get dealt some DAMAGE MOUAHAHAH
+                }
+                else if (collided_with_terrain) {
+                    // Make sure that players within radius get damage
+                    rock->flags.active = 0;
                     g_game->rocks.list.remove(i);
                 }
 
