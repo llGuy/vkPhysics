@@ -23,6 +23,7 @@ static void s_set_default_values(
     player->ball_speed = 0.0f;
     player->ws_velocity = vector3_t(0.0f);
     player->idx_in_chunk_list = -1;
+    player->health = 200;
 
     // FOR NOW: just have the default weapon setup
 

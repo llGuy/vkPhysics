@@ -73,6 +73,8 @@ struct rock_t {
         : position(p), direction(d), up(u), client_id(cid) {
         flags.active = 1;
     }
+
+    static constexpr uint32_t DIRECT_DAMAGE = 75;
 };
 
 // TODO

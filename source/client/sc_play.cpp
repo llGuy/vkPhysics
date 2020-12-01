@@ -9,6 +9,7 @@
 #include "fx_post.hpp"
 #include "cl_main.hpp"
 #include "wd_predict.hpp"
+#include "ui_hud.hpp"
 #include "wd_spectate.hpp"
 #include <common/game.hpp>
 #include <common/event.hpp>
@@ -189,6 +190,7 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
 
     case ET_EXIT_SCENE: {
         ui_clear_panels();
+        ui_end_gameplay_display();
 
         submit_event(ET_ENTER_MAIN_MENU_SCENE, NULL, events);
         submit_event(ET_LEAVE_SERVER, NULL, events);
@@ -199,6 +201,7 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
     case ET_SPAWN: {
         ui_clear_panels();
         ui_push_panel(USI_HUD);
+        ui_begin_gameplay_display();
 
         cl_change_view_type(GVT_IN_GAME);
 
@@ -209,6 +212,7 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
         if (submode == S_IN_GAME) {
             ui_push_panel(USI_GAME_MENU);
             cl_change_view_type(GVT_MENU);
+            ui_end_gameplay_display();
             submode = S_PAUSE;
 
             LOG_INFO("Going to pause menu\n");
@@ -217,6 +221,7 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
             ui_pop_panel();
             cl_change_view_type(GVT_IN_GAME);
             submode = S_IN_GAME;
+            ui_begin_gameplay_display();
 
             LOG_INFO("Going to game play\n");
         }
@@ -225,6 +230,7 @@ void sc_handle_play_event(void *object, event_t *event, event_submissions_t *eve
     case ET_LOCAL_PLAYER_DIED: {
         ui_clear_panels();
         ui_push_panel(USI_GAME_MENU);
+        ui_end_gameplay_display();
 
         cl_change_view_type(GVT_MENU);
 

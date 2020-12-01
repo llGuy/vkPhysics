@@ -66,10 +66,12 @@ void wd_tick(event_submissions_t *events) {
                 bool collided_with_terrain = check_projectile_terrain_collision(rock);
 
                 if (collided_with_player) {
+                    // Player need to get dealt some DAMAGE MOUAHAHAH
+                    player_t *dst_player = g_game->get_player(player_local_id);
+                    dst_player->health -= rock_t::DIRECT_DAMAGE;
+
                     rock->flags.active = 0;
                     g_game->rocks.list.remove(i);
-
-                    // Player need to get dealt some DAMAGE MOUAHAHAH
                 }
                 else if (collided_with_terrain) {
                     // Make sure that players within radius get damage

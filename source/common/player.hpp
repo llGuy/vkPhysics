@@ -216,6 +216,8 @@ struct player_t {
     // If idx_in_chunk_list == -1, the player hasn't been added to a chunk
     int32_t idx_in_chunk_list;
 
+    uint32_t health;
+
 };
 
 void fill_player_info(player_t *player, player_init_info_t *info);

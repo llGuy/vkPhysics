@@ -8,6 +8,8 @@
 enum packet_type_t {
     // Client sends to server when requesting to join game
     PT_CONNECTION_REQUEST,
+    // Packet sent from both server and client
+    PT_PING,
     // Server sends to client when join request was acknowledged and client can join
     PT_CONNECTION_HANDSHAKE,
     // Server sends to clients when a new player joins

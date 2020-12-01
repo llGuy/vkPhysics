@@ -912,6 +912,33 @@ static void s_send_pending_chunks() {
     }
 }
 
+static void s_ping_clients() {
+    // Send a ping
+    serialiser_t serialiser = {};
+    serialiser.init(30);
+
+    for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
+        client_t *c = &g_net_data.clients[i];
+
+        if (c->time_since_ping > NET_PING_INTERVAL) {
+            serialiser.data_buffer_head = 0;
+            
+            packet_header_t header = {};
+            header.current_packet_count = g_net_data.current_packet;
+            header.current_tick = g_game->current_tick;
+            header.client_id = c->client_id;
+            header.flags.packet_type = PT_PING;
+            header.flags.total_packet_size = packed_packet_header_size();
+
+            serialise_packet_header(&header, &serialiser);
+            send_to_client(&serialiser, c->address);
+        }
+
+        c->time_since_ping += srv_delta_time();
+        c->latency += srv_delta_time();
+    }
+}
+
 static void s_tick_server(
     event_submissions_t *events) {
     static float snapshot_elapsed = 0.0f;

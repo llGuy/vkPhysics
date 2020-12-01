@@ -1,11 +1,14 @@
-#include "client/ui_hover.hpp"
+#include "ui_hover.hpp"
+#include <common/game.hpp>
 #include "common/event.hpp"
+#include "wd_predict.hpp"
 #include "ui_list.hpp"
 #include <common/allocators.hpp>
 #include "ui_hud.hpp"
 #include "ui_core.hpp"
 #include <common/event.hpp>
 #include "ui_menu_layout.hpp"
+#include <cstdio>
 #include <renderer/input.hpp>
 #include <common/log.hpp>
 #include <cstring>
@@ -15,9 +18,12 @@
 static ui_box_t crosshair;
 static VkDescriptorSet crosshair_texture;
 
+static bool gameplay_display;
+
 static struct {
     ui_box_t box;
     ui_text_t text;
+    uint32_t current_health;
 } health_display;
 
 static struct {
@@ -79,47 +85,75 @@ static struct {
 } browse_server_menu;
 
 void ui_hud_init() {
-    crosshair.init(
-        RT_CENTER,
-        1.0f,
-        ui_vector2_t(0.0f, 0.0f),
-        ui_vector2_t(0.05f, 0.05f),
-        NULL,
-        0xFFFFFFFF);
+    { // Crosshair
+        crosshair.init(
+            RT_CENTER,
+            1.0f,
+            ui_vector2_t(0.0f, 0.0f),
+            ui_vector2_t(0.05f, 0.05f),
+            NULL,
+            0xFFFFFFFF);
 
-    crosshair_texture = ui_texture(UT_CROSSHAIRS);
+        crosshair_texture = ui_texture(UT_CROSSHAIRS);
+        crosshair_selection.current_crosshair = 1;
+    }
 
-    crosshair_selection.current_crosshair = 1;
+    { // Health / ammo display
+        health_display.box.init(
+            RT_LEFT_DOWN,
+            1.8f,
+            ui_vector2_t(0.05f, 0.05f),
+            ui_vector2_t(0.08f, 0.08f),
+            NULL,
+            0x22222299);
 
-    display_minibuffer = 0;
+        health_display.text.init(
+            &health_display.box,
+            ui_game_font(),
+            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            0.8f,
+            0.7f,
+            3,
+            2.2f);
 
-    // Actually initialise minibuffer UI components
-    minibuffer.box.init(
-        RT_LEFT_DOWN,
-        13.0f,
-        ui_vector2_t(0.02f, 0.03f),
-        ui_vector2_t(0.6f, 0.17f),
-        NULL,
-        0x09090936);
+        for (uint32_t i = 0; i < 10; ++i) {
+            health_display.text.colors[i] = 0xFFFFFFFF;
+        }
 
-    minibuffer.input_text.text.init(
-        &minibuffer.box,
-        ui_game_font(),
-        ui_text_t::font_stream_box_relative_to_t::BOTTOM,
-        0.8f,
-        0.7f,
-        38,
-        1.8f);
+        gameplay_display = 0;
+    }
 
-    minibuffer.color.init(
-        0x09090936,
-        MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR,
-        0xFFFFFFFF,
-        0xFFFFFFFF);
+    { // Minibuffer
+        display_minibuffer = 0;
 
-    minibuffer.input_text.text_color = 0xFFFFFFFF;
-    minibuffer.input_text.cursor_position = 0;
-    minibuffer.is_typing = 0;
+        // Actually initialise minibuffer UI components
+        minibuffer.box.init(
+            RT_LEFT_DOWN,
+            13.0f,
+            ui_vector2_t(0.02f, 0.03f),
+            ui_vector2_t(0.6f, 0.17f),
+            NULL,
+            0x09090936);
+
+        minibuffer.input_text.text.init(
+            &minibuffer.box,
+            ui_game_font(),
+            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            0.8f,
+            0.7f,
+            38,
+            1.8f);
+
+        minibuffer.color.init(
+            0x09090936,
+            MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR,
+            0xFFFFFFFF,
+            0xFFFFFFFF);
+
+        minibuffer.input_text.text_color = 0xFFFFFFFF;
+        minibuffer.input_text.cursor_position = 0;
+        minibuffer.is_typing = 0;
+    }
 
     ui_color_table_init();
 }
@@ -136,6 +170,27 @@ void ui_submit_hud() {
     mark_ui_textured_section(crosshair_texture);
 
     push_textured_ui_box(&crosshair, crosshair_selection.uvs);
+
+    if (gameplay_display) {
+        // Check if main player health has changed
+        int32_t p_idx = wd_get_local_player();
+        player_t *p = g_game->get_player(p_idx);
+
+        if (p) {
+            uint32_t current_health = p->health;
+            if (current_health != health_display.current_health) {
+                health_display.current_health = current_health;
+
+                sprintf(health_display.text.characters, "%d", health_display.current_health);
+                health_display.text.char_count = strlen(health_display.text.characters);
+                health_display.text.null_terminate();
+            }
+
+            push_colored_ui_box(&health_display.box);
+            mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+            push_ui_text(&health_display.text);
+        }
+    }
 
     ui_submit_minibuffer();
     ui_submit_color_table();
@@ -187,6 +242,14 @@ void ui_color_table_init() {
         ui_vector2_t(0.9f, 0.9f),
         &table_widget.box,
         0x000000FF);
+}
+ 
+void ui_begin_gameplay_display() {
+    gameplay_display = 1;
+}
+
+void ui_end_gameplay_display() {
+    gameplay_display = 0;
 }
 
 void ui_begin_color_table() {

@@ -87,6 +87,10 @@ struct client_t {
     uint32_t chunk_packet_count;
     uint32_t current_chunk_sending;
     client_chunk_packet_t chunk_packets[20];
+
+    // The amount of time it takes for the client to receive a message from the server (vice versa)
+    float latency;
+    float time_since_ping;
 };
 
 struct accumulated_predicted_modification_t {
