@@ -632,8 +632,8 @@ bool collide_sphere_with_player(
         float player_height = PLAYER_SCALE * 2.0f;
 
         // Check collision with 2 spheres
-        float sphere_scale = player_height * 0.25f;
-        vector3_t body_low = p->ws_position + (p->ws_up_vector * player_height * 0.25f);
+        float sphere_scale = player_height * 0.5f;
+        vector3_t body_low = p->ws_position + (p->ws_up_vector * player_height * 0.22f);
         vector3_t body_high = p->ws_position + (p->ws_up_vector * player_height * 0.75f);
 
         vector3_t body_low_diff = body_low - center;
@@ -642,7 +642,7 @@ bool collide_sphere_with_player(
         float dist2_low = glm::dot(body_low_diff, body_low_diff);
         float dist2_high = glm::dot(body_high_diff, body_high_diff);
 
-        float dist_min = radius + player_height * 0.25f;
+        float dist_min = radius + sphere_scale;
         float dist_min2 = dist_min * dist_min;
 
         if (dist2_low < dist_min2 || dist2_high < dist_min2) {

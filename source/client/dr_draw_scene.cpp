@@ -13,19 +13,15 @@
 #include <renderer/renderer.hpp>
 
 static void s_render_person(
-    VkCommandBuffer render_command_buffer,
-    VkCommandBuffer render_shadow_command_buffer,
-    VkCommandBuffer transfer_command_buffer,
+    VkCommandBuffer render,
+    VkCommandBuffer shadow,
+    VkCommandBuffer transfer,
     player_t *p) {
-    if (p->render->animations.next_bound_cycle != p->animated_state) {
-        switch_to_cycle(
-            &p->render->animations,
-            p->animated_state,
-            0);
-    }
+    if (p->render->animations.next_bound_cycle != p->animated_state)
+        switch_to_cycle(&p->render->animations, p->animated_state, 0);
 
     interpolate_joints(&p->render->animations, cl_delta_time(), dr_is_animation_repeating((player_animated_state_t)p->animated_state));
-    sync_gpu_with_animated_transforms(&p->render->animations, transfer_command_buffer);
+    sync_gpu_with_animated_transforms(&p->render->animations, transfer);
 
     // This has to be a bit different
     movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
@@ -33,68 +29,40 @@ static void s_render_person(
     matrix4_t normal_rotation_matrix = matrix4_t(normal_rotation_matrix3);
     normal_rotation_matrix[3][3] = 1.0f;
 
-    vector3_t view_dir = glm::normalize(p->ws_view_direction);
-    float dir_x = view_dir.x;
-    float dir_z = view_dir.z;
-    float rotation_angle = atan2(dir_z, dir_x);
+    matrix4_t tran = glm::translate(p->ws_position);
+    matrix4_t rot = normal_rotation_matrix * p->render->animations.cycles->rotation;
+    matrix4_t sca = glm::scale(vector3_t(PLAYER_SCALE)) * p->render->animations.cycles->scale;
 
-    matrix4_t rot_matrix = glm::rotate(-rotation_angle, vector3_t(0.0f, 1.0f, 0.0f));
+    p->render->render_data.model = tran * rot * sca;
+    buffer_t rdata = {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE};
 
-    p->render->render_data.model = glm::translate(p->ws_position) *
-        normal_rotation_matrix *
-        p->render->animations.cycles->rotation *
-        glm::scale(vector3_t(PLAYER_SCALE)) *
-        p->render->animations.cycles->scale;
-
-    submit_skeletal_mesh(
-        render_command_buffer,
-        dr_get_mesh_rsc(GM_PLAYER),
-        dr_get_shader_rsc(GS_PLAYER),
-        {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE},
-        &p->render->animations);
-
-    submit_skeletal_mesh_shadow(
-        render_shadow_command_buffer,
-        dr_get_mesh_rsc(GM_PLAYER),
-        dr_get_shader_rsc(GS_PLAYER_SHADOW),
-        {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE},
-        &p->render->animations);
+    submit_skeletal_mesh(render, dr_get_mesh_rsc(GM_PLAYER), dr_get_shader_rsc(GS_PLAYER), rdata, &p->render->animations);
+    submit_skeletal_mesh_shadow(shadow, dr_get_mesh_rsc(GM_PLAYER), dr_get_shader_rsc(GS_PLAYER_SHADOW), rdata, &p->render->animations);
 }
 
 static void s_render_ball(
-    VkCommandBuffer render_command_buffer,
-    VkCommandBuffer shadow_render_command_buffer,
+    VkCommandBuffer render,
+    VkCommandBuffer shadow,
     player_t *p) {
     p->render->rotation_speed = p->frame_displacement / calculate_sphere_circumference(PLAYER_SCALE) * 360.0f;
     p->render->rotation_angle += p->render->rotation_speed;
 
-    if (p->render->rotation_angle > 360.0f) {
+    if (p->render->rotation_angle > 360.0f)
         p->render->rotation_angle -= 360.0f;
-    }
 
     if (glm::dot(p->ws_velocity, p->ws_velocity) > 0.0001f) {
         vector3_t cross = glm::cross(glm::normalize(p->ws_velocity), p->ws_up_vector);
         vector3_t right = glm::normalize(cross);
-
         matrix4_t rolling_rotation = glm::rotate(glm::radians(p->render->rotation_angle), -right);
-
         p->render->rolling_matrix = rolling_rotation;
     }
 
     p->render->render_data.model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(vector3_t(PLAYER_SCALE));
+    buffer_t rdata = {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE};
 
-    begin_mesh_submission(render_command_buffer, dr_get_shader_rsc(GS_BALL));
-    submit_mesh(
-        render_command_buffer,
-        dr_get_mesh_rsc(GM_BALL),
-        dr_get_shader_rsc(GS_BALL),
-        {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE});
-
-    submit_mesh_shadow(
-        shadow_render_command_buffer,
-        dr_get_mesh_rsc(GM_BALL),
-        dr_get_shader_rsc(GS_BALL_SHADOW),
-        {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE});
+    begin_mesh_submission(render, dr_get_shader_rsc(GS_BALL));
+    submit_mesh(render, dr_get_mesh_rsc(GM_BALL), dr_get_shader_rsc(GS_BALL), rdata);
+    submit_mesh_shadow(shadow, dr_get_mesh_rsc(GM_BALL), dr_get_shader_rsc(GS_BALL_SHADOW), {rdata});
 }
 
 static void s_render_transition(
