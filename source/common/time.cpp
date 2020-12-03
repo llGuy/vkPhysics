@@ -36,3 +36,5 @@ void sleep_seconds(
 //     } while (ret && errno == EINTR);
 // #endif    
 }
+
+// Get global time
