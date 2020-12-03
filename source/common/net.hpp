@@ -5,6 +5,7 @@
 #include "socket.hpp"
 #include "constant.hpp"
 #include "serialiser.hpp"
+#include <bits/stdint-uintn.h>
 
 #define MAX_PREDICTED_CHUNK_MODIFICATIONS 20
 #define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 250
@@ -59,6 +60,9 @@ struct client_t {
             uint32_t should_set_tick: 1;
             uint32_t did_terrain_mod_previous_tick: 1;
             uint32_t send_corrected_predicted_voxels: 1;
+
+            // For the server: if the server receives the ping response: flip this bit
+            uint32_t received_ping;
             // Will use other bits in future
         };
 
@@ -89,7 +93,8 @@ struct client_t {
     client_chunk_packet_t chunk_packets[20];
 
     // The amount of time it takes for the client to receive a message from the server (vice versa)
-    float latency;
+    float ping;
+    float ping_in_progress;
     float time_since_ping;
 };
 

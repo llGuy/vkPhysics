@@ -873,6 +873,23 @@ static void s_receive_player_team_change(
     }
 }
 
+static void s_receive_ping(
+    serialiser_t *in_serialiser,
+    event_submissions_t *events) {
+    packet_header_t header = {};
+    header.current_tick = g_game->current_tick;
+    header.current_packet_count = g_net_data.current_packet;
+    header.client_id = current_client_id;
+    header.flags.packet_type = PT_PING;
+    header.flags.total_packet_size = packed_packet_header_size();
+
+    serialiser_t serialiser = {};
+    serialiser.init(header.flags.total_packet_size);
+    serialise_packet_header(&header, &serialiser);
+
+    send_to_game_server(&serialiser, bound_server_address);
+}
+
 static void s_check_incoming_game_server_packets(
     event_submissions_t *events) {
     raw_input_t *input = get_raw_input();
@@ -952,6 +969,12 @@ static void s_check_incoming_game_server_packets(
 
             case PT_PLAYER_TEAM_CHANGE: {
                 s_receive_player_team_change(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            case PT_PING: {
+                s_receive_ping(
                     &in_serialiser,
                     events);
             } break;

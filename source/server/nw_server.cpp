@@ -342,6 +342,13 @@ static void s_receive_packet_connection_request(
     client->received_first_commands_packet = 0;
     client->predicted_chunk_mod_count = 0;
     client->predicted_modifications = (chunk_modifications_t *)g_net_data.chunk_modification_allocator.allocate_arena();
+
+    // Force a ping in the next loop
+    client->ping = 0.0f;
+    client->ping_in_progress = 0.0f;
+    client->time_since_ping = NET_PING_INTERVAL + 0.1f;
+    client->received_ping = 1;
+
     memset(client->predicted_modifications, 0, sizeof(chunk_modifications_t) * MAX_PREDICTED_CHUNK_MODIFICATIONS);
     
     event_new_player_t *event_data = FL_MALLOC(event_new_player_t, 1);
@@ -920,7 +927,11 @@ static void s_ping_clients() {
     for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
         client_t *c = &g_net_data.clients[i];
 
-        if (c->time_since_ping > NET_PING_INTERVAL) {
+        if (c->time_since_ping > NET_CLIENT_TIMEOUT) {
+            // TODO: Kick the client out of the server
+            LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
+        }
+        else if (c->time_since_ping > NET_PING_INTERVAL && c->received_ping) {
             serialiser.data_buffer_head = 0;
             
             packet_header_t header = {};
@@ -932,15 +943,39 @@ static void s_ping_clients() {
 
             serialise_packet_header(&header, &serialiser);
             send_to_client(&serialiser, c->address);
+
+            LOG_INFOV("Ping client %d (%s)\n", c->client_id, c->name);
+
+            c->time_since_ping = 0.0f;
+            c->ping_in_progress = 0.0f;
+
+            c->received_ping = 0;
+            serialiser.data_buffer_head = 0;
         }
 
         c->time_since_ping += srv_delta_time();
-        c->latency += srv_delta_time();
+        c->ping_in_progress += srv_delta_time();
     }
+}
+
+static void s_receive_packet_ping(
+    serialiser_t *serialiser,
+    uint16_t client_id,
+    uint64_t current_tick,
+    event_submissions_t *events) {
+    client_t *c = &g_net_data.clients[client_id];
+
+    c->received_ping = 1;
+    c->ping = c->ping_in_progress;
+    c->ping_in_progress = 0.0f;
+
+    LOG_INFOV("Received ping from client %d (%s): latency = %f\n", c->client_id, c->name, c->ping / 2.0f);
 }
 
 static void s_tick_server(
     event_submissions_t *events) {
+    s_ping_clients();
+
     static float snapshot_elapsed = 0.0f;
     snapshot_elapsed += srv_delta_time();
     
@@ -1002,6 +1037,15 @@ static void s_tick_server(
 
             case PT_TEAM_SELECT_REQUEST: {
                 s_receive_packet_team_select_request(
+                    &in_serialiser,
+                    header.client_id,
+                    header.current_tick,
+                    events);
+            } break;
+
+                // Response to a ping
+            case PT_PING: {
+                s_receive_packet_ping(
                     &in_serialiser,
                     header.client_id,
                     header.current_tick,
