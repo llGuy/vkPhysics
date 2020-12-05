@@ -47,6 +47,7 @@ struct game_t {
 
     // Projectiles ////////////////////////////////////////////////////////////
     projectile_tracker_t<rock_t, PROJECTILE_MAX_ROCK_COUNT> rocks;
+    stack_container_t<predicted_projectile_hit_t> predicted_hits;
 
 
 

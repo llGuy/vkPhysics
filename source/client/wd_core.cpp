@@ -57,6 +57,8 @@ void wd_tick(event_submissions_t *events) {
     wd_predict_state(events);
 
     { // Local and remote projectiles (basically predicting the state)
+        player_t *local_player = g_game->get_player(wd_get_local_player());
+
         for (uint32_t i = 0; i < g_game->rocks.list.data_count; ++i) {
             rock_t *rock = &g_game->rocks.list[i];
 
@@ -69,6 +71,12 @@ void wd_tick(event_submissions_t *events) {
                     // Player need to get dealt some DAMAGE MOUAHAHAH
                     player_t *dst_player = g_game->get_player(player_local_id);
                     dst_player->health -= rock_t::DIRECT_DAMAGE;
+
+                    if (rock->client_id == local_player->client_id) {
+                        // Add this player to the list of players that have been hit
+                        // So that the server can check whether or not the client actually got hit
+
+                    }
 
                     rock->flags.active = 0;
                     g_game->rocks.list.remove(i);

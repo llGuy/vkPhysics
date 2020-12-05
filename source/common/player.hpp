@@ -10,8 +10,8 @@
 
 // There can be multiple of these (can be sent over network)
 struct player_action_t {
-    union {
 
+    union {
 
         struct {
             uint16_t move_forward: 1;
@@ -45,6 +45,7 @@ struct player_action_t {
 #if 1
     uint64_t tick;
 #endif
+
 };
 
 struct player_snapshot_t {
@@ -176,6 +177,7 @@ struct player_t {
 
     // Will use this to interpolate between snapshots
     circular_buffer_array_t<player_snapshot_t, 30> remote_snapshots;
+    uint32_t snapshot_before, snapshot_after;
     float elapsed;
 
     float accumulated_dt;

@@ -54,6 +54,7 @@ void game_t::init_memory() {
 
     { // Projectiles
         rocks.init();
+        predicted_hits.init(60);
     }
 }
 

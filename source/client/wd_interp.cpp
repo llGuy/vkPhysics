@@ -103,6 +103,9 @@ void wd_player_interp_step(
             }
         }
 
+        p->snapshot_before = previous_snapshot_index;
+        p->snapshot_after = next_snapshot_index;
+
         player_snapshot_t *previous_snapshot = &p->remote_snapshots.buffer[previous_snapshot_index];
         player_snapshot_t *next_snapshot = &p->remote_snapshots.buffer[next_snapshot_index];
 

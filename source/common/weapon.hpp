@@ -129,3 +129,10 @@ struct projectile_tracker_t {
 
 bool check_projectile_players_collision(rock_t *rock, int32_t *dst_player);
 bool check_projectile_terrain_collision(rock_t *rock);
+
+struct predicted_projectile_hit_t {
+    uint16_t client_id;
+    uint64_t tick_before;
+    uint64_t tick_after;
+    float progression;
+};

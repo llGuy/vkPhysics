@@ -133,6 +133,9 @@ struct net_data_t {
     available_servers_t available_servers;
 
     FILE *log_file;
+
+    // List of "predicted" projectile hits from local client
+
 };
 
 extern net_data_t g_net_data;

@@ -11,6 +11,8 @@ static int32_t local_player;
 
 static terraform_package_t local_current_terraform_package;
 
+static stack_container_t<predicted_projectile_hit_t> hits;
+
 void wd_set_local_player(int32_t id) {
     local_player = id;
 }
@@ -161,5 +163,17 @@ struct terraform_package_t *wd_get_local_terraform_package() {
     return &local_current_terraform_package;
 }
 
-void wd_predict_projectiles() {
+void wd_add_predicted_projectile_hit(player_t *hit_player) {
+    predicted_projectile_hit_t new_hit = {};
+    new_hit.client_id = hit_player->client_id;
+    new_hit.progression = hit_player->elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+
+    player_snapshot_t *before = &hit_player->remote_snapshots.buffer[hit_player->snapshot_before];
+    player_snapshot_t *after = &hit_player->remote_snapshots.buffer[hit_player->snapshot_after];
+
+    new_hit.tick_before = before->tick;
+    new_hit.tick_after = after->tick;
+
+    uint32_t hit_idx = g_game->predicted_hits.add();
+    g_game->predicted_hits[hit_idx] = new_hit;
 }
