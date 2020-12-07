@@ -77,6 +77,8 @@ void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &ch
 }
 
 void destroy_chunk(chunk_t *chunk) {
+    chunk->players_in_chunk.destroy();
+
     FL_FREE(chunk);
 }
 

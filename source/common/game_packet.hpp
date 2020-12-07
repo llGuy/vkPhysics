@@ -135,6 +135,10 @@ struct packet_client_commands_t {
 
     uint32_t new_rocks_count;
     rock_snapshot_t *spawned_rocks;
+
+    // Predicted hits
+    uint32_t predicted_hit_count;
+    predicted_projectile_hit_t *hits;
 };
 
 uint32_t packed_player_commands_size(packet_client_commands_t *commands);

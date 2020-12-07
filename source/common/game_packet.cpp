@@ -1,3 +1,4 @@
+#include "common/weapon.hpp"
 #include "net.hpp"
 #include "allocators.hpp"
 #include "game_packet.hpp"
@@ -328,6 +329,16 @@ uint32_t packed_player_commands_size(
         final_size += commands->chunk_modifications[c].modified_voxels_count * sizeof(voxel_color_t);
     }
 
+    final_size += sizeof(packet_client_commands_t::predicted_hit_count);
+
+    uint32_t predicted_hit_size =
+        sizeof(predicted_projectile_hit_t::client_id) +
+        sizeof(predicted_projectile_hit_t::progression) +
+        sizeof(predicted_projectile_hit_t::tick_before) +
+        sizeof(predicted_projectile_hit_t::tick_after);
+
+    final_size += predicted_hit_size * commands->predicted_hit_count;
+
     return final_size;
 }
 
@@ -361,6 +372,15 @@ void serialise_player_commands(
         s_serialise_chunk_modification_meta_info(serialiser, c);
         s_serialise_chunk_modification_values_with_initial_values(serialiser, c);
         s_serialise_chunk_modification_colors_from_array(serialiser, c);
+    }
+
+    serialiser->serialise_uint32(packet->predicted_hit_count);
+
+    for (uint32_t i = 0; i < packet->predicted_hit_count; ++i) {
+        serialiser->serialise_uint16(packet->hits[i].client_id);
+        serialiser->serialise_float32(packet->hits[i].progression);
+        serialiser->serialise_uint64(packet->hits[i].tick_before);
+        serialiser->serialise_uint64(packet->hits[i].tick_after);
     }
 }
 
@@ -396,6 +416,16 @@ void deserialise_player_commands(
         s_deserialise_chunk_modification_meta_info(serialiser, c);
         s_deserialise_chunk_modification_values_with_initial_values(serialiser, c);
         s_deserialise_chunk_modification_colors_from_array(serialiser, c);
+    }
+
+    packet->predicted_hit_count = serialiser->deserialise_uint32();
+    packet->hits = LN_MALLOC(predicted_projectile_hit_t, packet->predicted_hit_count);
+
+    for (uint32_t i = 0; i < packet->predicted_hit_count; ++i) {
+        packet->hits[i].client_id = serialiser->deserialise_uint16();
+        packet->hits[i].progression = serialiser->deserialise_float32();
+        packet->hits[i].tick_before = serialiser->deserialise_uint64();
+        packet->hits[i].tick_after = serialiser->deserialise_uint64();
     }
 }
 

@@ -485,6 +485,7 @@ static void s_receive_packet_client_commands(
             c->ws_predicted_up_vector = commands.ws_final_up_vector;
             c->ws_predicted_velocity = commands.ws_final_velocity;
             c->predicted_player_flags.u32 = commands.player_flags;
+            // Predicted projectiles
 
             if (c->predicted_player_flags.alive_state == PAS_DEAD) {
                 // LOG_INFO("Player is now dead!\n");
@@ -929,7 +930,7 @@ static void s_ping_clients() {
 
         if (c->time_since_ping > NET_CLIENT_TIMEOUT) {
             // TODO: Kick the client out of the server
-            LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
+            // LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
         }
         else if (c->time_since_ping > NET_PING_INTERVAL && c->received_ping) {
             serialiser.data_buffer_head = 0;

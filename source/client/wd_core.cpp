@@ -75,7 +75,7 @@ void wd_tick(event_submissions_t *events) {
                     if (rock->client_id == local_player->client_id) {
                         // Add this player to the list of players that have been hit
                         // So that the server can check whether or not the client actually got hit
-
+                        wd_add_predicted_projectile_hit(dst_player);
                     }
 
                     rock->flags.active = 0;

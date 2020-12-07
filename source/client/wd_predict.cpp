@@ -165,6 +165,7 @@ struct terraform_package_t *wd_get_local_terraform_package() {
 
 void wd_add_predicted_projectile_hit(player_t *hit_player) {
     predicted_projectile_hit_t new_hit = {};
+    new_hit.flags.initialised = 1;
     new_hit.client_id = hit_player->client_id;
     new_hit.progression = hit_player->elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
 

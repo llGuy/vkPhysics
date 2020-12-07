@@ -2,6 +2,7 @@
 #include "client/ui_game_menu.hpp"
 #include "common/chunk.hpp"
 #include "common/player.hpp"
+#include "common/weapon.hpp"
 #include "nw_client.hpp"
 #include "wd_interp.hpp"
 #include "wd_predict.hpp"
@@ -236,10 +237,25 @@ static void s_fill_predicted_data(
     packet->ws_final_up_vector = p->ws_up_vector;
     packet->ws_final_velocity = p->ws_velocity;
 
-    /* Add the projectiles that the client spawned so that the server can check whether
-     * the client "ACTUALLY" spawned those rocks (prevent hacking)
-     */
-    // ^^^^^^^^^^^^^^^^^^^^^ IS THIS REALLY NECESSARY
+    // Add the players that the local client thinks it has hit with projectiles
+    // Don't need to add the new bullets / rocks that the client spawns
+    // Because if it so happens that the client was cheating, when the client
+    // thinks there was a hit, the server will know that it was incorrect because
+    // the bullet wouldn't have been spawned on server-side
+    packet->predicted_hit_count = g_game->predicted_hits.data_count;
+    packet->hits = LN_MALLOC(predicted_projectile_hit_t, packet->predicted_hit_count);
+
+    uint32_t actual_predicted_count = 0;
+
+    for (uint32_t i = 0; i < packet->predicted_hit_count; ++i) {
+        if (g_game->predicted_hits[i].flags.initialised) {
+            packet->hits[actual_predicted_count++] = g_game->predicted_hits[i];
+
+            LOG_INFO("Predicted a projectile hit\n");
+        }
+    }
+
+    packet->predicted_hit_count = actual_predicted_count;
 }
 
 static void s_fill_with_accumulated_chunk_modifications(
@@ -326,6 +342,11 @@ static void s_send_packet_client_commands() {
             c->waiting_on_correction = 0;
 
             // Clear projectiles
+            for (uint32_t i = 0; i < g_game->predicted_hits.data_count; ++i) {
+                g_game->predicted_hits[i].flags.initialised = 0;
+            }
+
+            g_game->predicted_hits.clear();
             g_game->rocks.clear_recent();
         }
     }

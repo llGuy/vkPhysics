@@ -1,3 +1,4 @@
+#include "client/ui_game_menu.hpp"
 #include "common/game.hpp"
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
@@ -128,6 +129,20 @@ static void s_handle_event_player_disconnected(
 
         int32_t local_id = g_game->client_to_local_id(data->client_id);
         player_t *p = g_game->get_player(local_id);
+
+        if (p->idx_in_chunk_list > -1) {
+            chunk_t *chunk = g_game->access_chunk(p->chunk_coord);
+            chunk->players_in_chunk.remove(p->idx_in_chunk_list);
+            p->idx_in_chunk_list = -1;
+        }
+
+        uint32_t team_color = p->flags.team_color;
+
+        if (team_color != team_color_t::INVALID) {
+            // Remove player from team
+            g_game->remove_player_from_team(p);
+            ui_init_game_menu_for_server();
+        }
             
         if (p) {
             g_game->remove_player(p->local_id);
