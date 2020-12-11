@@ -53,6 +53,9 @@ static bool s_send_packet_connection_handshake(
     uint32_t loaded_chunk_count) {
     packet_connection_handshake_t connection_handshake = {};
     connection_handshake.loaded_chunk_count = loaded_chunk_count;
+
+    LOG_INFOV("Loaded chunk count: %d\n", connection_handshake.loaded_chunk_count);
+
     connection_handshake.player_infos = LN_MALLOC(full_player_info_t, g_net_data.clients.data_count);
 
     { // Fill in the data on the players
@@ -240,6 +243,8 @@ static uint32_t s_prepare_packet_chunk_voxels(
             packet_to_save->size = serialiser.data_buffer_head;
 
             serialiser.data_buffer_head = chunk_values_start;
+
+            LOG_INFOV("Packet contains %d chunks\n", chunks_in_packet);
             chunks_in_packet = 0;
         }
     }
@@ -894,7 +899,7 @@ static void s_send_pending_chunks() {
         uint32_t client_id = clients_to_send_chunks_to[i];
         client_t *c_ptr = &g_net_data.clients[client_id];
 
-        LOG_INFOV("Need to send %d chunks\n", c_ptr->chunk_packet_count);
+        LOG_INFOV("Need to send %d packets\n", c_ptr->chunk_packet_count);
         if (c_ptr->current_chunk_sending < c_ptr->chunk_packet_count) {
             client_chunk_packet_t *packet = &c_ptr->chunk_packets[c_ptr->current_chunk_sending];
             serialiser_t serialiser = {};

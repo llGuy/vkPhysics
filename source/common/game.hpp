@@ -36,7 +36,7 @@ struct game_t {
 
     // Chunks /////////////////////////////////////////////////////////////////
     stack_container_t<chunk_t *> chunks;
-    hash_table_t<uint32_t, 300, 30, 10> chunk_indices;
+    hash_table_t<uint32_t, 1500, 30, 10> chunk_indices;
     uint32_t max_modified_chunks;
     uint32_t modified_chunk_count;
     chunk_t **modified_chunks;

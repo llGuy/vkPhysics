@@ -3,6 +3,7 @@
 #include "log.hpp"
 #include "tools.hpp"
 #include "allocators.hpp"
+#include <cstring>
 
 // Simple hash table implementation
 template <
@@ -146,6 +147,61 @@ template <
         FL_FREE(removed);
 
         data = NULL;
+        data_count = 0;
+        removed_count = 0;
+    }
+    
+    uint32_t add() {
+        if (removed_count) {
+            return removed[removed_count-- - 1];
+        }
+        else {
+            return data_count++;
+        }
+    }
+
+    T *get(
+        uint32_t index) {
+        return &data[index];
+    }
+
+    T &operator[](
+        uint32_t i) {
+        return data[i];
+    }
+
+    void remove(
+        uint32_t index) {
+        data[index] = T();
+        removed[removed_count++] = index;
+    }
+};
+
+template <
+    typename T, uint32_t Count> struct static_stack_container_t {
+    uint32_t max_size = 0;
+    uint32_t data_count = 0;
+    T data[Count];
+
+    uint32_t removed_count = 0;
+    uint32_t removed[Count];
+
+    void init() {
+        max_size = Count;
+
+        memset(data, 0, max_size * sizeof(T));
+        memset(removed, 0, max_size * sizeof(T));
+
+        removed_count = 0;
+        data_count = 0;
+    }
+
+    void clear() {
+        data_count = 0;
+        removed_count = 0;
+    }
+    
+    void destroy() {
         data_count = 0;
         removed_count = 0;
     }
