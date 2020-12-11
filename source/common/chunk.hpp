@@ -50,9 +50,8 @@ struct chunk_t {
     voxel_t voxels[CHUNK_VOXEL_COUNT];
 
     // uint8_t because anyway, player index won't go beyond 50
-    stack_container_t<uint8_t> players_in_chunk;
+    static_stack_container_t<uint8_t, PLAYER_MAX_COUNT> players_in_chunk;
 
-    //chunk_history_t *history;
     chunk_history_t history;
 
     struct chunk_render_t *render;

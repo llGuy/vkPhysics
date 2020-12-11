@@ -73,7 +73,7 @@ void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &ch
 
     chunk->render = NULL;
 
-    chunk->players_in_chunk.init(PLAYER_MAX_COUNT);
+    chunk->players_in_chunk.init();
 }
 
 void destroy_chunk(chunk_t *chunk) {

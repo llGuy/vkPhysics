@@ -802,6 +802,7 @@ static void s_receive_packet_chunk_voxels(
         chunk->flags.has_to_update_vertices = 1;
 
         // Also force update surrounding chunks
+#if 0
         g_game->get_chunk(ivector3_t(x + 1, y, z))->flags.has_to_update_vertices = 1;
         g_game->get_chunk(ivector3_t(x - 1, y, z))->flags.has_to_update_vertices = 1;
         g_game->get_chunk(ivector3_t(x, y + 1, z))->flags.has_to_update_vertices = 1;
@@ -818,6 +819,7 @@ static void s_receive_packet_chunk_voxels(
         g_game->get_chunk(ivector3_t(x - 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
         g_game->get_chunk(ivector3_t(x - 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
         g_game->get_chunk(ivector3_t(x - 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
+#endif
         
         for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
             uint8_t current_value = serialiser->deserialise_uint8();
@@ -851,7 +853,39 @@ static void s_receive_packet_chunk_voxels(
         }
     }
 
+    uint32_t loaded;
+    chunk_t **chunks = g_game->get_active_chunks(&loaded);
+    LOG_INFOV("Currently there are %d loaded chunks\n", loaded);
+
     chunks_to_receive -= loaded_chunk_count;
+
+    if (chunks_to_receive == 0) {
+        for (uint32_t i = 0; i < loaded; ++i) {
+            chunk_t *c = g_game->chunks[i];
+            uint32_t x = c->chunk_coord.x;
+            uint32_t y = c->chunk_coord.y;
+            uint32_t z = c->chunk_coord.z;
+
+            chunk_t *a = NULL;
+            if ((a = g_game->access_chunk(ivector3_t(x + 1, y, z)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x - 1, y, z)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x, y + 1, z)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x, y - 1, z)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x, y, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x, y, z - 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x + 1, y + 1, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x + 1, y + 1, z - 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x + 1, y - 1, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x + 1, y - 1, z - 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x - 1, y + 1, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x - 1, y + 1, z - 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x - 1, y - 1, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = g_game->access_chunk(ivector3_t(x - 1, y - 1, z - 1)))) a->flags.has_to_update_vertices = 1;
+        }
+    }
+
+    g_game->get_active_chunks(&loaded);
+    LOG_INFOV("Currently there are %d loaded chunks\n", loaded);
 }
 
 static void s_receive_player_team_change(
