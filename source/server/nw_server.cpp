@@ -347,6 +347,7 @@ static void s_receive_packet_connection_request(
     client->received_first_commands_packet = 0;
     client->predicted_chunk_mod_count = 0;
     client->predicted_modifications = (chunk_modifications_t *)g_net_data.chunk_modification_allocator.allocate_arena();
+    client->previous_locations.init();
 
     // Force a ping in the next loop
     client->ping = 0.0f;
@@ -823,6 +824,12 @@ static void s_send_packet_game_state_snapshot() {
             snapshot->contact = p->flags.contact;
             snapshot->animated_state = p->animated_state;
             snapshot->frame_displacement = p->frame_displacement;
+
+            // Add snapshot to client's circular buffer of snapshots
+            player_position_snapshot_t s = {};
+            s.ws_position = snapshot->ws_position;
+            s.tick = snapshot->tick;
+            c->previous_locations.push_item(&s);
             
             if (snapshot->terraformed) {
                 snapshot->terraform_tick = c->tick_at_which_client_terraformed;

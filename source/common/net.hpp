@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/containers.hpp"
 #include "tools.hpp"
 #include "player.hpp"
 #include "socket.hpp"
@@ -81,6 +82,9 @@ struct client_t {
 
     player_flags_t predicted_player_flags;
 
+    // Previous locations
+    circular_buffer_array_t<player_position_snapshot_t, 40> previous_locations;
+
     // Predicted chunk modifications
     uint32_t predicted_chunk_mod_count;
     chunk_modifications_t *predicted_modifications;
@@ -119,6 +123,14 @@ struct available_servers_t {
     hash_table_t<uint32_t, 50, 5, 5> name_to_server;
 };
 
+#define MAX_CLIENT_PACKET_STORAGE 5
+
+struct packet_t {
+    network_address_t address;
+    uint32_t byte_size;
+    void *data;
+};
+
 struct net_data_t {
     uint64_t current_packet;
     char *message_buffer;
@@ -134,13 +146,21 @@ struct net_data_t {
 
     FILE *log_file;
 
-    // List of "predicted" projectile hits from local client
+    uint32_t current_packet_count;
+    packet_t packets[MAX_CLIENT_PACKET_STORAGE];
 
+    // List of "predicted" projectile hits from local client
 };
+
 
 extern net_data_t g_net_data;
 
 void main_udp_socket_init(uint16_t output_port);
+// When something has been received, make sure (that isn't ping),
+// Make sure to dispatch it to the main thread when needed
+void start_client_udp_thread();
+void stop_client_udp_thread();
+
 void meta_socket_init();
 bool send_to_game_server(serialiser_t *serialiser, network_address_t address);
 int32_t receive_from_game_server(char *message_buffer, uint32_t max_size, network_address_t *addr);

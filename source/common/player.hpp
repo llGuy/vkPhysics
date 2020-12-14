@@ -82,6 +82,11 @@ struct player_snapshot_t {
     uint64_t terraform_tick;
 };
 
+struct player_position_snapshot_t {
+    uint64_t tick;
+    vector3_t ws_position;
+};
+
 // To initialise player, need to fill everything (except for player_render_t *render)
 enum player_alive_state_t {
     PAS_DEAD, PAS_ALIVE

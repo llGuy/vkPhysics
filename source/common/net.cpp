@@ -1,14 +1,26 @@
 #include "net.hpp"
+#include "allocators.hpp"
+#include "common/constant.hpp"
+#include "game_packet.hpp"
 #include "game.hpp"
 #include "string.hpp"
 #include "socket.hpp"
 #include "meta_packet.hpp"
 #include <cstdio>
+#include <mutex>
+#include <thread>
+#include <atomic>
 
 net_data_t g_net_data = {};
 
 static socket_t meta_socket;
 static socket_t main_udp_socket;
+
+// Don't need to udp thread on server because server tick rate doesn't
+// depend so heavily on framerate (which is a huge burden on client side)
+static std::thread client_udp_thread;
+static std::mutex udp_thread_mutex;
+static std::atomic<bool> udp_thread_running;
 
 void main_udp_socket_init(uint16_t output_port) {
     g_net_data.current_packet = 0;
@@ -33,6 +45,73 @@ void main_udp_socket_init(uint16_t output_port) {
     }
 }
 
+// If the packet is a ping packet, return true
+static bool s_handle_ping(const packet_t &packet) {
+    // Do quick check to see if it's ping, in which case, we send something back
+    serialiser_t ser = {};
+    ser.data_buffer = (uint8_t *)packet.data;
+    ser.data_buffer_size = packet.byte_size;
+
+    packet_header_t header = {};
+    deserialise_packet_header(&header, &ser);
+
+    if (header.flags.packet_type == PT_PING) {
+        LOG_INFO("Received ping\n");
+
+        // Send pong
+        send_to_game_server(&ser, packet.address);
+
+        send_to(main_udp_socket, packet.address, (char *)ser.data_buffer, ser.data_buffer_head);
+
+        return true;
+    }
+
+    return false;
+}
+
+static void s_client_udp_thread() {
+    while (udp_thread_running) {
+        // Get the starting pointer
+        packet_t packet = {};
+        packet.data = g_net_data.message_buffer;
+        if (g_net_data.current_packet_count) {
+            packet_t *previous_packet = &g_net_data.packets[g_net_data.current_packet_count - 1];
+            packet.data = (char *)(previous_packet->data) + previous_packet->byte_size;
+        }
+
+        { // Lock the mutex
+            std::lock_guard<std::mutex> guard (udp_thread_mutex);
+        
+            packet_t packet = {};
+            packet.byte_size = receive_from_game_server(
+                (char *)packet.data,
+                sizeof(char) * NET_MAX_MESSAGE_SIZE,
+                &packet.address);
+
+            if (packet.byte_size) {
+                // If this packet isn't a ping packet, make sure not to push
+                if (!s_handle_ping(packet)) {
+                    // Push this packet to the list of packets
+                    LOG_INFO("Received packet that wasn't ping\n");
+                    g_net_data.packets[g_net_data.current_packet_count++] = packet;
+                }
+            }
+        } // Unlock mutex
+    }
+}
+
+void start_client_udp_thread() {
+    udp_thread_running = true;
+    client_udp_thread = std::thread(s_client_udp_thread);
+}
+
+void stop_client_udp_thread() {
+    udp_thread_running = false;
+    client_udp_thread.join();
+
+    LOG_INFO("UDP thread finished\n");
+}
+
 #define META_SERVER_DOMAIN "www.llguy.fun"
 
 void meta_socket_init() {
@@ -45,7 +124,14 @@ bool send_to_game_server(
     serialiser_t *serialiser,
     network_address_t address) {
     ++g_net_data.current_packet;
-    return send_to(main_udp_socket, address, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
+
+    { // Lock mutex to make sure that socket isn't being used
+        std::lock_guard<std::mutex> guard (udp_thread_mutex);
+
+        LOG_INFO("Sending packet to server\n");
+
+        return send_to(main_udp_socket, address, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
+    }
 }
 
 bool send_to_client(serialiser_t *serialiser, network_address_t address) {

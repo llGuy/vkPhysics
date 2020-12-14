@@ -291,7 +291,7 @@ template <
     uint32_t buffer_size;
     T *buffer;
 
-    void initialize(
+    void init(
         uint32_t count) {
         buffer_size = count;
         uint32_t byte_count = buffer_size * sizeof(T);

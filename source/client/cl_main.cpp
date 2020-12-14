@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <ctime>
+#include "common/net.hpp"
 #include "ui_core.hpp"
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
@@ -109,6 +110,7 @@ int32_t main(
     game_input_settings_init();
     renderer_init();
     fx_fader_init();
+    start_client_udp_thread();
     nw_init(&events);
 
     s_open();
@@ -135,6 +137,7 @@ int32_t main(
     dispatch_events(&events);
 
     nw_stop_request_thread();
+    stop_client_udp_thread();
 
     return 0;
 }
