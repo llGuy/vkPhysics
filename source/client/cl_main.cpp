@@ -110,7 +110,6 @@ int32_t main(
     game_input_settings_init();
     renderer_init();
     fx_fader_init();
-    start_client_udp_thread();
     nw_init(&events);
 
     s_open();
