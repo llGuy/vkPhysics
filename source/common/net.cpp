@@ -6,7 +6,6 @@
 #include "string.hpp"
 #include "socket.hpp"
 #include "meta_packet.hpp"
-#include <bits/stdint-intn.h>
 #include <cstdio>
 #include <mutex>
 #include <thread>
@@ -61,6 +60,8 @@ static bool s_handle_ping(const packet_t &packet) {
         LOG_INFO("Received ping\n");
 
         // Send pong
+        send_to_game_server(&ser, packet.address);
+
         send_to(main_udp_socket, packet.address, (char *)ser.data_buffer, ser.data_buffer_head);
 
         return true;
@@ -71,8 +72,6 @@ static bool s_handle_ping(const packet_t &packet) {
 
 static void s_client_udp_thread() {
     while (udp_thread_running) {
-        std::lock_guard<std::mutex> guard (udp_thread_mutex);
-
         // Get the starting pointer
         packet_t packet = {};
         packet.data = g_net_data.message_buffer;
@@ -81,7 +80,9 @@ static void s_client_udp_thread() {
             packet.data = (char *)(previous_packet->data) + previous_packet->byte_size;
         }
 
-        if (g_net_data.current_packet_count < MAX_CLIENT_PACKET_STORAGE) {
+        { // Lock mutex
+            std::lock_guard<std::mutex> guard (udp_thread_mutex);
+
             packet.byte_size = receive_from(
                 main_udp_socket,
                 (char *)packet.data,
@@ -96,7 +97,9 @@ static void s_client_udp_thread() {
                     g_net_data.packets[g_net_data.current_packet_count++] = packet;
                 }
             }
-        }
+
+            putchar('.');
+        } // Unlock mutex
 
         std::this_thread::sleep_for(std::chrono::duration<float>(0.00001f));
     }
@@ -140,44 +143,14 @@ bool send_to_client(serialiser_t *serialiser, network_address_t address) {
     return send_to(main_udp_socket, address, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
 }
 
-std::unique_lock<std::mutex> get_next_received_packet(packet_t **p) {
-    *p = NULL;
-
-    // Make sure that this gets locked until we have fully handled this packet
-    std::unique_lock<std::mutex> lock (udp_thread_mutex);
-
-    if (g_net_data.packet_pointer < g_net_data.current_packet_count) {
-        packet_t *p = &g_net_data.packets[g_net_data.packet_pointer];
-
-        ++g_net_data.packet_pointer;
-        if (g_net_data.current_packet_count == g_net_data.packet_pointer) {
-            g_net_data.current_packet_count = 0;
-            g_net_data.packet_pointer = 0;
-        }
-    }
-
-    return lock;
+int32_t receive_from_game_server(char *message_buffer, uint32_t max_size, network_address_t *addr) {
+    // return receive_from(
+    //     main_udp_socket,
+    //     message_buffer,
+    //     sizeof(char) * max_size,
+    //     addr);
+    return 0;
 }
-
-// int32_t receive_from_game_server(char *message_buffer, uint32_t max_size, network_address_t *addr) {
-//     std::lock_guard<std::mutex> guard (udp_thread_mutex);
-
-//     uint32_t byte_size = 0;
-
-//     if (g_net_data.packet_pointer < g_net_data.current_packet_count) {
-//         packet_t *p = &g_net_data.packets[g_net_data.packet_pointer];
-
-//         byte_size = p->byte_size;
-
-//         ++g_net_data.packet_pointer;
-//         if (g_net_data.current_packet_count == g_net_data.packet_pointer) {
-//             g_net_data.current_packet_count = 0;
-//             g_net_data.packet_pointer = 0;
-//         }
-//     }
-
-//     return byte_size;
-// }
 
 int32_t receive_from_client(char *message_buffer, uint32_t max_size, network_address_t *addr) {
     return receive_from(

@@ -930,70 +930,6 @@ static void s_receive_player_team_change(
     }
 }
 
-static void s_handle_packet(
-    uint8_t *data,
-    uint32_t data_size,
-    event_submissions_t *events) {
-    serialiser_t in_serialiser = {};
-    in_serialiser.data_buffer = (uint8_t *)g_net_data.message_buffer;
-    in_serialiser.data_buffer_size = data_size;
-
-    packet_header_t header = {};
-    deserialise_packet_header(&header, &in_serialiser);
-
-    switch(header.flags.packet_type) {
-
-    case PT_CONNECTION_HANDSHAKE: {
-        s_receive_packet_connection_handshake(
-            &in_serialiser,
-            events);
-        return;
-    } break;
-
-    case PT_PLAYER_JOINED: {
-        s_receive_packet_player_joined(
-            &in_serialiser,
-            events);
-    } break;
-
-    case PT_PLAYER_LEFT: {
-        s_receive_packet_player_left(
-            &in_serialiser,
-            events);
-    } break;
-
-    case PT_GAME_STATE_SNAPSHOT: {
-        s_receive_packet_game_state_snapshot(
-            &in_serialiser,
-            header.current_tick,
-            events);
-    } break;
-
-    case PT_CHUNK_VOXELS: {
-        s_receive_packet_chunk_voxels(
-            &in_serialiser,
-            events);
-    } break;
-
-    case PT_PLAYER_TEAM_CHANGE: {
-        s_receive_player_team_change(
-            &in_serialiser,
-            events);
-    } break;
-
-    // case PT_PING: {
-    //     s_receive_ping(
-    //         &in_serialiser,
-    //         events);
-    // } break;
-
-    default: {
-        LOG_INFO("Received unidentifiable packet\n");
-    } break;
-
-    }
-}
-
 static void s_receive_ping(
     serialiser_t *in_serialiser,
     event_submissions_t *events) {
@@ -1036,35 +972,87 @@ static void s_check_incoming_game_server_packets(
             elapsed = 0.0f;
         }
 
+        network_address_t received_address = {};
+        int32_t received = receive_from_game_server(
+            g_net_data.message_buffer,
+            sizeof(char) * NET_MAX_MESSAGE_SIZE,
+            &received_address);
+
         // In future, separate thread will be capturing all these packets
         static const uint32_t MAX_RECEIVED_PER_TICK = 4;
         uint32_t i = 0;
 
-        bool reading = true;
+        while (received) {
+            serialiser_t in_serialiser = {};
+            in_serialiser.data_buffer = (uint8_t *)g_net_data.message_buffer;
+            in_serialiser.data_buffer_size = received;
 
-        while (reading) {
+            packet_header_t header = {};
+            deserialise_packet_header(&header, &in_serialiser);
+
+            switch(header.flags.packet_type) {
+
+            case PT_CONNECTION_HANDSHAKE: {
+                s_receive_packet_connection_handshake(
+                    &in_serialiser,
+                    events);
+                return;
+            } break;
+
+            case PT_PLAYER_JOINED: {
+                s_receive_packet_player_joined(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            case PT_PLAYER_LEFT: {
+                s_receive_packet_player_left(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            case PT_GAME_STATE_SNAPSHOT: {
+                s_receive_packet_game_state_snapshot(
+                    &in_serialiser,
+                    header.current_tick,
+                    events);
+            } break;
+
+            case PT_CHUNK_VOXELS: {
+                s_receive_packet_chunk_voxels(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            case PT_PLAYER_TEAM_CHANGE: {
+                s_receive_player_team_change(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            case PT_PING: {
+                s_receive_ping(
+                    &in_serialiser,
+                    events);
+            } break;
+
+            default: {
+                LOG_INFO("Received unidentifiable packet\n");
+            } break;
+
+            }
+
             if (i < MAX_RECEIVED_PER_TICK) {
-                packet_t *p = {};
-                auto unique_lock = get_next_received_packet(&p);
-
-                if (p) {
-                    reading = true;
-
-                    // Need to lock the mutex
-                    s_handle_packet(
-                        (uint8_t *)p->data,
-                        p->byte_size,
-                        events);
-
-                    ++i;
-                }
-                else {
-                    reading = false;
-                }
+                received = receive_from_game_server(
+                    g_net_data.message_buffer,
+                    sizeof(char) * NET_MAX_MESSAGE_SIZE,
+                    &received_address);
             }
             else {
-                reading = false;
-            }
+                received = false;
+            } 
+
+            ++i;
         }
 
         if (chunks_to_receive == 0 && still_receiving_chunk_packets) {
@@ -1257,7 +1245,7 @@ void nw_init(event_submissions_t *events) {
 
     socket_api_init();
 
-    g_net_data.message_buffer = FL_MALLOC(char, (NET_MAX_MESSAGE_SIZE * 3));
+    g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 
     nw_init_meta_connection();
 
