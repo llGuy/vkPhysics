@@ -1,5 +1,7 @@
+#include "common/constant.hpp"
 #include "common/player.hpp"
 #include "common/team.hpp"
+#include "common/weapon.hpp"
 #include "server/nw_server_meta.hpp"
 #include "srv_main.hpp"
 #include "nw_server.hpp"
@@ -394,6 +396,7 @@ static void s_receive_packet_client_disconnect(
     (void)serialiser;
     LOG_INFO("Client disconnected\n");
 
+    g_net_data.clients[client_id].previous_locations.destroy();
     g_net_data.clients[client_id].initialised = 0;
     g_net_data.clients.remove(client_id);
 
@@ -491,7 +494,14 @@ static void s_receive_packet_client_commands(
             c->ws_predicted_up_vector = commands.ws_final_up_vector;
             c->ws_predicted_velocity = commands.ws_final_velocity;
             c->predicted_player_flags.u32 = commands.player_flags;
+            c->predicted_player_health = commands.predicted_health;
+
             // Predicted projectiles
+            c->predicted_proj_hit_count = commands.predicted_hit_count;
+            for (uint32_t i = 0; i < commands.predicted_hit_count; ++i) {
+                c->predicted_proj_hits[i] = commands.hits[i];
+            }
+
 
             if (c->predicted_player_flags.alive_state == PAS_DEAD) {
                 // LOG_INFO("Player is now dead!\n");
@@ -715,6 +725,40 @@ static bool s_check_if_client_has_to_correct_terrain(
     return needs_to_correct;
 }
 
+static bool s_check_if_client_has_to_correct_hits(
+    player_t *player_client,
+    client_t *shooter_client) {
+    /* Each projectile hit will be associated with a client (the client that was hit).
+     * This means that for each projectile hit, we need to do lag compensation for just
+     * One player and check the projectiles that the shooter shot with the player
+     * At the previous position */
+
+    float shooter_half_roundtrip = shooter_client->ping / 2.0f;
+
+    for (uint32_t i = 0; i < shooter_client->predicted_proj_hit_count; ++i) {
+        predicted_projectile_hit_t *hit = &shooter_client->predicted_proj_hits[i];
+
+        client_t *target = &g_net_data.clients[hit->client_id];
+
+        // Get the two snapshots that encompass the latency of the shooting_player
+        float snapshot_from_head = shooter_half_roundtrip / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+        float snapshot_from_head_trunc = floor(snapshot_from_head);
+        float progression = snapshot_from_head - snapshot_from_head_trunc;
+
+        uint32_t s1_idx = target->previous_locations.decrement_index(
+            target->previous_locations.head,
+            (uint32_t)snapshot_from_head_trunc);
+
+        uint32_t s0_idx = target->previous_locations.decrement_index(
+            s1_idx);
+
+        player_position_snapshot_t *s1 = &target->previous_locations.buffer[s1_idx];
+        player_position_snapshot_t *s0 = &target->previous_locations.buffer[s0_idx];
+
+        // TODO:
+    }
+}
+
 // Send the voxel modifications
 // It will the client's job to decide which voxels to interpolate between based on the
 // fact that it knows which voxels it modified - it will not interpolate between voxels it knows to have modified
@@ -777,10 +821,11 @@ static void s_send_packet_game_state_snapshot() {
             int32_t local_id = g_game->client_to_local_id(c->client_id);
             player_t *p = g_game->get_player(local_id);
 
-            // Check if 
+            // Check if player has to correct general state (position, view direction, etc...)
             bool has_to_correct_state = s_check_if_client_has_to_correct_state(p, c);
             // Check if client has to correct voxel modifications
             bool has_to_correct_terrain = s_check_if_client_has_to_correct_terrain(c);
+            // Check if predicted projectile hits were correct
 
             if (has_to_correct_state || has_to_correct_terrain) {
                 if (c->waiting_on_correction) {
@@ -812,6 +857,7 @@ static void s_send_packet_game_state_snapshot() {
 
             snapshot->client_id = c->client_id;
             snapshot->player_local_flags = p->flags.u32;
+            snapshot->player_health = p->health;
             snapshot->ws_position = p->ws_position;
             snapshot->ws_view_direction = p->ws_view_direction;
             snapshot->ws_next_random_spawn = p->next_random_spawn_position;
@@ -957,8 +1003,6 @@ static void s_ping_clients() {
             serialise_packet_header(&header, &serialiser);
             send_to_client(&serialiser, c->address);
 
-            LOG_INFOV("Ping client %d (%s)\n", c->client_id, c->name);
-
             c->time_since_ping = 0.0f;
             c->ping_in_progress = 0.0f;
 
@@ -981,8 +1025,6 @@ static void s_receive_packet_ping(
     c->received_ping = 1;
     c->ping = c->ping_in_progress;
     c->ping_in_progress = 0.0f;
-
-    LOG_INFOV("Received ping from client %d (%s): latency = %f\n", c->client_id, c->name, c->ping / 2.0f);
 }
 
 static void s_tick_server(

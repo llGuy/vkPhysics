@@ -439,22 +439,24 @@ template <
     }
 
     uint32_t decrement_index(
-        uint32_t index) {
-        if (index == 0) {
-            return (buffer_size - 1);
+        uint32_t index,
+        uint32_t by = 1) {
+        if (index < by) {
+            return (buffer_size - (by - index));
         }
         else {
-            return (index - 1);
+            return (index - by);
         }
     }
 
     uint32_t increment_index(
-        uint32_t index) {
-        if (index == buffer_size - 1) {
-            return 0;
+        uint32_t index,
+        uint32_t by = 1) {
+        if (index >= buffer_size - by) {
+            return by - (buffer_size - 1 - index);
         }
         else {
-            return index + 1;
+            return index + by;
         }
     }
 };

@@ -7,8 +7,14 @@
 
 enum class firing_type_t { AUTOMATIC, SEMI_AUTOMATIC, INVALID };
 enum class bullet_type_t { PROJECTILE, HITSCAN, INVALID };
+
 // TODO: ADD MORE WEPANOS!
 enum class weapon_type_t { TERRAFORMER, ROCKS, EXPLODING_ROCKS, RIFLE, INVALID };
+
+struct projectile_obj_reference_t {
+    uint32_t initialised: 1;
+    uint32_t idx: 31;
+};
 
 // Causes projectiles to spawn
 struct weapon_t {
@@ -41,6 +47,8 @@ struct weapon_t {
     float recoil_time;
     float elapsed;
     bool ready;
+
+    stack_container_t<projectile_obj_reference_t> active_projs;
 };
 
 struct rock_snapshot_t {
@@ -55,6 +63,11 @@ struct rock_t {
     struct {
         uint32_t active: 1;
         uint32_t spawned_locally: 1;
+
+        // Index of the reference to this projectile
+        // In the weapon structure's list of active projectiles
+        uint32_t ref_idx_obj: 28;
+        uint32_t ref_idx_weapon: 2;
     } flags;
 
     vector3_t position;
@@ -69,9 +82,13 @@ struct rock_t {
         const vector3_t &p,
         const vector3_t &d,
         const vector3_t &u,
-        uint16_t cid)
+        uint16_t cid,
+        uint32_t ref_obj,
+        uint32_t ref_weapon)
         : position(p), direction(d), up(u), client_id(cid) {
         flags.active = 1;
+        flags.ref_idx_obj = ref_obj;
+        flags.ref_idx_weapon = ref_weapon;
     }
 
     static constexpr uint32_t DIRECT_DAMAGE = 75;
@@ -85,10 +102,6 @@ struct exploding_rock_t {
 
 // Initialise all the memory to contain the rocks / bullets which will deal damage
 void weapons_and_bullets_memory_init();
-
-void spawn_rock(
-    const vector3_t &position,
-    const vector3_t &start_direction);
 
 void tick_rock(rock_t *rock, float dt);
 
@@ -111,7 +124,7 @@ struct projectile_tracker_t {
     }
 
     template <typename ...Constr /* Constructor parameters */>
-    T *spawn(Constr &&...params) {
+    uint32_t spawn(Constr &&...params) {
         // Add the projectile to the list
         uint32_t idx = list.add();
         T *p = &list[idx];
@@ -119,7 +132,7 @@ struct projectile_tracker_t {
 
         recent[recent_count++] = idx;
 
-        return p;
+        return idx;
     }
 
     void clear_recent() {

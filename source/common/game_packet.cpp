@@ -309,6 +309,7 @@ uint32_t packed_player_commands_size(
     final_size += command_size * commands->command_count;
 
     final_size += sizeof(packet_client_commands_t::player_flags);
+    final_size += sizeof(packet_client_commands_t::predicted_health);
     final_size += sizeof(packet_client_commands_t::ws_final_position);
     final_size += sizeof(packet_client_commands_t::ws_final_view_direction);
     final_size += sizeof(packet_client_commands_t::ws_final_up_vector);
@@ -358,6 +359,7 @@ void serialise_player_commands(
     }
 
     serialiser->serialise_uint32(packet->player_flags);
+    serialiser->serialise_uint32(packet->predicted_health);
 
     serialiser->serialise_vector3(packet->ws_final_position);
     serialiser->serialise_vector3(packet->ws_final_view_direction);
@@ -400,7 +402,8 @@ void deserialise_player_commands(
         packet->actions[i].tick = serialiser->deserialise_uint64();
     }
 
-    packet->player_flags =serialiser->deserialise_uint32();
+    packet->player_flags = serialiser->deserialise_uint32();
+    packet->predicted_health = serialiser->deserialise_uint32();
 
     packet->ws_final_position = serialiser->deserialise_vector3();
     packet->ws_final_view_direction = serialiser->deserialise_vector3();
@@ -438,6 +441,7 @@ uint32_t packed_game_state_snapshot_size(
         sizeof(player_snapshot_t::flags) +
         sizeof(player_snapshot_t::client_id) +
         sizeof(player_snapshot_t::player_local_flags) +
+        sizeof(player_snapshot_t::player_health) +
         sizeof(player_snapshot_t::ws_position) +
         sizeof(player_snapshot_t::ws_view_direction) +
         sizeof(player_snapshot_t::ws_up_vector) +
@@ -468,6 +472,7 @@ void serialise_game_state_snapshot(
         serialiser->serialise_uint16(packet->player_snapshots[i].flags);
         serialiser->serialise_uint16(packet->player_snapshots[i].client_id);
         serialiser->serialise_uint32(packet->player_snapshots[i].player_local_flags);
+        serialiser->serialise_uint32(packet->player_snapshots[i].player_health);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_position);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_view_direction);
         serialiser->serialise_vector3(packet->player_snapshots[i].ws_up_vector);
@@ -497,6 +502,7 @@ void deserialise_game_state_snapshot(
         packet->player_snapshots[i].flags = serialiser->deserialise_uint16();
         packet->player_snapshots[i].client_id = serialiser->deserialise_uint16();
         packet->player_snapshots[i].player_local_flags = serialiser->deserialise_uint32();
+        packet->player_snapshots[i].player_health = serialiser->deserialise_uint32();
         packet->player_snapshots[i].ws_position = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_view_direction = serialiser->deserialise_vector3();
         packet->player_snapshots[i].ws_up_vector = serialiser->deserialise_vector3();

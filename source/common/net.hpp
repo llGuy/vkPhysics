@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/containers.hpp"
+#include "common/weapon.hpp"
 #include "tools.hpp"
 #include "player.hpp"
 #include "socket.hpp"
@@ -47,6 +48,8 @@ struct client_chunk_packet_t {
     uint32_t size;
 };
 
+#define MAX_PREDICTED_PROJECTILE_HITS 15
+
 struct client_t {
     union {
         struct {
@@ -81,6 +84,10 @@ struct client_t {
     vector3_t ws_predicted_velocity;
 
     player_flags_t predicted_player_flags;
+    uint32_t predicted_player_health;
+
+    uint32_t predicted_proj_hit_count;
+    predicted_projectile_hit_t predicted_proj_hits[MAX_PREDICTED_PROJECTILE_HITS];
 
     // Previous locations
     circular_buffer_array_t<player_position_snapshot_t, 40> previous_locations;

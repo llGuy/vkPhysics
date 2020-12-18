@@ -582,7 +582,9 @@ static void s_add_projectiles_from_snapshot(
                 rock_snapshot->position,
                 rock_snapshot->direction,
                 rock_snapshot->up,
-                rock_snapshot->client_id);
+                rock_snapshot->client_id,
+                // We don't care about ref indices
+                0, 0);
         }
     }
 }

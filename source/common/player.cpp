@@ -136,12 +136,20 @@ static void s_execute_player_triggers(
         // Spawn rock
         if (player_actions->trigger_left && weapon->elapsed > weapon->recoil_time) {
             weapon->elapsed = 0.0f;
+            
+            // TODO: Do check to see if the player can shoot...
+            uint32_t ref_idx = weapon->active_projs.add();
 
-            g_game->rocks.spawn(
+            uint32_t rock_idx = g_game->rocks.spawn(
                 compute_player_view_position(player),
                 player->ws_view_direction * PROJECTILE_ROCK_SPEED,
                 player->ws_up_vector,
-                player->client_id);
+                player->client_id,
+                ref_idx,
+                player->selected_weapon);
+
+            weapon->active_projs[ref_idx].initialised = 1;
+            weapon->active_projs[ref_idx].idx = rock_idx;
         }
 
         player->terraform_package.ray_hit_terrain = 0;

@@ -123,6 +123,8 @@ struct packet_client_commands_t {
 
     // Stuff that the server will use to compare server-calculated data
     uint32_t player_flags;
+    // Predicted health
+    uint32_t predicted_health;
 
     vector3_t ws_final_position;
     vector3_t ws_final_view_direction;

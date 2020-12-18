@@ -24,6 +24,8 @@ void weapon_t::init(
     elapsed = 0.0f;
     recoil_time = 1.0f / rps;
     ready = 1;
+
+    active_projs.init(max_ammo);
 }
 
 void weapon_t::weapon_reload() {

@@ -69,6 +69,7 @@ struct player_snapshot_t {
     
     uint16_t client_id;
     uint32_t player_local_flags;
+    uint32_t player_health;
     vector3_t ws_position;
     vector3_t ws_view_direction;
     vector3_t ws_up_vector;
