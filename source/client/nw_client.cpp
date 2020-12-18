@@ -64,8 +64,6 @@ static void s_start_client(
         NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 
     local_client_info.client_name = data->client_name;
-
-    start_client_udp_thread();
 }
 
 static network_address_t bound_server_address = {};

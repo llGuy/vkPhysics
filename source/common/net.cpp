@@ -10,7 +10,6 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
-#include <chrono>
 
 net_data_t g_net_data = {};
 
@@ -80,16 +79,16 @@ static void s_client_udp_thread() {
             packet.data = (char *)(previous_packet->data) + previous_packet->byte_size;
         }
 
-        { // Lock mutex
+        { // Lock the mutex
             std::lock_guard<std::mutex> guard (udp_thread_mutex);
-
-            packet.byte_size = receive_from(
-                main_udp_socket,
+        
+            packet_t packet = {};
+            packet.byte_size = receive_from_game_server(
                 (char *)packet.data,
                 sizeof(char) * NET_MAX_MESSAGE_SIZE,
                 &packet.address);
-        
-            if (packet.byte_size > 0) {
+
+            if (packet.byte_size) {
                 // If this packet isn't a ping packet, make sure not to push
                 if (!s_handle_ping(packet)) {
                     // Push this packet to the list of packets
@@ -97,11 +96,7 @@ static void s_client_udp_thread() {
                     g_net_data.packets[g_net_data.current_packet_count++] = packet;
                 }
             }
-
-            putchar('.');
         } // Unlock mutex
-
-        std::this_thread::sleep_for(std::chrono::duration<float>(0.00001f));
     }
 }
 
@@ -130,11 +125,13 @@ bool send_to_game_server(
     network_address_t address) {
     ++g_net_data.current_packet;
 
-    std::lock_guard<std::mutex> guard (udp_thread_mutex);
+    { // Lock mutex to make sure that socket isn't being used
+        std::lock_guard<std::mutex> guard (udp_thread_mutex);
 
-    LOG_INFO("Sending packet to server\n");
+        LOG_INFO("Sending packet to server\n");
 
-    return send_to(main_udp_socket, address, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
+        return send_to(main_udp_socket, address, (char *)serialiser->data_buffer, serialiser->data_buffer_head);
+    }
 }
 
 bool send_to_client(serialiser_t *serialiser, network_address_t address) {
@@ -144,12 +141,11 @@ bool send_to_client(serialiser_t *serialiser, network_address_t address) {
 }
 
 int32_t receive_from_game_server(char *message_buffer, uint32_t max_size, network_address_t *addr) {
-    // return receive_from(
-    //     main_udp_socket,
-    //     message_buffer,
-    //     sizeof(char) * max_size,
-    //     addr);
-    return 0;
+    return receive_from(
+        main_udp_socket,
+        message_buffer,
+        sizeof(char) * max_size,
+        addr);
 }
 
 int32_t receive_from_client(char *message_buffer, uint32_t max_size, network_address_t *addr) {
