@@ -6,7 +6,7 @@
 #include "socket.hpp"
 #include "constant.hpp"
 #include "serialiser.hpp"
-#include <bits/stdint-uintn.h>
+#include <mutex>
 
 #define MAX_PREDICTED_CHUNK_MODIFICATIONS 20
 #define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 250
@@ -148,6 +148,9 @@ struct net_data_t {
 
     uint32_t current_packet_count;
     packet_t packets[MAX_CLIENT_PACKET_STORAGE];
+    // Current packet that has been processed
+    // Once the current_packet_count == 5, and packet_pointer == 5, reset everything
+    uint32_t packet_pointer;
 
     // List of "predicted" projectile hits from local client
 };
@@ -163,6 +166,7 @@ void stop_client_udp_thread();
 
 void meta_socket_init();
 bool send_to_game_server(serialiser_t *serialiser, network_address_t address);
+std::unique_lock<std::mutex> get_next_received_packet(packet_t **p);
 int32_t receive_from_game_server(char *message_buffer, uint32_t max_size, network_address_t *addr);
 int32_t receive_from_client(char *message_buffer, uint32_t max_size, network_address_t *addr);
 bool send_to_meta_server(serialiser_t *serialiser);
