@@ -92,6 +92,7 @@ static void s_handle_event_spawn(
     // Meteorite when player spawns
     p->flags.interaction_mode = PIM_METEORITE;
     p->ws_velocity = vector3_t(0.0f);
+    p->health = 200;
 
     if (p->flags.is_local) {
         p->flags.camera_type = CT_THIRD_PERSON;

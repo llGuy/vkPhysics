@@ -15,6 +15,7 @@ void spawn_player(uint32_t client_id) {
 
     int32_t local_id = g_game->client_to_local_id(client_id);
     player_t *p = g_game->get_player(local_id);
+    p->health = 200;
     p->ws_position = p->next_random_spawn_position;
     p->ws_view_direction = glm::normalize(-p->ws_position);
     // Calculate up vector
@@ -185,8 +186,12 @@ static bool s_check_projectile_player_collision_lag(
             }
 
             if (collided) {
+                LOG_INFOV("%s just got hit by projectile\n", target->name);
+
                 // Register hit and decrease client's health
                 if (target->health < rock_t::DIRECT_DAMAGE) {
+                    LOG_INFOV("%s just got killed\n", target->name);
+
                     // Player needs to die
                     target->flags.alive_state = PAS_DEAD;
                     target->frame_displacement = 0.0f;
