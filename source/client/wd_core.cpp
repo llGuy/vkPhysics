@@ -76,6 +76,12 @@ void wd_tick(event_submissions_t *events) {
                         // Add this player to the list of players that have been hit
                         // So that the server can check whether or not the client actually got hit
                         wd_add_predicted_projectile_hit(dst_player);
+
+                        uint32_t weapon_idx = rock->flags.ref_idx_weapon;
+                        uint32_t ref_idx = rock->flags.ref_idx_obj;
+
+                        local_player->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
+                        local_player->weapons[weapon_idx].active_projs.remove(ref_idx);
                     }
 
                     rock->flags.active = 0;

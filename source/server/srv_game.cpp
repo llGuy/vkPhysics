@@ -1,9 +1,12 @@
 #include "common/event.hpp"
 #include "common/map.hpp"
+#include "common/weapon.hpp"
 #include "srv_main.hpp"
 #include <common/game.hpp>
 #include <common/chunk.hpp>
 #include <common/player.hpp>
+
+#include <common/net.hpp>
 
 static listener_t game_listener;
 
@@ -125,6 +128,78 @@ void srv_game_init(event_submissions_t *events) {
     g_game->start_session();
 }
 
+// Compensate for lag
+static bool s_check_projectile_player_collision_lag(
+    rock_t *rock,
+    int32_t *dst_player) {
+    ivector3_t chunk_coord = space_voxel_to_chunk(space_world_to_voxel(rock->position));
+    chunk_t *c = g_game->access_chunk(chunk_coord);
+
+    bool collided = 0;
+
+    if (c) {
+        for (uint32_t i = 0; i < c->players_in_chunk.data_count; ++i) {
+            uint8_t player_local_id = c->players_in_chunk[i];
+
+            player_t *target = g_game->get_player(player_local_id);
+
+            // Get lag compensated position of the player
+            auto *shooter_client = &g_net_data.clients[rock->client_id];
+            float shooter_half_roundtrip = shooter_client->ping / 2.0f;
+
+            auto *target_client = &g_net_data.clients[target->client_id];
+            float target_half_roundtrip = target_client->ping / 2.0f;
+
+            // Get the two snapshots that encompass the latency of the shooting_player
+            float snapshot_from_head = (shooter_half_roundtrip + target_half_roundtrip) / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+            float snapshot_from_head_trunc = floor(snapshot_from_head);
+            float progression = snapshot_from_head - snapshot_from_head_trunc;
+
+            uint32_t s1_idx = target_client->previous_locations.decrement_index(
+                target_client->previous_locations.head,
+                (uint32_t)snapshot_from_head_trunc);
+
+            uint32_t s0_idx = target_client->previous_locations.decrement_index(
+                s1_idx);
+
+            auto *s1 = &target_client->previous_locations.buffer[s1_idx];
+            auto *s0 = &target_client->previous_locations.buffer[s0_idx];
+
+            vector3_t approx_target_position = s0->ws_position + (s1->ws_position - s0->ws_position) * progression;
+
+            if (target->client_id != rock->client_id) {
+                if (target->flags.interaction_mode == PIM_STANDING ||
+                    target->flags.interaction_mode == PIM_FLOATING) {
+                    collided = collide_sphere_with_standing_player(
+                        approx_target_position,
+                        target->ws_up_vector,
+                        rock->position,
+                        0.2f);
+                }
+                else {
+                    collided = collide_sphere_with_rolling_player(
+                        approx_target_position,
+                        rock->position,
+                        0.2f);
+                }
+            }
+
+            if (collided) {
+                // Register hit and decrease client's health
+                if (target->health < rock_t::DIRECT_DAMAGE) {
+                    // Player needs to die
+                    target->flags.alive_state = PAS_DEAD;
+                    target->frame_displacement = 0.0f;
+                }
+
+                target->health -= rock_t::DIRECT_DAMAGE;
+            }
+        }
+    }
+    
+    return collided;
+}
+
 void srv_game_tick() {
     for (uint32_t i = 0; i < g_game->players.data_count; ++i) {
         player_t *player = g_game->get_player(i);
@@ -152,18 +227,34 @@ void srv_game_tick() {
         rock_t *rock = &g_game->rocks.list[i];
 
         if (rock->flags.active) {
-            terrain_collision_t collision = {};
-            collision.ws_size = vector3_t(0.2f);
-            collision.ws_position = rock->position;
-            collision.ws_velocity = rock->direction;
-            collision.es_position = collision.ws_position / collision.ws_size;
-            collision.es_velocity = collision.ws_velocity / collision.ws_size;
+            int32_t target = -1;
 
-            check_ray_terrain_collision(&collision);
-            if (collision.detected) {
-                LOG_INFO("Detected collision\n");
+            bool collided_with_terrain = check_projectile_terrain_collision(rock);
+            bool collided_with_player = s_check_projectile_player_collision_lag(rock, &target);
+
+            if (collided_with_player) {
+                // Do something
+                uint16_t client_id = rock->client_id;
+                uint32_t weapon_idx = rock->flags.ref_idx_weapon;
+                uint32_t ref_idx = rock->flags.ref_idx_obj;
+
+                auto *p = g_game->get_player(g_game->client_to_local_id(client_id));
+                p->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
+                p->weapons[weapon_idx].active_projs.remove(ref_idx);
+
                 rock->flags.active = 0;
+                g_game->rocks.list.remove(i);
+            }
+            else if (collided_with_terrain) {
+                uint16_t client_id = rock->client_id;
+                uint32_t weapon_idx = rock->flags.ref_idx_weapon;
+                uint32_t ref_idx = rock->flags.ref_idx_obj;
 
+                auto *p = g_game->get_player(g_game->client_to_local_id(client_id));
+                p->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
+                p->weapons[weapon_idx].active_projs.remove(ref_idx);
+
+                rock->flags.active = 0;
                 g_game->rocks.list.remove(i);
             }
 

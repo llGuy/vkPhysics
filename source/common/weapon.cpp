@@ -58,7 +58,6 @@ bool check_projectile_players_collision(rock_t *rock, int32_t *dst_player) {
             if (p->client_id != rock->client_id) {
                 if (collide_sphere_with_player(p, rock->position, 0.2f)) {
                     // Collision!
-                    LOG_INFO("Collided with player\n");
                     *dst_player = (int32_t)player_local_id;
 
                     return true;
@@ -80,8 +79,6 @@ bool check_projectile_terrain_collision(rock_t *rock) {
 
     check_ray_terrain_collision(&collision);
     if (collision.detected) {
-        LOG_INFO("Detected collision\n");
-
         return true;
     }
     else {

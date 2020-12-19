@@ -177,6 +177,21 @@ template <
     }
 };
 
+// Array allocated on linear allocator
+template <typename T>
+struct lnarray_t {
+    uint32_t count;
+    T *data;
+
+    lnarray_t(uint32_t c) : count(c) {
+        data = LN_MALLOC(T, count);
+    }
+
+    T &operator[] (uint32_t i) {
+        return data[i];
+    }
+};
+
 template <
     typename T, uint32_t Count> struct static_stack_container_t {
     uint32_t max_size = 0;

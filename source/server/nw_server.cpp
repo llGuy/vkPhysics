@@ -1,5 +1,6 @@
 #include "common/constant.hpp"
 #include "common/player.hpp"
+#include "common/t_types.hpp"
 #include "common/team.hpp"
 #include "common/weapon.hpp"
 #include "server/nw_server_meta.hpp"
@@ -497,11 +498,13 @@ static void s_receive_packet_client_commands(
             c->predicted_player_health = commands.predicted_health;
 
             // Predicted projectiles
-            c->predicted_proj_hit_count = commands.predicted_hit_count;
+#if 0
             for (uint32_t i = 0; i < commands.predicted_hit_count; ++i) {
-                c->predicted_proj_hits[i] = commands.hits[i];
+                c->predicted_proj_hits[c->predicted_proj_hit_count + i] = commands.hits[i];
             }
 
+            c->predicted_proj_hit_count += commands.predicted_hit_count;
+#endif
 
             if (c->predicted_player_flags.alive_state == PAS_DEAD) {
                 // LOG_INFO("Player is now dead!\n");
@@ -732,16 +735,17 @@ static bool s_check_if_client_has_to_correct_hits(
      * This means that for each projectile hit, we need to do lag compensation for just
      * One player and check the projectiles that the shooter shot with the player
      * At the previous position */
-
     float shooter_half_roundtrip = shooter_client->ping / 2.0f;
 
     for (uint32_t i = 0; i < shooter_client->predicted_proj_hit_count; ++i) {
         predicted_projectile_hit_t *hit = &shooter_client->predicted_proj_hits[i];
 
         client_t *target = &g_net_data.clients[hit->client_id];
+        player_t *target_player = g_game->get_player(g_game->client_to_local_id(target->client_id));
+        float target_half_roundtrip = target->ping / 2.0f;
 
         // Get the two snapshots that encompass the latency of the shooting_player
-        float snapshot_from_head = shooter_half_roundtrip / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+        float snapshot_from_head = (shooter_half_roundtrip + target_half_roundtrip) / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
         float snapshot_from_head_trunc = floor(snapshot_from_head);
         float progression = snapshot_from_head - snapshot_from_head_trunc;
 
@@ -752,11 +756,60 @@ static bool s_check_if_client_has_to_correct_hits(
         uint32_t s0_idx = target->previous_locations.decrement_index(
             s1_idx);
 
-        player_position_snapshot_t *s1 = &target->previous_locations.buffer[s1_idx];
-        player_position_snapshot_t *s0 = &target->previous_locations.buffer[s0_idx];
+        auto *s1 = &target->previous_locations.buffer[s1_idx];
+        auto *s0 = &target->previous_locations.buffer[s0_idx];
 
-        // TODO:
+        vector3_t approx_target_position = s0->ws_position + (s1->ws_position - s0->ws_position) * progression;
+
+        bool prediction_was_correct = 0;
+
+        // For each weapon
+        for (uint32_t w = 0; w < player_client->weapon_count; ++w) {
+            if (prediction_was_correct) {
+                break;
+            }
+
+            LOG_INFOV("Client has currently %d active projectiles\n", player_client->weapons[w].active_projs.data_count);
+
+            for (uint32_t b = 0; b < player_client->weapons[w].active_projs.data_count; ++b) {
+                auto *ref = &player_client->weapons[w].active_projs[b];
+
+                if (ref->initialised) {
+                    // TODO: Make sure to check appropriate projectile type (for now, just rocks)
+                    rock_t *r = &g_game->rocks.list[ref->idx];
+
+                    // Check collision with target
+                    bool collided = collide_sphere_with_player(target_player, r->position, 0.2f);
+
+                    if (collided) {
+                        // Remove the bullets from the game
+                        uint32_t weapon_idx = r->flags.ref_idx_weapon;
+                        uint32_t ref_idx = r->flags.ref_idx_obj;
+                        player_client->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
+                        player_client->weapons[weapon_idx].active_projs.remove(ref_idx);
+
+                        r->flags.active = 0;
+                        g_game->rocks.list.remove(i);
+
+                        prediction_was_correct = 1;
+                        break;
+                    }
+                    else {
+                        LOG_INFOV("Missed: (%s) vs (%s)\n", glm::to_string(approx_target_position).c_str(), glm::to_string(r->position).c_str());
+                    }
+                }
+            }
+        }
+
+        if (prediction_was_correct) {
+            LOG_INFO("TARGET WAS HIT!\n");
+        }
+        else {
+            LOG_INFO("TARGET WAS NOOOOT HIT\n");
+        }
     }
+
+    shooter_client->predicted_proj_hit_count = 0;
 }
 
 // Send the voxel modifications
@@ -826,6 +879,7 @@ static void s_send_packet_game_state_snapshot() {
             // Check if client has to correct voxel modifications
             bool has_to_correct_terrain = s_check_if_client_has_to_correct_terrain(c);
             // Check if predicted projectile hits were correct
+            // s_check_if_client_has_to_correct_hits(p, c);
 
             if (has_to_correct_state || has_to_correct_terrain) {
                 if (c->waiting_on_correction) {

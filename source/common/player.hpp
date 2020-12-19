@@ -235,6 +235,8 @@ void execute_action(player_t *player, player_action_t *action);
 void handle_shape_switch(player_t *p, bool switch_shapes, float dt);
 vector3_t compute_player_view_position(const player_t *p);
 
+bool collide_sphere_with_standing_player(const vector3_t &target, const vector3_t &up, const vector3_t &center, float radius);
+bool collide_sphere_with_rolling_player(const vector3_t &target, const vector3_t &center, float radius);
 bool collide_sphere_with_player(const player_t *p, const vector3_t &center, float radius);
 
 // Make sure chunk has correct information as to where each player is

@@ -250,8 +250,6 @@ static void s_fill_predicted_data(
     for (uint32_t i = 0; i < packet->predicted_hit_count; ++i) {
         if (g_game->predicted_hits[i].flags.initialised) {
             packet->hits[actual_predicted_count++] = g_game->predicted_hits[i];
-
-            LOG_INFO("Predicted a projectile hit\n");
         }
     }
 
