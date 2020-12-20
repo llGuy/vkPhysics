@@ -5,8 +5,6 @@
 #include "renderer.hpp"
 #include <common/log.hpp>
 
-#define VK_CHECK(call) if (call != VK_SUCCESS) { LOG_ERRORV("%s failed\n", #call); }
-
 void r_handle_resize(
     uint32_t width,
     uint32_t height);
@@ -17,14 +15,6 @@ VkFormat r_swapchain_format();
 VkExtent2D r_swapchain_extent();
 
 VkExtent2D r_shadow_extent();
-
-struct attachment_t {
-    VkImage image;
-    VkImageView image_view;
-    VkDeviceMemory image_memory;
-    VkFormat format;
-    VkSampler sampler;
-};
 
 void r_swapchain_images(
     uint32_t *image_count,
@@ -93,26 +83,6 @@ void r_free_blend_state_info(
     VkPipelineColorBlendStateCreateInfo *info);
 
 /* Rendering pipeline stage (post processing etc..) */
-struct rpipeline_stage_t {
-    VkRenderPass render_pass;
-    
-    union {
-        VkFramebuffer framebuffer;
-        struct {
-            // Maximum 3 framebuffers now
-            VkFramebuffer framebuffers[3];
-        };
-    };
-
-    uint32_t color_attachment_count;
-    attachment_t *color_attachments;
-    
-    attachment_t *depth_attachment;
-
-    uint32_t binding_count;
-    VkDescriptorSet descriptor_set;
-};
-
 void r_free_rpipeline_stage(
     rpipeline_stage_t *stage);
 

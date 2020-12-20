@@ -40,13 +40,6 @@ DECLARE_VOID_RENDERER_PROC(void, handle_resize,
     uint32_t width,
     uint32_t height);
 
-struct swapchain_information_t {
-    uint32_t frames_in_flight;
-    uint32_t image_count;
-    uint32_t width;
-    uint32_t height;
-};
-
 DECLARE_VOID_RENDERER_PROC(void, swapchain_information,
     swapchain_information_t *dst);
 
@@ -97,12 +90,6 @@ DECLARE_RENDERER_PROC(void *, map_gpu_memory,
 DECLARE_VOID_RENDERER_PROC(void, unmap_gpu_memory,
     VkDeviceMemory memory);
 
-struct gpu_buffer_t {
-    VkBuffer buffer;
-    VkDeviceMemory memory;
-    VkBufferUsageFlags usage;
-    VkDeviceSize size;
-};
 
 DECLARE_RENDERER_PROC(gpu_buffer_t, create_gpu_buffer,
     uint32_t size,
@@ -145,23 +132,10 @@ DECLARE_RENDERER_PROC(VkBufferMemoryBarrier, create_gpu_buffer_barrier,
     uint32_t offset,
     uint32_t max);
 
-struct shader_binding_info_t {
-    uint32_t binding_count;
-    VkVertexInputBindingDescription *binding_descriptions;
-
-    uint32_t attribute_count;
-    VkVertexInputAttributeDescription *attribute_descriptions;
-};
-
 struct shader_t {
     VkPipeline pipeline;
     VkPipelineLayout layout;
     VkShaderStageFlags flags;
-};
-
-enum alpha_blending_t {
-    AB_ONE_MINUS_SRC_ALPHA,
-    AB_NONE
 };
 
 // Disabled depth
@@ -244,18 +218,6 @@ DECLARE_RENDERER_PROC(texture_t, create_texture,
 
 // RENDERING FUNCTIONALITY ////////////////////////////////////////////////////
 DECLARE_RENDERER_PROC(VkCommandBuffer, begin_frame, void);
-
-struct frame_info_t {
-    union {
-        struct {
-            uint32_t blurred: 1;
-            uint32_t ssao: 1;
-            uint32_t debug_window: 1;
-        };
-
-        uint32_t flags;
-    };
-};
 
 DECLARE_VOID_RENDERER_PROC(void, end_frame,
     frame_info_t *frame_info);

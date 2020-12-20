@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdio.h>
+
 #define LOG_ERRORV(str, ...)                    \
     printf("ERROR:%s:  ", __FUNCTION__);  \
     printf(str, __VA_ARGS__)

@@ -20,67 +20,6 @@ void r_free_rpipeline_stage(
     }
 }
 
-VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(
-    rpipeline_stage_t *stage,
-    alpha_blending_t alpha_blending) {
-    VkPipelineColorBlendAttachmentState *attachment_states = FL_MALLOC(VkPipelineColorBlendAttachmentState, stage->color_attachment_count);
-    memset(attachment_states, 0, sizeof(VkPipelineColorBlendAttachmentState) * stage->color_attachment_count);
-    for (uint32_t attachment = 0; attachment < stage->color_attachment_count; ++attachment) {
-        switch (stage->color_attachments[attachment].format) {
-        case VK_FORMAT_B8G8R8A8_UNORM: case VK_FORMAT_R8G8B8A8_UNORM: case VK_FORMAT_R16G16B16A16_SFLOAT: {
-            attachment_states[attachment].colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                VK_COLOR_COMPONENT_G_BIT |
-                VK_COLOR_COMPONENT_B_BIT |
-                VK_COLOR_COMPONENT_A_BIT;
-            break;
-        }
-        case VK_FORMAT_R16G16_SFLOAT: {
-            attachment_states[attachment].colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                VK_COLOR_COMPONENT_G_BIT;
-            break;
-        }
-        case VK_FORMAT_R16_SFLOAT: {
-            attachment_states[attachment].colorWriteMask = VK_COLOR_COMPONENT_R_BIT;
-            break;
-        }
-        case VK_FORMAT_R32G32_SFLOAT: {
-            attachment_states[attachment].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT;
-        } break;
-        default:
-            break;
-        }
-
-        switch (alpha_blending) {
-        case AB_NONE: default: {
-            attachment_states[attachment].blendEnable = VK_FALSE;
-            attachment_states[attachment].srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-            attachment_states[attachment].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-            attachment_states[attachment].colorBlendOp = VK_BLEND_OP_ADD; // Optional
-            attachment_states[attachment].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-            attachment_states[attachment].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-            attachment_states[attachment].alphaBlendOp = VK_BLEND_OP_ADD; // Optional
-        } break;
-        case AB_ONE_MINUS_SRC_ALPHA: {
-            attachment_states[attachment].blendEnable = VK_TRUE;
-            attachment_states[attachment].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA; // Optional
-            attachment_states[attachment].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; // Optional
-            attachment_states[attachment].colorBlendOp = VK_BLEND_OP_ADD; // Optional
-            attachment_states[attachment].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-            attachment_states[attachment].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-            attachment_states[attachment].alphaBlendOp = VK_BLEND_OP_ADD; // Optional
-        } break;
-        }
-    }
-
-    VkPipelineColorBlendStateCreateInfo blend_info = {};
-    blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    blend_info.logicOpEnable = VK_FALSE;
-    blend_info.attachmentCount = stage->color_attachment_count;
-    blend_info.pAttachments = attachment_states;
-    blend_info.logicOp = VK_LOGIC_OP_COPY;
-
-    return blend_info;
-}
 
 void r_free_blend_state_info(VkPipelineColorBlendStateCreateInfo *info) {
     FL_FREE((void *)info->pAttachments);

@@ -28,3 +28,12 @@ struct buffer_t {
 };
 
 enum class result_t : uint32_t { FAILURE = 0, SUCCESS = 1 };
+
+inline uint32_t pop_count(
+    uint32_t bits) {
+#ifndef __GNUC__
+    return __popcnt(bits);
+#else
+    return __builtin_popcount(bits);
+#endif
+}
