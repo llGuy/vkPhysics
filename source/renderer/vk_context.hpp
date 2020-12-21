@@ -6,6 +6,7 @@
 #include "vk_cmdbuf.hpp"
 #include "vk_present.hpp"
 #include "vk_descriptor.hpp"
+#include "vk_render_pipeline.hpp"
 
 #include <common/log.hpp>
 #include <vulkan/vulkan.h>
@@ -67,6 +68,9 @@ extern struct ctx_t {
     // This will only oscillate between 0 and 1 (because FRAMES_IN_FLIGHT = 2)
     uint32_t current_frame;
     uint32_t image_index;
+
+    // For all the post processing effects
+    render_pipeline_t pipeline;
 } *g_ctx;
 
 void allocate_context();

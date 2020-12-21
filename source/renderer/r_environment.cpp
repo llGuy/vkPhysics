@@ -5,70 +5,6 @@
 #include "r_internal.hpp"
 #include <common/allocators.hpp>
 
-static attachment_t s_create_cubemap(
-    VkExtent3D extent,
-    VkFormat format,
-    uint32_t mip_levels,
-    VkSamplerAddressMode address_mode) {
-    VkImageCreateInfo image_info = {};
-    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-    image_info.arrayLayers = 6;
-    image_info.extent = extent;
-    image_info.format = format;
-    image_info.imageType = VK_IMAGE_TYPE_2D;
-    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_info.mipLevels = mip_levels;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VkImage image;
-    VK_CHECK(vkCreateImage(r_device(), &image_info, NULL, &image));
-
-    VkDeviceMemory memory = allocate_image_memory(image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    VkImageViewCreateInfo image_view_info = {};
-    image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_info.image = image;
-    image_view_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-    image_view_info.format = format;
-    image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_view_info.subresourceRange.baseMipLevel = 0;
-    image_view_info.subresourceRange.levelCount = mip_levels;
-    image_view_info.subresourceRange.baseArrayLayer = 0;
-    image_view_info.subresourceRange.layerCount = 6;
-
-    VkImageView image_view;
-    VK_CHECK(vkCreateImageView(r_device(), &image_view_info, NULL, &image_view));
-
-    VkSampler sampler;
-    VkSamplerCreateInfo sampler_info = {};
-    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_info.magFilter = VK_FILTER_LINEAR;
-    sampler_info.minFilter = VK_FILTER_LINEAR;
-    sampler_info.addressModeU = address_mode;
-    sampler_info.addressModeV = address_mode;
-    sampler_info.addressModeW = address_mode;
-    sampler_info.anisotropyEnable = VK_TRUE;
-    sampler_info.maxAnisotropy = 16;
-    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_info.maxLod = (float)mip_levels;
-    
-    VK_CHECK(vkCreateSampler(r_device(), &sampler_info, NULL, &sampler));
-
-    attachment_t attachment = {};
-    attachment.image = image;
-    attachment.image_view = image_view;
-    attachment.image_memory = memory;
-    attachment.format = format;
-    attachment.sampler = sampler;
-
-    return attachment;
-}
 
 static VkExtent2D base_cubemap_extent;
 static rpipeline_stage_t base_cubemap_init;
@@ -188,20 +124,6 @@ static void s_base_cubemap_init() {
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         &base_cubemap_init,
         VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
-
-    /*    render_data.eye_height = 0.5f;
-    render_data.light_direction.x = 0.0f;
-    render_data.light_direction.y = 1.0f;
-    render_data.light_direction.z = 0.0f;
-    render_data.light_direction.w = 1.0f;
-    render_data.rayleigh = -0.01f;
-    render_data.mie = -0.75f;
-    render_data.intensity = 1.5f;
-    render_data.scatter_strength = 19.0f;
-    render_data.rayleigh_strength = 1.0f;
-    render_data.mie_strength = 1.0f;
-    render_data.rayleigh_collection = 1.0f;
-    render_data.mie_collection = 1.0f;*/
 }
 
 static void s_render_to_base_cubemap(VkCommandBuffer command_buffer) {

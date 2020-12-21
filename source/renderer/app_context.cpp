@@ -328,4 +328,8 @@ void disable_cursor() {
     glfwSetInputMode(ctx.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
+void get_immediate_cursor_pos(double *x, double *y) {
+    glfwGetCursorPos(ctx.window, x, y);
+}
+
 }

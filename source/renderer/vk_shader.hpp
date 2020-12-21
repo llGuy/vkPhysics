@@ -49,7 +49,7 @@ struct shader_t {
         VkPrimitiveTopology topology,
         alpha_blending_t alpha_blending);
 
-    void create_as_3d_shader(
+    void init_as_3d_shader(
         shader_binding_info_t *binding_info,
         uint32_t push_constant_size,
         VkDescriptorType *descriptor_layout_types,
@@ -60,10 +60,17 @@ struct shader_t {
         VkPrimitiveTopology topology,
         VkCullModeFlags cull_mode);
 
+    // For post processing shaders
+    void init_as_render_pipeline_shader(
+        const char *vertex_shader_path,
+        const char *fragment_shader_path,
+        render_pipeline_stage_t *stage,
+        VkPipelineLayout layout);
+
     // Some helper functions which just add some more clarity
     // (can use either the functions above, or the ones below)
     // The ones above just give programmer more control
-    shader_t create_as_3d_shader_for_stage(
+    shader_t init_as_3d_shader_for_stage(
         stage_type_t stage_type,
         shader_binding_info_t *binding_info,
         uint32_t push_constant_size,

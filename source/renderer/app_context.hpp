@@ -87,4 +87,6 @@ void poll_input_events(event_submissions_t *events);
 void enable_cursor();
 void disable_cursor();
 
+void get_immediate_cursor_pos(double *x, double *y);
+
 }

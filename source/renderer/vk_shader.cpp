@@ -250,7 +250,7 @@ void shader_t::init_as_2d_shader(
     flags = shader_flags;
 }
 
-void shader_t::create_as_3d_shader(
+void shader_t::init_as_3d_shader(
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
     VkDescriptorType *descriptor_layout_types,
@@ -356,7 +356,7 @@ void shader_t::create_as_3d_shader(
     flags = shader_flags;
 }
 
-shader_t create_as_3d_shader_for_stage(
+shader_t init_as_3d_shader_for_stage(
     stage_type_t stage_type,
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
@@ -396,6 +396,87 @@ shader_t create_as_3d_shader_for_stage(
     default: {
     } break;
     }
+}
+
+void shader_t::init_as_render_pipeline_shader(
+    const char *vertex_shader_path,
+    const char *fragment_shader_path,
+    render_pipeline_stage_t *stage,
+    VkPipelineLayout s_layout) {
+    layout = s_layout;
+
+    const char *shaders[] = {vertex_shader_path, fragment_shader_path};
+    VkPipelineShaderStageCreateInfo *shader_infos = fill_shader_stage_create_infos(shaders, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    /* Is all zero for rendering pipeline shaders */
+    VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
+    vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
+    input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkViewport viewport = {};
+    viewport.width = (float)g_ctx->swapchain.extent.width;
+    viewport.height = (float)g_ctx->swapchain.extent.height;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D rect = {};
+    rect.extent = g_ctx->swapchain.extent;
+    
+    VkPipelineViewportStateCreateInfo viewport_info {};
+    viewport_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_info.viewportCount = 1;
+    viewport_info.pViewports = &viewport;
+    viewport_info.scissorCount = 1;
+    viewport_info.pScissors = &rect;
+
+    VkPipelineRasterizationStateCreateInfo rasterization_info = {};
+    rasterization_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_info.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterization_info.cullMode = VK_CULL_MODE_NONE;
+    rasterization_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterization_info.lineWidth = 1.0f;
+
+    VkPipelineMultisampleStateCreateInfo multisample_info = {};
+    multisample_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisample_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisample_info.minSampleShading = 1.0f;
+
+    VkPipelineColorBlendStateCreateInfo blend_info = fill_blend_state_info(stage);
+
+    VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    
+    VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
+    dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamic_state_info.dynamicStateCount = sizeof(dynamic_states) / sizeof(dynamic_states[0]);
+    dynamic_state_info.pDynamicStates = dynamic_states;
+
+    VkGraphicsPipelineCreateInfo pipeline_info = {};
+    pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_info.stageCount = 2;
+    pipeline_info.pStages = shader_infos;
+    pipeline_info.pVertexInputState = &vertex_input_info;
+    pipeline_info.pInputAssemblyState = &input_assembly_info;
+    pipeline_info.pViewportState = &viewport_info;
+    pipeline_info.pRasterizationState = &rasterization_info;
+    pipeline_info.pMultisampleState = &multisample_info;
+    pipeline_info.pDepthStencilState = NULL;
+    pipeline_info.pColorBlendState = &blend_info;
+    pipeline_info.pDynamicState = &dynamic_state_info;
+
+    pipeline_info.layout = layout;
+    pipeline_info.renderPass = stage->render_pass;
+    /* For now just support one subpass per render pass */
+    pipeline_info.subpass = 0;
+
+    pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline_info.basePipelineIndex = -1;
+
+    VK_CHECK(vkCreateGraphicsPipelines(g_ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline));
+
+    flfree(shader_infos);
+    flfree(blend_info.pAttachments);
 }
 
 }

@@ -16,5 +16,6 @@ struct imgui_data_t {
 
 void init_imgui(void *window);
 void add_debug_ui_proc(debug_ui_proc_t proc);
+void render_imgui(VkCommandBuffer cmdbuf);
 
 }

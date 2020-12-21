@@ -106,7 +106,7 @@ void r_rpipeline_descriptor_set_output_init(
     bool add_depth = 1);
 
 VkPipelineColorBlendStateCreateInfo r_fill_blend_state_info(
-    rpipeline_stage_t *stage,
+    rpipeline_stage_a *stage,
     alpha_blending_t alpha_blending = AB_NONE);
 
 VkAttachmentDescription r_fill_color_attachment_description(
@@ -127,24 +127,6 @@ void r_update_lighting();
 
 #define MAX_LIGHTS 10
 
-struct lighting_data_t {
-    vector4_t light_positions[MAX_LIGHTS];
-    vector4_t ws_light_positions[MAX_LIGHTS];
-    vector4_t light_directions[MAX_LIGHTS];
-    vector4_t ws_light_directions[MAX_LIGHTS];
-    vector4_t light_colors[MAX_LIGHTS];
-    vector4_t vs_directional_light;
-    vector4_t ws_directional_light;
-
-    matrix4_t shadow_view_projection;
-    matrix4_t shadow_view;
-    matrix4_t shadow_projection;
-
-    vector2_t light_screen_coord;
-
-    int point_light_count;
-};
-
 vector3_t *r_light_direction();
 
 void r_lighting_gpu_sync(
@@ -161,28 +143,6 @@ void r_render_environment(
 void r_render_environment_to_offscreen_if_updated(
     VkCommandBuffer command_buffer);
 
-struct base_cubemap_render_data_t {
-    matrix4_t inverse_projection;
-    
-    float width;
-    float height;
-
-    float light_direction_x;
-    float light_direction_y;
-    float light_direction_z;
-    float eye_height;
-    float rayleigh;
-    float mie;
-    float intensity;
-    float scatter_strength;
-    float rayleigh_strength;
-    float mie_strength;
-    float rayleigh_collection;
-    float mie_collection;
-    float air_color_r;
-    float air_color_g;
-    float air_color_b;
-};
 
 base_cubemap_render_data_t *r_cubemap_render_data();
 
@@ -190,29 +150,6 @@ VkDescriptorSet r_diffuse_ibl_irradiance();
 VkDescriptorSet r_specular_ibl();
 VkDescriptorSet r_integral_lookup();
 
-struct gpu_camera_transforms_t {
-    matrix4_t projection;
-    matrix4_t view;
-    matrix4_t inverse_view;
-    matrix4_t view_projection;
-    vector4_t frustum;
-    vector4_t view_direction;
-    matrix4_t previous_view_projection;
-    float dt;
-    float width;
-    float height;
-};
-
-struct cpu_camera_data_t {
-    vector3_t position;
-    vector3_t direction;
-    vector3_t up;
-    vector2_t mouse_position;
-    // Degrees
-    float fov;
-    float near, far;
-    matrix4_t previous_view_projection;
-};
 
 gpu_camera_transforms_t *r_gpu_camera_data();
 cpu_camera_data_t *r_cpu_camera_data();

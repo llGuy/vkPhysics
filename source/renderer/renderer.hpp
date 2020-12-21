@@ -224,16 +224,6 @@ DECLARE_VOID_RENDERER_PROC(void, end_frame,
 
 // This needs to be created and passed to the renderer module to update camera transforms
 // And lighting information
-struct eye_3d_info_t {
-    vector3_t position;
-    vector3_t direction;
-    vector3_t up;
-    float fov;
-    float near;
-    float far;
-    float dt;
-};
-
 #define MAX_LIGHTS 10
 
 struct lighting_info_t {
@@ -833,33 +823,6 @@ DECLARE_POINTER_RENDERER_PROC(font_t *, load_font,
 // FADE EFFECT SUPPORT ////////////////////////////////////////////////////////
 DECLARE_VOID_RENDERER_PROC(void, set_main_screen_brightness,
     float brightness);
-
-enum frustum_corner_t {
-    FLT, FLB,
-    FRT, FRB,
-    NLT, NLB,
-    NRT, NRB
-};    
-
-enum frustum_plane_t {
-    NEAR, FAR,
-    LEFT, RIGHT,
-    TOP, BOTTOM
-};
-
-struct frustum_t {
-    vector3_t vertex[8];
-    plane_t planes[6];
-
-    vector3_t position;
-    vector3_t direction;
-    vector3_t up;
-    // Radians
-    float fov;
-    float aspect;
-    float near;
-    float far;
-};
 
 // FOV needs to be in radians
 DECLARE_VOID_RENDERER_PROC(void, create_frustum,

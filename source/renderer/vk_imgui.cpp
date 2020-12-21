@@ -85,4 +85,24 @@ void add_debug_ui_proc(debug_ui_proc_t proc) {
     g_ctx->debug.ui_procs[g_ctx->debug.ui_proc_count++] = proc;
 }
 
+void render_imgui(VkCommandBuffer cmdbuf) {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // General stuff
+    ImGui::Begin("General");
+    ImGui::Text("Framerate: %.1f", ImGui::GetIO().Framerate);
+
+    for (uint32_t i = 0; i < g_ctx->debug.ui_proc_count; ++i) {
+        (g_ctx->debug.ui_procs[i])();
+    }
+
+    ImGui::End();
+
+    ImGui::Render();
+
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), g_ctx->primary_command_buffers[g_ctx->image_index]);
+}
+
 }
