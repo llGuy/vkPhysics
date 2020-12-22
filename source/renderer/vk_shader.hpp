@@ -3,6 +3,7 @@
 #include "vk_render_pipeline.hpp"
 
 #include <vulkan/vulkan.h>
+#include <common/allocators.hpp>
 
 namespace vk {
 
@@ -30,6 +31,11 @@ struct shader_binding_info_t {
 
     uint32_t attribute_count;
     VkVertexInputAttributeDescription *attribute_descriptions;
+
+    inline void free() {
+        flfree(attribute_descriptions);
+        flfree(binding_descriptions);
+    }
 };
 
 struct shader_t {
@@ -47,8 +53,8 @@ struct shader_t {
         VkShaderStageFlags shader_flags,
         struct render_pipeline_stage_t *stage,
         VkPrimitiveTopology topology,
-        alpha_blending_t alpha_blending);
-
+        alpha_blending_t alpha_blending = AB_NONE);
+ 
     void init_as_3d_shader(
         shader_binding_info_t *binding_info,
         uint32_t push_constant_size,

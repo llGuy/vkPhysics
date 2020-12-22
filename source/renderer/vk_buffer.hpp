@@ -15,7 +15,7 @@ struct gpu_buffer_t {
         uint32_t size,
         void *data,
         VkBufferUsageFlags usage,
-        VkMemoryPropertyFlags memory_flags);
+        VkMemoryPropertyFlags memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     void update(
         VkCommandBuffer command_buffer,

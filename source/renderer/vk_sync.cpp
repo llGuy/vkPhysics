@@ -5,7 +5,7 @@
 
 namespace vk {
 
-void synchronisation_init() {
+void init_synchronisation() {
     for (uint32_t i = 0; i < FRAMES_IN_FLIGHT; ++i) {
         VkSemaphoreCreateInfo semaphore_info = {};
         semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;

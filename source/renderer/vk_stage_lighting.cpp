@@ -1,4 +1,6 @@
+#include "vk_scene3d.hpp"
 #include "vk_context.hpp"
+#include "vk_stage_shadow.hpp"
 #include "vk_stage_deferred.hpp"
 #include "vk_stage_lighting.hpp"
 
@@ -127,18 +129,19 @@ void lighting_stage_t::execute(VkCommandBuffer cmdbuf) {
 
     vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipeline);
 
+    VkDescriptorSet deferred_set = g_ctx->pipeline.deferred->stage.descriptor_set;
+    scene3d_descriptors_t scene_descriptors = get_scene_descriptors();
+
     VkDescriptorSet inputs[] = {
-        deferred.descriptor_set,
+        deferred_set,
         /* Contains lighting information */
-        r_lighting_uniform(),
+        scene_descriptors.lighting_ubo,
         /* Contains camera information */
-        r_camera_transforms_uniform(),
-        r_diffuse_ibl_irradiance(),
-        r_integral_lookup(),
-        r_specular_ibl(),
-        // ssao_blur_stage.descriptor_set,
-        // shadow_stage.descriptor_set
-        shadow_blur.current_set
+        scene_descriptors.camera_ubo,
+        scene_descriptors.diff_ibl_tx,
+        scene_descriptors.lut_tx,
+        scene_descriptors.spec_ibl_tx,
+        g_ctx->pipeline.shadow->blur.stage.descriptor_set
     };
     
     vkCmdBindDescriptorSets(

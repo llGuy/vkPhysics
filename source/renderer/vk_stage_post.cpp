@@ -1,3 +1,4 @@
+#include "vk_scene3d.hpp"
 #include "vk_context.hpp"
 #include "vk_descriptor.hpp"
 #include "vk_stage_post.hpp"
@@ -122,11 +123,14 @@ void post_stage_t::init() {
 
         vkCmdBindPipeline(post_process_cmdbufs[i], VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipeline);
 
+        VkDescriptorSet deferred_set = g_ctx->pipeline.deferred->stage.descriptor_set;
+        scene3d_descriptors_t scene_descriptors = get_scene_descriptors();
+
         VkDescriptorSet inputs[] = {
-            deferred.descriptor_set,
-            r_camera_transforms_uniform(),
-            lighting_stage.descriptor_set,
-            r_lighting_uniform(),
+            deferred_set,
+            scene_descriptors.camera_ubo,
+            g_ctx->pipeline.lighting->stage.descriptor_set,
+            scene_descriptors.lighting_ubo
         };
     
         vkCmdBindDescriptorSets(

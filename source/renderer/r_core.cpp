@@ -61,9 +61,6 @@ void destroy_renderer() {
     FL_FREE(final_framebuffers);
 }
 
-static uint32_t current_frame = 0;
-static uint32_t image_index = 0;
-
 void handle_resize(
     uint32_t width,
     uint32_t height) {

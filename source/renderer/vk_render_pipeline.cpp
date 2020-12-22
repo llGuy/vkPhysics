@@ -269,7 +269,6 @@ void render_pipeline_stage_t::free() {
 }
 
 void render_pipeline_stage_t::destroy() {
-    // No need to destroy the render pass
     vkDestroyFramebuffer(g_ctx->device, framebuffer, NULL);
     for (uint32_t i = 0; i < color_attachment_count; ++i) {
         vkDestroyImageView(g_ctx->device, color_attachments[i].image_view, NULL);
@@ -420,6 +419,13 @@ void post_process_scene(frame_info_t *info, VkCommandBuffer ui_cmdbuf) {
     }
 
     g_ctx->pipeline.ui->execute(g_ctx->primary_command_buffers[g_ctx->image_index], ui_cmdbuf);
+}
+
+void resize_render_pipeline(uint32_t width, uint32_t height) {
+    vkDeviceWaitIdle(g_ctx->device);
+
+    resize_swapchain(width, height);
+    g_ctx->pipeline.resize();
 }
 
 }

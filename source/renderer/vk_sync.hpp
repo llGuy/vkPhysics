@@ -4,7 +4,7 @@
 
 namespace vk {
 
-void synchronisation_init();
+void init_synchronisation();
 
 // Utility functions for creating things like pipeline barriers, etc...
 VkAccessFlags find_access_flags_for_stage(VkPipelineStageFlags stage);

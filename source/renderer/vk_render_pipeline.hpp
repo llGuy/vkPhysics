@@ -103,4 +103,7 @@ render_pipeline_stage_t *get_stage_before_final_render();
 
 void post_process_scene(struct frame_info_t *info, VkCommandBuffer ui_cmdbuf);
 
+// This will also resize the swapchain
+void resize_render_pipeline(uint32_t width, uint32_t height);
+
 }

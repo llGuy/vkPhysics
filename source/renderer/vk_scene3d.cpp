@@ -1,4 +1,5 @@
 #include "vk_sync.hpp"
+#include "vk_imgui.hpp"
 #include "vk_shader.hpp"
 #include "vk_buffer.hpp"
 #include "vk_scene3d.hpp"
@@ -7,6 +8,8 @@
 #include "vk_scene3d_camera.hpp"
 #include "vk_scene3d_lighting.hpp"
 #include "vk_scene3d_environment.hpp"
+
+#include <imgui.h>
 
 namespace vk {
 
@@ -282,10 +285,17 @@ static struct {
     VkExtent2D extent;
     // Base because there will be IBL cubemaps, etc...
     render_pipeline_stage_t base_cubemap_init;
-    shader_t base_cubemap_shader;
+    // To create the cubemap
+    shader_t base_cubemap_init_shader;
+
+    // To render the cubemap in the world
+    shader_t cubemap_shader;
+
+    // IBL components, etc...
+    pbr_environment_t pbr_env;
 } environment;
 
-static void s_environment_cubemap_init() {
+static void s_init_environment_cubemap() {
     environment.extent.width = 512;
     environment.extent.height = 512;
 
@@ -356,8 +366,10 @@ static void s_environment_cubemap_init() {
     const char *paths[] = {
         "shaders/SPV/atmosphere_scatter_cubemap_init.vert.spv",
         "shaders/SPV/atmosphere_scatter_cubemap_init.geom.spv",
-        "shaders/SPV/atmosphere_scatter_cubemap_init.frag.spv"  };
-    environment.base_cubemap_shader = create_2d_shader(
+        "shaders/SPV/atmosphere_scatter_cubemap_init.frag.spv"
+    };
+
+    environment.base_cubemap_init_shader.init_as_2d_shader(
         NULL,
         sizeof(atmosphere_model_t),
         NULL, 0,
@@ -367,17 +379,231 @@ static void s_environment_cubemap_init() {
         VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
 }
 
+static void s_render_to_base_cubemap(VkCommandBuffer cmdbuf) {
+    VkClearValue clear_value = {};
+    
+    VkRect2D render_area = {};
+    render_area.extent = environment.extent;
+    
+    VkRenderPassBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    begin_info.renderPass = environment.base_cubemap_init.render_pass;
+    begin_info.framebuffer = environment.base_cubemap_init.framebuffer;
+    begin_info.renderArea = render_area;
+    begin_info.clearValueCount = 1;
+    begin_info.pClearValues = &clear_value;
+    
+    vkCmdBeginRenderPass(cmdbuf, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkViewport viewport = {};
+    viewport.width = (float)environment.extent.width;
+    viewport.height = (float)environment.extent.height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent.width = environment.extent.width;
+    rect.extent.height = environment.extent.height;
+    vkCmdSetScissor(cmdbuf, 0, 1, &rect);
+
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, environment.base_cubemap_init_shader.pipeline);
+
+    matrix4_t projection = glm::perspective(
+        glm::radians(90.0f),
+        (float)environment.extent.width / (float)environment.extent.height,
+        0.1f, 5.0f);
+    
+    environment.atm.width = (float)environment.extent.width;
+    environment.atm.height = (float)environment.extent.height;
+    environment.atm.inverse_projection = glm::inverse(projection);
+    
+    vkCmdPushConstants(
+        cmdbuf,
+        environment.base_cubemap_init_shader.layout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        0,
+        sizeof(atmosphere_model_t),
+        &environment.atm);
+
+    vkCmdDraw(cmdbuf, 1, 1, 0, 0);
+
+    vkCmdEndRenderPass(cmdbuf);
+}
+
+struct cubemap_render_data_t {
+    matrix4_t model;
+    float invert_y;
+};
+
+static void s_init_cubemap_shader() {
+    shader_binding_info_t binding_info = {};
+    VkDescriptorType descriptor_types[] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
+    const char *shader_paths[] = { "shaders/SPV/cubemap.vert.spv", "shaders/SPV/cubemap.frag.spv" };
+    
+    environment.cubemap_shader.init_as_3d_shader_for_stage(
+        ST_DEFERRED,
+        &binding_info,
+        sizeof(cubemap_render_data_t),
+        descriptor_types,
+        sizeof(descriptor_types) / sizeof(descriptor_types[0]),
+        shader_paths,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        VK_CULL_MODE_NONE);
+}
+
+static integral_lut_t integral_lut;
+
+static bool updated_environment = 0;
+
+static void s_scene_debug_menu() {
+    ImGui::Separator();
+    ImGui::Text("-- Environment --");
+
+    static float eye_height = 0.0f;
+    ImGui::SliderFloat("Eye height", &eye_height, 0.0f, 1.0f);
+
+    static float light_direction[3] = { 0.1f, 0.422f, 0.714f };
+    ImGui::SliderFloat3("Light direction", light_direction, -1.0f, +1.0f);
+
+    static float rayleigh = -0.082f;
+    ImGui::SliderFloat("Rayleigh factor", &rayleigh, -0.1f, 0.0f);
+    
+    static float mie = -0.908f;
+    ImGui::SliderFloat("Mie factor", &mie, -0.999f, -0.75f);
+
+    static float intensity = 0.650f;
+    ImGui::SliderFloat("Intensity", &intensity, 0.1f, 30.0f);
+
+    static float scatter_strength = 1.975f;
+    ImGui::SliderFloat("Scatter strength", &scatter_strength, 1.0f, 30.0f);
+
+    static float rayleigh_strength = 2.496f;
+    ImGui::SliderFloat("Rayleigh strength", &rayleigh_strength, 0.0f, 3.0f);
+
+    static float mie_strength = 0.034f;
+    ImGui::SliderFloat("Mie strength", &mie_strength, 0.0f, 3.0f);
+
+    static float rayleigh_collection = 8.0f;
+    ImGui::SliderFloat("Rayleigh collection", &rayleigh_collection, 0.0f, 3.0f);
+
+    static float mie_collection = 2.981f;
+    ImGui::SliderFloat("Mie collection", &mie_collection, 0.0f, 3.0f);
+
+    //static float kr[3] = {0.18867780436772762, 0.4978442963618773, 0.6616065586417131};
+    static float kr[3] = {27.0f / 255.0f, 82.0f / 255.0f, 111.0f / 255.0f};
+    ImGui::ColorEdit3("Air color", kr);
+
+    updated_environment = ImGui::Button("Update");
+    
+    environment.atm.eye_height = eye_height;
+    environment.atm.light_direction_x = light_direction[0];
+    environment.atm.light_direction_y = light_direction[1];
+    environment.atm.light_direction_z = light_direction[2];
+    environment.atm.rayleigh = rayleigh;
+    environment.atm.mie = mie;
+    environment.atm.intensity = intensity;
+    environment.atm.scatter_strength = scatter_strength;
+    environment.atm.rayleigh_strength = rayleigh_strength;
+    environment.atm.mie_strength = mie_strength;
+    environment.atm.rayleigh_collection = rayleigh_collection;
+    environment.atm.mie_collection = mie_collection;
+    environment.atm.air_color_r = kr[0];
+    environment.atm.air_color_g = kr[1];
+    environment.atm.air_color_b = kr[2];
+
+    lighting_data.directional_light = vector3_t(
+        environment.atm.light_direction_x = light_direction[0],
+        environment.atm.light_direction_y = light_direction[1],
+        environment.atm.light_direction_z = light_direction[2]);
+}
+
 void prepare_scene3d_data() {
+    add_debug_ui_proc(s_scene_debug_menu);
+
     s_prepare_camera();
     s_prepare_lighting();
 
     atmosphere_model_default_values(&environment.atm, lighting_data.directional_light);
-    s_environment_cubemap_init();
+    s_init_environment_cubemap();
+
+    environment.pbr_env.prepare_diff_ibl();
+    s_init_cubemap_shader();
+    integral_lut.init();
+    environment.pbr_env.prepare_spec_ibl();
+
+    VkCommandBuffer cmdbuf = begin_single_use_command_buffer();
+    s_render_to_base_cubemap(cmdbuf);
+    environment.pbr_env.render_to_diff_ibl(environment.base_cubemap_init.descriptor_set, cmdbuf);
+    environment.pbr_env.render_to_spec_ibl(environment.base_cubemap_init.descriptor_set, cmdbuf);
+    end_single_use_command_buffer(cmdbuf);
+}
+
+static void s_update_environment_if_updated(VkCommandBuffer cmdbuf) {
+    if (updated_environment) {
+        s_render_to_base_cubemap(cmdbuf);
+        environment.pbr_env.render_to_diff_ibl(environment.base_cubemap_init.descriptor_set, cmdbuf);
+        environment.pbr_env.render_to_spec_ibl(environment.base_cubemap_init.descriptor_set, cmdbuf);
+
+        updated_environment = 0;
+    }
 }
 
 void gpu_sync_scene3d_data(VkCommandBuffer cmdbuf, eye_3d_info_t *eye, lighting_info_t *light_info) {
     s_camera_gpu_sync(cmdbuf, eye);
     s_lighting_gpu_sync(light_info, eye, cmdbuf);
+    s_update_environment_if_updated(cmdbuf);
+}
+
+void render_environment(VkCommandBuffer cmdbuf) {
+    VkViewport viewport = {};
+    viewport.width = (float)g_ctx->swapchain.extent.width;
+    viewport.height = (float)g_ctx->swapchain.extent.height;
+    viewport.maxDepth = 1;
+    vkCmdSetViewport(cmdbuf, 0, 1, &viewport);
+
+    VkRect2D rect = {};
+    rect.extent = g_ctx->swapchain.extent;
+    vkCmdSetScissor(cmdbuf, 0, 1, &rect);
+
+    vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, environment.cubemap_shader.pipeline);
+
+    VkDescriptorSet descriptor_sets[] = {
+        camera_data.descriptor_set,
+        environment.base_cubemap_init.descriptor_set };
+
+    vkCmdBindDescriptorSets(
+        cmdbuf,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        environment.cubemap_shader.layout,
+        0,
+        2, descriptor_sets,
+        0, NULL);
+
+    cubemap_render_data_t render_data = {};
+    render_data.model = glm::translate(camera_data.info.position);
+    render_data.invert_y = -1.0f;
+    
+    vkCmdPushConstants(
+        cmdbuf,
+        environment.cubemap_shader.layout,
+        environment.cubemap_shader.flags,
+        0,
+        sizeof(cubemap_render_data_t),
+        &render_data);
+
+    vkCmdDraw(cmdbuf, 36, 1, 0, 0);
+}
+
+scene3d_descriptors_t get_scene_descriptors() {
+    scene3d_descriptors_t res = {};
+    res.camera_ubo = camera_data.descriptor_set;
+    res.diff_ibl_tx = environment.pbr_env.diff_ibl_init.descriptor_set;
+    res.spec_ibl_tx = environment.pbr_env.spec_ibl_set;
+    res.lighting_ubo = lighting_data.descriptor;
+    res.lut_tx = integral_lut.set;
+
+    return res;
 }
 
 }

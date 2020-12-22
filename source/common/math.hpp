@@ -139,3 +139,5 @@ inline float compute_point_to_plane_dist(
     const vector3_t &point) {
     return glm::dot(point, plane->normal) + plane->plane_constant;
 }
+
+constexpr float PI = 3.14159265359f;

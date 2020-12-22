@@ -261,49 +261,7 @@ DECLARE_VOID_RENDERER_PROC(void, end_shadow_rendering,
 
 
 
-// MESH AND ANIMATIONS ////////////////////////////////////////////////////////
-enum buffer_type_t : char {
-    BT_INVALID_BUFFER_TYPE,
-    BT_INDICES,
-    BT_VERTEX,
-    BT_NORMAL,
-    BT_UVS,
-    BT_COLOR,
-    BT_JOINT_WEIGHT,
-    BT_JOINT_INDICES,
-    BT_EXTRA_V3,
-    BT_EXTRA_V2,
-    BT_EXTRA_V1,
-    BT_MAX_VALUE
-};
-
-struct mesh_buffer_t {
-    gpu_buffer_t gpu_buffer;
-    buffer_type_t type;
-};
-
-#define MAX_MESH_BUFFERS BT_MAX_VALUE
-
 // For the data needed to render (vertex offset, first index, index_count, index_offset, index_type) - will be set to default values by load_mesh_* functions
-struct mesh_t {
-    mesh_buffer_t buffers[MAX_MESH_BUFFERS];
-    uint32_t buffer_count;
-    buffer_type_t buffer_type_stack[BT_MAX_VALUE];
-
-    // This is what will get passed to the vkCmdBindVertexBuffers
-    uint32_t vertex_buffer_count;
-    VkBuffer vertex_buffers_final[BT_MAX_VALUE];
-    VkDeviceSize vertex_buffers_offsets[BT_MAX_VALUE];
-    VkBuffer index_buffer;
-
-    // Data needed to render
-    uint32_t vertex_offset;
-    uint32_t vertex_count;
-    uint32_t first_index;
-    uint32_t index_count;
-    uint32_t index_offset;
-    VkIndexType index_type;
-};
 
 DECLARE_VOID_RENDERER_PROC(void, push_buffer_to_mesh,
     buffer_type_t buffer_type,
@@ -340,101 +298,6 @@ DECLARE_VOID_RENDERER_PROC(void, create_player_merged_mesh,
     mesh_t *dst_b, shader_binding_info_t *sbi_b,
     mesh_t *dst_merged, shader_binding_info_t *sbi_merged);
 
-#define MAX_CHILD_JOINTS 5
-
-struct joint_t {
-    uint32_t joint_id = 0;
-    // Eventually won't need joint name
-    const char *joint_name;
-    uint32_t children_count = 0;
-    uint32_t children_ids[MAX_CHILD_JOINTS] = {};
-    // Inverse of transform going from model space origin to "bind" position of bone
-    // "bind" = position of bone by default (without any animations affecting it)
-    matrix4_t inverse_bind_transform;
-};
-
-struct skeleton_t {
-    uint32_t joint_count;
-    joint_t *joints;
-};
-
-DECLARE_VOID_RENDERER_PROC(void, load_skeleton,
-    skeleton_t *skeleton,
-    const char *path);
-
-#define MAX_ANIMATION_CYCLES 10
-
-struct joint_position_key_frame_t {
-    vector3_t position;
-    float time_stamp;
-};
-
-struct joint_rotation_key_frame_t {
-    quaternion_t rotation;
-    float time_stamp;
-};
-
-struct joint_scale_key_frame_t {
-    vector3_t scale;
-    float time_stamp;
-};
-
-// Index of the joint_key_frames_t in the array = joint id
-struct joint_key_frames_t {
-    uint32_t position_count;
-    joint_position_key_frame_t *positions;
-
-    uint32_t rotation_count;
-    joint_rotation_key_frame_t *rotations;
-
-    uint32_t scale_count;
-    joint_scale_key_frame_t *scales;
-};
-
-struct animation_cycle_t {
-    const char *animation_name;
-    
-    float duration;
-    uint32_t joint_animation_count;
-    joint_key_frames_t *joint_animations;
-};
-
-struct animation_cycles_t {
-    uint32_t cycle_count;
-    animation_cycle_t *cycles;
-
-    // This also holds some information on how to render this thing
-    matrix4_t scale;
-    matrix4_t rotation;
-};
-
-DECLARE_VOID_RENDERER_PROC(void, load_animation_cycles,
-    animation_cycles_t *cycles,
-    const char *linker_path, // Defines relationship between bone and index + blending between animations (priorities)
-    const char *path);
-
-struct animated_instance_t {
-    float current_animation_time;
-    float in_between_interpolation_time = 0.1f;
-    bool is_interpolating_between_cycles;
-
-    skeleton_t *skeleton;
-    uint32_t prev_bound_cycle;
-    uint32_t next_bound_cycle;
-    animation_cycles_t *cycles;
-
-    matrix4_t *interpolated_transforms;
-
-    gpu_buffer_t interpolated_transforms_ubo;
-    VkDescriptorSet descriptor_set;
-
-    uint32_t *current_position_indices;
-    vector3_t *current_positions;
-    uint32_t *current_rotation_indices;
-    quaternion_t *current_rotations;
-    uint32_t *current_scale_indices;
-    vector3_t *current_scales;
-};
 
 DECLARE_VOID_RENDERER_PROC(void, animated_instance_init,
     animated_instance_t *instance,
@@ -475,34 +338,6 @@ DECLARE_VOID_RENDERER_PROC(void, switch_to_cycle,
 DECLARE_VOID_RENDERER_PROC(void, sync_gpu_with_animated_transforms,
     animated_instance_t *instance,
     VkCommandBuffer command_buffer);
-
-struct mesh_render_data_t {
-    matrix4_t model;
-    vector4_t color;
-
-    // .x = roughness
-    // .y = metallic
-    vector4_t pbr_info;
-    
-    // To add later with texture stuff
-    int32_t texture_index;
-};
-
-#define DEF_MESH_RENDER_DATA_SIZE (sizeof(mesh_render_data_t))
-
-// By default, a uniform buffer is added for camera transforms
-// If STATIC is chosen, no extra descriptors will be added to shader information
-// If ANIMATED is chosen, 1 extra uniform buffer will be added for joint transforms
-// If PASS_EXTRA_UNIFORM_BUFFER, all uniforms will be added from previous options, and
-// Extra ones will be added that you pass in the extra descriptors array
-enum mesh_type_t {
-    MT_STATIC = 1 << 0,
-    MT_ANIMATED = 1 << 1,
-    MT_PASS_EXTRA_UNIFORM_BUFFER = 1 << 2,
-    MT_MERGED_MESH = 1 << 3
-};
-
-typedef int32_t mesh_type_flags_t;
 
 DECLARE_RENDERER_PROC(shader_t, create_mesh_shader_color,
     shader_binding_info_t *binding_info,
