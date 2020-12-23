@@ -99,10 +99,10 @@ void menu_layout_t::submit() {
         mark_ui_textured_section(widgets[i].texture.descriptor);
         push_textured_ui_box(&widgets[i].image_box);
 
-        push_colored_ui_box(&widgets[i].box);
+        push_color_ui_box(&widgets[i].box);
     }
 
-    push_reversed_colored_ui_box(
+    push_reversed_color_ui_box(
         &current_menu,
         vector2_t(menu_slider_x_max_size, menu_slider_y_max_size) * 2.0f);
 }

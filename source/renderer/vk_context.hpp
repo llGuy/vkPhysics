@@ -76,4 +76,6 @@ extern struct ctx_t {
 void allocate_context();
 void deallocate_context();
 
+void init_context();
+
 }

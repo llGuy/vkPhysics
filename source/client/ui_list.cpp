@@ -143,24 +143,24 @@ void ui_list_end(ui_list_t *list) {
 }
 
 void ui_submit_typing_box(typing_box_t *box) {
-    push_colored_ui_box(&box->box);
+    push_color_ui_box(&box->box);
     mark_ui_textured_section(ui_game_font()->font_img.descriptor);
     push_ui_input_text(1, 0, 0xFFFFFFFF, &box->input_text);
 }
 
 void ui_submit_list(ui_list_t *list) {
     mark_ui_textured_section(ui_game_font()->font_img.descriptor);
-    push_colored_ui_box(&list->list_box);
+    push_color_ui_box(&list->list_box);
 
     for (uint32_t i = 0; i < list->button_count; ++i) {
         push_ui_text(&list->right_buttons[i].text);
-        push_colored_ui_box(&list->right_buttons[i].box);
+        push_color_ui_box(&list->right_buttons[i].box);
     }
 
     ui_submit_typing_box(&list->typing_box);
 
     for (uint32_t i = 0; i < list->item_count; ++i) {
-        push_colored_ui_box(&list->items[i].box);
+        push_color_ui_box(&list->items[i].box);
         push_ui_text(&list->items[i].text);
     }
 }

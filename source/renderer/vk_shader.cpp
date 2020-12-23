@@ -1,5 +1,8 @@
 #include "vk_shader.hpp"
 #include "vk_context.hpp"
+#include "vk_stage_ui.hpp"
+#include "vk_stage_shadow.hpp"
+#include "vk_stage_deferred.hpp"
 #include "vk_render_pipeline.hpp"
 
 #include <common/tools.hpp>
@@ -250,6 +253,26 @@ void shader_t::init_as_2d_shader(
     flags = shader_flags;
 }
 
+void shader_t::init_as_ui_shader(
+    shader_binding_info_t *binding_info,
+    uint32_t push_constant_size,
+    VkDescriptorType *descriptor_layout_types,
+    uint32_t descriptor_layout_count,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags,
+    VkPrimitiveTopology topology,
+    alpha_blending_t alpha_blending) {
+    init_as_2d_shader(
+        binding_info,
+        push_constant_size,
+        descriptor_layout_types,
+        descriptor_layout_count,
+        shader_paths,
+        shader_flags,
+        &g_ctx->pipeline.ui->stage,
+        topology);
+}
+
 void shader_t::init_as_3d_shader(
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
@@ -366,29 +389,31 @@ shader_t init_as_3d_shader_for_stage(
     VkShaderStageFlags shader_flags,
     VkPrimitiveTopology topology,
     VkCullModeFlags culling) {
+    shader_t s = {};
+
     switch (stage_type) {
     case ST_SHADOW: {
-        return s_create_3d_shader(
+        s.init_as_3d_shader(
             binding_info,
             push_constant_size,
             descriptor_layout_types,
             descriptor_layout_count,
             shader_paths,
             shader_flags,
-            r_shadow_stage(),
+            &g_ctx->pipeline.shadow->stage,
             topology,
             VK_CULL_MODE_FRONT_BIT);
     } break;
 
     case ST_DEFERRED: {
-        return s_create_3d_shader(
+        s.init_as_3d_shader(
             binding_info,
             push_constant_size,
             descriptor_layout_types,
             descriptor_layout_count,
             shader_paths,
             shader_flags,
-            r_deferred_stage(),
+            &g_ctx->pipeline.deferred->stage,
             topology,
             culling);
     } break;
@@ -396,6 +421,8 @@ shader_t init_as_3d_shader_for_stage(
     default: {
     } break;
     }
+
+    return s;
 }
 
 void shader_t::init_as_render_pipeline_shader(

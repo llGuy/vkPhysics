@@ -210,21 +210,21 @@ void ui_submit_popups() {
     for (uint32_t i = 0; i < popup_count; ++i) {
         ui_popup_t *popup = &popups[i];
 
-        push_colored_ui_box(&popup->panel);
+        push_color_ui_box(&popup->panel);
         for (uint32_t i = 0; i < popup->vertical_section_count; ++i) {
             popup_section_t *section = &popup->sections[i];
 
             switch (section->type) {
             case PST_BUTTON_SINGLE: {
-                push_colored_ui_box(&section->s_button.button.box);
+                push_color_ui_box(&section->s_button.button.box);
                 push_ui_text(&section->s_button.button.text);
             } break;
 
             case PST_BUTTON_DOUBLE: {
-                push_colored_ui_box(&section->d_button.buttons[0].box);
+                push_color_ui_box(&section->d_button.buttons[0].box);
                 push_ui_text(&section->d_button.buttons[0].text);
 
-                push_colored_ui_box(&section->d_button.buttons[1].box);
+                push_color_ui_box(&section->d_button.buttons[1].box);
                 push_ui_text(&section->d_button.buttons[1].text);
             } break;
 

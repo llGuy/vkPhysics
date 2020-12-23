@@ -186,7 +186,7 @@ void ui_submit_hud() {
                 health_display.text.null_terminate();
             }
 
-            push_colored_ui_box(&health_display.box);
+            push_color_ui_box(&health_display.box);
             mark_ui_textured_section(ui_game_font()->font_img.descriptor);
             push_ui_text(&health_display.text);
         }
@@ -262,7 +262,7 @@ void ui_end_color_table() {
 
 void ui_submit_color_table() {
     if (display_color_table) {
-        push_colored_ui_box(&table_widget.box);
+        push_color_ui_box(&table_widget.box);
         mark_ui_textured_section(ui_texture(UT_COLOR_TABLE));
         push_textured_ui_box(&table_widget.image_box);
     }

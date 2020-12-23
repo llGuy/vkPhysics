@@ -148,11 +148,11 @@ void ui_sign_up_menu_init() {
 }
 
 void ui_submit_sign_up_menu() {
-    push_colored_ui_box(&panel_box);
-    push_colored_ui_box(&signup_box);
-    push_colored_ui_box(&login_box);
-    push_colored_ui_box(&type_password_box);
-    push_colored_ui_box(&type_username_box);
+    push_color_ui_box(&panel_box);
+    push_color_ui_box(&signup_box);
+    push_color_ui_box(&login_box);
+    push_color_ui_box(&type_password_box);
+    push_color_ui_box(&type_username_box);
     
     mark_ui_textured_section(ui_game_font()->font_img.descriptor);
 

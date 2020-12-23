@@ -38,6 +38,7 @@ struct shader_binding_info_t {
     }
 };
 
+// TODO: Create struct to avoid having to pass a million parameters
 struct shader_t {
     VkPipeline pipeline;
     VkPipelineLayout layout;
@@ -52,6 +53,16 @@ struct shader_t {
         const char **shader_paths,
         VkShaderStageFlags shader_flags,
         struct render_pipeline_stage_t *stage,
+        VkPrimitiveTopology topology,
+        alpha_blending_t alpha_blending = AB_NONE);
+
+    void init_as_ui_shader(
+        shader_binding_info_t *binding_info,
+        uint32_t push_constant_size,
+        VkDescriptorType *descriptor_layout_types,
+        uint32_t descriptor_layout_count,
+        const char **shader_paths,
+        VkShaderStageFlags shader_flags,
         VkPrimitiveTopology topology,
         alpha_blending_t alpha_blending = AB_NONE);
  

@@ -104,11 +104,11 @@ void ui_update_team_roster_display_text(menu_layout_t *layout) {
 
 void ui_submit_team_select() {
     mark_ui_textured_section(ui_game_font()->font_img.descriptor);
-    push_colored_ui_box(&head_box);
+    push_color_ui_box(&head_box);
     push_ui_text(&head_text);
 
     for (uint32_t i = 0; i < button_count; ++i) {
-        push_colored_ui_box(&buttons[i].box);
+        push_color_ui_box(&buttons[i].box);
         push_ui_text(&buttons[i].player_count_text);
     }
 }
