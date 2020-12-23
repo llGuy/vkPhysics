@@ -143,11 +143,12 @@ void gpu_buffer_t::update(
         data_size,
         data);
 
-    barrier = create_barrier(
+    barrier = create_gpu_buffer_barrier(
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         pipeline_stage,
         offset,
-        data_size);
+        data_size,
+        this);
 
     vkCmdPipelineBarrier(
         command_buffer,

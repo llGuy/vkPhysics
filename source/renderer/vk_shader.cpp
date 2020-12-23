@@ -248,7 +248,7 @@ void shader_t::init_as_2d_shader(
     VK_CHECK(vkCreateGraphicsPipelines(g_ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline));
 
     flfree(shader_infos);
-    flfree(blend_info.pAttachments);
+    flfree((void *)blend_info.pAttachments);
 
     flags = shader_flags;
 }
@@ -374,7 +374,7 @@ void shader_t::init_as_3d_shader(
     VK_CHECK(vkCreateGraphicsPipelines(g_ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline));
 
     flfree(shader_infos);
-    flfree(blend_info.pAttachments);
+    flfree((void *)blend_info.pAttachments);
 
     flags = shader_flags;
 }
@@ -503,7 +503,7 @@ void shader_t::init_as_render_pipeline_shader(
     VK_CHECK(vkCreateGraphicsPipelines(g_ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline));
 
     flfree(shader_infos);
-    flfree(blend_info.pAttachments);
+    flfree((void *)blend_info.pAttachments);
 }
 
 }

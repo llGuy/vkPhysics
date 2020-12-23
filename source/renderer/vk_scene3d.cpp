@@ -492,7 +492,7 @@ static void s_scene_debug_menu() {
 
     //static float kr[3] = {0.18867780436772762, 0.4978442963618773, 0.6616065586417131};
     static float kr[3] = {27.0f / 255.0f, 82.0f / 255.0f, 111.0f / 255.0f};
-    ImGui::Colorit3("Air color", kr);
+    ImGui::ColorEdit3("Air color", kr);
 
     updated_environment = ImGui::Button("Update");
     
