@@ -15,20 +15,20 @@
 #include <vk.hpp>
 
 // HUD for now, just contains a crosshair
-static ui_box_t crosshair;
+static ui::box_t crosshair;
 static VkDescriptorSet crosshair_texture;
 
 static bool gameplay_display;
 
 static struct {
-    ui_box_t box;
-    ui_text_t text;
+    ui::box_t box;
+    ui::text_t text;
     uint32_t current_health;
 } health_display;
 
 static struct {
-    ui_box_t box;
-    ui_text_t text;
+    ui::box_t box;
+    ui::text_t text;
 } ammo_display;
 
 static bool display_minibuffer;
@@ -44,53 +44,53 @@ static struct {
 
 enum button_t { B_SIGNUP, B_LOGIN, B_USERNAME, B_PASSWORD, B_INVALID };
 
-static ui_box_t panel_box;
+static ui::box_t panel_box;
 
 static void s_panel_init() {
     panel_box.init(
-        RT_CENTER,
+        ui::RT_CENTER,
         1.0f,
-        ui_vector2_t(0.0f, 0.0f),
-        ui_vector2_t(0.6f, 0.6f),
+        ui::vector2_t(0.0f, 0.0f),
+        ui::vector2_t(0.6f, 0.6f),
         NULL,
         0x000000EE);
 }
 
-static ui_box_t signup_box;
-static ui_text_t signup_text;
+static ui::box_t signup_box;
+static ui::text_t signup_text;
 static widget_color_t signup_color;
 
-static ui_box_t login_box;
-static ui_text_t login_text;
+static ui::box_t login_box;
+static ui::text_t login_text;
 static widget_color_t login_color;
 
 static struct {
     // When you select a server, press connect to request connection
-    ui_box_t connect_button;
-    ui_text_t connect_text;
+    ui::box_t connect_button;
+    ui::text_t connect_text;
     widget_color_t connect_color;
 
-    ui_box_t refresh_button;
-    ui_text_t refresh_text;
+    ui::box_t refresh_button;
+    ui::text_t refresh_text;
     widget_color_t refresh_color;
 
-    ui_box_t server_list_box;
+    ui::box_t server_list_box;
 
     uint32_t selected_server = 0xFFFF;
 
     bool typing_ip_address;
-    ui_box_t ip_address_box;
-    ui_input_text_t ip_address;
+    ui::box_t ip_address_box;
+    ui::input_text_t ip_address;
     widget_color_t ip_address_color;
 } browse_server_menu;
 
 void ui_hud_init() {
     { // Crosshair
         crosshair.init(
-            RT_CENTER,
+            ui::RT_CENTER,
             1.0f,
-            ui_vector2_t(0.0f, 0.0f),
-            ui_vector2_t(0.05f, 0.05f),
+            ui::vector2_t(0.0f, 0.0f),
+            ui::vector2_t(0.05f, 0.05f),
             NULL,
             0xFFFFFFFF);
 
@@ -100,17 +100,17 @@ void ui_hud_init() {
 
     { // Health / ammo display
         health_display.box.init(
-            RT_LEFT_DOWN,
+            ui::RT_LEFT_DOWN,
             1.8f,
-            ui_vector2_t(0.05f, 0.05f),
-            ui_vector2_t(0.08f, 0.08f),
+            ui::vector2_t(0.05f, 0.05f),
+            ui::vector2_t(0.08f, 0.08f),
             NULL,
             0x22222299);
 
         health_display.text.init(
             &health_display.box,
             ui_game_font(),
-            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.7f,
             3,
@@ -128,17 +128,17 @@ void ui_hud_init() {
 
         // Actually initialise minibuffer UI components
         minibuffer.box.init(
-            RT_LEFT_DOWN,
+            ui::RT_LEFT_DOWN,
             13.0f,
-            ui_vector2_t(0.02f, 0.03f),
-            ui_vector2_t(0.6f, 0.17f),
+            ui::vector2_t(0.02f, 0.03f),
+            ui::vector2_t(0.6f, 0.17f),
             NULL,
             0x09090936);
 
         minibuffer.input_text.text.init(
             &minibuffer.box,
             ui_game_font(),
-            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.7f,
             38,
@@ -167,9 +167,9 @@ void ui_submit_hud() {
     crosshair_selection.uvs[2] = crosshair_selection.uvs[4] = vector2_t(start.x + unit, start.y + unit);
     crosshair_selection.uvs[5] = vector2_t(start.x + unit, start.y);
 
-    mark_ui_textured_section(crosshair_texture);
+    ui::mark_ui_textured_section(crosshair_texture);
 
-    push_textured_ui_box(&crosshair, crosshair_selection.uvs);
+    ui::push_textured_box(&crosshair, crosshair_selection.uvs);
 
     if (gameplay_display) {
         // Check if main player health has changed
@@ -186,9 +186,9 @@ void ui_submit_hud() {
                 health_display.text.null_terminate();
             }
 
-            push_color_ui_box(&health_display.box);
-            mark_ui_textured_section(ui_game_font()->font_img.descriptor);
-            push_ui_text(&health_display.text);
+            ui::push_color_box(&health_display.box);
+            ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+            ui::push_text(&health_display.text);
         }
     }
 
@@ -228,18 +228,18 @@ void ui_color_table_init() {
     display_color_table = 0;
 
     table_widget.box.init(
-        RT_CENTER,
+        ui::RT_CENTER,
         1.0f,
-        ui_vector2_t(0.0f, 0.0f),
-        ui_vector2_t(0.7f, 0.7f),
+        ui::vector2_t(0.0f, 0.0f),
+        ui::vector2_t(0.7f, 0.7f),
         NULL,
         MENU_WIDGET_NOT_HOVERED_OVER_BACKGROUND_COLOR);
 
     table_widget.image_box.init(
-        RT_CENTER,
+        ui::RT_CENTER,
         1.0f,
-        ui_vector2_t(0.0f, 0.0f),
-        ui_vector2_t(0.9f, 0.9f),
+        ui::vector2_t(0.0f, 0.0f),
+        ui::vector2_t(0.9f, 0.9f),
         &table_widget.box,
         0x000000FF);
 }
@@ -262,15 +262,15 @@ void ui_end_color_table() {
 
 void ui_submit_color_table() {
     if (display_color_table) {
-        push_color_ui_box(&table_widget.box);
-        mark_ui_textured_section(ui_texture(UT_COLOR_TABLE));
-        push_textured_ui_box(&table_widget.image_box);
+        ui::push_color_box(&table_widget.box);
+        ui::mark_ui_textured_section(ui_texture(UT_COLOR_TABLE));
+        ui::push_textured_box(&table_widget.image_box);
     }
 }
 
-void ui_hud_input(event_submissions_t *events, raw_input_t *input) {
+void ui_hud_input(event_submissions_t *events, const app::raw_input_t *input) {
     if (display_color_table) {
-        if (input->buttons[BT_MOUSE_LEFT].instant) {
+        if (input->buttons[app::BT_MOUSE_LEFT].instant) {
             vector2_t color = vector2_t(0.0f);
 
             // Check where user clicked

@@ -226,7 +226,7 @@ void ui_submit_main_menu() {
     
 void ui_main_menu_input(
     event_submissions_t *events,
-    raw_input_t *input) {
+    const app::raw_input_t *input) {
     if (main_menu_layout.input(events, input)) {
         switch (main_menu_layout.current_open_menu) {
         case B_BROWSE_SERVER: {

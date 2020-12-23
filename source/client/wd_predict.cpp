@@ -31,7 +31,7 @@ static player_t *s_get_local_player() {
 }
 
 void wd_handle_local_player_input(float dt) {
-    game_input_t *game_input = get_game_input();
+    const app::game_input_t *game_input = app::get_game_input();
 
     player_action_t actions;
     memset(&actions, 0, sizeof(actions));
@@ -44,34 +44,34 @@ void wd_handle_local_player_input(float dt) {
     actions.dmouse_x = game_input->mouse_x - game_input->previous_mouse_x;
     actions.dmouse_y = game_input->mouse_y - game_input->previous_mouse_y;
 
-    if (game_input->actions[GIAT_MOVE_FORWARD].state == BS_DOWN)
+    if (game_input->actions[app::GIAT_MOVE_FORWARD].state == app::BS_DOWN)
         actions.move_forward = 1;
-    if (game_input->actions[GIAT_MOVE_LEFT].state == BS_DOWN)
+    if (game_input->actions[app::GIAT_MOVE_LEFT].state == app::BS_DOWN)
         actions.move_left = 1;
-    if (game_input->actions[GIAT_MOVE_BACK].state == BS_DOWN)
+    if (game_input->actions[app::GIAT_MOVE_BACK].state == app::BS_DOWN)
         actions.move_back = 1;
-    if (game_input->actions[GIAT_MOVE_RIGHT].state == BS_DOWN)
+    if (game_input->actions[app::GIAT_MOVE_RIGHT].state == app::BS_DOWN)
         actions.move_right = 1;
-    if (game_input->actions[GIAT_TRIGGER4].state == BS_DOWN)
+    if (game_input->actions[app::GIAT_TRIGGER4].state == app::BS_DOWN)
         actions.jump = 1;
-    if (game_input->actions[GIAT_TRIGGER6].state == BS_DOWN)
+    if (game_input->actions[app::GIAT_TRIGGER6].state == app::BS_DOWN)
         actions.crouch = 1;
-    if (game_input->actions[GIAT_TRIGGER1].state == BS_DOWN)
+    if (game_input->actions[app::GIAT_TRIGGER1].state == app::BS_DOWN)
         actions.trigger_left = 1;
-    if (game_input->actions[GIAT_TRIGGER2].state == BS_DOWN)
+    if (game_input->actions[app::GIAT_TRIGGER2].state == app::BS_DOWN)
         actions.trigger_right = 1;
-    if (game_input->actions[GIAT_TRIGGER5].release == BS_DOWN)
+    if (game_input->actions[app::GIAT_TRIGGER5].release == app::BS_DOWN)
         actions.switch_shapes = 1;
-    if (game_input->actions[GIAT_TRIGGER7].instant == BS_DOWN)
+    if (game_input->actions[app::GIAT_TRIGGER7].instant == app::BS_DOWN)
         actions.flashlight = 1;
 
-    if (game_input->actions[GIAT_TRIGGER8].instant == BS_DOWN) {
+    if (game_input->actions[app::GIAT_TRIGGER8].instant == app::BS_DOWN) {
         actions.switch_weapons = 1;
         actions.next_weapon = 0b111;
     }
 
     for (uint32_t i = 0; i < 3; ++i) {
-        if (game_input->actions[GIAT_NUMBER0 + i].instant == BS_DOWN) {
+        if (game_input->actions[app::GIAT_NUMBER0 + i].instant == app::BS_DOWN) {
             actions.switch_weapons = 1;
             actions.next_weapon = i;
         }

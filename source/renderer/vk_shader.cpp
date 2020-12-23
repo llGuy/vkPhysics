@@ -384,7 +384,7 @@ void shader_t::init_as_3d_shader(
     flags = shader_flags;
 }
 
-shader_t init_as_3d_shader_for_stage(
+void shader_t::init_as_3d_shader_for_stage(
     stage_type_t stage_type,
     shader_binding_info_t *binding_info,
     uint32_t push_constant_size,
@@ -394,11 +394,9 @@ shader_t init_as_3d_shader_for_stage(
     VkShaderStageFlags shader_flags,
     VkPrimitiveTopology topology,
     VkCullModeFlags culling) {
-    shader_t s = {};
-
     switch (stage_type) {
     case ST_SHADOW: {
-        s.init_as_3d_shader(
+        init_as_3d_shader(
             binding_info,
             push_constant_size,
             descriptor_layout_types,
@@ -411,7 +409,7 @@ shader_t init_as_3d_shader_for_stage(
     } break;
 
     case ST_DEFERRED: {
-        s.init_as_3d_shader(
+        init_as_3d_shader(
             binding_info,
             push_constant_size,
             descriptor_layout_types,
@@ -426,8 +424,6 @@ shader_t init_as_3d_shader_for_stage(
     default: {
     } break;
     }
-
-    return s;
 }
 
 void shader_t::init_as_render_pipeline_shader(

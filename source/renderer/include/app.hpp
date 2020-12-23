@@ -82,6 +82,11 @@ struct raw_input_t {
     bool has_focus = 1;
 };
 
+/*
+  Sets the 'i'th char in raw_input_t::char_stack to 0
+ */
+void nullify_char_at(uint32_t i);
+
 const raw_input_t *get_raw_input();
 
 void enable_cursor();

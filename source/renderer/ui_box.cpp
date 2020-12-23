@@ -1,7 +1,6 @@
-#include "ui_box.hpp"
-#include "ui_math.hpp"
 #include "vk_present.hpp"
 
+#include <ui.hpp>
 #include <common/math.hpp>
 
 namespace ui {

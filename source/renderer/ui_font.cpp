@@ -1,6 +1,7 @@
-#include "ui_font.hpp"
+#include "app.hpp"
 #include "app_context.hpp"
 
+#include <ui.hpp>
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -226,14 +227,14 @@ void text_t::null_terminate() {
 }
 
 void input_text_t::input(
-    app::raw_input_t *raw_input) {
+    const app::raw_input_t *raw_input) {
     for (uint32_t i = 0; i < raw_input->char_count; ++i) {
         char character[2] = {raw_input->char_stack[i], 0};
         if (character[0]) {
             text.colors[cursor_position] = text_color;
             text.characters[cursor_position++] = raw_input->char_stack[i];
             ++text.char_count;
-            raw_input->char_stack[i] = 0;
+            app::nullify_char_at(i);
         }
     }
 

@@ -15,7 +15,4 @@ struct final_stage_t {
     void execute(VkCommandBuffer cmdbuf);
 };
 
-// Brightness value between 0 and 1
-void set_main_screen_brightness(float brightness);
-
 }

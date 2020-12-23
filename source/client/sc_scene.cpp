@@ -7,8 +7,8 @@
 
 static scene_type_t bound_scene;
 
-static eye_3d_info_t eye_info;
-static lighting_info_t lighting_info;
+static vk::eye_3d_info_t eye_info;
+static vk::lighting_info_t lighting_info;
 
 static listener_t scene_listener;
 
@@ -87,10 +87,10 @@ void sc_tick(
     }
 }
 
-eye_3d_info_t *sc_get_eye_info() {
+vk::eye_3d_info_t *sc_get_eye_info() {
     return &eye_info;
 }
 
-lighting_info_t *sc_get_lighting_info() {
+vk::lighting_info_t *sc_get_lighting_info() {
     return &lighting_info;
 }

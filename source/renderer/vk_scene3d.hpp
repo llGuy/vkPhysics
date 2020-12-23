@@ -8,8 +8,6 @@ namespace vk {
 
 void prepare_scene3d_data();
 
-void render_environment(VkCommandBuffer cmdbuf);
-
 struct scene3d_descriptors_t {
     VkDescriptorSet lighting_ubo;
     VkDescriptorSet camera_ubo;

@@ -1,12 +1,12 @@
 #include "ui_box.hpp"
 #include "ui_math.hpp"
-#include "ui_font.hpp"
 #include "vk_buffer.hpp"
 #include "vk_shader.hpp"
 #include "ui_submit.hpp"
 #include "vk_present.hpp"
 #include "app_context.hpp"
 
+#include <ui.hpp>
 #include <common/log.hpp>
 #include <common/math.hpp>
 
@@ -133,7 +133,7 @@ void init_submission() {
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 }
 
-void mark_textured_section(VkDescriptorSet set) {
+void mark_ui_textured_section(VkDescriptorSet set) {
     if (textured_list.section_count) {
         // Get current section
         vertex_section_t *next = &textured_list.sections[textured_list.section_count];

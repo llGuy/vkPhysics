@@ -1,4 +1,3 @@
-#include "vk_mesh.hpp"
 #include "vk_buffer.hpp"
 #include "vk_scene3d.hpp"
 #include "vk_context.hpp"

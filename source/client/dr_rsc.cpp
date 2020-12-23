@@ -1,23 +1,22 @@
 #include "dr_rsc.hpp"
+#include "dr_chunk.hpp"
+#include <common/chunk.hpp>
 #include <common/files.hpp>
 #include <common/constant.hpp>
 #include <common/serialiser.hpp>
-#include <vk.hpp>
-#include <common/chunk.hpp>
 #include <common/allocators.hpp>
-#include <vulkan/vulkan_core.h>
 
-#include "dr_chunk.hpp"
+#include <vk.hpp>
 
-static mesh_t meshes[GM_INVALID];
+static vk::mesh_t meshes[GM_INVALID];
 
 static struct animations_t {
-    skeleton_t player_sk;
+    vk::skeleton_t player_sk;
 
-    animation_cycles_t player_cyc;
+    vk::animation_cycles_t player_cyc;
 } animations;
 
-static shader_t shaders[GS_INVALID];
+static vk::shader_t shaders[GS_INVALID];
 
 chunk_color_mem_t dr_chunk_colors_g;
 
@@ -27,17 +26,17 @@ static struct tmp_t {
 } tmp;
 
 static void s_create_player_shaders_and_meshes() {
-    shader_binding_info_t bullet_sbi = {};
-    load_mesh_external(dr_get_mesh_rsc(GM_BULLET), &bullet_sbi, "assets/models/bullet.mesh");
+    vk::shader_binding_info_t bullet_sbi = {};
+    dr_get_mesh_rsc(GM_BULLET)->load_external(&bullet_sbi, "assets/models/bullet.mesh");
 
     // Load the animation data for the player "person" mesh
-    load_skeleton(&animations.player_sk, "assets/models/player.skeleton");
-    load_animation_cycles(&animations.player_cyc, "assets/models/player.animations.link", "assets/models/player.animations");
+    animations.player_sk.load("assets/models/player.skeleton");
+    animations.player_cyc.load("assets/models/player.animations.link", "assets/models/player.animations");
 
-    shader_binding_info_t player_sbi, ball_sbi, merged_sbi;
+    vk::shader_binding_info_t player_sbi, ball_sbi, merged_sbi;
 
     // Create meshes also for transition effect between both models
-    create_player_merged_mesh(
+    vk::create_player_merged_mesh(
         &meshes[GM_PLAYER], &player_sbi,
         &meshes[GM_BALL], &ball_sbi,
         &meshes[GM_MERGED], &merged_sbi);
@@ -48,20 +47,20 @@ static void s_create_player_shaders_and_meshes() {
     const char *static_shadow_shader_paths[] =
         {"shaders/SPV/mesh_shadow.vert.spv", "shaders/SPV/shadow.frag.spv"};
 
-    shaders[GS_BALL] = create_mesh_shader_color(
+    shaders[GS_BALL] = vk::create_mesh_shader_color(
         &ball_sbi,
         static_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        MT_STATIC);
+        vk::MT_STATIC);
 
-    shaders[GS_BALL_SHADOW] = create_mesh_shader_shadow(
+    shaders[GS_BALL_SHADOW] = vk::create_mesh_shader_shadow(
         &ball_sbi,
         static_shadow_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        MT_STATIC);
+        vk::MT_STATIC);
 
     // Create shaders for the "person" mesh
     const char *player_shader_paths[] =
@@ -69,20 +68,20 @@ static void s_create_player_shaders_and_meshes() {
     const char *player_shadow_shader_paths[] =
         {"shaders/SPV/skeletal_shadow.vert.spv", "shaders/SPV/shadow.frag.spv"};
 
-    shaders[GS_PLAYER] = create_mesh_shader_color(
+    shaders[GS_PLAYER] = vk::create_mesh_shader_color(
         &player_sbi,
         player_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE, 
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        MT_ANIMATED);
+        vk::MT_ANIMATED);
 
-    shaders[GS_PLAYER_SHADOW] = create_mesh_shader_shadow(
+    shaders[GS_PLAYER_SHADOW] = vk::create_mesh_shader_shadow(
         &player_sbi,
         player_shadow_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        MT_ANIMATED);
+        vk::MT_ANIMATED);
 
     // Create shaders for the transition effect between person and ball
     const char *merged_shader_paths[] =
@@ -90,41 +89,41 @@ static void s_create_player_shaders_and_meshes() {
     const char *merged_shadow_shader_paths[] =
         {"shaders/SPV/morph.vert.spv", "shaders/SPV/morph_ball_shadow.geom.spv", "shaders/SPV/shadow.frag.spv"};
 
-    shaders[GS_MERGED_BALL] = create_mesh_shader_color(
+    shaders[GS_MERGED_BALL] = vk::create_mesh_shader_color(
         &merged_sbi,
         merged_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE, 
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
-        MT_ANIMATED | MT_MERGED_MESH);
+        vk::MT_ANIMATED | vk::MT_MERGED_MESH);
 
 #if 1
-    shaders[GS_MERGED_BALL_SHADOW] = create_mesh_shader_shadow(
+    shaders[GS_MERGED_BALL_SHADOW] = vk::create_mesh_shader_shadow(
         &merged_sbi,
         merged_shadow_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
-        MT_ANIMATED | MT_MERGED_MESH);
+        vk::MT_ANIMATED | vk::MT_MERGED_MESH);
 #endif
 
     merged_shader_paths[1] = "shaders/SPV/morph_dude.geom.spv";
     merged_shadow_shader_paths[1] = "shaders/SPV/morph_dude_shadow.geom.spv";
 
-    shaders[GS_MERGED_PLAYER] = create_mesh_shader_color(
+    shaders[GS_MERGED_PLAYER] = vk::create_mesh_shader_color(
         &merged_sbi,
         merged_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_NONE, 
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
-        MT_ANIMATED | MT_MERGED_MESH);
+        vk::MT_ANIMATED | vk::MT_MERGED_MESH);
 
 #if 1
-    shaders[GS_MERGED_PLAYER_SHADOW] = create_mesh_shader_shadow(
+    shaders[GS_MERGED_PLAYER_SHADOW] = vk::create_mesh_shader_shadow(
         &merged_sbi,
         merged_shadow_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY,
-        MT_ANIMATED | MT_MERGED_MESH);
+        vk::MT_ANIMATED | vk::MT_MERGED_MESH);
 #endif
 }
 
@@ -138,7 +137,7 @@ static void s_create_chunk_shaders() {
     //     &chunk_mesh_prototype);
 
     // Need to create special binding for chunk mesh rendering
-    shader_binding_info_t binding_info = {};
+    vk::shader_binding_info_t binding_info = {};
     binding_info.binding_count = 1;
     binding_info.binding_descriptions = FL_MALLOC(VkVertexInputBindingDescription, binding_info.binding_count);
 
@@ -170,31 +169,31 @@ static void s_create_chunk_shaders() {
         "shaders/SPV/shadow.frag.spv"
     };
     
-    shaders[GS_CHUNK] = create_mesh_shader_color(
+    shaders[GS_CHUNK] = vk::create_mesh_shader_color(
         &binding_info,
         shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_CULL_MODE_FRONT_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        MT_STATIC | MT_PASS_EXTRA_UNIFORM_BUFFER);
+        vk::MT_STATIC | vk::MT_PASS_EXTRA_UNIFORM_BUFFER);
 
-    shaders[GS_CHUNK_SHADOW] = create_mesh_shader_shadow(
+    shaders[GS_CHUNK_SHADOW] = vk::create_mesh_shader_shadow(
         &binding_info,
         shadow_shader_paths,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        MT_STATIC);
+        vk::MT_STATIC);
 
     dr_chunk_colors_g.chunk_color.pointer_position = vector4_t(0.0f);
     dr_chunk_colors_g.chunk_color.pointer_color = vector4_t(0.0f);
     dr_chunk_colors_g.chunk_color.pointer_radius = 0.0f;
 
-    dr_chunk_colors_g.chunk_color_ubo = create_gpu_buffer(
+    dr_chunk_colors_g.chunk_color_ubo.init(
         sizeof(chunk_color_data_t),
         &dr_chunk_colors_g.chunk_color,
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
-    dr_chunk_colors_g.chunk_color_set = create_buffer_descriptor_set(
+    dr_chunk_colors_g.chunk_color_set = vk::create_buffer_descriptor_set(
         dr_chunk_colors_g.chunk_color_ubo.buffer,
         sizeof(chunk_color_data_t),
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -207,8 +206,8 @@ void dr_resources_init() {
     tmp.mesh_vertices = FL_MALLOC(compressed_chunk_mesh_vertex_t, CHUNK_MAX_VERTICES_PER_CHUNK);
 }
 
-void dr_player_animated_instance_init(animated_instance_t *instance) {
-    animated_instance_init(instance, &animations.player_sk, &animations.player_cyc);
+void dr_player_animated_instance_init(vk::animated_instance_t *instance) {
+    instance->init(&animations.player_sk, &animations.player_cyc);
 }
 
 compressed_chunk_mesh_vertex_t *dr_get_tmp_mesh_verts() {
@@ -239,9 +238,9 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path) {
         vertices[i] = serialiser.deserialise_vector3();
     }
 
-    push_buffer_to_mesh(BT_VERTEX, &res.world_mesh);
-    mesh_buffer_t *vtx_buffer = get_mesh_buffer(BT_VERTEX, &res.world_mesh);
-    vtx_buffer->gpu_buffer = create_gpu_buffer(
+    res.world_mesh.push_buffer(vk::BT_VERTEX);
+    vk::mesh_buffer_t *vtx_buffer = res.world_mesh.get_mesh_buffer(vk::BT_VERTEX);
+    vtx_buffer->gpu_buffer.init(
         sizeof(vector3_t) * vertex_count,
         vertices,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -253,7 +252,7 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path) {
     res.world_mesh.index_count = 0;
     res.world_mesh.index_type = VK_INDEX_TYPE_UINT32;
 
-    create_mesh_vbo_final_list(&res.world_mesh);
+    res.world_mesh.init_mesh_vbo_final_list();
 
     res.world_render_data.model = matrix4_t(1.0f);
     res.world_render_data.pbr_info.x = 0.1f;
@@ -267,10 +266,10 @@ fixed_premade_scene_t dr_read_premade_rsc(const char *path) {
     return res;
 }
 
-mesh_t *dr_get_mesh_rsc(game_mesh_t mesh) {
+vk::mesh_t *dr_get_mesh_rsc(game_mesh_t mesh) {
     return &meshes[mesh];
 }
 
-shader_t *dr_get_shader_rsc(game_shader_t shader) {
+vk::shader_t *dr_get_shader_rsc(game_shader_t shader) {
     return &shaders[shader];
 }

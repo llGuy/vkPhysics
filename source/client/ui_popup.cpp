@@ -75,7 +75,7 @@ void ui_push_popup_section_input(ui_popup_t *popup) {
 
 void ui_prepare_popup_for_render(ui_popup_t *popup) {
     { // Initialise popup main panel
-        popup->panel.init(RT_CENTER, 1.0f, ui_vector2_t(0.0f, 0.0f), ui_vector2_t(0.6f, 0.6f), NULL, 0x000000EE);
+        popup->panel.init(ui::RT_CENTER, 1.0f, ui::vector2_t(0.0f, 0.0f), ui::vector2_t(0.6f, 0.6f), NULL, 0x000000EE);
     }
 
     // Initialise each section
@@ -89,17 +89,17 @@ void ui_prepare_popup_for_render(ui_popup_t *popup) {
         case PST_BUTTON_SINGLE: {
             auto *button = &section->s_button.button;
             button->box.init(
-                RT_RELATIVE_CENTER,
+                ui::RT_RELATIVE_CENTER,
                 6.0f,
-                ui_vector2_t(start_x, current_y),
-                ui_vector2_t(0.9f, 0.2f),
+                ui::vector2_t(start_x, current_y),
+                ui::vector2_t(0.9f, 0.2f),
                 &popup->panel,
                 0x09090956);
 
             button->text.init(
                 &button->box,
                 ui_game_font(),
-                ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+                ui::text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f, 25, 1.8f);
 
             if (!button->text.char_count) {
@@ -115,17 +115,17 @@ void ui_prepare_popup_for_render(ui_popup_t *popup) {
                 start_x = -0.22f;
                 auto *button = &section->d_button.buttons[0];
                 button->box.init(
-                    RT_RELATIVE_CENTER,
+                    ui::RT_RELATIVE_CENTER,
                     3.0f,
-                    ui_vector2_t(start_x, current_y),
-                    ui_vector2_t(0.4f, 0.2f),
+                    ui::vector2_t(start_x, current_y),
+                    ui::vector2_t(0.4f, 0.2f),
                     &popup->panel,
                     0x09090956);
 
                 button->text.init(
                     &button->box,
                     ui_game_font(),
-                    ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+                    ui::text_t::font_stream_box_relative_to_t::BOTTOM,
                     0.8f, 0.9f, 7, 1.8f);
 
                 if (!button->text.char_count) {
@@ -140,17 +140,17 @@ void ui_prepare_popup_for_render(ui_popup_t *popup) {
                 start_x = 0.22f;
                 auto *button = &section->d_button.buttons[1];
                 button->box.init(
-                    RT_RELATIVE_CENTER,
+                    ui::RT_RELATIVE_CENTER,
                     3.0f,
-                    ui_vector2_t(start_x, current_y),
-                    ui_vector2_t(0.4f, 0.2f),
+                    ui::vector2_t(start_x, current_y),
+                    ui::vector2_t(0.4f, 0.2f),
                     &popup->panel,
                     0x09090956);
 
                 button->text.init(
                     &button->box,
                     ui_game_font(),
-                    ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+                    ui::text_t::font_stream_box_relative_to_t::BOTTOM,
                     0.8f, 0.9f, 7, 1.8f);
 
                 if (!button->text.char_count) {
@@ -168,15 +168,15 @@ void ui_prepare_popup_for_render(ui_popup_t *popup) {
             auto *text = &section->text;
             
             text->box.init(
-                RT_RELATIVE_CENTER, 8.0f,
-                ui_vector2_t(start_x, current_y),
-                ui_vector2_t(0.9f, 0.2f),
+                ui::RT_RELATIVE_CENTER, 8.0f,
+                ui::vector2_t(start_x, current_y),
+                ui::vector2_t(0.9f, 0.2f),
                 &popup->panel, 0x09090936);
 
             text->text.init(
                 &text->box,
                 ui_game_font(),
-                ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+                ui::text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f, 25, 1.8f);
 
             if (!text->text.char_count) {
@@ -188,11 +188,11 @@ void ui_prepare_popup_for_render(ui_popup_t *popup) {
         case PST_INPUT: {
             auto *input = &section->input;
             
-            input->box.init(RT_RELATIVE_CENTER, 8.0f, ui_vector2_t(start_x, current_y), ui_vector2_t(0.9f, 0.2f), &popup->panel, 0x09090936);
+            input->box.init(ui::RT_RELATIVE_CENTER, 8.0f, ui::vector2_t(start_x, current_y), ui::vector2_t(0.9f, 0.2f), &popup->panel, 0x09090936);
             input->color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
             input->input.text.init(
                 &input->box, ui_game_font(),
-                ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+                ui::text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f, 25, 1.8f);
 
             input->input.text_color = 0xFFFFFFFF;
@@ -205,31 +205,31 @@ void ui_prepare_popup_for_render(ui_popup_t *popup) {
 }
 
 void ui_submit_popups() {
-    mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+    ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
 
     for (uint32_t i = 0; i < popup_count; ++i) {
         ui_popup_t *popup = &popups[i];
 
-        push_color_ui_box(&popup->panel);
+        ui::push_color_box(&popup->panel);
         for (uint32_t i = 0; i < popup->vertical_section_count; ++i) {
             popup_section_t *section = &popup->sections[i];
 
             switch (section->type) {
             case PST_BUTTON_SINGLE: {
-                push_color_ui_box(&section->s_button.button.box);
-                push_ui_text(&section->s_button.button.text);
+                ui::push_color_box(&section->s_button.button.box);
+                ui::push_text(&section->s_button.button.text);
             } break;
 
             case PST_BUTTON_DOUBLE: {
-                push_color_ui_box(&section->d_button.buttons[0].box);
-                push_ui_text(&section->d_button.buttons[0].text);
+                ui::push_color_box(&section->d_button.buttons[0].box);
+                ui::push_text(&section->d_button.buttons[0].text);
 
-                push_color_ui_box(&section->d_button.buttons[1].box);
-                push_ui_text(&section->d_button.buttons[1].text);
+                ui::push_color_box(&section->d_button.buttons[1].box);
+                ui::push_text(&section->d_button.buttons[1].text);
             } break;
 
             case PST_TEXT: {
-                push_ui_text(&section->text.text);
+                ui::push_text(&section->text.text);
             } break;
 
             case PST_INPUT: {
@@ -240,7 +240,7 @@ void ui_submit_popups() {
     }
 }
 
-void ui_popup_input(event_submissions_t *events, raw_input_t *input) {
+void ui_popup_input(event_submissions_t *events, const app::raw_input_t *input) {
     if (popup_count) {
         ui_popup_t *popup = &popups[popup_count - 1];
 
@@ -299,7 +299,7 @@ void ui_popup_input(event_submissions_t *events, raw_input_t *input) {
             }
         }
 
-        if (input->buttons[BT_MOUSE_LEFT].instant)
+        if (input->buttons[app::BT_MOUSE_LEFT].instant)
             if (input_proc)
                 input_proc(popup, events);
 

@@ -184,7 +184,7 @@ struct shader_t {
     // Some helper functions which just add some more clarity
     // (can use either the functions above, or the ones below)
     // The ones above just give programmer more control
-    shader_t init_as_3d_shader_for_stage(
+    void init_as_3d_shader_for_stage(
         stage_type_t stage_type,
         shader_binding_info_t *binding_info,
         uint32_t push_constant_size,
@@ -231,6 +231,8 @@ struct gpu_buffer_t {
   a certain amount of frames, will the buffer really get deleted.
  */
 void destroy_sensitive_buffer(gpu_buffer_t *buf);
+
+VkDescriptorSet create_buffer_descriptor_set(VkBuffer buffer, VkDeviceSize buffer_size, VkDescriptorType type);
 
 /*
   Each mesh has certain buffers it can have.
@@ -289,6 +291,50 @@ struct mesh_t {
 };
 
 /*
+  An oddly specific function for the game's rendering API.
+  It is simply here because in order have the cool transition
+  effect between standing mode and rolling mode, I needed to do
+  some fancy trickery (needed a bit more control over what was going on).
+  It would have been to complicated and unnecessary to create
+  wrapers which could allow that sort of control.
+ */
+void create_player_merged_mesh(
+    mesh_t *dst_a, shader_binding_info_t *sbi_a,
+    mesh_t *dst_b, shader_binding_info_t *sbi_b,
+    mesh_t *dst_merged, shader_binding_info_t *sbi_merged);
+
+/* 
+  By default, a uniform buffer is added for camera transforms
+  If STATIC is chosen, no extra descriptors will be added to shader information
+  If ANIMATED is chosen, 1 extra uniform buffer will be added for joint transforms
+  If PASS_EXTRA_UNIFORM_BUFFER, all uniforms will be added from previous options, and
+  Extra ones will be added that you pass in the extra descriptors array
+*/
+enum mesh_type_t {
+    MT_STATIC = 1 << 0,
+    MT_ANIMATED = 1 << 1,
+    MT_PASS_EXTRA_UNIFORM_BUFFER = 1 << 2,
+    MT_MERGED_MESH = 1 << 3
+};
+
+typedef int32_t mesh_type_flags_t;
+
+shader_t create_mesh_shader_color(
+    shader_binding_info_t *binding_info,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags,
+    VkCullModeFlags culling,
+    VkPrimitiveTopology topology,
+    mesh_type_flags_t type);
+
+shader_t create_mesh_shader_shadow(
+    shader_binding_info_t *binding_info,
+    const char **shader_paths,
+    VkShaderStageFlags shader_flags,
+    VkPrimitiveTopology topology,
+    mesh_type_flags_t mesh_type);
+
+/*
   Data gets sent through push constant to the shaders
  */
 struct mesh_render_data_t {
@@ -308,7 +354,7 @@ constexpr uint32_t DEF_MESH_RENDER_DATA_SIZE = sizeof(mesh_render_data_t);
 /*
   Set of functions to submit mesh objects for rendering
  */
-void begin_mesh_submission(VkCommandBuffer cmdbuf, shader_t *shader, VkDescriptorSet extra_set);
+void begin_mesh_submission(VkCommandBuffer cmdbuf, shader_t *shader, VkDescriptorSet extra_set = VK_NULL_HANDLE);
 void submit_mesh(VkCommandBuffer cmdbuf, mesh_t *mesh, shader_t *shader, const buffer_t &render_data);
 void submit_mesh_shadow(VkCommandBuffer cmdbuf, mesh_t *mesh, shader_t *shader, const buffer_t &render_data);
 void submit_skeletal_mesh(
@@ -409,6 +455,37 @@ private:
     void calculate_in_between_bone_space_transforms(float progression, struct animation_cycle_t *next);
     void calculate_bone_space_transforms(struct animation_cycle_t *bound_cycle, float current_time);
     void calculate_final_offset(uint32_t joint_index, matrix4_t parent_transform);
+};
+
+/*
+  Simply renders the environment cubemap.
+ */
+void render_environment(VkCommandBuffer cmdbuf);
+
+/*
+  Brightness value between 0 and 1.
+  Simply sets the brightness of the screen. (affects the final render pass)
+*/
+void set_main_screen_brightness(float brightness);
+
+/*
+  Wrapper for textures.
+ */
+struct texture_t {
+    VkImage image;
+    VkImageView image_view;
+    VkDeviceMemory image_memory;
+    VkSampler sampler;
+    VkFormat format;
+
+    VkDescriptorSet descriptor;
+
+    void init(
+        const char *path,
+        VkFormat format,
+        void *data,
+        uint32_t width, uint32_t height,
+        VkFilter filter);
 };
 
 }

@@ -17,6 +17,8 @@
 #include <common/game_packet.hpp>
 #include <cstddef>
 
+#include <app.hpp>
+
 struct client_info_t {
     const char *client_name;
 };
@@ -947,10 +949,10 @@ static void s_receive_ping(
 
 static void s_check_incoming_game_server_packets(
     event_submissions_t *events) {
-    raw_input_t *input = get_raw_input();
+    const app::raw_input_t *input = app::get_raw_input();
 
 #if 1
-    if (input->buttons[BT_F].instant) {
+    if (input->buttons[app::BT_F].instant) {
         simulate_lag = !simulate_lag;
 
         if (simulate_lag) {LOG_INFO("Simulating lag\n");}
@@ -1076,7 +1078,6 @@ static void s_check_incoming_game_server_packets(
 
 static void s_tick_client(
     event_submissions_t *events) {
-    raw_input_t *input = get_raw_input();
     s_check_incoming_game_server_packets(events);
 }
 

@@ -1,10 +1,9 @@
 #include "ui_list.hpp"
 #include <app.hpp>
-#include "renderer/renderer.hpp"
 #include <common/allocators.hpp>
 
 void ui_list_init(
-    ui_box_t *parent,
+    ui::box_t *parent,
     ui_list_t *list,
     uint32_t right_buttons_count,
     const char **right_button_text,
@@ -12,25 +11,25 @@ void ui_list_init(
     void (* fill_item_proc)(ui_list_item_t *item)) {
     { // Initialise the list box
         list->list_box.init(
-            RT_RIGHT_DOWN,
+            ui::RT_RIGHT_DOWN,
             2.1f,
-            ui_vector2_t(-0.02f, 0.15f),
-            ui_vector2_t(0.95f, 0.95f), parent, 0x09090936);
+            ui::vector2_t(-0.02f, 0.15f),
+            ui::vector2_t(0.95f, 0.95f), parent, 0x09090936);
     }
 
     { // Initialise the typing box
         list->typing_box.box.init(
-            RT_LEFT_DOWN,
+            ui::RT_LEFT_DOWN,
             6.0f,
-            ui_vector2_t(0.02f, 0.03f),
-            ui_vector2_t(0.28f, 0.2f),
+            ui::vector2_t(0.02f, 0.03f),
+            ui::vector2_t(0.28f, 0.2f),
             parent,
             0x09090936);
 
         list->typing_box.input_text.text.init(
             &list->typing_box.box,
             ui_game_font(),
-            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.9f,
             18,
@@ -64,17 +63,17 @@ void ui_list_init(
             button->handle_input_proc = handle_input_procs[i];
 
             button->box.init(
-                RT_RIGHT_DOWN,
+                ui::RT_RIGHT_DOWN,
                 4.0f,
-                ui_vector2_t(-0.02f - ((float)i * dx), 0.03f),
-                ui_vector2_t(0.2f, 0.2f),
+                ui::vector2_t(-0.02f - ((float)i * dx), 0.03f),
+                ui::vector2_t(0.2f, 0.2f),
                 parent,
                 0x09090936);
 
             button->text.init(
                 &button->box,
                 ui_game_font(),
-                ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+                ui::text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f,
                 10, 1.8f);
 
@@ -116,17 +115,17 @@ void ui_list_end(ui_list_t *list) {
         ui_list_item_t *item = &list->items[i];
 
         item->box.init(
-            RT_LEFT_UP,
+            ui::RT_LEFT_UP,
             20.8f,
-            ui_vector2_t(0.0f, -server_button_height * (float)i),
-            ui_vector2_t(1.0f, server_button_height),
+            ui::vector2_t(0.0f, -server_button_height * (float)i),
+            ui::vector2_t(1.0f, server_button_height),
             &list->list_box,
             0x05050536);
 
         item->text.init(
             &item->box,
             ui_game_font(),
-            ui_text_t::font_stream_box_relative_to_t::BOTTOM,
+            ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.8f,
             60,
@@ -143,36 +142,36 @@ void ui_list_end(ui_list_t *list) {
 }
 
 void ui_submit_typing_box(typing_box_t *box) {
-    push_color_ui_box(&box->box);
-    mark_ui_textured_section(ui_game_font()->font_img.descriptor);
-    push_ui_input_text(1, 0, 0xFFFFFFFF, &box->input_text);
+    ui::push_color_box(&box->box);
+    ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+    ui::push_ui_input_text(1, 0, 0xFFFFFFFF, &box->input_text);
 }
 
 void ui_submit_list(ui_list_t *list) {
-    mark_ui_textured_section(ui_game_font()->font_img.descriptor);
-    push_color_ui_box(&list->list_box);
+    ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+    ui::push_color_box(&list->list_box);
 
     for (uint32_t i = 0; i < list->button_count; ++i) {
-        push_ui_text(&list->right_buttons[i].text);
-        push_color_ui_box(&list->right_buttons[i].box);
+        ui::push_text(&list->right_buttons[i].text);
+        ui::push_color_box(&list->right_buttons[i].box);
     }
 
     ui_submit_typing_box(&list->typing_box);
 
     for (uint32_t i = 0; i < list->item_count; ++i) {
-        push_color_ui_box(&list->items[i].box);
-        push_ui_text(&list->items[i].text);
+        ui::push_color_box(&list->items[i].box);
+        ui::push_text(&list->items[i].text);
     }
 }
 
-void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *input) {
+void ui_list_input(ui_list_t *list, event_submissions_t *events, const app::raw_input_t *input) {
     { // For the typing space
         bool hovered_over_ip_address = ui_hover_over_box(&list->typing_box.box, vector2_t(input->cursor_pos_x, input->cursor_pos_y));
         color_pair_t pair = list->typing_box.color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over_ip_address);
 
         list->typing_box.box.color = pair.current_background;
 
-        if (input->buttons[BT_MOUSE_LEFT].instant && hovered_over_ip_address) {
+        if (input->buttons[app::BT_MOUSE_LEFT].instant && hovered_over_ip_address) {
             list->typing_box.is_typing = 1;
 
             list->selected_item = 0xFFFF;
@@ -190,7 +189,7 @@ void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *in
             color_pair_t pair = button->color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over);
             button->box.color = pair.current_background;
 
-            if (hovered_over && input->buttons[BT_MOUSE_LEFT].instant) {
+            if (hovered_over && input->buttons[app::BT_MOUSE_LEFT].instant) {
                 button->handle_input_proc(list, events);
             }
         }
@@ -208,7 +207,7 @@ void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *in
                 color_pair_t pair = item->button_color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over);
                 item->box.color = pair.current_background;
 
-                if (hovered_over && input->buttons[BT_MOUSE_LEFT].instant) {
+                if (hovered_over && input->buttons[app::BT_MOUSE_LEFT].instant) {
                     list->selected_item = i;
 
                     list->typing_box.is_typing = 0;

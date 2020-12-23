@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <app.hpp>
 #include <vk.hpp>
+#include <ui.hpp>
 
 static fixed_premade_scene_t scene;
 
@@ -40,7 +41,7 @@ static void s_handle_input(event_submissions_t *events) {
     ui_handle_input(events);
 
     player_t *spect = wd_get_spectator();
-    game_input_t *game_input = get_game_input();
+    const app::game_input_t *game_input = app::get_game_input();
 
     static bool rotating = 0;
     static vector3_t dest = vector3_t(0.0f);
@@ -51,7 +52,7 @@ static void s_handle_input(event_submissions_t *events) {
     if (rotating) {
         vector3_t diff = dest - spect->ws_view_direction;
         if (glm::dot(diff, diff) > 0.00001f) {
-            spect->ws_view_direction = glm::normalize(spect->ws_view_direction + diff * surface_delta_time() * 3.0f);
+            spect->ws_view_direction = glm::normalize(spect->ws_view_direction + diff * app::g_delta_time * 3.0f);
         }
         else {
             rotating = 0;
@@ -86,18 +87,18 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     // Submit the mesh
     begin_mesh_submission(render, dr_get_shader_rsc(GS_BALL));
     scene.world_render_data.color = vector4_t(0.0f);
-    submit_mesh(render, &scene.world_mesh, dr_get_shader_rsc(GS_BALL), {&scene.world_render_data, DEF_MESH_RENDER_DATA_SIZE});
+    submit_mesh(render, &scene.world_mesh, dr_get_shader_rsc(GS_BALL), {&scene.world_render_data, vk::DEF_MESH_RENDER_DATA_SIZE});
 
-    render_environment(render);
+    vk::render_environment(render);
 
     // Update UI
     // Submits quads to a list that will get sent to the GPU
     ui_tick(events);
     // (from renderer module) - submits the quads to the GPU
-    render_submitted_ui(transfer, ui);
+    ui::render_submitted_ui(transfer, ui);
 
-    eye_3d_info_t *eye_info = sc_get_eye_info();
-    memset(eye_info, 0, sizeof(eye_3d_info_t));
+    vk::eye_3d_info_t *eye_info = sc_get_eye_info();
+    memset(eye_info, 0, sizeof(vk::eye_3d_info_t));
     player_t *player = wd_get_spectator();
 
     eye_info->position = player->ws_position;
@@ -109,8 +110,8 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     eye_info->far = 10000.0f;
     eye_info->dt = cl_delta_time();
 
-    lighting_info_t *light_info = sc_get_lighting_info();
-    memset(light_info, 0, sizeof(lighting_info_t));
+    vk::lighting_info_t *light_info = sc_get_lighting_info();
+    memset(light_info, 0, sizeof(vk::lighting_info_t));
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
 }

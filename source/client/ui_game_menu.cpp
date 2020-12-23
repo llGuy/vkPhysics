@@ -93,7 +93,7 @@ void ui_submit_game_menu() {
 
 void ui_game_menu_input(
     event_submissions_t *events,
-    raw_input_t *input) {
+    const app::raw_input_t *input) {
     if (game_menu_layout.input(events, input)) {
         enum { TEAM_SELECT = 1, SETTINGS = 2 };
 

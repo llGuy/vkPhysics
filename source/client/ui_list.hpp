@@ -3,17 +3,20 @@
 #include "ui_core.hpp"
 #include "ui_menu_layout.hpp"
 
+#include <ui.hpp>
+#include <app.hpp>
+
 struct ui_list_button_t {
-    ui_box_t box;
-    ui_text_t text;
+    ui::box_t box;
+    ui::text_t text;
     widget_color_t color;
 
     void (* handle_input_proc)(struct ui_list_t *list, event_submissions_t *events);
 };
 
 struct ui_list_item_t {
-    ui_box_t box;
-    ui_text_t text;
+    ui::box_t box;
+    ui::text_t text;
     widget_color_t button_color;
     widget_color_t color;
 
@@ -22,8 +25,8 @@ struct ui_list_item_t {
 
 struct typing_box_t {
     bool is_typing;
-    ui_box_t box;
-    ui_input_text_t input_text;
+    ui::box_t box;
+    ui::input_text_t input_text;
     widget_color_t color;
 };
 
@@ -38,7 +41,7 @@ struct ui_list_t {
     typing_box_t typing_box;
 
     // Filling up most of the list, there will be the actual list where you can click on items
-    ui_box_t list_box;
+    ui::box_t list_box;
     uint32_t item_count;
     ui_list_item_t *items;
     uint32_t selected_item = 0xFFFF;
@@ -47,7 +50,7 @@ struct ui_list_t {
 };
 
 void ui_list_init(
-    ui_box_t *parent,
+    ui::box_t *parent,
     ui_list_t *list,
     uint32_t right_buttons_count,
     const char **right_button_text,
@@ -63,4 +66,4 @@ void ui_list_add(ui_list_t *list, void *data);
 void ui_list_end(ui_list_t *list);
 // Submits a list for rendering
 void ui_submit_list(ui_list_t *list);
-void ui_list_input(ui_list_t *list, event_submissions_t *events, raw_input_t *raw_input);
+void ui_list_input(ui_list_t *list, event_submissions_t *events, const app::raw_input_t *raw_input);

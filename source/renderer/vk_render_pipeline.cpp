@@ -1,4 +1,3 @@
-#include "vk_frame.hpp"
 #include "vk_memory.hpp"
 #include "vk_context.hpp"
 #include "vk_stage_ui.hpp"
@@ -9,6 +8,8 @@
 #include "vk_stage_deferred.hpp"
 #include "vk_stage_lighting.hpp"
 #include "vk_render_pipeline.hpp"
+
+#include <vk.hpp>
 
 namespace vk {
 

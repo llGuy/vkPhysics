@@ -5,7 +5,7 @@
 
 namespace vk {
 
-void init_cmdpool() {
+void init_command_pool() {
     VkCommandPoolCreateInfo cmdpool_info = {};
     cmdpool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmdpool_info.queueFamilyIndex = g_ctx->queue_families.graphics_family;
@@ -14,7 +14,7 @@ void init_cmdpool() {
     VK_CHECK(vkCreateCommandPool(g_ctx->device, &cmdpool_info, NULL, &g_ctx->graphics_command_pool));
 }
 
-void init_primary_cmdbufs() {
+void init_primary_command_buffers() {
     g_ctx->primary_command_buffer_count = g_ctx->swapchain.image_count;
     g_ctx->primary_command_buffers = flmalloc<VkCommandBuffer>(g_ctx->primary_command_buffer_count);
 
@@ -24,7 +24,7 @@ void init_primary_cmdbufs() {
         g_ctx->primary_command_buffer_count);
 }
 
-void create_cmdbufs(
+void create_command_buffers(
     VkCommandBufferLevel level,
     VkCommandBuffer *command_buffers, uint32_t count) {
     VkCommandBufferAllocateInfo allocate_info = {};

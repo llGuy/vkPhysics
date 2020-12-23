@@ -1,11 +1,10 @@
-#include "client/ui_core.hpp"
-#include "client/ui_game_menu.hpp"
-#include "client/ui_hover.hpp"
-#include "client/wd_predict.hpp"
+#include "ui_core.hpp"
+#include "ui_game_menu.hpp"
+#include "ui_hover.hpp"
+#include "wd_predict.hpp"
 #include "common/chunk.hpp"
 #include "common/event.hpp"
 #include "common/player.hpp"
-#include "renderer/renderer.hpp"
 #include "ui_popup.hpp"
 #include <common/team.hpp>
 #include "ui_menu_layout.hpp"
@@ -15,19 +14,19 @@
 #include <app.hpp>
 #include "ui_hover.hpp"
 
-static ui_box_t head_box;
+static ui::box_t head_box;
 // "Select team"
-static ui_text_t head_text;
+static ui::text_t head_text;
 
 struct team_button_t {
     team_color_t color;
 
     // Display color
-    ui_box_t box;
+    ui::box_t box;
     // Contain the text
-    ui_box_t text_box;
+    ui::box_t text_box;
     // Display player count
-    ui_text_t player_count_text;
+    ui::text_t player_count_text;
 
     widget_color_t button_color;
     bool hovered_on;
@@ -35,12 +34,12 @@ struct team_button_t {
 
 static uint32_t button_count;
 static team_button_t *buttons;
-static ui_box_t main_box;
+static ui::box_t main_box;
 
 void ui_team_select_init(
     menu_layout_t *layout) {
-    head_box.init(RT_LEFT_UP, 10.0f, {0.025f, -0.025f}, {0.3, 0.1f}, &layout->current_menu, 0);
-    head_text.init(&head_box, ui_game_font(), ui_text_t::BOTTOM, 0.2f, 0.2f, 15, 1.3f);
+    head_box.init(ui::RT_LEFT_UP, 10.0f, {0.025f, -0.025f}, {0.3, 0.1f}, &layout->current_menu, 0);
+    head_text.init(&head_box, ui_game_font(), ui::text_t::BOTTOM, 0.2f, 0.2f, 15, 1.3f);
 
     if (head_text.char_count == 0) {
         head_text.draw_string("Select Team", 0xFFFFFFFF);
@@ -61,7 +60,7 @@ void ui_update_team_roster_layout(
     buttons = FL_MALLOC(team_button_t, button_count);
 
     main_box.init(
-        RT_CENTER,
+        ui::RT_CENTER,
         0.6f * (float)(team_count),
         {0.0f, 0.0f},
         {(float)team_count * 0.3f, 0.7f},
@@ -76,11 +75,11 @@ void ui_update_team_roster_layout(
 
         team_info_t info = teams[i].make_team_info();
 
-        rgb_hovered = vec4_color_to_ui32b(team_color_to_v4(info.color, 0.9f));
-        rgb_unhovered = vec4_color_to_ui32b(team_color_to_v4(info.color, 0.9f) * 0.8f);
+        rgb_hovered = ui::vec4_color_to_ui32b(team_color_to_v4(info.color, 0.9f));
+        rgb_unhovered = ui::vec4_color_to_ui32b(team_color_to_v4(info.color, 0.9f) * 0.8f);
 
-        buttons[i].box.init(RT_LEFT_DOWN, 0.75f, {i * scale, 0.0f}, {scale, 1.0f}, &main_box, rgb_unhovered);
-        buttons[i].text_box.init(RT_RELATIVE_CENTER, 2.0f, {0.0f, 0.1f}, {0.5f, 0.5f}, &buttons[i].box, 0);
+        buttons[i].box.init(ui::RT_LEFT_DOWN, 0.75f, {i * scale, 0.0f}, {scale, 1.0f}, &main_box, rgb_unhovered);
+        buttons[i].text_box.init(ui::RT_RELATIVE_CENTER, 2.0f, {0.0f, 0.1f}, {0.5f, 0.5f}, &buttons[i].box, 0);
         buttons[i].button_color.init(rgb_unhovered, rgb_hovered, 0, 0xFF);
 
         buttons[i].color = color;
@@ -97,23 +96,23 @@ void ui_update_team_roster_display_text(menu_layout_t *layout) {
         team_info_t info = teams[i].make_team_info();
         sprintf(buf, "%d / %d", info.player_count, info.max_players);
 
-        buttons[i].player_count_text.init(&buttons[i].text_box, ui_game_font(), ui_text_t::BOTTOM, 0.1f, 0.1f, 7, 1.3f);
+        buttons[i].player_count_text.init(&buttons[i].text_box, ui_game_font(), ui::text_t::BOTTOM, 0.1f, 0.1f, 7, 1.3f);
         buttons[i].player_count_text.draw_string(buf, 0xFFFFFFFF);
     }
 }
 
 void ui_submit_team_select() {
-    mark_ui_textured_section(ui_game_font()->font_img.descriptor);
-    push_color_ui_box(&head_box);
-    push_ui_text(&head_text);
+    ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+    ui::push_color_box(&head_box);
+    ui::push_text(&head_text);
 
     for (uint32_t i = 0; i < button_count; ++i) {
-        push_color_ui_box(&buttons[i].box);
-        push_ui_text(&buttons[i].player_count_text);
+        ui::push_color_box(&buttons[i].box);
+        ui::push_text(&buttons[i].player_count_text);
     }
 }
 
-void ui_team_select_input(raw_input_t *raw_input, event_submissions_t *events) {
+void ui_team_select_input(const app::raw_input_t *raw_input, event_submissions_t *events) {
     int32_t hovered_button = -1;
     for (int32_t i = 0; i < button_count; ++i) {
         bool hovered_over = ui_hover_over_box(
@@ -135,7 +134,7 @@ void ui_team_select_input(raw_input_t *raw_input, event_submissions_t *events) {
         buttons[i].box.color = pair.current_background;
     }
 
-    if (raw_input->buttons[BT_MOUSE_LEFT].instant) {
+    if (raw_input->buttons[app::BT_MOUSE_LEFT].instant) {
         int32_t team = hovered_button;
 
         if (team > -1) {

@@ -1,11 +1,11 @@
-#include <client/cl_view.hpp>
-#include <client/ui_popup.hpp>
+#include "cl_view.hpp"
+#include "ui_popup.hpp"
 #include <common/chunk.hpp>
 #include <common/event.hpp>
 #include <common/map.hpp>
 #include <app.hpp>
 #include <vk.hpp>
-#include "client/ui_hud.hpp"
+#include "ui_hud.hpp"
 #include "ui_core.hpp"
 #include "cl_main.hpp"
 #include "fx_post.hpp"
@@ -179,10 +179,10 @@ static void s_handle_input(event_submissions_t *events) {
     switch (submode) {
 
     case S_IN_GAME: {
-        raw_input_t *raw_input = get_raw_input();
+        const app::raw_input_t *raw_input = app::get_raw_input();
 
         if (started_command) {
-            if (raw_input->buttons[BT_ENTER].instant) {
+            if (raw_input->buttons[app::BT_ENTER].instant) {
                 LOG_INFO("Executing edit command...\n");
 
                 // Parse and execute the command
@@ -244,7 +244,7 @@ static void s_handle_input(event_submissions_t *events) {
                     } break;
                     }
 
-                    raw_input->char_stack[i] = 0;
+                    app::nullify_char_at(i);
                 }
             }
 
@@ -279,7 +279,7 @@ void sc_map_creator_tick(
     wd_execute_player_actions(wd_get_spectator(), events);
     wd_tick(events);
 
-    eye_3d_info_t *eye_info = sc_get_eye_info();
+    vk::eye_3d_info_t *eye_info = sc_get_eye_info();
     player_t *player = NULL;
 
     player = wd_get_spectator();
@@ -296,9 +296,9 @@ void sc_map_creator_tick(
     dr_draw_game(render, transfer, render_shadow);
 
     ui_tick(events);
-    render_submitted_ui(transfer, ui);
+    ui::render_submitted_ui(transfer, ui);
 
-    lighting_info_t *light_info = sc_get_lighting_info();
+    vk::lighting_info_t *light_info = sc_get_lighting_info();
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
 }

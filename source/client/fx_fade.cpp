@@ -59,5 +59,5 @@ void fx_tick_fade_effect(
         }
     }
 
-    set_main_screen_brightness(current_screen_brightness.current);
+    vk::set_main_screen_brightness(current_screen_brightness.current);
 }

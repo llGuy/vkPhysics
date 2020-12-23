@@ -13,10 +13,10 @@ void menu_layout_t::init(
     }
 
     main_box.init(
-        RT_CENTER,
+        ui::RT_CENTER,
         2.0f,
-        ui_vector2_t(0.0f, 0.0f),
-        ui_vector2_t(0.8f, 0.8f),
+        ui::vector2_t(0.0f, 0.0f),
+        ui::vector2_t(0.8f, 0.8f),
         NULL,
         0x46464646);
 
@@ -36,23 +36,23 @@ void menu_layout_t::init(
         widget->locked = 0;
 
         widget->box.init(
-            RT_RIGHT_UP,
+            ui::RT_RIGHT_UP,
             1.0f,
-            ui_vector2_t(0.0f, current_button_y),
-            ui_vector2_t(button_size, button_size),
+            ui::vector2_t(0.0f, current_button_y),
+            ui::vector2_t(button_size, button_size),
             &main_box,
             MENU_WIDGET_NOT_HOVERED_OVER_BACKGROUND_COLOR);
 
         widget->image_box.init(
-            RT_RELATIVE_CENTER,
+            ui::RT_RELATIVE_CENTER,
             1.0f,
-            ui_vector2_t(0.0f, 0.0f),
-            ui_vector2_t(0.8f, 0.8f),
+            ui::vector2_t(0.0f, 0.0f),
+            ui::vector2_t(0.8f, 0.8f),
             &widget->box,
             MENU_WIDGET_NOT_HOVERED_OVER_ICON_COLOR);
     
         if (widget_image_paths[i]) {
-            widget->texture = create_texture(
+            widget->texture.init(
                 widget_image_paths[i],
                 VK_FORMAT_R8G8B8A8_UNORM,
                 NULL,
@@ -79,10 +79,10 @@ void menu_layout_t::init(
     }
 
     current_menu.init(
-        RT_RIGHT_UP,
+        ui::RT_RIGHT_UP,
         1.75f,
-        ui_vector2_t(-0.125f, 0.0f),
-        ui_vector2_t(1.0f, 1.0f),
+        ui::vector2_t(-0.125f, 0.0f),
+        ui::vector2_t(1.0f, 1.0f),
         &main_box,
         MENU_WIDGET_CURRENT_MENU_BACKGROUND);
 
@@ -96,13 +96,13 @@ void menu_layout_t::init(
 
 void menu_layout_t::submit() {
     for (uint32_t i = 0; i < widget_count; ++i) {
-        mark_ui_textured_section(widgets[i].texture.descriptor);
-        push_textured_ui_box(&widgets[i].image_box);
+        ui::mark_ui_textured_section(widgets[i].texture.descriptor);
+        ui::push_textured_box(&widgets[i].image_box);
 
-        push_color_ui_box(&widgets[i].box);
+        ui::push_color_box(&widgets[i].box);
     }
 
-    push_reversed_color_ui_box(
+    ui::push_reversed_color_box(
         &current_menu,
         vector2_t(menu_slider_x_max_size, menu_slider_y_max_size) * 2.0f);
 }
@@ -111,8 +111,8 @@ void menu_layout_t::submit() {
 
 bool menu_layout_t::input(
     event_submissions_t *events,
-    raw_input_t *input) {
-    menu_slider.animate(surface_delta_time());
+    const app::raw_input_t *input) {
+    menu_slider.animate(app::g_delta_time);
     current_menu.gls_current_size.fx = menu_slider.current;
 
     float cursor_x = input->cursor_pos_x, cursor_y = input->cursor_pos_y;
@@ -149,7 +149,7 @@ bool menu_layout_t::input(
         current_button = widget_count;
     }
 
-    if (input->buttons[BT_MOUSE_LEFT].instant && current_button != widget_count) {
+    if (input->buttons[app::BT_MOUSE_LEFT].instant && current_button != widget_count) {
         if (!widgets[current_button].locked) {
             menu_click_handler_t proc = procs[current_button];
             if (proc) {

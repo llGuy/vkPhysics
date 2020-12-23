@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vk.hpp>
+#include <ui.hpp>
 
 enum ui_stack_item_t {
     USI_MAIN_MENU,
@@ -31,5 +32,5 @@ enum ui_texture_t {
     UT_INVALID_TEXTURE
 };
 
-struct font_t *ui_game_font();
+ui::font_t *ui_game_font();
 VkDescriptorSet ui_texture(ui_texture_t type);

@@ -1,5 +1,5 @@
 #include <cstddef>
-#include "client/ui_team_select.hpp"
+#include "ui_team_select.hpp"
 #include "ui_popup.hpp"
 #include "ui_core.hpp"
 #include "ui_main_menu.hpp"
@@ -71,10 +71,10 @@ static void s_ui_event_listener(
 
 static listener_t ui_listener;
 
-static struct font_t *global_font;
-static texture_t ui_textures[UT_INVALID_TEXTURE];
+static ui::font_t *global_font;
+static vk::texture_t ui_textures[UT_INVALID_TEXTURE];
 
-struct font_t *ui_game_font() {
+ui::font_t *ui_game_font() {
     return global_font;
 }
 
@@ -84,14 +84,14 @@ VkDescriptorSet ui_texture(
 }
 
 static void s_ui_textures_init() {
-    ui_textures[UT_PLAY_ICON] = create_texture("assets/textures/gui/play_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
-    ui_textures[UT_BUILD_ICON] = create_texture("assets/textures/gui/build_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
-    ui_textures[UT_SETTINGS_ICON] = create_texture("assets/textures/gui/settings_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
-    ui_textures[UT_QUIT_ICON] = create_texture("assets/textures/gui/quit_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
-    ui_textures[UT_SPAWN_ICON] = create_texture("assets/textures/gui/spawn_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
-    ui_textures[UT_CROSSHAIRS] = create_texture("assets/textures/gui/crosshair.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
-    ui_textures[UT_COLOR_TABLE] = create_texture("assets/textures/gui/color_table.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
-    ui_textures[UT_TEAM_SELECT] = create_texture("assets/textures/gui/team.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_PLAY_ICON].init("assets/textures/gui/play_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_BUILD_ICON].init("assets/textures/gui/build_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_SETTINGS_ICON].init("assets/textures/gui/settings_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_QUIT_ICON].init("assets/textures/gui/quit_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_SPAWN_ICON].init("assets/textures/gui/spawn_icon.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_CROSSHAIRS].init("assets/textures/gui/crosshair.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_COLOR_TABLE].init("assets/textures/gui/color_table.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    ui_textures[UT_TEAM_SELECT].init("assets/textures/gui/team.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
 void ui_init(
@@ -112,7 +112,7 @@ void ui_init(
     subscribe_to_event(ET_SPAWN, ui_listener, events);
     subscribe_to_event(ET_LOCAL_PLAYER_DIED, ui_listener, events);
 
-    global_font = load_font(
+    global_font->load(
         "assets/font/fixedsys.fnt",
         "assets/font/fixedsys.png");
 
@@ -127,7 +127,7 @@ void ui_init(
 
 void ui_handle_input(
     event_submissions_t *events) {
-    raw_input_t *raw_input = get_raw_input();
+    const app::raw_input_t *raw_input = app::get_raw_input();
 
     if (stack_item_count) {
         ui_stack_item_t last = stack_items[stack_item_count - 1];

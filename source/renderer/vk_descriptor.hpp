@@ -22,7 +22,6 @@ void init_descriptor_layouts();
 */
 VkDescriptorSetLayout get_descriptor_layout(VkDescriptorType type, uint32_t count);
 
-VkDescriptorSet create_buffer_descriptor_set(VkBuffer buffer, VkDeviceSize buffer_size, VkDescriptorType type);
 // Creates a descriptor set with one binding (one image)
 VkDescriptorSet create_image_descriptor_set(VkImageView image, VkSampler sampler, VkDescriptorType type);
 // Overload creates a descriptor with multiple bindings (multiple images)

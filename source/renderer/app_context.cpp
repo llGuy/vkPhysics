@@ -332,4 +332,8 @@ void get_immediate_cursor_pos(double *x, double *y) {
     glfwGetCursorPos(ctx.window, x, y);
 }
 
+void nullify_char_at(uint32_t i) {
+    ctx.raw_input.char_stack[i] = 0;
+}
+
 }

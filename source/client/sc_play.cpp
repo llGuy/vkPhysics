@@ -15,6 +15,7 @@
 #include <common/event.hpp>
 #include "dr_draw_scene.hpp"
 #include <vk.hpp>
+#include <ui.hpp>
 
 enum submode_t {
     S_MENU,
@@ -131,7 +132,7 @@ void sc_play_tick(
     wd_tick(events);
     nw_tick(events);
 
-    eye_3d_info_t *eye_info = sc_get_eye_info();
+    vk::eye_3d_info_t *eye_info = sc_get_eye_info();
     player_t *player = NULL;
     int32_t local_id = wd_get_local_player();
 
@@ -168,9 +169,9 @@ void sc_play_tick(
 
 
     ui_tick(events);
-    render_submitted_ui(transfer, ui);
+    ui::render_submitted_ui(transfer, ui);
 
-    lighting_info_t *light_info = sc_get_lighting_info();
+    vk::lighting_info_t *light_info = sc_get_lighting_info();
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
 

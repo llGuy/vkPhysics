@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ui.hpp>
 #include <common/math.hpp>
 
 struct color_pair_t {
@@ -37,6 +38,6 @@ struct widget_color_t {
 
 // Relative position will be from 0 -> 1
 bool ui_hover_over_box(
-    struct ui_box_t *box,
+    ui::box_t *box,
     const vector2_t &cursor_position,
     vector2_t *relative_position = NULL);

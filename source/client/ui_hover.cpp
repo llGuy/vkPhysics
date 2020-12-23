@@ -1,6 +1,7 @@
 #include "ui_hover.hpp"
 #include <app.hpp>
 #include <vk.hpp>
+#include <ui.hpp>
 
 void widget_color_t::init(
     uint32_t iunhovered_background,
@@ -12,8 +13,8 @@ void widget_color_t::init(
     unhovered_foreground = iunhovered_foreground;
     hovered_foreground = ihovered_foreground;
 
-    background_color.current = ui32b_color_to_vec4(unhovered_background);
-    foreground_color.current = ui32b_color_to_vec4(unhovered_foreground);
+    background_color.current = ui::ui32b_color_to_vec4(unhovered_background);
+    foreground_color.current = ui::ui32b_color_to_vec4(unhovered_foreground);
 
     is_hovered_on = 0;
 }
@@ -23,14 +24,14 @@ void widget_color_t::start_interpolation(
     uint32_t final_background,
     uint32_t final_foreground) {
     // Start interpolation
-    vector4_t background_final = ui32b_color_to_vec4(final_background);
+    vector4_t background_final = ui::ui32b_color_to_vec4(final_background);
     background_color.set(
         1,
         background_color.current,
         background_final,
         interpolation_speed);
 
-    vector4_t icon_final = ui32b_color_to_vec4(final_foreground);
+    vector4_t icon_final = ui::ui32b_color_to_vec4(final_foreground);
 
     foreground_color.set(
         1,
@@ -40,12 +41,12 @@ void widget_color_t::start_interpolation(
 }
 
 bool ui_hover_over_box(
-    ui_box_t *box,
+    ui::box_t *box,
     const vector2_t &cursor_position,
     vector2_t *relative_position) {
-    vector2_t cursor = convert_pixel_to_ndc(cursor_position);
+    vector2_t cursor = ui::convert_pixel_to_ndc(cursor_position);
 
-    vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
+    vector2_t normalized_base_position = ui::convert_glsl_to_normalized(box->gls_position.to_fvec2());
     vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
 
     float x_min = normalized_base_position.x,
@@ -107,8 +108,8 @@ color_pair_t widget_color_t::update(
     if (
         background_color.in_animation ||
         foreground_color.in_animation) {
-        background_color.animate(surface_delta_time());
-        foreground_color.animate(surface_delta_time());
+        background_color.animate(app::g_delta_time);
+        foreground_color.animate(app::g_delta_time);
 
         vector4_t current_background = vector4_t(
             background_color.current.r,
@@ -116,7 +117,7 @@ color_pair_t widget_color_t::update(
             background_color.current.b,
             background_color.current.a);
 
-        result.current_background = vec4_color_to_ui32b(current_background);
+        result.current_background = ui::vec4_color_to_ui32b(current_background);
 
         vector4_t current_icon = vector4_t(
             foreground_color.current.r,
@@ -124,14 +125,14 @@ color_pair_t widget_color_t::update(
             foreground_color.current.b,
             background_color.current.a);
 
-        result.current_foreground = vec4_color_to_ui32b(current_icon);
+        result.current_foreground = ui::vec4_color_to_ui32b(current_icon);
     }
     else {
         result.current_foreground = next_icon;
         result.current_background = next_background;
 
-        background_color.current = ui32b_color_to_vec4(next_background);
-        foreground_color.current = ui32b_color_to_vec4(next_icon);
+        background_color.current = ui::ui32b_color_to_vec4(next_background);
+        foreground_color.current = ui::ui32b_color_to_vec4(next_icon);
     }
 
     return result;

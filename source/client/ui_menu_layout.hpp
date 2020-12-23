@@ -3,13 +3,15 @@
 #include <common/math.hpp>
 #include <common/event.hpp>
 #include <vk.hpp>
+#include <ui.hpp>
+#include <app.hpp>
 
 #include "ui_hover.hpp"
 
 struct menu_widget_t {
-    texture_t texture;
-    ui_box_t box;
-    ui_box_t image_box;
+    vk::texture_t texture;
+    ui::box_t box;
+    ui::box_t image_box;
 
     widget_color_t color;
 
@@ -34,9 +36,9 @@ typedef void (*menu_click_handler_t)(
 // In this game, all menus have a sort of similar layout, so just group in this object
 // There will always however be a maximum of 4 buttons
 struct menu_layout_t {
-    ui_box_t main_box;
+    ui::box_t main_box;
 
-    ui_box_t current_menu;
+    ui::box_t current_menu;
     linear_interpolation_f32_t menu_slider;
     bool menu_in_out_transition;
     float menu_slider_x_max_size, menu_slider_y_max_size;
@@ -60,7 +62,7 @@ struct menu_layout_t {
 
     bool input(
         event_submissions_t *events,
-        raw_input_t *input);
+        const app::raw_input_t *input);
 
     bool menu_opened();
 
