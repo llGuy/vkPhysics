@@ -3,7 +3,7 @@
 #include <common/game.hpp>
 #include <common/math.hpp>
 #include <common/event.hpp>
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 #include <common/allocators.hpp>
 
 static linear_interpolation_f32_t current_screen_brightness;

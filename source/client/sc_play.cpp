@@ -14,7 +14,7 @@
 #include <common/game.hpp>
 #include <common/event.hpp>
 #include "dr_draw_scene.hpp"
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
 enum submode_t {
     S_MENU,

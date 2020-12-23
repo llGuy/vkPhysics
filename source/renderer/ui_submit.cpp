@@ -118,7 +118,7 @@ static void s_textured_shader_init() {
         vk::AB_ONE_MINUS_SRC_ALPHA);
 }
 
-void submission_init() {
+void init_submission() {
     s_color_shader_init();
     s_textured_shader_init();
 

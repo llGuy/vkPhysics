@@ -1,8 +1,8 @@
 #include "ui_menu_layout.hpp"
 #include "ui_core.hpp"
 #include "ui_popup.hpp"
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 
 #define MAX_POPUPS 10
 

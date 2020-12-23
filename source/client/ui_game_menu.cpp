@@ -5,8 +5,8 @@
 #include "ui_game_menu.hpp"
 #include "ui_core.hpp"
 #include <common/event.hpp>
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 #include <common/allocators.hpp>
 
 enum button_t {

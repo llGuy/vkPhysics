@@ -4,7 +4,8 @@
 #include "cl_view.hpp"
 #include <common/event.hpp>
 #include <common/allocators.hpp>
-#include <renderer/renderer.hpp>
+
+#include <vk.hpp>
 
 void cl_subscribe_to_events(
     listener_t game_core_listener,
@@ -30,7 +31,7 @@ void cl_game_event_listener(
     case ET_RESIZE_SURFACE: {
         event_surface_resize_t *data = (event_surface_resize_t *)event->data;
 
-        handle_resize(data->width, data->height);
+        vk::resize_render_pipeline(data->width, data->height);
 
         FL_FREE(data);
     } break;

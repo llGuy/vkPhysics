@@ -1,6 +1,6 @@
 #include "ui_hover.hpp"
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 
 void widget_color_t::init(
     uint32_t iunhovered_background,

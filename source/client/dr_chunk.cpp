@@ -1,7 +1,6 @@
 #include "dr_rsc.hpp"
 #include <common/game.hpp>
 #include "dr_chunk.hpp"
-#include "renderer/renderer.hpp"
 #include <common/log.hpp>
 #include <common/math.hpp>
 #include <common/chunk.hpp>
@@ -18,9 +17,9 @@ chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_p
     // Color of each vertex: uint32_t
     uint32_t buffer_size = sizeof(compressed_chunk_mesh_vertex_t) * CHUNK_MAX_VERTICES_PER_CHUNK;
 
-    push_buffer_to_mesh(BT_VERTEX, &chunk_render->mesh);
-    mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX, &chunk_render->mesh);
-    vertex_gpu_buffer->gpu_buffer = create_gpu_buffer(
+    chunk_render->mesh.push_buffer(vk::BT_VERTEX);
+    vk::mesh_buffer_t *vertex_gpu_buffer = chunk_render->mesh.get_mesh_buffer(vk::BT_VERTEX);
+    vertex_gpu_buffer->gpu_buffer.init(
         buffer_size,
         NULL,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -32,7 +31,7 @@ chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_p
     chunk_render->mesh.index_count = 0;
     chunk_render->mesh.index_type = VK_INDEX_TYPE_UINT32;
 
-    create_mesh_vbo_final_list(&chunk_render->mesh);
+    chunk_render->mesh.init_mesh_vbo_final_list();
 
     chunk_render->render_data.model = glm::translate(ws_position);
     chunk_render->render_data.pbr_info.x = 0.1f;
@@ -47,9 +46,9 @@ chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_p
 
 void dr_destroy_chunk_render(chunk_render_t *render) {
     if (render) {
-        mesh_buffer_t *mesh_buffer = get_mesh_buffer(BT_VERTEX, &render->mesh);
+        vk::mesh_buffer_t *mesh_buffer = render->mesh.get_mesh_buffer(vk::BT_VERTEX);
         if (mesh_buffer) {
-            destroy_sensitive_gpu_buffer(get_mesh_buffer(BT_VERTEX, &render->mesh)->gpu_buffer);
+            vk::destroy_sensitive_buffer(&render->mesh.get_mesh_buffer(vk::BT_VERTEX)->gpu_buffer);
         }
         FL_FREE(render);
         render = NULL;
@@ -369,13 +368,12 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
         uint32_t to_copy_left = update_size;
         uint32_t copied = 0;
         for (uint32_t i = 0; i < loop_count; ++i) {
-            update_gpu_buffer(
+            c->render->mesh.get_mesh_buffer(vk::BT_VERTEX)->gpu_buffer.update(
                 command_buffer,
                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
                 copied,
                 MAX_UPDATE_BUFFER_SIZE,
-                pointer,
-                &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
+                pointer);
 
             copied += MAX_UPDATE_BUFFER_SIZE;
             pointer += MAX_UPDATE_BUFFER_SIZE;
@@ -383,13 +381,12 @@ void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_le
         }
 
         if (to_copy_left) {
-            update_gpu_buffer(
+            c->render->mesh.get_mesh_buffer(vk::BT_VERTEX)->gpu_buffer.update(
                 command_buffer,
                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
                 copied,
                 to_copy_left,
-                pointer,
-                &get_mesh_buffer(BT_VERTEX, &c->render->mesh)->gpu_buffer);
+                pointer);
         }
 
         c->render->mesh.vertex_count = vertex_count;

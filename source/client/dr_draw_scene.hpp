@@ -1,6 +1,6 @@
 #pragma once
 
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
 // Performs a GPU sync for all the data needed for rendering
 // And renders

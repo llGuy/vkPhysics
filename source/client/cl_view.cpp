@@ -2,7 +2,7 @@
 #include "cl_main.hpp"
 #include "fx_post.hpp"
 #include <common/log.hpp>
-#include <renderer/input.hpp>
+#include <app.hpp>
 
 static game_view_type_t current_view_type;
 
@@ -15,13 +15,13 @@ void cl_change_view_type(game_view_type_t view) {
         // it's just a world that was loaded from disk (just the vertices). The rendering is
         // also blurred for cool main menu kind of effect.
     case GVT_MENU: {
-        enable_cursor_display();
+        app::enable_cursor();
         fx_enable_blur();
         fx_disable_ssao();
     } break;
 
     case GVT_IN_GAME: {
-        disable_cursor_display();
+        app::disable_cursor();
         fx_disable_blur();
         fx_enable_ssao();
     } break;

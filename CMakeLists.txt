@@ -20,6 +20,7 @@ include_directories("${CMAKE_SOURCE_DIR}/dependencies/glm")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/sha")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/imgui/include")
 include_directories("${CMAKE_SOURCE_DIR}/source")
+include_directories("${CMAKE_SOURCE_DIR}/source/renderer/include")
 
 # Find packages
 find_package(Vulkan)

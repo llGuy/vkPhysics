@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/event.hpp>
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
 // Scene where we are in game
 void sc_play_init(listener_t listener, event_submissions_t *events);

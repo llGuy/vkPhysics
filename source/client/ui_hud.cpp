@@ -9,10 +9,10 @@
 #include <common/event.hpp>
 #include "ui_menu_layout.hpp"
 #include <cstdio>
-#include <renderer/input.hpp>
+#include <app.hpp>
 #include <common/log.hpp>
 #include <cstring>
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
 // HUD for now, just contains a crosshair
 static ui_box_t crosshair;

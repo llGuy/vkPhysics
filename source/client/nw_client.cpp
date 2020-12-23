@@ -174,7 +174,7 @@ static void s_receive_packet_player_left(
     LOG_INFO("Player disconnected\n");
 }
 
-#include <renderer/input.hpp>
+#include <app.hpp>
 
 // Debugging!
 static bool simulate_lag = 0;

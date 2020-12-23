@@ -13,8 +13,4 @@ struct deferred_stage_t {
     void execute(VkCommandBuffer cmdbuf);
 };
 
-// Functions will be public
-void begin_scene_rendering(VkCommandBuffer cmdbuf);
-void end_scene_rendering(VkCommandBuffer cmdbuf);
-
 }

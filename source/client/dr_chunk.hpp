@@ -1,8 +1,8 @@
 #pragma once
 
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
-typedef mesh_render_data_t chunk_render_data_t;
+typedef vk::mesh_render_data_t chunk_render_data_t;
 
 struct uncompressed_chunk_mesh_vertex_t {
     vector3_t position;
@@ -19,7 +19,7 @@ struct compressed_chunk_mesh_vertex_t {
 };
 
 struct chunk_render_t {
-    mesh_t mesh;
+    vk::mesh_t mesh;
 
     chunk_render_data_t render_data;
 

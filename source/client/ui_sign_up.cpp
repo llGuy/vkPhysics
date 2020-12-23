@@ -6,8 +6,8 @@
 #include <cstdio>
 #include <sha1.hpp>
 #include <common/meta.hpp>
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 
 enum button_t { B_SIGNUP, B_LOGIN, B_USERNAME, B_PASSWORD, B_INVALID };
 

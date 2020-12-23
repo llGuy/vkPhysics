@@ -11,6 +11,11 @@
 
 namespace vk {
 
+void shader_binding_info_t::free() {
+    flfree(attribute_descriptions);
+    flfree(binding_descriptions);
+}
+
 static char *s_read_shader(
     const char *path,
     uint32_t *file_size) {

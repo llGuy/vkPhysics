@@ -2,7 +2,7 @@
 #include "client/sc_map_creator.hpp"
 #include "sc_main.hpp"
 #include "sc_play.hpp"
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 #include <common/event.hpp>
 
 static scene_type_t bound_scene;

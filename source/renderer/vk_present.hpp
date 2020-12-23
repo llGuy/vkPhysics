@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vk.hpp>
 #include <vulkan/vulkan.h>
 
 namespace app {
@@ -37,14 +38,6 @@ void init_swapchain(uint32_t width, uint32_t height);
 
 void resize_swapchain(uint32_t width, uint32_t height);
 
-struct swapchain_information_t {
-    uint32_t frames_in_flight;
-    uint32_t image_count;
-    uint32_t width;
-    uint32_t height;
-};
-
-swapchain_information_t get_swapchain_info();
 // Fills in attachment_t structs with images of swapchain
 void get_swapchain_images(uint32_t *image_count, struct attachment_t *attachments);
 

@@ -1,7 +1,7 @@
 #include "ui_core.hpp"
 #include "ui_menu_layout.hpp"
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 
 void menu_layout_t::init(
     menu_click_handler_t *handlers,

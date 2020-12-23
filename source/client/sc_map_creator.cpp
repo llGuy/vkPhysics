@@ -3,8 +3,8 @@
 #include <common/chunk.hpp>
 #include <common/event.hpp>
 #include <common/map.hpp>
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 #include "client/ui_hud.hpp"
 #include "ui_core.hpp"
 #include "cl_main.hpp"

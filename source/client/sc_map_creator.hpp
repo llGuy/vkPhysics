@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/event.hpp>
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
 // Scene where we are building a map
 void sc_map_creator_init(listener_t listener, event_submissions_t *events);

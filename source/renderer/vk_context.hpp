@@ -8,6 +8,7 @@
 #include "vk_descriptor.hpp"
 #include "vk_render_pipeline.hpp"
 
+#include <vk.hpp>
 #include <common/log.hpp>
 #include <vulkan/vulkan.h>
 #include <common/containers.hpp>
@@ -75,7 +76,5 @@ extern struct ctx_t {
 
 void allocate_context();
 void deallocate_context();
-
-void init_context();
 
 }

@@ -8,8 +8,8 @@
 #include "ui_sign_up.hpp"
 #include <common/meta.hpp>
 #include <common/event.hpp>
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 #include <common/allocators.hpp>
 
 // Whenever a new menu gets opened, it gets added to this stack to which the mouse pointer will be

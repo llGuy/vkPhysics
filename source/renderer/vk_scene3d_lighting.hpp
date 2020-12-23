@@ -1,10 +1,9 @@
 #pragma once
 
+#include <vk.hpp>
 #include <common/math.hpp>
 
 namespace vk {
-
-constexpr uint32_t MAX_LIGHTS = 10;
 
 struct lighting_ubo_data_t {
     vector4_t light_positions[MAX_LIGHTS];
@@ -22,16 +21,6 @@ struct lighting_ubo_data_t {
     vector2_t light_screen_coord;
 
     int point_light_count;
-};
-
-// This is will get passed by the programmers in client code
-struct lighting_info_t {
-    vector4_t ws_light_positions[MAX_LIGHTS];
-    vector4_t ws_light_directions[MAX_LIGHTS];
-    vector4_t light_colors[MAX_LIGHTS];
-    uint32_t lights_count;
-
-    vector4_t ws_directional_light;
 };
 
 struct shadow_box_t {

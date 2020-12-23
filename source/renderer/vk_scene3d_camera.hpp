@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vk.hpp>
 #include <common/math.hpp>
 
 namespace vk {
@@ -28,18 +29,6 @@ struct camera_info_t {
     float near, far;
     matrix4_t previous_view_projection;
 };
-
-// The game will need to pass in one of these for 3D scene to work
-struct eye_3d_info_t {
-    vector3_t position;
-    vector3_t direction;
-    vector3_t up;
-    float fov;
-    float near;
-    float far;
-    float dt;
-};
-
 
 enum frustum_corner_t {
     FLT, FLB,

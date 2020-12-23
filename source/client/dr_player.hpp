@@ -1,13 +1,13 @@
 #pragma once
 
 #include <common/player.hpp>
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
-typedef mesh_render_data_t player_render_data_t;
+typedef vk::mesh_render_data_t player_render_data_t;
 
 struct player_render_t {
     player_render_data_t render_data;
-    animated_instance_t animations;
+    vk::animated_instance_t animations;
     float rotation_speed;
     float rotation_angle;
     matrix4_t rolling_matrix;

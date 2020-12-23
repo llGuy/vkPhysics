@@ -1,7 +1,7 @@
 #pragma once
 
+#include <vk.hpp>
 #include <common/tools.hpp>
-#include <renderer/renderer.hpp>
 
 // Shaders, meshes, etc...
 void dr_resources_init();
@@ -16,8 +16,8 @@ struct fixed_premade_scene_t {
         };
     };
 
-    mesh_t world_mesh;
-    mesh_render_data_t world_render_data;
+    vk::mesh_t world_mesh;
+    vk::mesh_render_data_t world_render_data;
 
     vector3_t position, view_direction, up_vector;
 };
@@ -25,7 +25,7 @@ struct fixed_premade_scene_t {
 fixed_premade_scene_t dr_read_premade_rsc(const char *path);
 
 enum game_mesh_t { GM_PLAYER, GM_BALL, GM_MERGED, GM_BULLET, GM_INVALID };
-mesh_t *dr_get_mesh_rsc(game_mesh_t mesh);
+vk::mesh_t *dr_get_mesh_rsc(game_mesh_t mesh);
 
 enum game_shader_t {
     GS_PLAYER,
@@ -40,7 +40,8 @@ enum game_shader_t {
     GS_CHUNK_SHADOW,
     GS_INVALID
 };
-shader_t *dr_get_shader_rsc(game_shader_t shader);
+
+vk::shader_t *dr_get_shader_rsc(game_shader_t shader);
 
 struct chunk_color_data_t {
     vector4_t pointer_position;
@@ -49,7 +50,7 @@ struct chunk_color_data_t {
 };
 
 struct chunk_color_mem_t {
-    gpu_buffer_t chunk_color_ubo;
+    vk::gpu_buffer_t chunk_color_ubo;
     VkDescriptorSet chunk_color_set;
     chunk_color_data_t chunk_color;
 };

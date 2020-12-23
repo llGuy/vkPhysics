@@ -1,5 +1,5 @@
 #include "fx_post.hpp"
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
 // This struct gets passed to rendering so that the renderer can choose the post processing
 // Passes to use against the scene

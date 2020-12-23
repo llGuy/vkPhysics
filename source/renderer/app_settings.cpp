@@ -1,5 +1,4 @@
-#include "app_settings.hpp"
-#include "renderer/app_context.hpp"
+#include "app_context.hpp"
 
 namespace app {
 

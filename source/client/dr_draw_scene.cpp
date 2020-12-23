@@ -8,9 +8,9 @@
 #include "dr_player.hpp"
 #include "wd_predict.hpp"
 #include "dr_draw_scene.hpp"
-#include <renderer/input.hpp>
+#include <app.hpp>
 #include <common/player.hpp>
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
 static void s_render_person(
     VkCommandBuffer render,
@@ -18,10 +18,13 @@ static void s_render_person(
     VkCommandBuffer transfer,
     player_t *p) {
     if (p->render->animations.next_bound_cycle != p->animated_state)
-        switch_to_cycle(&p->render->animations, p->animated_state, 0);
+        p->render->animations.switch_to_cycle(p->animated_state, 0);
 
-    interpolate_joints(&p->render->animations, cl_delta_time(), dr_is_animation_repeating((player_animated_state_t)p->animated_state));
-    sync_gpu_with_animated_transforms(&p->render->animations, transfer);
+    p->render->animations.interpolate_joints(
+        cl_delta_time(),
+        dr_is_animation_repeating((player_animated_state_t)p->animated_state));
+
+    p->render->animations.sync_gpu_with_transforms(transfer);
 
     // This has to be a bit different
     movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);
@@ -34,10 +37,10 @@ static void s_render_person(
     matrix4_t sca = glm::scale(vector3_t(PLAYER_SCALE)) * p->render->animations.cycles->scale;
 
     p->render->render_data.model = tran * rot * sca;
-    buffer_t rdata = {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE};
+    buffer_t rdata = {&p->render->render_data, vk::DEF_MESH_RENDER_DATA_SIZE};
 
-    submit_skeletal_mesh(render, dr_get_mesh_rsc(GM_PLAYER), dr_get_shader_rsc(GS_PLAYER), rdata, &p->render->animations);
-    submit_skeletal_mesh_shadow(shadow, dr_get_mesh_rsc(GM_PLAYER), dr_get_shader_rsc(GS_PLAYER_SHADOW), rdata, &p->render->animations);
+    vk::submit_skeletal_mesh(render, dr_get_mesh_rsc(GM_PLAYER), dr_get_shader_rsc(GS_PLAYER), rdata, &p->render->animations);
+    vk::submit_skeletal_mesh_shadow(shadow, dr_get_mesh_rsc(GM_PLAYER), dr_get_shader_rsc(GS_PLAYER_SHADOW), rdata, &p->render->animations);
 }
 
 static void s_render_ball(
@@ -58,11 +61,11 @@ static void s_render_ball(
     }
 
     p->render->render_data.model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(vector3_t(PLAYER_SCALE));
-    buffer_t rdata = {&p->render->render_data, DEF_MESH_RENDER_DATA_SIZE};
+    buffer_t rdata = {&p->render->render_data, vk::DEF_MESH_RENDER_DATA_SIZE};
 
-    begin_mesh_submission(render, dr_get_shader_rsc(GS_BALL));
-    submit_mesh(render, dr_get_mesh_rsc(GM_BALL), dr_get_shader_rsc(GS_BALL), rdata);
-    submit_mesh_shadow(shadow, dr_get_mesh_rsc(GM_BALL), dr_get_shader_rsc(GS_BALL_SHADOW), {rdata});
+    vk::begin_mesh_submission(render, dr_get_shader_rsc(GS_BALL));
+    vk::submit_mesh(render, dr_get_mesh_rsc(GM_BALL), dr_get_shader_rsc(GS_BALL), rdata);
+    vk::submit_mesh_shadow(shadow, dr_get_mesh_rsc(GM_BALL), dr_get_shader_rsc(GS_BALL_SHADOW), {rdata});
 }
 
 static void s_render_transition(
@@ -85,14 +88,11 @@ static void s_render_transition(
     } render_data;
 
     if (p->render->animations.next_bound_cycle != p->animated_state) {
-        switch_to_cycle(
-            &p->render->animations,
-            p->animated_state,
-            0);
+        p->render->animations.switch_to_cycle(p->animated_state, 0);
     }
 
-    interpolate_joints(&p->render->animations, cl_delta_time(), dr_is_animation_repeating((player_animated_state_t)p->animated_state));
-    sync_gpu_with_animated_transforms(&p->render->animations, transfer_command_buffer);
+    p->render->animations.interpolate_joints(cl_delta_time(), dr_is_animation_repeating((player_animated_state_t)p->animated_state));
+    p->render->animations.sync_gpu_with_transforms(transfer_command_buffer);
 
     // This has to be a bit different
     movement_axes_t axes = compute_movement_axes(p->ws_view_direction, p->ws_up_vector);

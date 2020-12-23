@@ -21,7 +21,6 @@ struct textured_vertex_t {
 constexpr uint32_t MAX_TEXTURES_IN_RENDER_LIST = 25;
 constexpr uint32_t MAX_QUADS_TO_RENDER = 1000;
 
-void submission_init();
 void mark_ui_textured_section(VkDescriptorSet set);
 void push_textured_vertex(const textured_vertex_t &vertex);
 void push_textured_box(const struct box_t *box, ::vector2_t *uvs);

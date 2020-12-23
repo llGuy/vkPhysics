@@ -10,8 +10,8 @@
 #include <common/event.hpp>
 #include <common/player.hpp>
 #include <cstddef>
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 
 static fixed_premade_scene_t scene;
 

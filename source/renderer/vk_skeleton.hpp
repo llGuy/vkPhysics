@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vk.hpp>
 #include <common/math.hpp>
 
 namespace vk {
@@ -15,13 +16,6 @@ struct joint_t {
     // Inverse of transform going from model space origin to "bind" position of bone
     // "bind" = position of bone by default (without any animations affecting it)
     matrix4_t inverse_bind_transform;
-};
-
-struct skeleton_t {
-    uint32_t joint_count;
-    joint_t *joints;
-
-    void load(const char *path);
 };
 
 }

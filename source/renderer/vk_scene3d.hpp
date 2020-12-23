@@ -7,9 +7,6 @@
 namespace vk {
 
 void prepare_scene3d_data();
-// Make sure to update the data that is on the GPU with the new data
-// (e.g. new camera transforms, etc...)
-void gpu_sync_scene3d_data(VkCommandBuffer cmdbuf, eye_3d_info_t *eye, lighting_info_t *light);
 
 void render_environment(VkCommandBuffer cmdbuf);
 

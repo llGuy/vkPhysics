@@ -5,7 +5,7 @@
 #include <common/game.hpp>
 #include <common/event.hpp>
 #include <common/player.hpp>
-#include <renderer/input.hpp>
+#include <app.hpp>
 
 static int32_t local_player;
 

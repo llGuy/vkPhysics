@@ -1,6 +1,6 @@
 #pragma once
 
-#include <renderer/renderer.hpp>
+#include <vk.hpp>
 
 enum scene_type_t {
     ST_MAIN_MENU,
@@ -17,5 +17,5 @@ void sc_tick(
     VkCommandBuffer ui,
     VkCommandBuffer shadow,
     struct event_submissions_t *events);
-eye_3d_info_t *sc_get_eye_info();
-lighting_info_t *sc_get_lighting_info();
+vk::eye_3d_info_t *sc_get_eye_info();
+vk::lighting_info_t *sc_get_lighting_info();

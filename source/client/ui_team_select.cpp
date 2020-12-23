@@ -12,7 +12,7 @@
 #include "ui_team_select.hpp"
 #include <common/game.hpp>
 #include <cstdio>
-#include <renderer/input.hpp>
+#include <app.hpp>
 #include "ui_hover.hpp"
 
 static ui_box_t head_box;

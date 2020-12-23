@@ -6,8 +6,8 @@
 #include <common/net.hpp>
 #include <common/math.hpp>
 #include <common/event.hpp>
-#include <renderer/input.hpp>
-#include <renderer/renderer.hpp>
+#include <app.hpp>
+#include <vk.hpp>
 
 enum button_t {
     B_BROWSE_SERVER,

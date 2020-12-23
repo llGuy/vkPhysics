@@ -1,6 +1,9 @@
 #include <cstddef>
 #include <ctime>
 #include "common/net.hpp"
+#include "renderer/ui_submit.hpp"
+#include "renderer/vk_cmdbuf.hpp"
+#include "renderer/vk_context.hpp"
 #include "ui_core.hpp"
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
@@ -15,7 +18,8 @@
 #include <common/event.hpp>
 #include "nw_client_meta.hpp"
 #include "nw_client_meta.hpp"
-#include <renderer/input.hpp>
+#include <ui.hpp>
+#include <app.hpp>
 #include <common/allocators.hpp>
 
 static bool running;
@@ -42,8 +46,8 @@ static void s_open() {
 
 static void s_run() {
     while (running) {
-        poll_input_events(&events);
-        translate_raw_to_game_input();
+        app::poll_input_events(&events);
+        app::translate_input();
         dispatch_events(&events);
 
         LN_CLEAR();
@@ -63,7 +67,7 @@ static void s_run() {
         fx_tick_fade_effect(&events);
 
         cl_finish_frame();
-        dt = surface_delta_time();
+        dt = app::g_delta_time;
     }
 }
 
@@ -107,8 +111,9 @@ int32_t main(
 
     s_parse_command_line_args(argc, argv);
     game_allocate();
-    game_input_settings_init();
-    renderer_init();
+    app::init_settings();
+    vk::init_context();
+    ui::init_submission();
     fx_fader_init();
     nw_init(&events);
 

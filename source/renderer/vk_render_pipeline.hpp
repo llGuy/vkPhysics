@@ -1,14 +1,9 @@
 #pragma once
 
+#include <vk.hpp>
 #include <vulkan/vulkan.h>
 
 namespace vk {
-
-enum stage_type_t {
-    ST_SHADOW, ST_DEFERRED, ST_POST_PROCESS, ST_UI
-};
-
-void fill_main_inheritance_info(VkCommandBufferInheritanceInfo *info, stage_type_t type);
 
 // Structure contains data for a render pipeline stage attachment (for FBO)
 struct attachment_t {
@@ -100,8 +95,6 @@ struct render_pipeline_t {
 void update_pipeline_previous_output(VkDescriptorSet output);
 
 render_pipeline_stage_t *get_stage_before_final_render();
-
-void post_process_scene(struct frame_info_t *info, VkCommandBuffer ui_cmdbuf);
 
 // This will also resize the swapchain
 void resize_render_pipeline(uint32_t width, uint32_t height);
