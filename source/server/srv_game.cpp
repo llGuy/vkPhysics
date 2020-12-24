@@ -183,21 +183,23 @@ static bool s_check_projectile_player_collision_lag(
                         rock->position,
                         0.2f);
                 }
-            }
 
-            if (collided) {
-                LOG_INFOV("%s just got hit by projectile\n", target->name);
+                if (collided) {
+                    LOG_INFOV("%s just got hit by projectile\n", target->name);
 
-                // Register hit and decrease client's health
-                if (target->health < rock_t::DIRECT_DAMAGE) {
-                    LOG_INFOV("%s just got killed\n", target->name);
+                    // Register hit and decrease client's health
+                    if (target->health < rock_t::DIRECT_DAMAGE) {
+                        LOG_INFOV("%s just got killed\n", target->name);
 
-                    // Player needs to die
-                    target->flags.alive_state = PAS_DEAD;
-                    target->frame_displacement = 0.0f;
+                        // Player needs to die
+                        target->flags.alive_state = PAS_DEAD;
+                        target->frame_displacement = 0.0f;
+                    }
+
+                    target->health -= rock_t::DIRECT_DAMAGE;
+
+                    break;
                 }
-
-                target->health -= rock_t::DIRECT_DAMAGE;
             }
         }
     }
