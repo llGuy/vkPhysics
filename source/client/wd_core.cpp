@@ -14,9 +14,11 @@
 static listener_t world_listener;
 
 static struct {
+
     uint8_t in_server: 1;
     uint8_t in_meta_menu: 1;
     uint8_t in_gameplay: 1;
+
 } flags;
 
 void wd_init(event_submissions_t *events) {
