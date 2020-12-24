@@ -29,52 +29,6 @@ uint32_t get_voxel_index(uint32_t x, uint32_t y, uint32_t z) {
     return z * (CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH) + y * CHUNK_EDGE_LENGTH + x;
 }
 
-enum { B8_R_MAX = 0b111, B8_G_MAX = 0b111, B8_B_MAX = 0b11 };
-
-vector3_t b8_color_to_v3(voxel_color_t color) {
-    uint8_t r_b8 = color >> 5;
-    uint8_t g_b8 = (color >> 2) & 0b111;
-    uint8_t b_b8 = (color) & 0b11;
-
-    float r_f32 = (float)(r_b8) / (float)(B8_R_MAX);
-    float g_f32 = (float)(g_b8) / (float)(B8_G_MAX);
-    float b_f32 = (float)(b_b8) / (float)(B8_B_MAX);
-
-    return vector3_t(r_f32, g_f32, b_f32);
-}
-
-voxel_color_t v3_color_to_b8(const vector3_t &color) {
-    float r = color.r * (float)(B8_R_MAX);
-    float g = color.g * (float)(B8_G_MAX);
-    float b = color.b * (float)(B8_B_MAX);
-
-    return ((uint8_t)r << 5) + ((uint8_t)g << 2) + ((uint8_t)b);
-}
-
-voxel_color_t b8v_color_to_b8(uint8_t r, uint8_t g, uint8_t b) {
-    return (r << 5) + (g << 2) + b;
-}
-
-void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &chunk_coord) {
-    chunk->xs_bottom_corner = chunk_coord * CHUNK_EDGE_LENGTH;
-    chunk->chunk_coord = chunk_coord;
-    chunk->chunk_stack_index = chunk_stack_index;
-
-    chunk->flags.made_modification = 0;
-    chunk->flags.has_to_update_vertices = 0;
-    chunk->flags.active_vertices = 0;
-    chunk->flags.modified_marker = 0;
-    chunk->flags.index_of_modification_struct = 0;
-
-    memset(chunk->voxels, 0, sizeof(voxel_t) * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH);
-
-    chunk->history.modification_count = 0;
-    memset(chunk->history.modification_pool, CHUNK_SPECIAL_VALUE, CHUNK_VOXEL_COUNT);
-
-    chunk->render = NULL;
-
-    chunk->players_in_chunk.init();
-}
 
 void destroy_chunk(chunk_t *chunk) {
     chunk->players_in_chunk.destroy();

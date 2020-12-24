@@ -11,53 +11,6 @@ vector3_t space_chunk_to_world(const ivector3_t &chunk_coord);
 ivector3_t space_voxel_to_local_chunk(const ivector3_t &vs_position);
 uint32_t get_voxel_index(uint32_t x, uint32_t y, uint32_t z);
 
-struct chunk_history_t {
-    // These are all going to be set to 255 by default. If a voxel gets modified, modification_pool[voxel_index]
-    // will be set to the initial value of that voxel before modifications
-    uint8_t modification_pool[CHUNK_VOXEL_COUNT];
-
-    int16_t modification_count;
-    // Each int16_t is an index into the voxels array of struct chunk_t
-    int16_t modification_stack[CHUNK_VOXEL_COUNT / 2];
-};
-
-// This is an 8-bit color value ( R R R G G G B B ) - this is what each bit represents
-typedef uint8_t voxel_color_t;
-
-struct voxel_t {
-    voxel_color_t color;
-    uint8_t value;
-};
-
-vector3_t b8_color_to_v3(voxel_color_t color);
-voxel_color_t v3_color_to_b8(const vector3_t &color);
-voxel_color_t b8v_color_to_b8(uint8_t r, uint8_t g, uint8_t b);
-
-struct chunk_t {
-    struct flags_t {
-        uint32_t made_modification: 1;
-        uint32_t has_to_update_vertices: 1;
-        uint32_t active_vertices: 1;
-        // Flag that is used temporarily
-        uint32_t modified_marker: 1;
-        uint32_t index_of_modification_struct: 10;
-    } flags;
-    
-    uint32_t chunk_stack_index;
-    ivector3_t xs_bottom_corner;
-    ivector3_t chunk_coord;
-
-    voxel_t voxels[CHUNK_VOXEL_COUNT];
-
-    // uint8_t because anyway, player index won't go beyond 50
-    static_stack_container_t<uint8_t, PLAYER_MAX_COUNT> players_in_chunk;
-
-    chunk_history_t history;
-
-    struct chunk_render_t *render;
-};
-
-void chunk_init(chunk_t *chunk, uint32_t chunk_stack_index, const ivector3_t &chunk_coord);
 uint32_t hash_chunk_coord(const ivector3_t &coord);
 // If on client side, client will have to handle destroying the rendering resources of the chunk
 void destroy_chunk(chunk_t *chunk);
