@@ -1,5 +1,3 @@
-#include "ui_box.hpp"
-#include "ui_math.hpp"
 #include "vk_buffer.hpp"
 #include "vk_shader.hpp"
 #include "ui_submit.hpp"
