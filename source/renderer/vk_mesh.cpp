@@ -1,3 +1,4 @@
+#include "vk.hpp"
 #include "vk_buffer.hpp"
 #include "vk_scene3d.hpp"
 #include "vk_context.hpp"
@@ -582,13 +583,7 @@ void create_player_merged_mesh(
     dst_b->init_mesh_vbo_final_list();
 }
 
-shader_t create_mesh_shader_color(
-    shader_binding_info_t *binding_info,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkCullModeFlags culling,
-    VkPrimitiveTopology topology,
-    mesh_type_flags_t mesh_type) {
+shader_t create_mesh_shader_color(shader_create_info_t *info, mesh_type_flags_t mesh_type) {
     VkDescriptorType types[] = {
          VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
          VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -609,27 +604,23 @@ shader_t create_mesh_shader_color(
         push_constant_size += sizeof(matrix4_t) + sizeof(float);
     }
 
+    info->descriptor_layout_types = types;
+    info->descriptor_layout_count = type_count;
+    info->push_constant_size = push_constant_size;
+
     shader_t s = {};
-    s.init_as_3d_shader_for_stage(
-        ST_DEFERRED,
-        binding_info,
-        push_constant_size,
-        types,
-        type_count,
-        shader_paths,
-        shader_flags,
-        topology,
-        culling);
+    s.init_as_3d_shader_for_stage(info, ST_DEFERRED);
 
     return s;
 }
 
-shader_t create_mesh_shader_shadow(
-    shader_binding_info_t *binding_info,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkPrimitiveTopology topology,
-    mesh_type_flags_t mesh_type) {
+// shader_t create_mesh_shader_shadow(
+//     shader_binding_info_t *binding_info,
+//     const char **shader_paths,
+//     VkShaderStageFlags shader_flags,
+//     VkPrimitiveTopology topology,
+//     mesh_type_flags_t mesh_type) {
+shader_t create_mesh_shader_shadow(shader_create_info_t *info, mesh_type_flags_t mesh_type) {
     if (mesh_type == MT_STATIC) {
         VkDescriptorType ubo_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
@@ -638,17 +629,12 @@ shader_t create_mesh_shader_shadow(
             push_constant_size += sizeof(matrix4_t) + sizeof(float);
         }
 
-        shader_t s = {};
-        s.init_as_3d_shader_for_stage(
-            ST_SHADOW,
-            binding_info,
-            push_constant_size,
-            &ubo_type,
-            1,
-            shader_paths,
-            shader_flags,
-            topology,
-            VK_CULL_MODE_FRONT_BIT);
+        info->push_constant_size = push_constant_size;
+        info->descriptor_layout_count = 1;
+        info->descriptor_layout_types = &ubo_type;
+        info->cull_mode = VK_CULL_MODE_FRONT_BIT;
+
+        shader_t s = {}; s.init_as_3d_shader_for_stage(info, ST_SHADOW);
     
         return s;
     }
@@ -660,17 +646,13 @@ shader_t create_mesh_shader_shadow(
             push_constant_size += sizeof(matrix4_t) + sizeof(float);
         }
 
+        info->push_constant_size = push_constant_size;
+        info->descriptor_layout_count = 2;
+        info->descriptor_layout_types = ubo_types;
+        info->cull_mode = VK_CULL_MODE_FRONT_BIT;
+
         shader_t s = {};
-        s.init_as_3d_shader_for_stage(
-            ST_SHADOW,
-            binding_info,
-            push_constant_size,
-            ubo_types,
-            2,
-            shader_paths,
-            shader_flags,
-            topology,
-            VK_CULL_MODE_FRONT_BIT);
+        s.init_as_3d_shader_for_stage(info, ST_SHADOW);
 
         return s;
     }

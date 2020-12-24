@@ -1,3 +1,4 @@
+#include "vk.hpp"
 #include "vk_sync.hpp"
 #include "vk_imgui.hpp"
 #include "vk_shader.hpp"
@@ -10,6 +11,7 @@
 #include "vk_scene3d_environment.hpp"
 
 #include <imgui.h>
+#include <vulkan/vulkan_core.h>
 
 namespace vk {
 
@@ -369,14 +371,13 @@ static void s_init_environment_cubemap() {
         "shaders/SPV/atmosphere_scatter_cubemap_init.frag.spv"
     };
 
-    environment.base_cubemap_init_shader.init_as_2d_shader(
-        NULL,
-        sizeof(atmosphere_model_t),
-        NULL, 0,
-        paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        &environment.base_cubemap_init,
-        VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+    shader_create_info_t info;
+    info.push_constant_size = sizeof(atmosphere_model_t);
+    info.shader_paths = paths;
+    info.shader_flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    info.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+
+    environment.base_cubemap_init_shader.init_as_2d_shader(&info, &environment.base_cubemap_init);
 }
 
 static void s_render_to_base_cubemap(VkCommandBuffer cmdbuf) {
@@ -438,18 +439,22 @@ struct cubemap_render_data_t {
 static void s_init_cubemap_shader() {
     shader_binding_info_t binding_info = {};
     VkDescriptorType descriptor_types[] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
-    const char *shader_paths[] = { "shaders/SPV/cubemap.vert.spv", "shaders/SPV/cubemap.frag.spv" };
+    const char *shader_paths[] = {
+        "shaders/SPV/cubemap.vert.spv",
+        "shaders/SPV/cubemap.frag.spv"
+    };
+
+    shader_create_info_t info;
+    info.binding_info = &binding_info;
+    info.push_constant_size = sizeof(cubemap_render_data_t);
+    info.descriptor_layout_types = descriptor_types;
+    info.descriptor_layout_count = sizeof(descriptor_types) / sizeof(descriptor_types[0]);
+    info.shader_paths = shader_paths;
+    info.shader_flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    info.cull_mode = VK_CULL_MODE_NONE;
     
-    environment.cubemap_shader.init_as_3d_shader_for_stage(
-        ST_DEFERRED,
-        &binding_info,
-        sizeof(cubemap_render_data_t),
-        descriptor_types,
-        sizeof(descriptor_types) / sizeof(descriptor_types[0]),
-        shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        VK_CULL_MODE_NONE);
+    environment.cubemap_shader.init_as_3d_shader_for_stage(&info, ST_DEFERRED);
 }
 
 static integral_lut_t integral_lut;

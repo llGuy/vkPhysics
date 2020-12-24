@@ -156,37 +156,30 @@ VkPipelineLayout create_pipeline_layout(
 }
 
 void shader_t::init_as_2d_shader(
-    shader_binding_info_t *binding_info,
-    uint32_t push_constant_size,
-    VkDescriptorType *descriptor_layout_types,
-    uint32_t descriptor_layout_count,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    render_pipeline_stage_t *stage,
-    VkPrimitiveTopology topology,
-    alpha_blending_t alpha_blending) {
+    shader_create_info_t *info,
+    struct render_pipeline_stage_t *stage) {
     layout = create_pipeline_layout(
-        shader_flags,
-        descriptor_layout_types,
-        descriptor_layout_count,
-        push_constant_size);
+        info->shader_flags,
+        info->descriptor_layout_types,
+        info->descriptor_layout_count,
+        info->push_constant_size);
     
-    VkPipelineShaderStageCreateInfo *shader_infos = fill_shader_stage_create_infos(shader_paths, shader_flags);
+    VkPipelineShaderStageCreateInfo *shader_infos = fill_shader_stage_create_infos(info->shader_paths, info->shader_flags);
 
     /* Is all zero for rendering pipeline shaders */
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     
-    if (binding_info) {
-        vertex_input_info.vertexBindingDescriptionCount = binding_info->binding_count;
-        vertex_input_info.pVertexBindingDescriptions = binding_info->binding_descriptions;
-        vertex_input_info.vertexAttributeDescriptionCount = binding_info->attribute_count;
-        vertex_input_info.pVertexAttributeDescriptions = binding_info->attribute_descriptions;
+    if (info->binding_info) {
+        vertex_input_info.vertexBindingDescriptionCount = info->binding_info->binding_count;
+        vertex_input_info.pVertexBindingDescriptions = info->binding_info->binding_descriptions;
+        vertex_input_info.vertexAttributeDescriptionCount = info->binding_info->attribute_count;
+        vertex_input_info.pVertexAttributeDescriptions = info->binding_info->attribute_descriptions;
     }
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
     input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly_info.topology = topology;
+    input_assembly_info.topology = info->topology;
 
     VkViewport viewport = {};
     viewport.width = (float)g_ctx->swapchain.extent.width;
@@ -215,7 +208,7 @@ void shader_t::init_as_2d_shader(
     multisample_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisample_info.minSampleShading = 1.0f;
 
-    VkPipelineColorBlendStateCreateInfo blend_info = fill_blend_state_info(stage, alpha_blending);
+    VkPipelineColorBlendStateCreateInfo blend_info = fill_blend_state_info(stage, info->alpha_blending);
 
     VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     
@@ -231,7 +224,7 @@ void shader_t::init_as_2d_shader(
 
     VkGraphicsPipelineCreateInfo pipeline_info = {};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline_info.stageCount = pop_count(shader_flags);
+    pipeline_info.stageCount = pop_count(info->shader_flags);
     pipeline_info.pStages = shader_infos;
     pipeline_info.pVertexInputState = &vertex_input_info;
     pipeline_info.pInputAssemblyState = &input_assembly_info;
@@ -255,62 +248,36 @@ void shader_t::init_as_2d_shader(
     flfree(shader_infos);
     flfree((void *)blend_info.pAttachments);
 
-    flags = shader_flags;
+    flags = info->shader_flags;
 }
 
-void shader_t::init_as_ui_shader(
-    shader_binding_info_t *binding_info,
-    uint32_t push_constant_size,
-    VkDescriptorType *descriptor_layout_types,
-    uint32_t descriptor_layout_count,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkPrimitiveTopology topology,
-    alpha_blending_t alpha_blending) {
-    init_as_2d_shader(
-        binding_info,
-        push_constant_size,
-        descriptor_layout_types,
-        descriptor_layout_count,
-        shader_paths,
-        shader_flags,
-        &g_ctx->pipeline.ui->stage,
-        topology,
-        alpha_blending);
+void shader_t::init_as_ui_shader(shader_create_info_t *info) {
+    init_as_2d_shader(info, &g_ctx->pipeline.ui->stage);
 }
 
-void shader_t::init_as_3d_shader(
-    shader_binding_info_t *binding_info,
-    uint32_t push_constant_size,
-    VkDescriptorType *descriptor_layout_types,
-    uint32_t descriptor_layout_count,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    render_pipeline_stage_t *stage,
-    VkPrimitiveTopology topology,
-    VkCullModeFlags cull_mode) {
+void shader_t::init_as_3d_shader(shader_create_info_t *info, struct render_pipeline_stage_t *stage) {
     layout = create_pipeline_layout(
-        shader_flags,
-        descriptor_layout_types,
-        descriptor_layout_count,
-        push_constant_size);
+        info->shader_flags,
+        info->descriptor_layout_types,
+        info->descriptor_layout_count,
+        info->push_constant_size);
     
-    VkPipelineShaderStageCreateInfo *shader_infos = fill_shader_stage_create_infos(shader_paths, shader_flags);
+    VkPipelineShaderStageCreateInfo *shader_infos = fill_shader_stage_create_infos(info->shader_paths, info->shader_flags);
 
     /* Is all zero for rendering pipeline shaders */
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     
-    if (binding_info) {
-        vertex_input_info.vertexBindingDescriptionCount = binding_info->binding_count;
-        vertex_input_info.pVertexBindingDescriptions = binding_info->binding_descriptions;
-        vertex_input_info.vertexAttributeDescriptionCount = binding_info->attribute_count;
-        vertex_input_info.pVertexAttributeDescriptions = binding_info->attribute_descriptions;
+    if (info->binding_info) {
+        vertex_input_info.vertexBindingDescriptionCount = info->binding_info->binding_count;
+        vertex_input_info.pVertexBindingDescriptions = info->binding_info->binding_descriptions;
+        vertex_input_info.vertexAttributeDescriptionCount = info->binding_info->attribute_count;
+        vertex_input_info.pVertexAttributeDescriptions = info->binding_info->attribute_descriptions;
     }
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
     input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly_info.topology = topology;
+    input_assembly_info.topology = info->topology;
 
     VkViewport viewport = {};
     viewport.width = (float)g_ctx->swapchain.extent.width;
@@ -330,7 +297,7 @@ void shader_t::init_as_3d_shader(
     VkPipelineRasterizationStateCreateInfo rasterization_info = {};
     rasterization_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterization_info.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterization_info.cullMode = cull_mode;
+    rasterization_info.cullMode = info->cull_mode;
     rasterization_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rasterization_info.lineWidth = 1.0f;
 
@@ -358,7 +325,7 @@ void shader_t::init_as_3d_shader(
 
     VkGraphicsPipelineCreateInfo pipeline_info = {};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline_info.stageCount = pop_count(shader_flags);
+    pipeline_info.stageCount = pop_count(info->shader_flags);
     pipeline_info.pStages = shader_infos;
     pipeline_info.pVertexInputState = &vertex_input_info;
     pipeline_info.pInputAssemblyState = &input_assembly_info;
@@ -382,44 +349,20 @@ void shader_t::init_as_3d_shader(
     flfree(shader_infos);
     flfree((void *)blend_info.pAttachments);
 
-    flags = shader_flags;
+    flags = info->shader_flags;
 }
 
 void shader_t::init_as_3d_shader_for_stage(
-    stage_type_t stage_type,
-    shader_binding_info_t *binding_info,
-    uint32_t push_constant_size,
-    VkDescriptorType *descriptor_layout_types,
-    uint32_t descriptor_layout_count,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkPrimitiveTopology topology,
-    VkCullModeFlags culling) {
+    shader_create_info_t *info, stage_type_t stage_type) {
     switch (stage_type) {
     case ST_SHADOW: {
-        init_as_3d_shader(
-            binding_info,
-            push_constant_size,
-            descriptor_layout_types,
-            descriptor_layout_count,
-            shader_paths,
-            shader_flags,
-            &g_ctx->pipeline.shadow->stage,
-            topology,
-            VK_CULL_MODE_FRONT_BIT);
+        info->cull_mode = VK_CULL_MODE_FRONT_BIT;
+
+        init_as_3d_shader(info, &g_ctx->pipeline.shadow->stage);
     } break;
 
     case ST_DEFERRED: {
-        init_as_3d_shader(
-            binding_info,
-            push_constant_size,
-            descriptor_layout_types,
-            descriptor_layout_count,
-            shader_paths,
-            shader_flags,
-            &g_ctx->pipeline.deferred->stage,
-            topology,
-            culling);
+        init_as_3d_shader(info, &g_ctx->pipeline.deferred->stage);
     } break;
 
     default: {

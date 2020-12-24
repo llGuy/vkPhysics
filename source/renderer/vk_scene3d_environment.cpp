@@ -1,3 +1,4 @@
+#include "vk.hpp"
 #include "vk_sync.hpp"
 #include "vk_memory.hpp"
 #include "vk_cmdbuf.hpp"
@@ -83,16 +84,15 @@ void integral_lut_t::init_render_pass() {
 
     const char *paths[] = {
         "shaders/SPV/integral_lookup.vert.spv",
-        "shaders/SPV/integral_lookup.frag.spv"  };
+        "shaders/SPV/integral_lookup.frag.spv"
+    };
 
-    init_shader_.init_as_2d_shader(
-        NULL,
-        0,
-        NULL, 0,
-        paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        &init_,
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+    shader_create_info_t info;
+    info.shader_paths = paths;
+    info.shader_flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    init_shader_.init_as_2d_shader(&info, &init_);
 }
 
 void integral_lut_t::render_to_lut() {
@@ -244,18 +244,21 @@ void pbr_environment_t::prepare_diff_ibl() {
     diff_ibl_init.init_descriptor_set_output();
 
     VkDescriptorType types[] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
+
     const char *paths[] = {
         "shaders/SPV/diffuse_ibl.vert.spv",
         "shaders/SPV/diffuse_ibl.geom.spv",
-        "shaders/SPV/diffuse_ibl.frag.spv"  };
-    diff_ibl_init_shader.init_as_2d_shader(
-        NULL,
-        0,
-        types, 1,
-        paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        &diff_ibl_init,
-        VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+        "shaders/SPV/diffuse_ibl.frag.spv"
+    };
+
+    shader_create_info_t info;
+    info.descriptor_layout_types = types;
+    info.descriptor_layout_count = 1;
+    info.shader_paths = paths;
+    info.shader_flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    info.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+
+    diff_ibl_init_shader.init_as_2d_shader(&info, &diff_ibl_init);
 }
 
 void pbr_environment_t::render_to_diff_ibl(
@@ -393,16 +396,16 @@ void pbr_environment_t::prepare_spec_ibl() {
     };
 
     VkDescriptorType input_types[] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
+
+    shader_create_info_t info;
+    info.push_constant_size = sizeof(spec_ibl_render_data_t);
+    info.descriptor_layout_types = input_types;
+    info.descriptor_layout_count = sizeof(input_types) / sizeof(input_types[0]);
+    info.shader_paths = paths;
+    info.shader_flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     
-    spec_ibl_init_shader.init_as_2d_shader(
-        NULL,
-        sizeof(spec_ibl_render_data_t),
-        input_types,
-        sizeof(input_types) / sizeof(input_types[0]),
-        paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        &spec_ibl_init,
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    spec_ibl_init_shader.init_as_2d_shader(&info, &spec_ibl_init);
 }
 
 void pbr_environment_t::render_to_spec_ibl(VkDescriptorSet base_cubemap, VkCommandBuffer cmdbuf) {

@@ -1,3 +1,4 @@
+#include "vk.hpp"
 #include "vk_buffer.hpp"
 #include "vk_shader.hpp"
 #include "ui_submit.hpp"
@@ -7,6 +8,7 @@
 #include <ui.hpp>
 #include <common/log.hpp>
 #include <common/math.hpp>
+#include <vulkan/vulkan_core.h>
 
 namespace ui {
 
@@ -62,15 +64,14 @@ static void s_color_shader_init() {
         "shaders/SPV/uiquad.frag.spv"
     };
 
-    color_quads_shader.init_as_ui_shader(
-        &binding_info,
-        0,
-        NULL,
-        0,
-        color_shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        vk::AB_ONE_MINUS_SRC_ALPHA);
+    vk::shader_create_info_t info;
+    info.binding_info = &binding_info;
+    info.shader_paths = color_shader_paths;
+    info.shader_flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    info.alpha_blending = vk::AB_ONE_MINUS_SRC_ALPHA;
+
+    color_quads_shader.init_as_ui_shader(&info);
 }
 
 static void s_textured_shader_init() {
@@ -105,15 +106,16 @@ static void s_textured_shader_init() {
 
     VkDescriptorType texture_descriptor_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
-    textured_quads_shader.init_as_ui_shader(
-        &binding_info,
-        0,
-        &texture_descriptor_type,
-        1,
-        texture_shader_paths,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        vk::AB_ONE_MINUS_SRC_ALPHA);
+    vk::shader_create_info_t info;
+    info.binding_info = &binding_info;
+    info.descriptor_layout_types = &texture_descriptor_type;
+    info.descriptor_layout_count = 1;
+    info.shader_paths = texture_shader_paths;
+    info.shader_flags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    info.alpha_blending = vk::AB_ONE_MINUS_SRC_ALPHA;
+
+    textured_quads_shader.init_as_ui_shader(&info);
 }
 
 void init_submission() {

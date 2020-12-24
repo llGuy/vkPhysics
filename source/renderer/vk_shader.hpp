@@ -20,5 +20,4 @@ VkPipelineLayout create_pipeline_layout(
     uint32_t descriptor_layout_count,
     uint32_t push_constant_size);
 
-
 }

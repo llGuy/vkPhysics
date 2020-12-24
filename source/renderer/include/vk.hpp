@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <vulkan/vulkan.h>
 #include <common/math.hpp>
+#include <vulkan/vulkan_core.h>
 
 namespace vk {
 
@@ -130,6 +131,29 @@ struct shader_binding_info_t {
     void free();
 };
 
+struct shader_create_info_t {
+    shader_binding_info_t *binding_info;
+    uint32_t push_constant_size;
+    VkDescriptorType *descriptor_layout_types;
+    uint32_t descriptor_layout_count;
+    const char **shader_paths;
+    VkShaderStageFlags shader_flags;
+    VkPrimitiveTopology topology;
+    alpha_blending_t alpha_blending;
+    VkCullModeFlags cull_mode;
+
+    inline shader_create_info_t() :
+        binding_info(NULL),
+        push_constant_size(0),
+        descriptor_layout_types(NULL),
+        descriptor_layout_count(0),
+        shader_paths(NULL),
+        shader_flags(0),
+        topology((VkPrimitiveTopology)0),
+        alpha_blending(AB_NONE),
+        cull_mode(0) {}
+};
+
 /*
   Wrapper structure for Vulkan VkPipeline objects
   Provides easy way to create shaders for different
@@ -140,39 +164,33 @@ struct shader_t {
     VkPipelineLayout layout;
     VkShaderStageFlags flags;
 
-    // Yes, this takes a lot of parameters
-    // TODO: Create struct to avoid having to pass a million parameters
-    void init_as_2d_shader(
-        shader_binding_info_t *binding_info,
-        uint32_t push_constant_size,
-        VkDescriptorType *descriptor_layout_types,
-        uint32_t descriptor_layout_count,
-        const char **shader_paths,
-        VkShaderStageFlags shader_flags,
-        struct render_pipeline_stage_t *stage,
-        VkPrimitiveTopology topology,
-        alpha_blending_t alpha_blending = AB_NONE);
+    /* 
+       Need to set:
+       - shader_create_info_t::binding_info
+       - shader_create_info_t::push_constant_size
+       - shader_create_info_t::descriptor_layout_types
+       - shader_create_info_t::descriptor_layout_count
+       - shader_create_info_t::shader_paths
+       - shader_create_info_t::shader_flags
+       - shader_create_info_t::topology
+       - shader_create_info_t::alpha_blending
+     */
+    void init_as_2d_shader(shader_create_info_t *info, struct render_pipeline_stage_t *stage);
+    void init_as_ui_shader(shader_create_info_t *info);
 
-    void init_as_ui_shader(
-        shader_binding_info_t *binding_info,
-        uint32_t push_constant_size,
-        VkDescriptorType *descriptor_layout_types,
-        uint32_t descriptor_layout_count,
-        const char **shader_paths,
-        VkShaderStageFlags shader_flags,
-        VkPrimitiveTopology topology,
-        alpha_blending_t alpha_blending = AB_NONE);
- 
-    void init_as_3d_shader(
-        shader_binding_info_t *binding_info,
-        uint32_t push_constant_size,
-        VkDescriptorType *descriptor_layout_types,
-        uint32_t descriptor_layout_count,
-        const char **shader_paths,
-        VkShaderStageFlags shader_flags,
-        struct render_pipeline_stage_t *stage,
-        VkPrimitiveTopology topology,
-        VkCullModeFlags cull_mode);
+    /* 
+       Need to set:
+       - shader_create_info_t::binding_info
+       - shader_create_info_t::push_constant_size
+       - shader_create_info_t::descriptor_layout_types
+       - shader_create_info_t::descriptor_layout_count
+       - shader_create_info_t::shader_paths
+       - shader_create_info_t::shader_flags
+       - shader_create_info_t::topology
+       - shader_create_info_t::cull_mode
+     */
+    void init_as_3d_shader(shader_create_info_t *info, struct render_pipeline_stage_t *stage);
+    void init_as_3d_shader_for_stage(shader_create_info_t *info, stage_type_t stage_type);
 
     // For post processing shaders
     void init_as_render_pipeline_shader(
@@ -180,20 +198,6 @@ struct shader_t {
         const char *fragment_shader_path,
         render_pipeline_stage_t *stage,
         VkPipelineLayout layout);
-
-    // Some helper functions which just add some more clarity
-    // (can use either the functions above, or the ones below)
-    // The ones above just give programmer more control
-    void init_as_3d_shader_for_stage(
-        stage_type_t stage_type,
-        shader_binding_info_t *binding_info,
-        uint32_t push_constant_size,
-        VkDescriptorType *descriptor_layout_types,
-        uint32_t descriptor_layout_count,
-        const char **shader_paths,
-        VkShaderStageFlags shader_flags,
-        VkPrimitiveTopology topology,
-        VkCullModeFlags culling);
 };
 
 /*
@@ -319,20 +323,24 @@ enum mesh_type_t {
 
 typedef int32_t mesh_type_flags_t;
 
-shader_t create_mesh_shader_color(
-    shader_binding_info_t *binding_info,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkCullModeFlags culling,
-    VkPrimitiveTopology topology,
-    mesh_type_flags_t type);
+/* 
+   Need to set:
+   - shader_create_info_t::binding_info
+   - shader_create_info_t::shader_paths
+   - shader_create_info_t::shader_flags
+   - shader_create_info_t::cull_mode
+   - shader_create_info_t::topology
+*/
+shader_t create_mesh_shader_color(shader_create_info_t *info, mesh_type_flags_t type);
 
-shader_t create_mesh_shader_shadow(
-    shader_binding_info_t *binding_info,
-    const char **shader_paths,
-    VkShaderStageFlags shader_flags,
-    VkPrimitiveTopology topology,
-    mesh_type_flags_t mesh_type);
+/* 
+   Need to set:
+   - shader_create_info_t::binding_info
+   - shader_create_info_t::shader_paths
+   - shader_create_info_t::shader_flags
+   - shader_create_info_t::topology
+*/
+shader_t create_mesh_shader_shadow(shader_create_info_t *info, mesh_type_flags_t mesh_type);
 
 /*
   Data gets sent through push constant to the shaders
