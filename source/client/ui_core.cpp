@@ -112,6 +112,7 @@ void ui_init(
     subscribe_to_event(ET_SPAWN, ui_listener, events);
     subscribe_to_event(ET_LOCAL_PLAYER_DIED, ui_listener, events);
 
+    global_font = flmalloc<ui::font_t>();
     global_font->load(
         "assets/font/fixedsys.fnt",
         "assets/font/fixedsys.png");

@@ -235,7 +235,7 @@ void render_pipeline_stage_t::init_descriptor_set_output(bool add_depth) {
     VkImageView *views = ALLOCA(VkImageView, color_attachment_count + 1);
     VkSampler *samplers = ALLOCA(VkSampler, color_attachment_count + 1);
     
-    uint32_t binding_count = 0;
+    binding_count = 0;
 
     for (; binding_count < color_attachment_count; ++binding_count) {
         views[binding_count] = color_attachments[binding_count].image_view;

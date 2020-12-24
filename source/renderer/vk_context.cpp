@@ -26,11 +26,13 @@ void deallocate_context() {
 }
 
 void init_context() {
+    const char *title = "vkPhysics";
+
     allocate_context();
 
     app::api_init();
-    init_instance("vkPhysics");
-    app::context_info_t app_ctx = app::init_context();
+    init_instance(title);
+    app::context_info_t app_ctx = app::init_context(title);
     init_surface(&app_ctx);
     init_device();
     init_swapchain(app_ctx.width, app_ctx.height);
@@ -40,8 +42,11 @@ void init_context() {
     init_descriptor_pool();
     init_descriptor_layouts();
     init_imgui(app_ctx.window);
-    prepare_scene3d_data();
+    prepare_scene3d_camera();
+    prepare_scene3d_lighting();
+    g_ctx->pipeline.allocate();
     g_ctx->pipeline.init();
+    prepare_scene3d_environment();
     init_sensitive_buffer_deletions();
 
     // UI

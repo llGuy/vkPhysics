@@ -2,11 +2,11 @@
 
 namespace vk {
 
-void shadow_box_t::init(const vector3_t &light_dir, const vector3_t &up, float far) {
+void shadow_box_t::init(const vector3_t &light_dir, const vector3_t &up, float sfar) {
     view = glm::lookAt(vector3_t(0.0f), light_dir, vector3_t(0.0f, 1.0f, 0.0f));
     inverse_view = glm::inverse(view);
     near = 1.0f;
-    far = 25.0f;
+    this->far = sfar;
 }
 
 void shadow_box_t::update(
@@ -18,8 +18,6 @@ void shadow_box_t::update(
     const vector3_t &ws_up) {
     view = glm::lookAt(vector3_t(0.0f), light_dir, vector3_t(0.0f, 1.0f, 0.0f));
     
-    float far = far;
-    float near = near;
     float far_width, near_width, far_height, near_height;
     
     far_width = 2.0f * far * tan(fov);

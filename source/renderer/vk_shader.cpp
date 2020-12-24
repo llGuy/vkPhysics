@@ -275,7 +275,8 @@ void shader_t::init_as_ui_shader(
         shader_paths,
         shader_flags,
         &g_ctx->pipeline.ui->stage,
-        topology);
+        topology,
+        alpha_blending);
 }
 
 void shader_t::init_as_3d_shader(

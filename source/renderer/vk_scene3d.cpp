@@ -20,7 +20,7 @@ static struct {
     camera_info_t info;
 } camera_data;
 
-static void s_prepare_camera() {
+void prepare_scene3d_camera() {
     camera_info_t *c = &camera_data.info;
 
     c->position = vector3_t(0.0f, 5.0f, 0.0f);
@@ -157,7 +157,7 @@ static struct {
     shadow_box_t shadow;
 } lighting_data;
 
-static void s_prepare_lighting() {
+void prepare_scene3d_lighting() {
     memset(&lighting_data, 0, sizeof(lighting_data));
 
     camera_ubo_data_t *c_transforms = &camera_data.transforms;
@@ -518,11 +518,8 @@ static void s_scene_debug_menu() {
         environment.atm.light_direction_z = light_direction[2]);
 }
 
-void prepare_scene3d_data() {
+void prepare_scene3d_environment() {
     add_debug_ui_proc(s_scene_debug_menu);
-
-    s_prepare_camera();
-    s_prepare_lighting();
 
     atmosphere_model_default_values(&environment.atm, lighting_data.directional_light);
     s_init_environment_cubemap();

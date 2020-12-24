@@ -185,7 +185,8 @@ static void s_window_cursor_position_callback(
     ctx.raw_input.cursor_pos_y = (float)ypos;
 }
 
-context_info_t init_context() {
+context_info_t init_context(const char *name) {
+    ctx.name = name;
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());

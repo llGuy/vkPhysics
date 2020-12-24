@@ -141,7 +141,7 @@ void lighting_stage_t::execute(VkCommandBuffer cmdbuf) {
         scene_descriptors.diff_ibl_tx,
         scene_descriptors.lut_tx,
         scene_descriptors.spec_ibl_tx,
-        g_ctx->pipeline.shadow->blur.stage.descriptor_set
+        g_ctx->pipeline.shadow->blur.current_set
     };
     
     vkCmdBindDescriptorSets(

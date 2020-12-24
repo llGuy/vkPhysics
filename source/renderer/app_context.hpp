@@ -19,7 +19,7 @@ struct context_info_t {
     vk::surface_proc_t surface_proc;
 };
 
-context_info_t init_context();
+context_info_t init_context(const char *title);
 
 void get_immediate_cursor_pos(double *x, double *y);
 

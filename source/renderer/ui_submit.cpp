@@ -57,7 +57,7 @@ static void s_color_shader_init() {
     binding_info.attribute_descriptions[1].location = 1;
     binding_info.attribute_descriptions[1].binding = 0;
     binding_info.attribute_descriptions[1].format = VK_FORMAT_R32_UINT;
-    binding_info.attribute_descriptions[1].offset = sizeof(vector2_t);
+    binding_info.attribute_descriptions[1].offset = sizeof(::vector2_t);
 
     const char *color_shader_paths[] = {
         "shaders/SPV/uiquad.vert.spv",
@@ -93,12 +93,12 @@ static void s_textured_shader_init() {
     binding_info.attribute_descriptions[1].location = 1;
     binding_info.attribute_descriptions[1].binding = 0;
     binding_info.attribute_descriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
-    binding_info.attribute_descriptions[1].offset = sizeof(vector2_t);
+    binding_info.attribute_descriptions[1].offset = sizeof(::vector2_t);
 
     binding_info.attribute_descriptions[2].location = 2;
     binding_info.attribute_descriptions[2].binding = 0;
     binding_info.attribute_descriptions[2].format = VK_FORMAT_R32_UINT;
-    binding_info.attribute_descriptions[2].offset = sizeof(vector2_t) + sizeof(vector2_t);
+    binding_info.attribute_descriptions[2].offset = sizeof(::vector2_t) + sizeof(::vector2_t);
 
     const char *texture_shader_paths[] = {
         "shaders/SPV/uiquadtex.vert.spv",

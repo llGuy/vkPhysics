@@ -6,7 +6,9 @@
 
 namespace vk {
 
-void prepare_scene3d_data();
+void prepare_scene3d_lighting();
+void prepare_scene3d_camera();
+void prepare_scene3d_environment();
 
 struct scene3d_descriptors_t {
     VkDescriptorSet lighting_ubo;

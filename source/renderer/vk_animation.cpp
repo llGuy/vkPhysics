@@ -301,11 +301,11 @@ void animation_cycles_t::load(
 
 void animated_instance_t::init(
     skeleton_t *skeleton,
-    animation_cycles_t *cycles) {
+    animation_cycles_t *acycles) {
     memset(this, 0, sizeof(animated_instance_t));
     current_animation_time = 0.0f;
     is_interpolating_between_cycles = 0;
-    skeleton = skeleton;
+    this->skeleton = skeleton;
     next_bound_cycle = 0;
     interpolated_transforms = FL_MALLOC(matrix4_t, skeleton->joint_count);
     current_positions = FL_MALLOC(vector3_t, skeleton->joint_count);
@@ -314,7 +314,7 @@ void animated_instance_t::init(
     current_position_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
     current_rotation_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
     current_scale_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
-    cycles = cycles;
+    this->cycles = acycles;
     in_between_interpolation_time = 0.2f;
 
     memset(current_position_indices, 0, sizeof(uint32_t) * skeleton->joint_count);
