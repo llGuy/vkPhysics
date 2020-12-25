@@ -284,7 +284,7 @@ static void s_fill_with_accumulated_chunk_modifications(
 
 // PT_CLIENT_COMMANDS
 static void s_send_packet_client_commands() {
-    int32_t local_id = g_game->client_to_local_id(current_client_id);
+    int32_t local_id = g_game->get_local_id(current_client_id);
     int32_t p_index = wd_get_local_player();
     
     // DEAD by default
@@ -787,7 +787,7 @@ static void s_receive_packet_game_state_snapshot(
 
         if (snapshot->client_id == current_client_id) {
             client_t *c = &g_net_data.clients[snapshot->client_id];
-            int32_t local_id = g_game->client_to_local_id(snapshot->client_id);
+            int32_t local_id = g_game->get_local_id(snapshot->client_id);
             player_t *p = g_game->get_player(local_id);
             if (p) {
                 s_handle_local_player_snapshot(
@@ -800,7 +800,7 @@ static void s_receive_packet_game_state_snapshot(
             }
         }
         else {
-            int32_t local_id = g_game->client_to_local_id(snapshot->client_id);
+            int32_t local_id = g_game->get_local_id(snapshot->client_id);
             player_t *p = g_game->get_player(local_id);
 
             if (p) {
@@ -921,7 +921,7 @@ static void s_receive_player_team_change(
     // Otherwise, update ui roster and add player to team
 
     if (packet.client_id != nw_get_local_client_index()) {
-        int32_t p_id = g_game->client_to_local_id(packet.client_id);
+        int32_t p_id = g_game->get_local_id(packet.client_id);
 
         g_game->change_player_team(g_game->get_player(p_id), (team_color_t)packet.color);
 

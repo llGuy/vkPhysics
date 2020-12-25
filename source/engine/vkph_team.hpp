@@ -4,6 +4,8 @@
 #include <common/tools.hpp>
 #include <common/containers.hpp>
 
+#include "vkph_voxel.hpp"
+
 namespace vkph {
 
 enum team_color_t {

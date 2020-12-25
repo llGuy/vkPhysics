@@ -11,8 +11,9 @@ namespace vkph {
 
 struct chunk_history_t {
     /*
-      These are all going to be set to 255 by default. If a voxel gets modified, modification_pool[voxel_index]
-      will be set to the initial value of that voxel before modifications 
+      These are all going to be set to 255 by default. If a voxel gets modified, 
+      modification_pool[voxel_index] will be set to the initial value of that voxel 
+      before modifications.
     */
     uint8_t modification_pool[CHUNK_VOXEL_COUNT];
 
@@ -45,6 +46,17 @@ struct chunk_t {
     struct chunk_render_t *render;
 
     void init(uint32_t chunk_stack_index, const ivector3_t &chunk_coord);
+    void destroy();
 };
+
+/*
+  Some useful maths functions.
+ */
+ivector3_t space_world_to_voxel(const vector3_t &ws_position);
+ivector3_t space_voxel_to_chunk(const ivector3_t &vs_position);
+vector3_t space_chunk_to_world(const ivector3_t &chunk_coord);
+ivector3_t space_voxel_to_local_chunk(const ivector3_t &vs_position);
+uint32_t get_voxel_index(uint32_t x, uint32_t y, uint32_t z);
+uint32_t hash_chunk_coord(const ivector3_t &coord);
 
 }

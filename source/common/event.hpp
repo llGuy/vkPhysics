@@ -119,21 +119,6 @@ struct event_data_request_to_join_server_t {
     const char *ip_address;
 };
 
-struct player_init_info_t {
-    const char *client_name;
-    uint16_t client_id;
-    // A bunch of shit (more will come)
-    // (name and client_id are already in client_data)
-    vector3_t ws_position;
-    vector3_t ws_view_direction;
-    vector3_t ws_up_vector;
-    float default_speed;
-
-    uint32_t flags;
-
-    vector3_t next_random_spawn_position;
-};
-
 struct event_enter_server_t {
     uint16_t local_client_id;
 

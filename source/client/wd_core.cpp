@@ -123,6 +123,7 @@ void wd_clear_world() {
         }
 
         destroy_chunk(chunks[i]);
+        flfree(chunks[i]);
 
         chunks[i] = NULL;
     }

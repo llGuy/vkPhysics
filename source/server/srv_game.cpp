@@ -13,7 +13,7 @@ static listener_t game_listener;
 void spawn_player(uint32_t client_id) {
     LOG_INFOV("Client %i spawned\n", client_id);
 
-    int32_t local_id = g_game->client_to_local_id(client_id);
+    int32_t local_id = g_game->get_local_id(client_id);
     player_t *p = g_game->get_player(local_id);
     p->health = 200;
     p->ws_position = p->next_random_spawn_position;
@@ -46,7 +46,7 @@ static void s_handle_event_player_disconnected(
     event_t *event) {
     event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
-    int32_t local_id = g_game->client_to_local_id(data->client_id);
+    int32_t local_id = g_game->get_local_id(data->client_id);
     player_t *p = g_game->get_player(local_id);
             
     if (p) {
@@ -245,7 +245,7 @@ void srv_game_tick() {
                 uint32_t weapon_idx = rock->flags.ref_idx_weapon;
                 uint32_t ref_idx = rock->flags.ref_idx_obj;
 
-                auto *p = g_game->get_player(g_game->client_to_local_id(client_id));
+                auto *p = g_game->get_player(g_game->get_local_id(client_id));
                 p->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
                 p->weapons[weapon_idx].active_projs.remove(ref_idx);
 
@@ -257,7 +257,7 @@ void srv_game_tick() {
                 uint32_t weapon_idx = rock->flags.ref_idx_weapon;
                 uint32_t ref_idx = rock->flags.ref_idx_obj;
 
-                auto *p = g_game->get_player(g_game->client_to_local_id(client_id));
+                auto *p = g_game->get_player(g_game->get_local_id(client_id));
                 p->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
                 p->weapons[weapon_idx].active_projs.remove(ref_idx);
 

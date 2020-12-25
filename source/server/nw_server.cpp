@@ -84,7 +84,7 @@ static bool s_send_packet_connection_handshake(
                     info->flags = flags;
                 }
                 else {
-                    int32_t local_id = g_game->client_to_local_id(i);
+                    int32_t local_id = g_game->get_local_id(i);
                     player_t *p = g_game->get_player(local_id);
 
                     info->name = client->name;
@@ -440,7 +440,7 @@ static void s_receive_packet_client_commands(
     uint16_t client_id,
     uint64_t tick,
     event_submissions_t *events) {
-    int32_t local_id = g_game->client_to_local_id(client_id);
+    int32_t local_id = g_game->get_local_id(client_id);
     player_t *p = g_game->get_player(local_id);
 
     if (p) {
@@ -555,7 +555,7 @@ static void s_receive_packet_team_select_request(
     team_color_t color = (team_color_t)serialiser->deserialise_uint32();
 
     if (g_game->check_team_joinable(color)) {
-        int32_t local_id = g_game->client_to_local_id(client_id);
+        int32_t local_id = g_game->get_local_id(client_id);
         player_t *p = g_game->get_player(local_id);
 
         LOG_INFOV("Player %s just joined team %s\n", p->name, team_color_to_string(color));
@@ -741,7 +741,7 @@ static bool s_check_if_client_has_to_correct_hits(
         predicted_projectile_hit_t *hit = &shooter_client->predicted_proj_hits[i];
 
         client_t *target = &g_net_data.clients[hit->client_id];
-        player_t *target_player = g_game->get_player(g_game->client_to_local_id(target->client_id));
+        player_t *target_player = g_game->get_player(g_game->get_local_id(target->client_id));
         float target_half_roundtrip = target->ping / 2.0f;
 
         // Get the two snapshots that encompass the latency of the shooting_player
@@ -871,7 +871,7 @@ static void s_send_packet_game_state_snapshot() {
             player_snapshot_t *snapshot = &packet.player_snapshots[packet.player_data_count];
             snapshot->flags = 0;
 
-            int32_t local_id = g_game->client_to_local_id(c->client_id);
+            int32_t local_id = g_game->get_local_id(c->client_id);
             player_t *p = g_game->get_player(local_id);
 
             // Check if player has to correct general state (position, view direction, etc...)

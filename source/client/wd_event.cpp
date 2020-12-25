@@ -81,7 +81,7 @@ static void s_handle_event_spawn(
 
     LOG_INFOV("Client %i spawned\n", data->client_id);
 
-    int32_t local_id = g_game->client_to_local_id(id);
+    int32_t local_id = g_game->get_local_id(id);
     player_t *p = g_game->get_player(local_id);
     p->ws_position = p->next_random_spawn_position;
     p->ws_view_direction = glm::normalize(-p->ws_position);
@@ -128,7 +128,7 @@ static void s_handle_event_player_disconnected(
     if (wd_am_i_in_server()) {
         event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
-        int32_t local_id = g_game->client_to_local_id(data->client_id);
+        int32_t local_id = g_game->get_local_id(data->client_id);
         player_t *p = g_game->get_player(local_id);
 
         if (p->idx_in_chunk_list > -1) {

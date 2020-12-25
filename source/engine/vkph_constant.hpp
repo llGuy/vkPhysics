@@ -28,5 +28,6 @@ constexpr uint32_t PROJECTILE_MAX_ROCK_COUNT = 1000;
 constexpr float PROJECTILE_ROCK_SPEED = 35.0f;
 
 constexpr float GRAVITY_ACCELERATION = 10.0f;
+constexpr float SHAPE_SWITCH_ANIMATION_TIME = 0.3f;
 
 }
