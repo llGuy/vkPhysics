@@ -72,15 +72,35 @@ public:
 
         LOG_ERROR("Error in hash table remove()\n");
     }
+
+    const T *get(uint32_t hash) const {
+        static int32_t invalid = -1;
+        bucket_t *bucket = &buckets[hash % Bucket_Count];
+        uint32_t bucket_item = 0;
+        uint32_t filled_items = 0;
+
+        for (; bucket_item < Bucket_Size; ++bucket_item) {
+            item_t *item = &bucket->items[bucket_item];
+            if (item->hash != UNINITIALISED_HASH) {
+                ++filled_items;
+                if (hash == item->hash) {
+                    return(&item->value);
+                }
+            }
+        }
+
+        if (filled_items == Bucket_Size) {
+            LOG_ERROR("Error in hash table get()\n");
+        }
+
+        return NULL;
+    }
     
     T *get(
         uint32_t hash) {
         static int32_t invalid = -1;
-        
         bucket_t *bucket = &buckets[hash % Bucket_Count];
-        
         uint32_t bucket_item = 0;
-
         uint32_t filled_items = 0;
 
         for (; bucket_item < Bucket_Size; ++bucket_item) {
@@ -160,13 +180,15 @@ template <
         }
     }
 
-    T *get(
-        uint32_t index) {
+    T *get(uint32_t index) {
         return &data[index];
     }
 
-    T &operator[](
-        uint32_t i) {
+    T &operator[](uint32_t i) {
+        return data[i];
+    }
+
+    const T &operator[](uint32_t i) const {
         return data[i];
     }
 

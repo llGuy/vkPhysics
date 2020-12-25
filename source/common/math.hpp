@@ -103,21 +103,6 @@ struct smooth_exponential_interpolation_t {
     }
 };
 
-struct movement_axes_t {
-    vector3_t right;
-    vector3_t up;
-    vector3_t forward;
-};
-
-inline movement_axes_t compute_movement_axes(
-    const vector3_t &view_direction,
-    const vector3_t &up) {
-    vector3_t right = glm::normalize(glm::cross(view_direction, up));
-    vector3_t forward = glm::normalize(glm::cross(up, right));
-    movement_axes_t axes = {right, up, forward};
-    return axes;
-}
-
 inline float calculate_sphere_circumference(
     float radius) {
     return(2.0f * 3.1415f * radius);

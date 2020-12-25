@@ -99,6 +99,7 @@ struct state_t {
     chunk_t *get_chunk(const ivector3_t &coord);
     // If chunk doesn't exist, return NULL
     chunk_t *access_chunk(const ivector3_t &coord);
+    const chunk_t *access_chunk(const ivector3_t &coord) const;
     chunk_t **get_active_chunks(uint32_t *count);
     chunk_t **get_modified_chunks(uint32_t *count);
     void reset_modification_tracker();

@@ -217,8 +217,15 @@ private:
       Called in execute_action().
     */
     void handle_shape_switch(bool switch_shapes, float dt);
-    void handle_weapon_switch(player_action_t *actions);
-    void execute_player_triggers(player_action_t *player_actions, state_t *state);
+    void handle_weapon_switch(player_action_t *action);
+    void execute_player_triggers(player_action_t *action, state_t *state);
+    void accelerate_meteorite_player(player_action_t *action);
+    void execute_player_direction_change(player_action_t *action);
+    void execute_player_floating_movement(player_action_t *action);
+    void execute_standing_player_movement(player_action_t *action);
+    void execute_ball_player_movement(player_action_t *action);
+    void check_player_dead(player_action_t *action, state_t *state);
+    void update_player_chunk_status(state_t *state);
 
 };
 

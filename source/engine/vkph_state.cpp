@@ -248,10 +248,22 @@ chunk_t *state_t::get_chunk(
     }
 }
 
-chunk_t *state_t::access_chunk(
-    const ivector3_t &coord) {
+chunk_t *state_t::access_chunk(const ivector3_t &coord) {
     uint32_t hash = hash_chunk_coord(coord);
     uint32_t *index = chunk_indices.get(hash);
+
+    if (index) {
+        // Chunk was already added
+        return chunks[*index];
+    }
+    else {
+        return NULL;
+    }
+}
+
+const chunk_t *state_t::access_chunk(const ivector3_t &coord) const {
+    uint32_t hash = hash_chunk_coord(coord);
+    const uint32_t *index = chunk_indices.get(hash);
 
     if (index) {
         // Chunk was already added
