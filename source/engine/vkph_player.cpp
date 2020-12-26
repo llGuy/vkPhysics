@@ -82,21 +82,21 @@ void player_t::execute_action(player_action_t *action, state_t *state) {
             
     case PIM_METEORITE: {
         execute_player_direction_change(action);
-        accelerate_meteorite_player(action);
+        accelerate_meteorite_player(action, state);
     } break;
 
         // FOR NOW STANDING AND BALL ARE EQUIVALENT ///////////////////////
     case PIM_STANDING: {
         execute_player_triggers(action, state);
         execute_player_direction_change(action);
-        execute_standing_player_movement(action);
+        execute_standing_player_movement(action, state);
 
         check_player_dead(action, state);
     } break;
 
     case PIM_BALL: {
         execute_player_direction_change(action);
-        execute_ball_player_movement(action);
+        execute_ball_player_movement(action, state);
 
         check_player_dead(action, state);
     } break;

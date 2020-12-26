@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <vkph_state.hpp>
 
 // #define DEBUG_NETWORKING
 
@@ -12,5 +13,5 @@
 #define LOG_NETWORK_DEBUGV(text, ...)
 #endif
 
-void nw_init(struct event_submissions_t *events);
-void nw_tick(struct event_submissions_t *events);
+void nw_init(vkph::state_t *state);
+void nw_tick(vkph::state_t *state);

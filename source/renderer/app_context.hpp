@@ -6,8 +6,6 @@
 
 #include "vk_context.hpp"
 
-struct event_submissions_t;
-
 namespace app {
 
 void api_init();

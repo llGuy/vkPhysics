@@ -75,12 +75,12 @@ public:
 
     const T *get(uint32_t hash) const {
         static int32_t invalid = -1;
-        bucket_t *bucket = &buckets[hash % Bucket_Count];
+        const bucket_t *bucket = &buckets[hash % Bucket_Count];
         uint32_t bucket_item = 0;
         uint32_t filled_items = 0;
 
         for (; bucket_item < Bucket_Size; ++bucket_item) {
-            item_t *item = &bucket->items[bucket_item];
+            const item_t *item = &bucket->items[bucket_item];
             if (item->hash != UNINITIALISED_HASH) {
                 ++filled_items;
                 if (hash == item->hash) {

@@ -208,7 +208,7 @@ void state_t::clear_players() {
     }
 }
 
-int32_t state_t::get_local_id(uint16_t client_id) {
+int32_t state_t::get_local_id(uint16_t client_id) const {
     return client_to_local_id_map[client_id];
 }
 
@@ -284,10 +284,14 @@ const chunk_t *state_t::access_chunk(const ivector3_t &coord) const {
     }
 }
 
-chunk_t **state_t::get_active_chunks(
-    uint32_t *count) {
+chunk_t **state_t::get_active_chunks(uint32_t *count) {
     *count = chunks.data_count;
     return chunks.data;
+}
+
+const chunk_t **state_t::get_active_chunks(uint32_t *count) const {
+    *count = chunks.data_count;
+    return (const chunk_t **)chunks.data;
 }
 
 chunk_t **state_t::get_modified_chunks(

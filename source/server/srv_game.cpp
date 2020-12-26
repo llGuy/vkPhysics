@@ -1,29 +1,28 @@
-#include "common/event.hpp"
-#include "common/map.hpp"
-#include "common/weapon.hpp"
 #include "srv_main.hpp"
-#include <common/game.hpp>
-#include <common/chunk.hpp>
-#include <common/player.hpp>
+#include <vkph_chunk.hpp>
+#include <vkph_state.hpp>
+#include <vkph_events.hpp>
+#include <vkph_physics.hpp>
+#include <vkph_event_data.hpp>
 
 #include <common/net.hpp>
 
-static listener_t game_listener;
+static vkph::listener_t game_listener;
 
-void spawn_player(uint32_t client_id) {
+void spawn_player(uint32_t client_id, vkph::state_t *state) {
     LOG_INFOV("Client %i spawned\n", client_id);
 
-    int32_t local_id = g_game->get_local_id(client_id);
-    player_t *p = g_game->get_player(local_id);
+    int32_t local_id = state->get_local_id(client_id);
+    vkph::player_t *p = state->get_player(local_id);
     p->health = 200;
     p->ws_position = p->next_random_spawn_position;
     p->ws_view_direction = glm::normalize(-p->ws_position);
     // Calculate up vector
     vector3_t right = glm::cross(p->ws_view_direction, vector3_t(0.0f, 1.0f, 0.0f));
     p->ws_up_vector = glm::cross(right, p->ws_view_direction);
-    p->flags.alive_state = PAS_ALIVE;
+    p->flags.is_alive = true;
     // Meteorite when player spawns
-    p->flags.interaction_mode = PIM_METEORITE;
+    p->flags.interaction_mode = vkph::PIM_METEORITE;
     p->ws_velocity = vector3_t(0.0f);
 
     // Generate a new random position next time player needs to spawn
@@ -33,41 +32,42 @@ void spawn_player(uint32_t client_id) {
     p->next_random_spawn_position = vector3_t(x_rand, y_rand, z_rand);
 }
 
-static void s_handle_event_new_player(event_t *event) {
-    event_new_player_t *data = (event_new_player_t *)event->data;
+static void s_handle_event_new_player(vkph::event_t *event, vkph::state_t *state) {
+    vkph::event_new_player_t *data = (vkph::event_new_player_t *)event->data;
 
-    player_t *player = g_game->add_player();
-    fill_player_info(player, &data->info);
+    vkph::player_t *player = state->add_player();
+    player->init(&data->info, state->client_to_local_id_map);
 
     FL_FREE(event->data);
 }
 
-static void s_handle_event_player_disconnected(
-    event_t *event) {
-    event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
+static void s_handle_event_player_disconnected(vkph::event_t *event, vkph::state_t *state) {
+    auto *data = (vkph::event_player_disconnected_t *)event->data;
 
-    int32_t local_id = g_game->get_local_id(data->client_id);
-    player_t *p = g_game->get_player(local_id);
+    int32_t local_id = state->get_local_id(data->client_id);
+    vkph::player_t *p = state->get_player(local_id);
             
     if (p) {
         // Remove player from the team as well
-        g_game->remove_player_from_team(p);
+        state->remove_player_from_team(p);
 
-        g_game->remove_player(p->local_id);
+        state->remove_player(p->local_id);
     }
 
     FL_FREE(event->data);
 }
 
-static void s_game_listener(void *object, event_t *event, event_submissions_t *events) {
+static void s_game_listener(void *object, vkph::event_t *event) {
+    vkph::state_t *state = (vkph::state_t *)object;
+
     switch(event->type) {
 
-    case ET_NEW_PLAYER: {
-        s_handle_event_new_player(event);
+    case vkph::ET_NEW_PLAYER: {
+        s_handle_event_new_player(event, state);
     } break;
 
-    case ET_PLAYER_DISCONNECTED: {
-        s_handle_event_player_disconnected(event);
+    case vkph::ET_PLAYER_DISCONNECTED: {
+        s_handle_event_player_disconnected(event, state);
     } break;
 
     default: {
@@ -107,34 +107,30 @@ static float s_tube(float x, float y, float z) {
     }
 }
 
-void srv_game_init(event_submissions_t *events) {
-    game_listener = set_listener_callback(&s_game_listener, NULL, events);
+void srv_game_init(vkph::state_t *state) {
+    game_listener = set_listener_callback(&s_game_listener, state);
 
-    subscribe_to_event(ET_NEW_PLAYER, game_listener, events);
-    subscribe_to_event(ET_PLAYER_DISCONNECTED, game_listener, events);
-    subscribe_to_event(ET_SPAWN, game_listener, events);
+    vkph::subscribe_to_event(vkph::ET_NEW_PLAYER, game_listener);
+    vkph::subscribe_to_event(vkph::ET_PLAYER_DISCONNECTED, game_listener);
+    vkph::subscribe_to_event(vkph::ET_SPAWN, game_listener);
 
-    g_game->init_memory();
+    state->prepare();
 
-    // Make this a parameter to the vkPhysics_server program
-    // generate_sphere(vector3_t(0.0f), 30, 180, GT_ADDITIVE, 0b11111111);
-    // load_map("nucleus.map");
-
-    g_game->configure_game_mode(game_mode_t::DEATHMATCH);
-    g_game->configure_map("ice.map");
-    g_game->configure_team_count(2);
-    g_game->configure_team(0, team_color_t::PURPLE, 10);
-    g_game->configure_team(1, team_color_t::YELLOW, 10);
-
-    g_game->start_session();
+    state->configure_game_mode(vkph::game_mode_t::DEATHMATCH);
+    state->configure_map("ice.map");
+    state->configure_team_count(2);
+    state->configure_team(0, vkph::team_color_t::BLUE, 10);
+    state->configure_team(1, vkph::team_color_t::RED, 10);
+    state->start_session();
 }
 
 // Compensate for lag
 static bool s_check_projectile_player_collision_lag(
-    rock_t *rock,
-    int32_t *dst_player) {
-    ivector3_t chunk_coord = space_voxel_to_chunk(space_world_to_voxel(rock->position));
-    chunk_t *c = g_game->access_chunk(chunk_coord);
+    vkph::rock_t *rock,
+    int32_t *dst_player,
+    vkph::state_t *state) {
+    ivector3_t chunk_coord = vkph::space_voxel_to_chunk(vkph::space_world_to_voxel(rock->position));
+    vkph::chunk_t *c = state->access_chunk(chunk_coord);
 
     bool collided = 0;
 
@@ -142,7 +138,7 @@ static bool s_check_projectile_player_collision_lag(
         for (uint32_t i = 0; i < c->players_in_chunk.data_count; ++i) {
             uint8_t player_local_id = c->players_in_chunk[i];
 
-            player_t *target = g_game->get_player(player_local_id);
+            auto *target = state->get_player(player_local_id);
 
             // Get lag compensated position of the player
             auto *shooter_client = &g_net_data.clients[rock->client_id];
@@ -169,16 +165,16 @@ static bool s_check_projectile_player_collision_lag(
             vector3_t approx_target_position = s0->ws_position + (s1->ws_position - s0->ws_position) * progression;
 
             if (target->client_id != rock->client_id) {
-                if (target->flags.interaction_mode == PIM_STANDING ||
-                    target->flags.interaction_mode == PIM_FLOATING) {
-                    collided = collide_sphere_with_standing_player(
+                if (target->flags.interaction_mode == vkph::PIM_STANDING ||
+                    target->flags.interaction_mode == vkph::PIM_FLOATING) {
+                    collided = vkph::collide_sphere_with_standing_player(
                         approx_target_position,
                         target->ws_up_vector,
                         rock->position,
                         0.2f);
                 }
                 else {
-                    collided = collide_sphere_with_rolling_player(
+                    collided = vkph::collide_sphere_with_rolling_player(
                         approx_target_position,
                         rock->position,
                         0.2f);
@@ -188,15 +184,15 @@ static bool s_check_projectile_player_collision_lag(
                     LOG_INFOV("%s just got hit by projectile\n", target->name);
 
                     // Register hit and decrease client's health
-                    if (target->health < rock_t::DIRECT_DAMAGE) {
+                    if (target->health < vkph::rock_t::DIRECT_DAMAGE) {
                         LOG_INFOV("%s just got killed\n", target->name);
 
                         // Player needs to die
-                        target->flags.alive_state = PAS_DEAD;
+                        target->flags.is_alive = false;
                         target->frame_displacement = 0.0f;
                     }
 
-                    target->health -= rock_t::DIRECT_DAMAGE;
+                    target->health -= vkph::rock_t::DIRECT_DAMAGE;
 
                     break;
                 }
@@ -207,19 +203,19 @@ static bool s_check_projectile_player_collision_lag(
     return collided;
 }
 
-void srv_game_tick() {
-    for (uint32_t i = 0; i < g_game->players.data_count; ++i) {
-        player_t *player = g_game->get_player(i);
+void srv_game_tick(vkph::state_t *state) {
+    for (uint32_t i = 0; i < state->players.data_count; ++i) {
+        auto *player = state->get_player(i);
 
         if (player) {
-            if (player->flags.alive_state == PAS_ALIVE) {
+            if (player->flags.is_alive) {
                 // Execute all received player actions
                 for (uint32_t i = 0; i < player->player_action_count; ++i) {
-                    player_action_t *action = &player->player_actions[i];
+                    vkph::player_action_t *action = &player->player_actions[i];
 
-                    execute_action(player, action);
+                    player->execute_action(action, state);
 
-                    if (player->flags.alive_state == PAS_DEAD) {
+                    if (!player->flags.is_alive) {
                         break;
                     }
                 }
@@ -230,14 +226,14 @@ void srv_game_tick() {
     }
 
     // Still need to update all the things that update despite entities (projectiles)
-    for (uint32_t i = 0; i < g_game->rocks.list.data_count; ++i) {
-        rock_t *rock = &g_game->rocks.list[i];
+    for (uint32_t i = 0; i < state->rocks.list.data_count; ++i) {
+        vkph::rock_t *rock = &state->rocks.list[i];
 
         if (rock->flags.active) {
             int32_t target = -1;
 
-            bool collided_with_terrain = check_projectile_terrain_collision(rock);
-            bool collided_with_player = s_check_projectile_player_collision_lag(rock, &target);
+            bool collided_with_terrain = vkph::check_projectile_terrain_collision(rock, state);
+            bool collided_with_player = s_check_projectile_player_collision_lag(rock, &target, state);
 
             if (collided_with_player) {
                 // Do something
@@ -245,27 +241,27 @@ void srv_game_tick() {
                 uint32_t weapon_idx = rock->flags.ref_idx_weapon;
                 uint32_t ref_idx = rock->flags.ref_idx_obj;
 
-                auto *p = g_game->get_player(g_game->get_local_id(client_id));
+                auto *p = state->get_player(state->get_local_id(client_id));
                 p->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
                 p->weapons[weapon_idx].active_projs.remove(ref_idx);
 
                 rock->flags.active = 0;
-                g_game->rocks.list.remove(i);
+                state->rocks.list.remove(i);
             }
             else if (collided_with_terrain) {
                 uint16_t client_id = rock->client_id;
                 uint32_t weapon_idx = rock->flags.ref_idx_weapon;
                 uint32_t ref_idx = rock->flags.ref_idx_obj;
 
-                auto *p = g_game->get_player(g_game->get_local_id(client_id));
+                auto *p = state->get_player(state->get_local_id(client_id));
                 p->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
                 p->weapons[weapon_idx].active_projs.remove(ref_idx);
 
                 rock->flags.active = 0;
-                g_game->rocks.list.remove(i);
+                state->rocks.list.remove(i);
             }
 
-            tick_rock(rock, g_game->dt);
+            rock->tick(state->dt);
         }
     }
 }

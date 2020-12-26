@@ -13,6 +13,7 @@ file(GLOB_RECURSE COMMON_SOURCES "source/common/*.cpp" "source/common/*.hpp" "de
 file(GLOB_RECURSE CLIENT_SOURCES "source/client/*.cpp" "source/client/*.hpp")
 file(GLOB_RECURSE SERVER_SOURCES "source/server/*.cpp" "source/server/*.hpp")
 file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
+file(GLOB_RECURSE ENGINE_SOURCES "source/engine/*.cpp" "source/engine/*.hpp")
 
 # Include directories for all targets
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/stb")
@@ -34,6 +35,14 @@ endif()
 # Create common
 add_library(common STATIC "${COMMON_SOURCES}")
 target_compile_definitions(common PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
+
+# Create engine
+add_library(engine STATIC "${ENGINE_SOURCES}")
+target_compile_definitions(engine PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
+
+# Do not worry, this will be cleaned up after net refactor
+target_include_directories(common PUBLIC "${CMAKE_SOURCE_DIR}/source/engine/")
+target_include_directories(engine PUBLIC "${CMAKE_SOURCE_DIR}/source/common/")
 
 if(Vulkan_FOUND)
   message(STATUS "Found Vulkan package in system")
@@ -57,6 +66,8 @@ endif()
 if(BUILD_CLIENT)
   add_library(renderer STATIC "${RENDERER_SOURCES}")
   target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
+
+  target_include_directories(renderer PUBLIC "engine")
   if(WIN32)
     link_directories("${CMAKE_SOURCE_DIR}/dependencies/glfw/lib")
     target_link_libraries(renderer PUBLIC "user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib" "glfw3.lib" "msvcrtd.lib" "libcmtd.lib" "ucrtd.lib")
@@ -100,7 +111,7 @@ endif()
 
 # Create server (server can get built on whatever platform with or without vulkan support)
 add_executable(vkPhysics_server "${SERVER_SOURCES}")
-target_link_libraries(vkPhysics_server PUBLIC "common" "${CURL_LIBRARIES}")
+target_link_libraries(vkPhysics_server PUBLIC "common" "engine" "${CURL_LIBRARIES}")
 message("${$CURL_LIBRARIES}")
 
 if(WIN32)

@@ -1,4 +1,3 @@
-#include "common/weapon.hpp"
 #include "net.hpp"
 #include "allocators.hpp"
 #include "game_packet.hpp"
@@ -99,9 +98,9 @@ void deserialise_connection_handshake(
     }
 
     full_game_state->team_count = serialiser->deserialise_uint32();
-    full_game_state->team_infos = LN_MALLOC(team_info_t, full_game_state->team_count);
+    full_game_state->team_infos = LN_MALLOC(vkph::team_info_t, full_game_state->team_count);
     for (uint32_t i = 0; i < full_game_state->team_count; ++i) {
-        full_game_state->team_infos[i].color = (team_color_t)serialiser->deserialise_uint32();
+        full_game_state->team_infos[i].color = (vkph::team_color_t)serialiser->deserialise_uint32();
         full_game_state->team_infos[i].player_count = serialiser->deserialise_uint32();
         full_game_state->team_infos[i].max_players = serialiser->deserialise_uint32();
     }
@@ -300,11 +299,11 @@ uint32_t packed_player_commands_size(
     final_size += sizeof(packet_client_commands_t::command_count);
 
     uint32_t command_size =
-        sizeof(player_action_t::bytes) +
-        sizeof(player_action_t::dmouse_x) +
-        sizeof(player_action_t::dmouse_y) +
-        sizeof(player_action_t::dt) +
-        sizeof(player_action_t::accumulated_dt);
+        sizeof(vkph::player_action_t::bytes) +
+        sizeof(vkph::player_action_t::dmouse_x) +
+        sizeof(vkph::player_action_t::dmouse_y) +
+        sizeof(vkph::player_action_t::dt) +
+        sizeof(vkph::player_action_t::accumulated_dt);
 
     final_size += command_size * commands->command_count;
 
@@ -327,16 +326,16 @@ uint32_t packed_player_commands_size(
         final_size += commands->chunk_modifications[c].modified_voxels_count * sizeof_voxel_modification;
 
         // Incorporate the size of the colors
-        final_size += commands->chunk_modifications[c].modified_voxels_count * sizeof(voxel_color_t);
+        final_size += commands->chunk_modifications[c].modified_voxels_count * sizeof(vkph::voxel_color_t);
     }
 
     final_size += sizeof(packet_client_commands_t::predicted_hit_count);
 
     uint32_t predicted_hit_size =
-        sizeof(predicted_projectile_hit_t::client_id) +
-        sizeof(predicted_projectile_hit_t::progression) +
-        sizeof(predicted_projectile_hit_t::tick_before) +
-        sizeof(predicted_projectile_hit_t::tick_after);
+        sizeof(vkph::predicted_projectile_hit_t::client_id) +
+        sizeof(vkph::predicted_projectile_hit_t::progression) +
+        sizeof(vkph::predicted_projectile_hit_t::tick_before) +
+        sizeof(vkph::predicted_projectile_hit_t::tick_after);
 
     final_size += predicted_hit_size * commands->predicted_hit_count;
 
@@ -392,7 +391,7 @@ void deserialise_player_commands(
     packet->flags = serialiser->deserialise_uint8();
     packet->command_count = serialiser->deserialise_uint8();
 
-    packet->actions = LN_MALLOC(player_action_t, packet->command_count);
+    packet->actions = LN_MALLOC(vkph::player_action_t, packet->command_count);
     for (uint32_t i = 0; i < packet->command_count; ++i) {
         packet->actions[i].bytes = serialiser->deserialise_uint16();
         packet->actions[i].dmouse_x = serialiser->deserialise_float32();
@@ -422,7 +421,7 @@ void deserialise_player_commands(
     }
 
     packet->predicted_hit_count = serialiser->deserialise_uint32();
-    packet->hits = LN_MALLOC(predicted_projectile_hit_t, packet->predicted_hit_count);
+    packet->hits = LN_MALLOC(vkph::predicted_projectile_hit_t, packet->predicted_hit_count);
 
     for (uint32_t i = 0; i < packet->predicted_hit_count; ++i) {
         packet->hits[i].client_id = serialiser->deserialise_uint16();
@@ -438,26 +437,26 @@ uint32_t packed_game_state_snapshot_size(
     final_size += sizeof(packet_game_state_snapshot_t::player_data_count);
 
     uint32_t player_snapshot_size =
-        sizeof(player_snapshot_t::flags) +
-        sizeof(player_snapshot_t::client_id) +
-        sizeof(player_snapshot_t::player_local_flags) +
-        sizeof(player_snapshot_t::player_health) +
-        sizeof(player_snapshot_t::ws_position) +
-        sizeof(player_snapshot_t::ws_view_direction) +
-        sizeof(player_snapshot_t::ws_up_vector) +
-        sizeof(player_snapshot_t::ws_next_random_spawn) +
-        sizeof(player_snapshot_t::ws_velocity) +
-        sizeof(player_snapshot_t::frame_displacement) +
-        sizeof(player_snapshot_t::tick) +
-        sizeof(player_snapshot_t::terraform_tick);
+        sizeof(vkph::player_snapshot_t::flags) +
+        sizeof(vkph::player_snapshot_t::client_id) +
+        sizeof(vkph::player_snapshot_t::player_local_flags) +
+        sizeof(vkph::player_snapshot_t::player_health) +
+        sizeof(vkph::player_snapshot_t::ws_position) +
+        sizeof(vkph::player_snapshot_t::ws_view_direction) +
+        sizeof(vkph::player_snapshot_t::ws_up_vector) +
+        sizeof(vkph::player_snapshot_t::ws_next_random_spawn) +
+        sizeof(vkph::player_snapshot_t::ws_velocity) +
+        sizeof(vkph::player_snapshot_t::frame_displacement) +
+        sizeof(vkph::player_snapshot_t::tick) +
+        sizeof(vkph::player_snapshot_t::terraform_tick);
 
     final_size += player_snapshot_size * packet->player_data_count;
 
     uint32_t rock_snapshot_size =
-        sizeof(rock_snapshot_t::position) +
-        sizeof(rock_snapshot_t::direction) +
-        sizeof(rock_snapshot_t::up) +
-        sizeof(rock_snapshot_t::client_id);
+        sizeof(vkph::rock_snapshot_t::position) +
+        sizeof(vkph::rock_snapshot_t::direction) +
+        sizeof(vkph::rock_snapshot_t::up) +
+        sizeof(vkph::rock_snapshot_t::client_id);
 
     final_size += rock_snapshot_size * packet->rock_count;
 
@@ -496,7 +495,7 @@ void deserialise_game_state_snapshot(
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser) {
     packet->player_data_count = serialiser->deserialise_uint32();
-    packet->player_snapshots = LN_MALLOC(player_snapshot_t, packet->player_data_count);
+    packet->player_snapshots = LN_MALLOC(vkph::player_snapshot_t, packet->player_data_count);
 
     for (uint32_t i = 0; i < packet->player_data_count; ++i) {
         packet->player_snapshots[i].flags = serialiser->deserialise_uint16();
@@ -514,7 +513,7 @@ void deserialise_game_state_snapshot(
     }
 
     packet->rock_count = serialiser->deserialise_uint32();
-    packet->rock_snapshots = LN_MALLOC(rock_snapshot_t, packet->rock_count);
+    packet->rock_snapshots = LN_MALLOC(vkph::rock_snapshot_t, packet->rock_count);
 
     for (uint32_t i = 0; i < packet->rock_count; ++i) {
         packet->rock_snapshots[i].position = serialiser->deserialise_vector3();
@@ -529,7 +528,10 @@ uint32_t packed_chunk_voxels_size(
     uint32_t final_size = 0;
     final_size += sizeof(packet_chunk_voxels_t::chunk_in_packet_count);
 
-    uint32_t voxel_chunk_values_size = 3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(voxel_t);
+    using vkph::CHUNK_EDGE_LENGTH;
+
+    uint32_t voxel_chunk_values_size =
+        3 * sizeof(int16_t) + CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(vkph::voxel_t);
 
     final_size += voxel_chunk_values_size * packet->chunk_in_packet_count;
 
@@ -541,13 +543,15 @@ void serialise_packet_chunk_voxels(
     serialiser_t *serialiser) {
     serialiser->serialise_uint32(packet->chunk_in_packet_count);
 
+    using vkph::CHUNK_EDGE_LENGTH;
+
     for (uint32_t i = 0; i < packet->chunk_in_packet_count; ++i) {
         serialiser->serialise_int16(packet->values[i].x);
         serialiser->serialise_int16(packet->values[i].y);
         serialiser->serialise_int16(packet->values[i].z);
         // TODO: In future, optimise this, use the fact that the maximum value for a voxel is 254.
         // Make 255 a marker for: no more values that are not 0 or something
-        serialiser->serialise_bytes((uint8_t *)packet->values[i].voxel_values, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(voxel_t));
+        serialiser->serialise_bytes((uint8_t *)packet->values[i].voxel_values, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(vkph::voxel_t));
     }
 }
 
@@ -558,12 +562,14 @@ void deserialise_packet_chunk_voxels(
 
     packet->values = LN_MALLOC(voxel_chunk_values_t, packet->chunk_in_packet_count);
 
+    using vkph::CHUNK_EDGE_LENGTH;
+
     for (uint32_t i = 0; i < packet->chunk_in_packet_count; ++i) {
         packet->values[i].x = serialiser->deserialise_int16();
         packet->values[i].y = serialiser->deserialise_int16();
         packet->values[i].z = serialiser->deserialise_int16();
 
-        packet->values[i].voxel_values = (voxel_t *)serialiser->deserialise_bytes(NULL, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(voxel_t));
+        packet->values[i].voxel_values = (vkph::voxel_t *)serialiser->deserialise_bytes(NULL, CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * sizeof(vkph::voxel_t));
     }
 }
 

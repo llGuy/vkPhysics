@@ -2,7 +2,7 @@
 #include "allocators.hpp"
 #include "common/constant.hpp"
 #include "game_packet.hpp"
-#include "game.hpp"
+#include <vkph_state.hpp>
 #include "string.hpp"
 #include "socket.hpp"
 #include "meta_packet.hpp"
@@ -10,6 +10,9 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
+
+#include <vkph_chunk.hpp>
+#include <vkph_events.hpp>
 
 net_data_t g_net_data = {};
 
@@ -110,9 +113,7 @@ accumulated_predicted_modification_t *add_acc_predicted_modification() {
 }
 
 // HPT_RESPONSE_AVAILABLE_SERVERS
-static void s_receive_response_available_servers(
-    serialiser_t *serialiser,
-    event_submissions_t *submission) {
+static void s_receive_response_available_servers(serialiser_t *serialiser) {
     g_net_data.available_servers.name_to_server.clear();
     
     meta_response_available_servers_t response = {};
@@ -135,10 +136,10 @@ static void s_receive_response_available_servers(
         g_net_data.available_servers.name_to_server.insert(simple_string_hash(dst->server_name), i);
     }
 
-    submit_event(ET_RECEIVED_AVAILABLE_SERVERS, NULL, submission);
+    vkph::submit_event(vkph::ET_RECEIVED_AVAILABLE_SERVERS, NULL);
 }
 
-void check_incoming_meta_server_packets(event_submissions_t *events) {
+void check_incoming_meta_server_packets() {
     int32_t received = receive_from_bound_address(
         meta_socket,
         g_net_data.message_buffer,
@@ -158,7 +159,7 @@ void check_incoming_meta_server_packets(event_submissions_t *events) {
 
         switch (header.type) {
         case HPT_RESPONSE_AVAILABLE_SERVERS: {
-            s_receive_response_available_servers(&in_serialiser, events);
+            s_receive_response_available_servers(&in_serialiser);
             break;
         }
         case HPT_QUERY_RESPONSIVENESS: {
@@ -193,56 +194,49 @@ void check_incoming_meta_server_packets(event_submissions_t *events) {
     }
 }
 
-void flag_modified_chunks(
-    chunk_modifications_t *modifications,
-    uint32_t count) {
+void flag_modified_chunks(chunk_modifications_t *modifications, uint32_t count, vkph::state_t *state) {
     for (uint32_t i = 0; i < count; ++i) {
         chunk_modifications_t *m_ptr = &modifications[i];
-        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
+        vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
         c_ptr->flags.modified_marker = 1;
         c_ptr->flags.index_of_modification_struct = i;
     }
 }
 
-void unflag_modified_chunks(
-    chunk_modifications_t *modifications,
-    uint32_t count) {
+void unflag_modified_chunks(chunk_modifications_t *modifications, uint32_t count, vkph::state_t *state) {
     for (uint32_t i = 0; i < count; ++i) {
         chunk_modifications_t *m_ptr = &modifications[i];
-        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
+        vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
         c_ptr->flags.modified_marker = 0;
         c_ptr->flags.index_of_modification_struct = 0;
     }
 }
 
-void fill_dummy_voxels(
-    chunk_modifications_t *modifications) {
+void fill_dummy_voxels(chunk_modifications_t *modifications) {
     for (uint32_t i = 0; i < modifications->modified_voxels_count; ++i) {
         voxel_modification_t *v = &modifications->modifications[i];
         g_net_data.dummy_voxels[v->index] = i;
     }
 }
 
-void unfill_dummy_voxels(
-    chunk_modifications_t *modifications) {
+void unfill_dummy_voxels(chunk_modifications_t *modifications) {
     for (uint32_t i = 0; i < modifications->modified_voxels_count; ++i) {
         voxel_modification_t *v = &modifications->modifications[i];
-        g_net_data.dummy_voxels[v->index] = CHUNK_SPECIAL_VALUE;
+        g_net_data.dummy_voxels[v->index] = vkph::CHUNK_SPECIAL_VALUE;
     }
 }
 
 
-uint32_t fill_chunk_modification_array_with_initial_values(
-    chunk_modifications_t *modifications) {
+uint32_t fill_chunk_modification_array_with_initial_values(chunk_modifications_t *modifications, vkph::state_t *state) {
     uint32_t modified_chunk_count = 0;
-    chunk_t **chunks = g_game->get_modified_chunks(&modified_chunk_count);
+    vkph::chunk_t **chunks = state->get_modified_chunks(&modified_chunk_count);
 
     uint32_t current = 0;
             
     for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
         chunk_modifications_t *cm_ptr = &modifications[current];
-        chunk_t *c_ptr = chunks[c_index];
-        chunk_history_t *h_ptr = &chunks[c_index]->history;
+        vkph::chunk_t *c_ptr = chunks[c_index];
+        vkph::chunk_history_t *h_ptr = &chunks[c_index]->history;
 
         if (h_ptr->modification_count == 0) {
             // Chunk doesn't actually have modifications, it was just flagged
@@ -266,16 +260,16 @@ uint32_t fill_chunk_modification_array_with_initial_values(
     return current;
 }
 
-uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications) {
+uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications, vkph::state_t *state) {
     uint32_t modified_chunk_count = 0;
-    chunk_t **chunks = g_game->get_modified_chunks(&modified_chunk_count);
+    vkph::chunk_t **chunks = state->get_modified_chunks(&modified_chunk_count);
 
     uint32_t current = 0;
             
     for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
         chunk_modifications_t *cm_ptr = &modifications[current];
-        chunk_t *c_ptr = chunks[c_index];
-        chunk_history_t *h_ptr = &chunks[c_index]->history;
+        vkph::chunk_t *c_ptr = chunks[c_index];
+        vkph::chunk_history_t *h_ptr = &chunks[c_index]->history;
 
         if (h_ptr->modification_count == 0) {
             // Chunk doesn't actually have modifications, it was just flagged
@@ -300,11 +294,11 @@ uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifi
     return current;
 }
 
-accumulated_predicted_modification_t *accumulate_history() {
+accumulated_predicted_modification_t *accumulate_history(vkph::state_t *state) {
     accumulated_predicted_modification_t *next_acc = add_acc_predicted_modification();
-    acc_predicted_modification_init(next_acc, g_game->current_tick);
+    acc_predicted_modification_init(next_acc, state->current_tick);
     
-    next_acc->acc_predicted_chunk_mod_count = fill_chunk_modification_array_with_initial_values(next_acc->acc_predicted_modifications);
+    next_acc->acc_predicted_chunk_mod_count = fill_chunk_modification_array_with_initial_values(next_acc->acc_predicted_modifications, state);
 
     if (next_acc->acc_predicted_chunk_mod_count == 0) {
         // Pops item that was just pushed
@@ -321,13 +315,14 @@ void merge_chunk_modifications(
     chunk_modifications_t *dst,
     uint32_t *dst_count,
     chunk_modifications_t *src,
-    uint32_t src_count) {
-    flag_modified_chunks(dst, *dst_count);
+    uint32_t src_count,
+    vkph::state_t *state) {
+    flag_modified_chunks(dst, *dst_count, state);
 
     for (uint32_t i = 0; i < src_count; ++i) {
         chunk_modifications_t *src_modifications = &src[i];
 
-        chunk_t *chunk = g_game->get_chunk(ivector3_t(src_modifications->x, src_modifications->y, src_modifications->z));
+        vkph::chunk_t *chunk = state->get_chunk(ivector3_t(src_modifications->x, src_modifications->y, src_modifications->z));
 
         // Chunk has been terraformed on before (between previous game state dispatch and next one)
         if (chunk->flags.modified_marker) {
@@ -339,9 +334,9 @@ void merge_chunk_modifications(
 
             for (uint32_t voxel = 0; voxel < src_modifications->modified_voxels_count; ++voxel) {
                 voxel_modification_t *vm_ptr = &src_modifications->modifications[voxel];
-                voxel_color_t color = src_modifications->colors[voxel];
+                vkph::voxel_color_t color = src_modifications->colors[voxel];
 
-                if (g_net_data.dummy_voxels[vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
+                if (g_net_data.dummy_voxels[vm_ptr->index] == vkph::CHUNK_SPECIAL_VALUE) {
                     // Voxel has not yet been modified, can just push it into array
                     dst_modifications->colors[dst_modifications->modified_voxels_count] = color;
                     dst_modifications->modifications[dst_modifications->modified_voxels_count] = *vm_ptr;
@@ -369,9 +364,9 @@ void merge_chunk_modifications(
 
             m->modified_voxels_count = src_modifications->modified_voxels_count;
             memcpy(m->modifications, src_modifications->modifications, sizeof(voxel_modification_t) * m->modified_voxels_count);
-            memcpy(m->colors, src_modifications->colors, sizeof(voxel_color_t) * m->modified_voxels_count);
+            memcpy(m->colors, src_modifications->colors, sizeof(vkph::voxel_color_t) * m->modified_voxels_count);
         }
     }
     
-    unflag_modified_chunks(dst, *dst_count);
+    unflag_modified_chunks(dst, *dst_count, state);
 }

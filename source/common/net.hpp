@@ -1,13 +1,14 @@
 #pragma once
 
-#include "common/containers.hpp"
-#include "common/weapon.hpp"
+#include <common/containers.hpp>
 #include "tools.hpp"
-#include "player.hpp"
 #include "socket.hpp"
 #include "constant.hpp"
 #include "serialiser.hpp"
-#include <bits/stdint-uintn.h>
+
+#include <vkph_weapon.hpp>
+#include <vkph_player.hpp>
+#include <vkph_projectile.hpp>
 
 #define MAX_PREDICTED_CHUNK_MODIFICATIONS 20
 #define MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK 250
@@ -33,7 +34,7 @@ struct chunk_modifications_t {
     uint32_t modified_voxels_count;
     // Due to alignment and padding issues, it's best to store the data like so
     voxel_modification_t modifications[MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK];
-    voxel_color_t colors[MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK];
+    vkph::voxel_color_t colors[MAX_PREDICTED_VOXEL_MODIFICATIONS_PER_CHUNK];
 
     union {
         uint8_t flags;
@@ -44,7 +45,7 @@ struct chunk_modifications_t {
 };
 
 struct client_chunk_packet_t {
-    voxel_t *chunk_data;
+    vkph::voxel_t *chunk_data;
     uint32_t size;
 };
 
@@ -83,14 +84,14 @@ struct client_t {
 
     vector3_t ws_predicted_velocity;
 
-    player_flags_t predicted_player_flags;
+    vkph::player_flags_t predicted_player_flags;
     uint32_t predicted_player_health;
 
     uint32_t predicted_proj_hit_count;
-    predicted_projectile_hit_t predicted_proj_hits[MAX_PREDICTED_PROJECTILE_HITS];
+    vkph::predicted_projectile_hit_t predicted_proj_hits[MAX_PREDICTED_PROJECTILE_HITS];
 
     // Previous locations
-    circular_buffer_array_t<player_position_snapshot_t, 40> previous_locations;
+    circular_buffer_array_t<vkph::player_position_snapshot_t, 40> previous_locations;
 
     // Predicted chunk modifications
     uint32_t predicted_chunk_mod_count;
@@ -143,7 +144,7 @@ struct net_data_t {
     char *message_buffer;
     stack_container_t<client_t> clients;
     // This stores the index of the modification in the chunk_modifications_t struct's array
-    uint8_t dummy_voxels[CHUNK_VOXEL_COUNT];
+    uint8_t dummy_voxels[vkph::CHUNK_VOXEL_COUNT];
     arena_allocator_t chunk_modification_allocator;
     circular_buffer_array_t<
         accumulated_predicted_modification_t,
@@ -176,19 +177,20 @@ bool send_to_meta_server(serialiser_t *serialiser);
 bool send_to_client(serialiser_t *serialiser, network_address_t address);
 void acc_predicted_modification_init(accumulated_predicted_modification_t *apm_ptr, uint64_t tick);
 accumulated_predicted_modification_t *add_acc_predicted_modification();
-void check_incoming_meta_server_packets(event_submissions_t *events);
-void flag_modified_chunks(chunk_modifications_t *modifications, uint32_t count);
-void unflag_modified_chunks(chunk_modifications_t *modifications, uint32_t count);
+void check_incoming_meta_server_packets();
+void flag_modified_chunks(chunk_modifications_t *modifications, uint32_t count, vkph::state_t *state);
+void unflag_modified_chunks(chunk_modifications_t *modifications, uint32_t count, vkph::state_t *state);
 void fill_dummy_voxels(chunk_modifications_t *modifications);
 void unfill_dummy_voxels(chunk_modifications_t *modifications);
-uint32_t fill_chunk_modification_array_with_initial_values(chunk_modifications_t *modifications);
-uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications);
-accumulated_predicted_modification_t *accumulate_history();
+uint32_t fill_chunk_modification_array_with_initial_values(chunk_modifications_t *modifications, vkph::state_t *state);
+uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications, vkph::state_t *state);
+accumulated_predicted_modification_t *accumulate_history(vkph::state_t *state);
 void merge_chunk_modifications(
     chunk_modifications_t *dst,
     uint32_t *dst_count,
     chunk_modifications_t *src,
-    uint32_t src_count);
+    uint32_t src_count,
+    vkph::state_t *state);
 
 #if NET_DEBUG_TERRAFORMING
 template <typename ...T> void debug_log(

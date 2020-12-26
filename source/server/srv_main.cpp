@@ -5,15 +5,18 @@
 #include "nw_server.hpp"
 #include <common/time.hpp>
 #include <common/meta.hpp>
-#include <common/game.hpp>
 #include <common/files.hpp>
-#include <common/event.hpp>
 #include <common/allocators.hpp>
+
+#include <vkph_state.hpp>
+#include <vkph_events.hpp>
 
 static bool running;
 
-// All event submissions go here
-static event_submissions_t events;
+/*
+  All the game state is in here.
+*/
+static vkph::state_t *state;
 
 static float dt;
 
@@ -28,23 +31,23 @@ static void s_end_time() {
     tick_end = current_time();
 
     dt = time_difference(tick_end, tick_start);
-    g_game->dt = dt;
+    state->dt = dt;
 }
 
 static void s_run() {
     while (running) {
         s_begin_time();
 
-        g_game->timestep_begin(dt);
+        state->timestep_begin(dt);
 
-        dispatch_events(&events);
+        vkph::dispatch_events();
 
         LN_CLEAR();
 
-        srv_game_tick();
-        nw_tick(&events);
+        srv_game_tick(state);
+        nw_tick(state);
 
-        g_game->timestep_end();
+        state->timestep_end();
 
         // Sleep to not kill CPU usage
         time_stamp_t current = current_time();
@@ -76,17 +79,17 @@ int32_t main(
     running = 1;
     files_init();
 
-    nw_init(&events);
+    state = flmalloc<vkph::state_t>();
 
-    game_allocate();
-    srv_game_init(&events);
+    nw_init(state);
+    srv_game_init(state);
 
     s_run();
 
     nw_deactivate_server();
 
-    dispatch_events(&events);
-    dispatch_events(&events);
+    vkph::dispatch_events();
+    vkph::dispatch_events();
 
     return 0;
 }

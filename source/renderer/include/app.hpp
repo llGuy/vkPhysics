@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <common/math.hpp>
 
-struct event_submissions_t;
-
 namespace app {
 
 /*
@@ -16,7 +14,7 @@ extern float g_delta_time;
 /*
   Updates raw_input_t structure and g_delta_time.
  */
-void poll_input_events(event_submissions_t *events);
+void poll_input_events();
 
 enum button_type_t {
     BT_A, BT_B, BT_C, BT_D, BT_E, BT_F, BT_G, BT_H, BT_I, BT_J,

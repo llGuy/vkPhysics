@@ -1,8 +1,9 @@
 #pragma once
 
 #include "net.hpp"
-#include "team.hpp"
-#include "game.hpp"
+
+#include <vkph_team.hpp>
+#include <vkph_state.hpp>
 
 // PACKET TYPES ///////////////////////////////////////////////////////////////
 enum packet_type_t {
@@ -77,7 +78,7 @@ struct full_player_info_t {
 
     float default_speed;
 
-    player_flags_t flags;
+    vkph::player_flags_t flags;
 };
 
 // Will use this when new player joins
@@ -91,7 +92,7 @@ struct packet_connection_handshake_t {
     full_player_info_t *player_infos;
 
     uint32_t team_count;
-    team_info_t *team_infos;
+    vkph::team_info_t *team_infos;
 };
 
 uint32_t packed_connection_handshake_size(packet_connection_handshake_t *game_state);
@@ -119,7 +120,7 @@ struct packet_client_commands_t {
     };
 
     uint8_t command_count;
-    player_action_t *actions;
+    vkph::player_action_t *actions;
 
     // Stuff that the server will use to compare server-calculated data
     uint32_t player_flags;
@@ -136,11 +137,11 @@ struct packet_client_commands_t {
     chunk_modifications_t *chunk_modifications;
 
     uint32_t new_rocks_count;
-    rock_snapshot_t *spawned_rocks;
+    vkph::rock_snapshot_t *spawned_rocks;
 
     // Predicted hits
     uint32_t predicted_hit_count;
-    predicted_projectile_hit_t *hits;
+    vkph::predicted_projectile_hit_t *hits;
 };
 
 uint32_t packed_player_commands_size(packet_client_commands_t *commands);
@@ -150,11 +151,11 @@ void deserialise_player_commands(packet_client_commands_t *packet, serialiser_t 
 // Will use this during game play
 struct packet_game_state_snapshot_t {
     uint32_t player_data_count;
-    player_snapshot_t *player_snapshots;
+    vkph::player_snapshot_t *player_snapshots;
 
     // All the projectiles that have been spawned
     uint32_t rock_count;
-    rock_snapshot_t *rock_snapshots;
+    vkph::rock_snapshot_t *rock_snapshots;
 
     // Total chunk modifications that occured in the entire world
     uint32_t modified_chunk_count;
@@ -175,7 +176,7 @@ chunk_modifications_t *deserialise_chunk_modifications(uint32_t *modification_co
 struct voxel_chunk_values_t {
     // Chunk coord
     int16_t x, y, z;
-    voxel_t *voxel_values;
+    const vkph::voxel_t *voxel_values;
 };
 
 struct packet_chunk_voxels_t {

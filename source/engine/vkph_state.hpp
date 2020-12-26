@@ -89,7 +89,7 @@ struct state_t {
     player_t *add_player();
     void remove_player(uint32_t local_id);
     void clear_players();
-    int32_t get_local_id(uint16_t client_id);
+    int32_t get_local_id(uint16_t client_id) const;
     // Method makes sure the local id is valid
     player_t *get_player(int32_t local_id);
     const player_t *get_player(int32_t local_id) const;
@@ -102,6 +102,7 @@ struct state_t {
     chunk_t *access_chunk(const ivector3_t &coord);
     const chunk_t *access_chunk(const ivector3_t &coord) const;
     chunk_t **get_active_chunks(uint32_t *count);
+    const chunk_t **get_active_chunks(uint32_t *count) const;
     chunk_t **get_modified_chunks(uint32_t *count);
     void reset_modification_tracker();
 

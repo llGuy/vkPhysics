@@ -6,7 +6,8 @@
 #include <GLFW/glfw3.h>
 #include <common/log.hpp>
 #include <common/time.hpp>
-#include <common/event.hpp>
+#include <vkph_events.hpp>
+#include <vkph_event_data.hpp>
 
 namespace app {
 
@@ -217,7 +218,7 @@ const raw_input_t *get_raw_input() {
     return &ctx.raw_input;
 }
 
-void poll_input_events(event_submissions_t *events) {
+void poll_input_events() {
     static bool initialised_time = 0;
     static float current_time = 0.0f;
 
@@ -264,11 +265,11 @@ void poll_input_events(event_submissions_t *events) {
     current_time = glfwGetTime();
 
     if (glfwWindowShouldClose(ctx.window)) {
-        submit_event(ET_CLOSED_WINDOW, NULL, events);
+        vkph::submit_event(vkph::ET_CLOSED_WINDOW, NULL);
     }
 
     if (ctx.raw_input.buttons[BT_ESCAPE].instant) {
-        submit_event(ET_PRESSED_ESCAPE, NULL, events);
+        vkph::submit_event(vkph::ET_PRESSED_ESCAPE, NULL);
     }
     
     // Check if user resized to trigger event
@@ -311,11 +312,11 @@ void poll_input_events(event_submissions_t *events) {
 
     if (ctx.raw_input.resized) {
         // TODO: Change this to linear allocator when allocators are added in the future
-        event_surface_resize_t *resize_data = FL_MALLOC(event_surface_resize_t, 1);
+        vkph::event_surface_resize_t *resize_data = FL_MALLOC(vkph::event_surface_resize_t, 1);
         resize_data->width = ctx.raw_input.window_width;
         resize_data->height = ctx.raw_input.window_height;
         
-        submit_event(ET_RESIZE_SURFACE, resize_data, events);
+        submit_event(vkph::ET_RESIZE_SURFACE, resize_data);
 
         ctx.raw_input.resized = 0;
     }

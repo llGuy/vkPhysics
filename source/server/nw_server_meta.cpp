@@ -1,9 +1,10 @@
 #include <common/log.hpp>
 #include <common/meta.hpp>
+#include <vkph_events.hpp>
 #include <common/files.hpp>
-#include <common/event.hpp>
 #include "common/string.hpp"
 #include "nw_server_meta.hpp"
+#include <vkph_event_data.hpp>
 #include <common/serialiser.hpp>
 #include <common/allocators.hpp>
 
@@ -49,9 +50,9 @@ void nw_check_registration(event_submissions_t *events) {
         data->server_id = id;
         send_request(R_SERVER_ACTIVE, data);
 
-        event_start_server_t *event_data = FL_MALLOC(event_start_server_t, 1);
+        vkph::event_start_server_t *event_data = FL_MALLOC(vkph::event_start_server_t, 1);
         event_data->server_name = server_name;
-        submit_event(ET_START_SERVER, event_data, events);
+        vkph::submit_event(vkph::ET_START_SERVER, event_data);
     }
     else {
         bool register_finished = 0;
@@ -107,9 +108,9 @@ void nw_check_registration(event_submissions_t *events) {
             }
         }
 
-        event_start_server_t *event_data = FL_MALLOC(event_start_server_t, 1);
+        auto *event_data = FL_MALLOC(vkph::event_start_server_t, 1);
         event_data->server_name = current_server_name;
-        submit_event(ET_START_SERVER, event_data, events);
+        vkph::submit_event(vkph::ET_START_SERVER, event_data);
     }
 }
 
