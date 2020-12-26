@@ -1,5 +1,6 @@
 #include "vkph_state.hpp"
 #include "engine/vkph_map.hpp"
+#include "engine/vkph_terraform.hpp"
 #include "vkph_chunk.hpp"
 
 #include <common/string.hpp>
@@ -212,6 +213,15 @@ int32_t state_t::get_local_id(uint16_t client_id) {
 }
 
 player_t *state_t::get_player(int32_t local_id) {
+    if (local_id >= 0) {
+        return players[local_id];
+    }
+    else {
+        return NULL;
+    }
+}
+
+const player_t *state_t::get_player(int32_t local_id) const {
     if (local_id >= 0) {
         return players[local_id];
     }
@@ -477,6 +487,432 @@ void state_t::add_map_name(const char *map_name, const char *path) {
         p->name = map_name;
         p->path = path;
     }
+}
+
+template <typename T>
+static void s_iterate_3d(const ivector3_t &center, uint32_t radius, T to_apply) {
+    int32_t start_z = center.z - (int32_t)radius;
+    int32_t start_y = center.y - (int32_t)radius;
+    int32_t start_x = center.x - (int32_t)radius;
+
+    int32_t diameter = (int32_t)radius * 2 + 1;
+
+    for (int32_t z = start_z; z < start_z + diameter; ++z) {
+        for (int32_t y = start_y; y < start_y + diameter; ++y) {
+            for (int32_t x = start_x; x < start_x + diameter; ++x) {
+                to_apply(x, y, z);
+            }
+        }
+    }
+}
+
+void state_t::generate_hollow_sphere(sphere_create_info_t *info) {
+    float (* generation_proc)(float distance_squared, float radius_squared);
+    switch(info->type) {
+    case GT_ADDITIVE: {
+        generation_proc =
+            [] (float dsqu, float rsqu) {
+                float diff = abs(dsqu - rsqu);
+                if (diff < 120.0f)
+                    return 1.0f - (diff / 120.0f);
+                else
+                    return 0.0f;
+            };
+    } break;
+
+    case GT_DESTRUCTIVE: generation_proc = [] (float dsqu, float rsqu) {return 0.0f;}; break;
+    }
+
+    ivector3_t vs_center = space_world_to_voxel(info->ws_center);
+    vector3_t vs_float_center = (vector3_t)(vs_center);
+
+    ivector3_t current_chunk_coord = space_voxel_to_chunk(vs_center);
+
+    chunk_t *current_chunk = get_chunk(
+        current_chunk_coord);
+
+    current_chunk->flags.has_to_update_vertices = 1;
+
+    int32_t diameter = (int32_t)info->ws_radius * 2 + 1;
+
+    int32_t start_z = vs_center.z - (int32_t)info->ws_radius;
+    int32_t start_y = vs_center.y - (int32_t)info->ws_radius;
+    int32_t start_x = vs_center.x - (int32_t)info->ws_radius;
+
+    float radius_squared = info->ws_radius * info->ws_radius;
+    float smaller_radius_squared = (info->ws_radius - 10) * (info->ws_radius - 10);
+
+    for (int32_t z = start_z; z < start_z + diameter; ++z) {
+        for (int32_t y = start_y; y < start_y + diameter; ++y) {
+            for (int32_t x = start_x; x < start_x + diameter; ++x) {
+                ivector3_t vs_position = ivector3_t(x, y, z);
+                vector3_t vs_float = vector3_t((float)x, (float)y, (float)z);
+                vector3_t vs_diff_float = vs_float - vs_float_center;
+
+                float distance_squared = glm::dot(vs_diff_float, vs_diff_float);
+
+                if (distance_squared <= radius_squared) {
+                    ivector3_t c = space_voxel_to_chunk(vs_position);
+
+                    ivector3_t chunk_origin_diff = vs_position - current_chunk_coord * (int32_t)CHUNK_EDGE_LENGTH;
+                    if (chunk_origin_diff.x >= 0 && chunk_origin_diff.x < 16 &&
+                        chunk_origin_diff.y >= 0 && chunk_origin_diff.y < 16 &&
+                        chunk_origin_diff.z >= 0 && chunk_origin_diff.z < 16) {
+                        // Is within current chunk boundaries
+                        float proportion = generation_proc(distance_squared, smaller_radius_squared);
+
+                        ivector3_t voxel_coord = chunk_origin_diff;
+
+                        voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t new_value = (uint32_t)((proportion) * info->max_value);
+                        if (v->value < new_value) {
+                            v->value = new_value;
+                            v->color = info->color;
+                        }
+                    }
+                    else {
+                        ivector3_t c = space_voxel_to_chunk(vs_position);
+
+                        // In another chunk, need to switch current_chunk pointer
+                        current_chunk = get_chunk(c);
+                        current_chunk_coord = c;
+
+                        current_chunk->flags.has_to_update_vertices = 1;
+
+                        float proportion = generation_proc(distance_squared, smaller_radius_squared);
+
+                        ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
+
+                        voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t new_value = (uint32_t)((proportion) * info->max_value);
+                        if (v->value < new_value) {
+                            v->value = new_value;
+                            v->color = info->color;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void state_t::generate_sphere(sphere_create_info_t *info) {
+    float (* generation_proc)(float distance_squared, float radius_squared);
+    switch(info->type) {
+    case GT_ADDITIVE: generation_proc = [] (float dsqu, float rsqu) {return 1.0f - (dsqu / rsqu);}; break;
+    case GT_DESTRUCTIVE: generation_proc = [] (float dsqu, float rsqu) {return 0.0f;}; break;
+    }
+
+    ivector3_t vs_center = space_world_to_voxel(info->ws_center);
+    vector3_t vs_float_center = (vector3_t)(vs_center);
+
+    ivector3_t current_chunk_coord = space_voxel_to_chunk(vs_center);
+
+    chunk_t *current_chunk = get_chunk(
+        current_chunk_coord);
+
+    current_chunk->flags.has_to_update_vertices = 1;
+
+    int32_t diameter = (int32_t)info->ws_radius * 2 + 1;
+
+    int32_t start_z = vs_center.z - (int32_t)info->ws_radius;
+    int32_t start_y = vs_center.y - (int32_t)info->ws_radius;
+    int32_t start_x = vs_center.x - (int32_t)info->ws_radius;
+
+    float radius_squared = info->ws_radius * info->ws_radius;
+
+    for (int32_t z = start_z; z < start_z + diameter; ++z) {
+        for (int32_t y = start_y; y < start_y + diameter; ++y) {
+            for (int32_t x = start_x; x < start_x + diameter; ++x) {
+                ivector3_t vs_position = ivector3_t(x, y, z);
+                vector3_t vs_float = vector3_t((float)x, (float)y, (float)z);
+                vector3_t vs_diff_float = vs_float - vs_float_center;
+
+                float distance_squared = glm::dot(vs_diff_float, vs_diff_float);
+
+                if (distance_squared <= radius_squared) {
+                    ivector3_t c = space_voxel_to_chunk(vs_position);
+
+                    ivector3_t chunk_origin_diff = vs_position - current_chunk_coord * (int32_t)CHUNK_EDGE_LENGTH;
+                    //if (c.x == current_chunk_coord.x && c.y == current_chunk_coord.y && c.z == current_chunk_coord.z) {
+                    if (chunk_origin_diff.x >= 0 && chunk_origin_diff.x < 16 &&
+                        chunk_origin_diff.y >= 0 && chunk_origin_diff.y < 16 &&
+                        chunk_origin_diff.z >= 0 && chunk_origin_diff.z < 16) {
+                        // Is within current chunk boundaries
+                        float proportion = generation_proc(distance_squared, radius_squared);
+
+                        ivector3_t voxel_coord = chunk_origin_diff;
+
+                        //current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)] = (uint32_t)((proportion) * (float)MAX_VOXEL_VALUE_I);
+
+                        voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t new_value = (uint32_t)((proportion) * info->max_value);
+                        v->value = new_value;
+                        v->color = info->color;
+                    }
+                    else {
+                        ivector3_t c = space_voxel_to_chunk(vs_position);
+
+                        // In another chunk, need to switch current_chunk pointer
+                        current_chunk = get_chunk(c);
+                        current_chunk_coord = c;
+
+                        current_chunk->flags.has_to_update_vertices = 1;
+
+                        float proportion = generation_proc(distance_squared, radius_squared);
+
+                        ivector3_t voxel_coord = vs_position - current_chunk_coord * CHUNK_EDGE_LENGTH;
+
+                        voxel_t *v = &current_chunk->voxels[get_voxel_index(voxel_coord.x, voxel_coord.y, voxel_coord.z)];
+                        uint8_t new_value = (uint32_t)((proportion) * info->max_value);
+                        v->value = new_value;
+                        v->color = info->color;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void state_t::generate_platform(platform_create_info_t *info) {
+    uint8_t (* generation_proc)();
+    switch (info->type) {
+    case GT_ADDITIVE: generation_proc = [] () -> uint8_t {return 80;}; break;
+    case GT_DESTRUCTIVE: generation_proc = [] () -> uint8_t {return 0;}; break;
+    }
+
+    for (int32_t z = info->position.z - info->depth / 2; z < info->position.z + info->depth / 2; ++z) {
+        for (int32_t x = info->position.x - info->width / 2; x < info->position.x + info->width / 2; ++x) {
+            ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
+            ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
+            chunk_t *chunk = get_chunk(chunk_coord);
+            chunk->flags.has_to_update_vertices = 1;
+            ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
+            uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
+            chunk->voxels[index].value = generation_proc();
+            chunk->voxels[index].color = info->color;
+        }
+    }
+}
+
+void state_t::generate_math_equation(math_equation_create_info_t *info) {
+    uint8_t (* generation_proc)(float equation_result);
+    switch (info->type) {
+    case GT_ADDITIVE: generation_proc = [] (float equation_result) {return (uint8_t)(150.0f * equation_result);}; break;
+    case GT_DESTRUCTIVE: generation_proc = [] (float equation_result) {return (uint8_t)0;}; break;
+    }
+
+    for (int32_t z = info->ws_center.z - info->ws_extent.z / 2; z < info->ws_center.z + info->ws_extent.z / 2; ++z) {
+        for (int32_t y = info->ws_center.y - info->ws_extent.y / 2; y < info->ws_center.y + info->ws_extent.y / 2; ++y) {
+            for (int32_t x = info->ws_center.x - info->ws_extent.x / 2; x < info->ws_center.x + info->ws_extent.x / 2; ++x) {
+                float c = info->equation(x - info->ws_center.x, y - info->ws_center.y, z - info->ws_center.z);
+
+                if (c > 0.0f) {
+                    ivector3_t voxel_coord = ivector3_t((float)x, (float)y, (float)z);
+                    ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
+                    chunk_t *chunk = get_chunk(chunk_coord);
+                    chunk->flags.has_to_update_vertices = 1;
+                    ivector3_t local_coord = space_voxel_to_local_chunk(voxel_coord);
+                    uint32_t index = get_voxel_index(local_coord.x, local_coord.y, local_coord.z);
+                    chunk->voxels[index].value = generation_proc(c);
+                    chunk->voxels[index].color = info->color;
+                }
+            }
+        }
+    }
+}
+
+bool state_t::terraform_with_history(terraform_info_t *info) {
+    if (info->package->ray_hit_terrain) {
+        ivector3_t voxel = space_world_to_voxel(info->package->ws_position);
+        ivector3_t chunk_coord = space_voxel_to_chunk(voxel);
+        chunk_t *chunk = access_chunk(chunk_coord);
+
+        if (!chunk->flags.made_modification) {
+            // Push this chunk onto list of modified chunks
+            modified_chunks[modified_chunk_count++] = chunk;
+        }
+                    
+        chunk->flags.made_modification = 1;
+        chunk->flags.has_to_update_vertices = 1;
+
+        float coeff = 0.0f;
+        switch(info->type) {
+        case TT_DESTROY: {coeff = -1.0f;} break;
+        case TT_BUILD: {coeff = +1.0f;} break;
+        }
+
+        float radius_squared = info->radius * info->radius;
+        ivector3_t bottom_corner = voxel - ivector3_t((int32_t)info->radius);
+        int32_t diameter = (int32_t)info->radius * 2 + 1;
+
+        for (int32_t z = bottom_corner.z; z < bottom_corner.z + diameter; ++z) {
+            for (int32_t y = bottom_corner.y; y < bottom_corner.y + diameter; ++y) {
+                for (int32_t x = bottom_corner.x; x < bottom_corner.x + diameter; ++x) {
+                    vector3_t current_voxel = vector3_t((float)x, (float)y, (float)z);
+                    vector3_t diff = current_voxel - (vector3_t)voxel;
+                    float distance_squared = glm::dot(diff, diff);
+
+                    if (distance_squared <= radius_squared) {
+                        ivector3_t current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
+                                
+                        if (current_local_coord.x < 0 || current_local_coord.x >= 16 ||
+                            current_local_coord.y < 0 || current_local_coord.y >= 16 ||
+                            current_local_coord.z < 0 || current_local_coord.z >= 16) {
+                            // If the current voxel coord is out of bounds, switch chunks
+                            ivector3_t chunk_coord = space_voxel_to_chunk(current_voxel);
+                            chunk_t *new_chunk = get_chunk(chunk_coord);
+
+                            chunk = new_chunk;
+
+                            if (!chunk->flags.made_modification) {
+                                // Push this chunk onto list of modified chunks
+                                modified_chunks[modified_chunk_count++] = chunk;
+                            }
+                                        
+                            chunk->flags.made_modification = 1;
+                            chunk->flags.has_to_update_vertices = 1;
+
+                            current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
+                        }
+
+                        uint32_t voxel_index = get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
+                        voxel_t *voxel = &chunk->voxels[voxel_index];
+                        uint8_t voxel_value = voxel->value;
+                        float proportion = 1.0f - (distance_squared / radius_squared);
+
+                        int32_t current_voxel_value = (int32_t)voxel->value;
+
+                        int32_t new_value = (int32_t)(proportion * coeff * dt * info->speed) + current_voxel_value;
+
+                        uint8_t *vh = &chunk->history.modification_pool[voxel_index];
+                                    
+                        if (new_value > (int32_t)CHUNK_MAX_VOXEL_VALUE_I) {
+                            voxel_value = (int32_t)CHUNK_MAX_VOXEL_VALUE_I;
+                        }
+                        else if (new_value < 0) {
+                            voxel_value = 0;
+                        }
+                        else {
+                            voxel_value = (uint8_t)new_value;
+                        }
+
+                        // Didn't add to the history yet
+                        if (*vh == CHUNK_SPECIAL_VALUE && voxel_value != voxel->value) {
+                            *vh = voxel->value;
+                            chunk->history.modification_stack[chunk->history.modification_count++] = voxel_index;
+                        }
+                                    
+                        voxel->value = voxel_value;
+                        voxel->color = info->package->color;
+                    }
+                }
+            }
+        }
+
+        return 1;
+    }
+
+    return 0;
+}
+
+bool state_t::terraform_without_history(terraform_info_t *info) {
+    if (info->package->ray_hit_terrain) {
+        ivector3_t voxel = space_world_to_voxel(info->package->ws_position);
+        ivector3_t chunk_coord = space_voxel_to_chunk(voxel);
+        chunk_t *chunk = access_chunk(chunk_coord);
+
+        if (chunk) {
+            ivector3_t local_voxel_coord = space_voxel_to_local_chunk(voxel);
+            voxel_t *voxel_ptr = &chunk->voxels[get_voxel_index(local_voxel_coord.x, local_voxel_coord.y, local_voxel_coord.z)];
+            if (voxel_ptr->value > CHUNK_SURFACE_LEVEL) {
+                info->package->ray_hit_terrain = 1;
+
+                chunk->flags.made_modification = 1;
+                chunk->flags.has_to_update_vertices = 1;
+
+                float coeff = 0.0f;
+                switch(info->type) {
+                        
+                case TT_DESTROY: {
+                    coeff = -1.0f;
+                } break;
+                        
+                case TT_BUILD: {
+                    coeff = +1.0f;
+                } break;
+                        
+                }
+
+                float radius_squared = info->radius * info->radius;
+                ivector3_t bottom_corner = voxel - ivector3_t((int32_t)info->radius);
+                int32_t diameter = (int32_t)info->radius * 2 + 1;
+
+                for (int32_t z = bottom_corner.z; z < bottom_corner.z + diameter; ++z) {
+                    for (int32_t y = bottom_corner.y; y < bottom_corner.y + diameter; ++y) {
+                        for (int32_t x = bottom_corner.x; x < bottom_corner.x + diameter; ++x) {
+                            vector3_t current_voxel = vector3_t((float)x, (float)y, (float)z);
+                            vector3_t diff = current_voxel - (vector3_t)voxel;
+                            float distance_squared = glm::dot(diff, diff);
+
+                            if (distance_squared <= radius_squared) {
+                                ivector3_t current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
+                                
+                                if (current_local_coord.x < 0 || current_local_coord.x >= 16 ||
+                                    current_local_coord.y < 0 || current_local_coord.y >= 16 ||
+                                    current_local_coord.z < 0 || current_local_coord.z >= 16) {
+                                    // If the current voxel coord is out of bounds, switch chunks
+                                    ivector3_t chunk_coord = space_voxel_to_chunk(current_voxel);
+                                    chunk_t *new_chunk = get_chunk(chunk_coord);
+
+                                    chunk = new_chunk;
+                                    chunk->flags.made_modification = 1;
+                                    chunk->flags.has_to_update_vertices = 1;
+
+                                    current_local_coord = (ivector3_t)current_voxel - chunk->xs_bottom_corner;
+                                }
+
+                                uint32_t voxel_index = get_voxel_index(current_local_coord.x, current_local_coord.y, current_local_coord.z);
+
+                                voxel_t *voxel = &chunk->voxels[voxel_index];
+                                float proportion = 1.0f - (distance_squared / radius_squared);
+
+                                int32_t current_voxel_value = (int32_t)voxel->value;
+
+                                int32_t new_value = (int32_t)(proportion * coeff * dt * info->speed) + current_voxel_value;
+
+                                uint8_t voxel_value = 0;
+                                    
+                                if (new_value > (int32_t)CHUNK_MAX_VOXEL_VALUE_I) {
+                                    voxel_value = (int32_t)CHUNK_MAX_VOXEL_VALUE_I;
+                                }
+                                else if (new_value < 0) {
+                                    voxel_value = 0;
+                                }
+                                else {
+                                    voxel_value = (uint8_t)new_value;
+                                }
+
+                                voxel->value = voxel_value;
+                                voxel->color = info->package->color;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return 1;
+    }
+
+    return 0;
+}
+
+bool state_t::terraform(terraform_info_t *info) {
+    if (flags.track_history)
+        return terraform_with_history(info);
+    else
+        return terraform_without_history(info);
 }
 
 void state_t::load_map_names() {

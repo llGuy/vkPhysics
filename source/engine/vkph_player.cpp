@@ -116,7 +116,7 @@ void player_t::execute_action(player_action_t *action, state_t *state) {
         weapons[i].elapsed += action->dt;
     }
 
-    update_player_chunk_status();
+    update_player_chunk_status(state);
 }
 
 vector3_t player_t::compute_view_position() {
@@ -209,10 +209,26 @@ void player_t::execute_player_triggers(player_action_t *player_actions, state_t 
             terraform_package.color,
             state);
 
-        if (player_actions->trigger_left)
-            terraform(TT_DESTROY, terraform_package, PLAYER_TERRAFORMING_RADIUS, PLAYER_TERRAFORMING_SPEED, player_actions->accumulated_dt);
-        if (player_actions->trigger_right)
-            terraform(TT_BUILD, terraform_package, PLAYER_TERRAFORMING_RADIUS, PLAYER_TERRAFORMING_SPEED, player_actions->accumulated_dt);
+        if (player_actions->trigger_left) {
+            terraform_info_t info = {};
+            info.dt = player_actions->accumulated_dt;
+            info.package = &terraform_package;
+            info.radius = PLAYER_TERRAFORMING_RADIUS;
+            info.speed = PLAYER_TERRAFORMING_SPEED;
+            info.type = TT_DESTROY;
+
+            state->terraform(&info);
+        }
+        if (player_actions->trigger_right) {
+            terraform_info_t info = {};
+            info.dt = player_actions->accumulated_dt;
+            info.package = &terraform_package;
+            info.radius = PLAYER_TERRAFORMING_RADIUS;
+            info.speed = PLAYER_TERRAFORMING_SPEED;
+            info.type = TT_BUILD;
+
+            state->terraform(&info);
+        }
 
         if (player_actions->flashlight) {
             flags.flashing_light ^= 1;
@@ -221,7 +237,7 @@ void player_t::execute_player_triggers(player_action_t *player_actions, state_t 
     }
 }
 
-void player_t::accelerate_meteorite_player(player_action_t *actions) {
+void player_t::accelerate_meteorite_player(player_action_t *actions, const state_t *state) {
     // Need to set player's up vector depending on direction it is flying
     vector3_t right = glm::normalize(glm::cross(ws_view_direction, ws_up_vector));
     ws_up_vector = glm::normalize(glm::cross(right, ws_view_direction));
@@ -245,7 +261,7 @@ void player_t::accelerate_meteorite_player(player_action_t *actions) {
     collision.es_position = collision.ws_position / collision.ws_size;
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
-    ws_position = collide_and_slide(&collision) * player_scale;
+    ws_position = collide_and_slide(&collision, state) * player_scale;
     ws_velocity = (collision.es_velocity * player_scale) / actions->dt;
 
     if (collision.detected) {
@@ -311,7 +327,7 @@ void player_t::execute_player_floating_movement(player_action_t *actions) {
         ws_position -= ws_up_vector * actions->dt * default_speed;
 }
 
-void player_t::execute_standing_player_movement(player_action_t *actions) {
+void player_t::execute_standing_player_movement(player_action_t *actions, const state_t *state) {
     if (flags.is_on_ground) {
         if (animated_state == PAS_STOP_FAST && frame_displacement / actions->dt > 0.002f) {
             // Need to slow down
@@ -356,16 +372,17 @@ void player_t::execute_standing_player_movement(player_action_t *actions) {
         this,
         actions,
         &forces,
-        MRF_GRAVITY_CHECK_INCLINATION | MRF_ABRUPT_STOP | MRF_CAP_SPEED);
+        MRF_GRAVITY_CHECK_INCLINATION | MRF_ABRUPT_STOP | MRF_CAP_SPEED,
+        state);
 }
 
-void player_t::execute_ball_player_movement(player_action_t *actions) {
+void player_t::execute_ball_player_movement(player_action_t *actions, const state_t *state) {
     force_values_t forces = {};
     forces.friction = 1.0f;
     forces.movement_acceleration = 10.0f;
     forces.gravity = 10.0f;
     forces.maximum_walking_speed = default_speed;
-    resolve_player_movement(this, actions, &forces, MRF_ADOPT_GRAVITY | MRF_CAP_SPEED);
+    resolve_player_movement(this, actions, &forces, MRF_ADOPT_GRAVITY | MRF_CAP_SPEED, state);
 }
 
 void player_t::check_player_dead(player_action_t *actions, state_t *state) {

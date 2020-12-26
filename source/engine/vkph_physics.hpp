@@ -64,7 +64,8 @@ void resolve_player_movement(
     player_t *player,
     player_action_t *actions,
     force_values_t *force_values,
-    int32_t flags);
+    int32_t flags,
+    const state_t *state);
 
 /*
   When doing any sort of collision with terrain (whether it be player-terrain,
@@ -102,14 +103,44 @@ struct terrain_collision_t {
     vector3_t es_contact_point;
 };
 
+/*
+  Performs the collide and slide algorithm on an entity with the terrain.
+  (It generates the chunk terrain mesh on the fly).
+*/
 vector3_t collide_and_slide(terrain_collision_t *collision, const state_t *state);
+
 void check_ray_terrain_collision(terrain_collision_t *collision, const state_t *state);
 
-terraform_info_t cast_terrain_ray(
+terraform_package_t cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
     float max_reach,
     voxel_color_t color,
     const state_t *state);
+
+/*
+  Collision detection with other types of bodies which are not the terrain.
+*/
+bool collide_sphere_with_standing_player(
+    const vector3_t &player_pos,
+    const vector3_t &player_up,
+    const vector3_t &scenter,
+    float sradius);
+
+bool collide_sphere_with_rolling_player(
+    const vector3_t &target_pos,
+    const vector3_t &scenter,
+    float sradius);
+
+bool collide_sphere_with_player(
+    const player_t *player,
+    const vector3_t &scenter,
+    float sradius);
+
+/*
+  These functions use the above functions.
+ */
+bool check_projectile_players_collision(struct rock_t *rock, int32_t *dst_player, const state_t *state);
+bool check_projectile_terrain_collision(struct rock_t *rock, const state_t *state);
 
 }

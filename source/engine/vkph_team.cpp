@@ -1,6 +1,6 @@
-#include "team.hpp"
-#include "allocators.hpp"
-#include "common/chunk.hpp"
+#include "vkph_team.hpp"
+
+namespace vkph {
 
 void team_t::init(
     team_color_t color,
@@ -101,4 +101,6 @@ vector4_t team_color_to_v4(team_color_t color, float alpha) {
 
 voxel_color_t team_color_to_voxel_color(team_color_t color) {
     return v3_color_to_b8(vector3_t(team_color_to_v4(color)));
+}
+
 }

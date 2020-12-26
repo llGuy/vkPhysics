@@ -43,13 +43,21 @@ struct math_equation_create_info_t {
 
 enum terraform_type_t { TT_DESTROY, TT_BUILD };
 
-struct terraform_info_t {
+struct terraform_package_t {
     // Voxel position
     vector3_t ws_position;
     // Triangle contact point in world space
     vector3_t ws_contact_point;
     bool ray_hit_terrain;
     voxel_color_t color;
+};
+
+struct terraform_info_t {
+    terraform_type_t type;
+    terraform_package_t *package;
+    float radius;
+    float speed;
+    float dt;
 };
 
 }

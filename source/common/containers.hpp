@@ -252,13 +252,15 @@ template <
         }
     }
 
-    T *get(
-        uint32_t index) {
+    T *get(uint32_t index) {
         return &data[index];
     }
 
-    T &operator[](
-        uint32_t i) {
+    T &operator[](uint32_t i) {
+        return data[i];
+    }
+
+    const T &operator[](uint32_t i) const {
         return data[i];
     }
 

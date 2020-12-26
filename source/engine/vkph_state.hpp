@@ -92,6 +92,7 @@ struct state_t {
     int32_t get_local_id(uint16_t client_id);
     // Method makes sure the local id is valid
     player_t *get_player(int32_t local_id);
+    const player_t *get_player(int32_t local_id) const;
 
     void clear_chunks();
 
@@ -109,6 +110,7 @@ struct state_t {
     void generate_hollow_sphere(sphere_create_info_t *info);
     void generate_platform(platform_create_info_t *info);
     void generate_math_equation(math_equation_create_info_t *info);
+    bool terraform(terraform_info_t *info);
 
     map_t *load_map(const char *path);
     void save_map(map_t *map = NULL);
@@ -121,6 +123,8 @@ private:
 
 
     void load_map_names();
+    bool terraform_with_history(terraform_info_t *info);
+    bool terraform_without_history(terraform_info_t *info);
 
 };
 

@@ -91,7 +91,8 @@ void resolve_player_movement(
     player_t *player,
     player_action_t *actions,
     force_values_t *force_values,
-    int32_t flags) {
+    int32_t flags,
+    const state_t *state) {
     vector3_t acceleration = vector3_t(0.0f);
     bool made_movement = compute_acceleration_vector(player, actions, (movement_resolution_flags_t)flags, force_values, &acceleration);
         
@@ -116,7 +117,7 @@ void resolve_player_movement(
     collision.es_position = collision.ws_position / collision.ws_size;
     collision.es_velocity = collision.ws_velocity / collision.ws_size;
 
-    vector3_t ws_new_position = collide_and_slide(&collision) * PLAYER_SCALE;
+    vector3_t ws_new_position = collide_and_slide(&collision, state) * PLAYER_SCALE;
 
     if (player->flags.is_on_ground) {
         float len = glm::length(ws_new_position - player->ws_position);
@@ -340,7 +341,7 @@ static collision_triangle_t *s_get_collision_triangles(
             for (int32_t x = bounding_cube_min.x; x < bounding_cube_max.x; ++x) {
                 ivector3_t voxel_coord = ivector3_t(x, y, z);
                 ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
-                chunk_t *chunk = state->access_chunk(chunk_coord);
+                const chunk_t *chunk = state->access_chunk(chunk_coord);
 
                 if (chunk) {
                     bool doesnt_exist = 0;
@@ -778,7 +779,7 @@ void check_ray_terrain_collision(terrain_collision_t *collision, const state_t *
     }
 }
 
-terraform_info_t cast_terrain_ray(
+terraform_package_t cast_terrain_ray(
     const vector3_t &ws_ray_start,
     const vector3_t &ws_ray_direction,
     float max_reach,
@@ -793,7 +794,7 @@ terraform_info_t cast_terrain_ray(
 
     float max_reach_squared = max_reach * max_reach;
 
-    terraform_info_t package = {};
+    terraform_package_t package = {};
     package.ray_hit_terrain = 0;
     package.color = color;
 
@@ -825,6 +826,117 @@ terraform_info_t cast_terrain_ray(
     }
 
     return package;
+}
+
+bool collide_sphere_with_standing_player(
+    const vector3_t &player_pos,
+    const vector3_t &player_up,
+    const vector3_t &scenter,
+    float sradius) {
+    float player_height = PLAYER_SCALE * 2.0f;
+
+    // Check collision with 2 spheres
+    float sphere_scale = player_height * 0.5f;
+    vector3_t body_low = player_pos + (player_up * player_height * 0.22f);
+    vector3_t body_high = player_pos + (player_up * player_height * 0.75f);
+
+    vector3_t body_low_diff = body_low - scenter;
+    vector3_t body_high_diff = body_high - scenter;
+
+    float dist2_low = glm::dot(body_low_diff, body_low_diff);
+    float dist2_high = glm::dot(body_high_diff, body_high_diff);
+
+    float dist_min = sradius + sphere_scale;
+    float dist_min2 = dist_min * dist_min;
+
+    if (dist2_low < dist_min2 || dist2_high < dist_min2) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+bool collide_sphere_with_rolling_player(
+    const vector3_t &target_pos,
+    const vector3_t &scenter,
+    float sradius) {
+    float dist_min = sradius + PLAYER_SCALE;
+    float dist_min2 = dist_min * dist_min;
+
+    vector3_t diff = target_pos - scenter;
+    float dist_to_player2 = glm::dot(diff, diff);
+
+    if (dist_to_player2 < dist_min2) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+bool collide_sphere_with_player(
+    const player_t *player,
+    const vector3_t &scenter,
+    float sradius) {
+    if (player->flags.interaction_mode == PIM_STANDING ||
+        player->flags.interaction_mode == PIM_FLOATING) {
+        return collide_sphere_with_standing_player(
+            player->ws_position,
+            player->ws_up_vector,
+            scenter,
+            sradius);
+    }
+    else {
+        return collide_sphere_with_rolling_player(
+            player->ws_position,
+            scenter,
+            sradius);
+    }
+
+    return false;
+}
+
+bool check_projectile_players_collision(rock_t *rock, int32_t *dst_player, const state_t *state) {
+    // Check if there was collision with players or terrain
+    ivector3_t chunk_coord = space_voxel_to_chunk(space_world_to_voxel(rock->position));
+    const chunk_t *c = state->access_chunk(chunk_coord);
+
+    if (c) {
+        for (uint32_t i = 0; i < c->players_in_chunk.data_count; ++i) {
+            uint8_t player_local_id = c->players_in_chunk[i];
+
+            const player_t *p = state->get_player(player_local_id);
+
+            if (p->client_id != rock->client_id) {
+                if (collide_sphere_with_player(p, rock->position, 0.2f)) {
+                    // Collision!
+                    *dst_player = (int32_t)player_local_id;
+
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+bool check_projectile_terrain_collision(rock_t *rock, const state_t *state) {
+    terrain_collision_t collision = {};
+    collision.ws_size = vector3_t(0.2f);
+    collision.ws_position = rock->position;
+    collision.ws_velocity = rock->direction;
+    collision.es_position = collision.ws_position / collision.ws_size;
+    collision.es_velocity = collision.ws_velocity / collision.ws_size;
+
+    check_ray_terrain_collision(&collision, state);
+    if (collision.detected) {
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 }

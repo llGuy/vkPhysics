@@ -157,7 +157,7 @@ struct player_t {
     vector3_t current_camera_up;
     vector3_t next_camera_up;
 
-    terraform_info_t terraform_package;
+    terraform_package_t terraform_package;
 
     /* 
       Basically a timer (death checking for falling down forever).
@@ -219,11 +219,11 @@ private:
     void handle_shape_switch(bool switch_shapes, float dt);
     void handle_weapon_switch(player_action_t *action);
     void execute_player_triggers(player_action_t *action, state_t *state);
-    void accelerate_meteorite_player(player_action_t *action);
+    void accelerate_meteorite_player(player_action_t *action, const state_t *state);
     void execute_player_direction_change(player_action_t *action);
     void execute_player_floating_movement(player_action_t *action);
-    void execute_standing_player_movement(player_action_t *action);
-    void execute_ball_player_movement(player_action_t *action);
+    void execute_standing_player_movement(player_action_t *action, const state_t *state);
+    void execute_ball_player_movement(player_action_t *action, const state_t *state);
     void check_player_dead(player_action_t *action, state_t *state);
     void update_player_chunk_status(state_t *state);
 
