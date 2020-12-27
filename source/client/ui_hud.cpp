@@ -174,7 +174,7 @@ void ui_submit_hud() {
     if (gameplay_display) {
         // Check if main player health has changed
         int32_t p_idx = wd_get_local_player();
-        player_t *p = g_game->get_player(p_idx);
+        player_t *p = state->get_player(p_idx);
 
         if (p) {
             uint32_t current_health = p->health;

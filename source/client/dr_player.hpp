@@ -1,7 +1,7 @@
 #pragma once
 
-#include <common/player.hpp>
 #include <vk.hpp>
+#include <vkph_player.hpp>
 
 typedef vk::mesh_render_data_t player_render_data_t;
 
@@ -19,4 +19,4 @@ struct player_render_t {
 };
 
 player_render_t *dr_player_render_init();
-bool dr_is_animation_repeating(player_animated_state_t state);
+bool dr_is_animation_repeating(vkph::player_animated_state_t state);

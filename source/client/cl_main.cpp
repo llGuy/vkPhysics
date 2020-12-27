@@ -13,9 +13,9 @@
 #include "cl_event.hpp"
 #include "nw_client.hpp"
 #include "cl_render.hpp"
-#include <common/game.hpp>
+#include <vkph_state.hpp>
 #include <common/files.hpp>
-#include <common/event.hpp>
+#include <vkph_events.hpp>
 #include "nw_client_meta.hpp"
 #include "nw_client_meta.hpp"
 #include <ui.hpp>
@@ -25,30 +25,32 @@
 static bool running;
 
 // Core listener of in-game events - main code in cl_event.cpp
-static listener_t core_listener;
+static vkph::listener_t core_listener;
 
-// All event submissions go here
-static event_submissions_t events;
+/*
+  Client's game state is here:
+*/
+static vkph::state_t *state;
 
 static float dt;
 
 // Starts a fade in effect into the main menu screen
 static void s_open() {
     // Launch fade effect immediately
-    event_begin_fade_effect_t *fade_info = FL_MALLOC(event_begin_fade_effect_t, 1);
+    vkph::event_begin_fade_effect_t *fade_info = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
     fade_info->dest_value = 1.0f;
     fade_info->duration = 6.0f;
     fade_info->trigger_count = 0;
-    submit_event(ET_BEGIN_FADE, fade_info, &events);
+    vkph::submit_event(vkph::ET_BEGIN_FADE, fade_info);
     
-    submit_event(ET_ENTER_MAIN_MENU_SCENE, NULL, &events);
+    vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
 }
 
 static void s_run() {
     while (running) {
-        app::poll_input_events(&events);
+        app::poll_input_events();
         app::translate_input();
-        dispatch_events(&events);
+        vkph::dispatch_events();
 
         LN_CLEAR();
 
@@ -60,11 +62,11 @@ static void s_run() {
             frame.transfer_command_buffer,
             frame.ui_command_buffer,
             frame.render_shadow_command_buffer,
-            &events);
+            state);
 
         // This needs to always happen - quite an important part of the loop
         // Handles transitions between different game modes
-        fx_tick_fade_effect(&events);
+        fx_tick_fade_effect();
 
         cl_finish_frame();
         dt = app::g_delta_time;
@@ -104,41 +106,43 @@ int32_t main(
     char *argv[]) {
     global_linear_allocator_init((uint32_t)megabytes(30));
     srand(time(NULL));
-    core_listener = set_listener_callback(cl_game_event_listener, NULL, &events);
+    core_listener = set_listener_callback(cl_game_event_listener, NULL);
     running = 1;
     files_init();
-    cl_subscribe_to_events(core_listener, &events);
+    cl_subscribe_to_events(core_listener);
 
     s_parse_command_line_args(argc, argv);
-    game_allocate();
+
+    state = flmalloc<vkph::state_t>();
+    
     app::init_settings();
     vk::init_context();
     ui::init_submission();
     fx_fader_init();
-    nw_init(&events);
+    nw_init(state);
 
     s_open();
 
     cl_command_buffers_init();
 
     dr_resources_init();
-    wd_init(&events);
-    ui_init(&events);
+    wd_init(state);
+    ui_init();
 
     // Initialise scenes
-    sc_scenes_init(&events);
+    sc_scenes_init();
     // Bind main menu
     sc_bind(ST_MAIN_MENU);
 
     fx_get_frame_info()->debug_window = 1;
 
     // Check if the user has registered and can actually join servers
-    nw_check_registration(&events);
+    nw_check_registration();
 
     s_run();
 
-    dispatch_events(&events);
-    dispatch_events(&events);
+    vkph::dispatch_events();
+    vkph::dispatch_events();
 
     nw_stop_request_thread();
 
@@ -147,8 +151,8 @@ int32_t main(
 
 void cl_terminate() {
     running = 0;
-    submit_event(ET_EXIT_SCENE, NULL, &events);
-    submit_event(ET_LEAVE_SERVER, NULL, &events);
+    vkph::submit_event(vkph::ET_EXIT_SCENE, NULL);
+    vkph::submit_event(vkph::ET_LEAVE_SERVER, NULL);
 }
 
 float cl_delta_time() {

@@ -3,7 +3,7 @@
 #include <ui.hpp>
 #include <app.hpp>
 #include "ui_hover.hpp"
-#include <common/event.hpp>
+#include <vkph_events.hpp>
 
 enum popup_section_type_t { PST_BUTTON_DOUBLE, PST_BUTTON_SINGLE, PST_TEXT, PST_INPUT, PST_INVALID };
 
@@ -12,7 +12,7 @@ struct popup_button_t {
     ui::text_t text;
     widget_color_t color;
     const char *button_string;
-    void (* handle_press_proc)(struct ui_popup_t *, event_submissions_t *);
+    void (* handle_press_proc)(struct ui_popup_t *);
 
     popup_button_t() = default;
 };
@@ -64,14 +64,14 @@ ui_popup_t *ui_add_popup(uint32_t vertical_section_count);
 void ui_push_popup_section_button_double(
     ui_popup_t *popup,
     const char **button_text,
-    void (** handle_press_proc)(ui_popup_t *, event_submissions_t *));
+    void (** handle_press_proc)(ui_popup_t *));
 void ui_push_popup_section_button_single(
     ui_popup_t *popup,
     const char *button_text,
-    void (* handle_press_proc)(ui_popup_t *, event_submissions_t *));
+    void (* handle_press_proc)(ui_popup_t *));
 void ui_push_popup_section_text(ui_popup_t *popup, const char *text);
 void ui_push_popup_section_input(ui_popup_t *popup);
 // Initialise all the ui_box_t and ui_text_t, etc...
 void ui_prepare_popup_for_render(ui_popup_t *popup);
 void ui_submit_popups();
-void ui_popup_input(event_submissions_t *events, const app::raw_input_t *input);
+void ui_popup_input(const app::raw_input_t *input);

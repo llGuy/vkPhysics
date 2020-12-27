@@ -1,10 +1,8 @@
-#pragma once
-
-#include <stdint.h>
+#include "vkph_triangle_table.hpp"
 
 namespace vkph {
 
-static constexpr int8_t TRIANGLE_TABLE[256][16] = {
+const int8_t TRIANGLE_TABLE[256][16] = {
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},

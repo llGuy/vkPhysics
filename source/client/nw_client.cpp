@@ -1,14 +1,15 @@
 #include "cl_main.hpp"
 #include "client/ui_game_menu.hpp"
-#include "common/chunk.hpp"
-#include "common/player.hpp"
-#include "common/weapon.hpp"
+#include <vkph_chunk.hpp>
+#include <vkph_player.hpp>
+#include <vkph_weapon.hpp>
 #include "nw_client.hpp"
 #include "wd_interp.hpp"
 #include "wd_predict.hpp"
 #include <common/net.hpp>
-#include <common/game.hpp>
-#include <common/event.hpp>
+#include <vkph_state.hpp>
+#include <vkph_events.hpp>
+#include <vkph_event_data.hpp>
 #include <common/socket.hpp>
 #include <common/string.hpp>
 #include "nw_client_meta.hpp"
@@ -41,15 +42,16 @@ static uint32_t chunks_to_receive;
 
 // Start the client sockets and initialize containers
 static void s_start_client(
-    event_start_client_t *data) {
+    vkph::event_start_client_t *data,
+    vkph::state_t *state) {
     still_receiving_chunk_packets = 0;
     chunks_to_receive = 0;
 
-    memset(g_net_data.dummy_voxels, CHUNK_SPECIAL_VALUE, sizeof(g_net_data.dummy_voxels));
+    memset(g_net_data.dummy_voxels, vkph::CHUNK_SPECIAL_VALUE, sizeof(g_net_data.dummy_voxels));
     main_udp_socket_init(GAME_OUTPUT_PORT_CLIENT);
     g_net_data.clients.init(NET_MAX_CLIENT_COUNT);
     started_client = 1;
-    g_game->flags.track_history = 1;
+    state->flags.track_history = 1;
     g_net_data.acc_predicted_modifications.init();
 
     uint32_t sizeof_chunk_mod_pack = sizeof(chunk_modifications_t) * MAX_PREDICTED_CHUNK_MODIFICATIONS;
@@ -72,7 +74,7 @@ static network_address_t bound_server_address = {};
 
 static void s_fill_enter_server_data(
     packet_connection_handshake_t *handshake,
-    event_enter_server_t *data) {
+    vkph::event_enter_server_t *data) {
     int32_t highest_client_index = -1;
     
     // Add all the players
@@ -109,23 +111,23 @@ static void s_fill_enter_server_data(
 // PT_CONNECTION_HANDSHAKE
 static void s_receive_packet_connection_handshake(
     serialiser_t *serialiser,
-    event_submissions_t *events) {
+    vkph::state_t *state) {
     packet_connection_handshake_t handshake = {};
     deserialise_connection_handshake(&handshake, serialiser);
 
     // Initialise the teams on the client side
-    g_game->set_teams(handshake.team_count, handshake.team_infos);
+    state->set_teams(handshake.team_count, handshake.team_infos);
 
     LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
 
     // Dispatch event to initialise all the players
-    event_enter_server_t *data = FL_MALLOC(event_enter_server_t, 1);
+    auto *data = FL_MALLOC(vkph::event_enter_server_t, 1);
     data->info_count = handshake.player_count;
-    data->infos = FL_MALLOC(player_init_info_t, data->info_count);
+    data->infos = FL_MALLOC(vkph::player_init_info_t, data->info_count);
 
     s_fill_enter_server_data(&handshake, data);
 
-    submit_event(ET_ENTER_SERVER, data, events);
+    vkph::submit_event(vkph::ET_ENTER_SERVER, data);
 
     if (handshake.loaded_chunk_count) {
         still_receiving_chunk_packets = 1;
@@ -136,13 +138,13 @@ static void s_receive_packet_connection_handshake(
 // PT_PLAYER_JOINED
 static void s_receive_packet_player_joined(
     serialiser_t *in_serialiser,
-    event_submissions_t *events) {
+    vkph::state_t *state) {
     packet_player_joined_t packet = {};
     deserialise_player_joined(&packet, in_serialiser);
 
     LOG_INFOV("%s joined the game\n", packet.player_info.name);
 
-    event_new_player_t *new_player = FL_MALLOC(event_new_player_t, 1);
+    auto *new_player = FL_MALLOC(vkph::event_new_player_t, 1);
     client_t *c = &g_net_data.clients.data[packet.player_info.client_id];
     c->name = packet.player_info.name;
     c->client_id = packet.player_info.client_id;
@@ -154,24 +156,24 @@ static void s_receive_packet_player_joined(
     new_player->info.ws_up_vector = packet.player_info.ws_up_vector;
     new_player->info.default_speed = packet.player_info.default_speed;
 
-    player_flags_t flags = {};
+    vkph::player_flags_t flags = {};
     flags.is_local = 0;
 
     new_player->info.flags = flags.u32;
 
-    submit_event(ET_NEW_PLAYER, new_player, events);
+    vkph::submit_event(vkph::ET_NEW_PLAYER, new_player);
 }
 
 static void s_receive_packet_player_left(
     serialiser_t *in_serialiser,
-    event_submissions_t *events) {
+    vkph::state_t *state) {
     uint16_t disconnected_client = in_serialiser->deserialise_uint16();
 
     g_net_data.clients.data[disconnected_client].initialised = 0;
 
-    event_player_disconnected_t *data = FL_MALLOC(event_player_disconnected_t, 1);
+    auto *data = FL_MALLOC(vkph::event_player_disconnected_t, 1);
     data->client_id = disconnected_client;
-    submit_event(ET_PLAYER_DISCONNECTED, data, events);
+    vkph::submit_event(vkph::ET_PLAYER_DISCONNECTED, data);
 
     LOG_INFO("Player disconnected\n");
 }
@@ -182,10 +184,10 @@ static void s_receive_packet_player_left(
 static bool simulate_lag = 0;
 
 static void s_inform_on_death(
-    player_t *p,
-    player_alive_state_t previous_alive_state,
+    vkph::player_t *p,
+    bool was_alive,
     packet_client_commands_t *packet) {
-    if (previous_alive_state == PAS_DEAD && p->flags.alive_state == PAS_ALIVE) {
+    if (!was_alive && p->flags.is_alive) {
         // Means player just spawned
         LOG_INFO("Requesting to spawn\n");
         packet->requested_spawn = 1;
@@ -196,10 +198,10 @@ static void s_inform_on_death(
 }
 
 static void s_fill_commands_with_actions(
-    player_t *p,
+    vkph::player_t *p,
     packet_client_commands_t *packet) {
     packet->command_count = (uint8_t)p->cached_player_action_count;
-    packet->actions = LN_MALLOC(player_action_t, packet->command_count);
+    packet->actions = LN_MALLOC(vkph::player_action_t, packet->command_count);
 
     if (packet->command_count) {
         debug_log("\tClient has made %d actions\n", 0, packet->command_count);
@@ -232,8 +234,9 @@ static void s_fill_commands_with_actions(
 }
 
 static void s_fill_predicted_data(
-    player_t *p,
-    packet_client_commands_t *packet) {
+    vkph::player_t *p,
+    packet_client_commands_t *packet,
+    vkph::state_t *state) {
     packet->ws_final_position = p->ws_position;
     packet->ws_final_view_direction = p->ws_view_direction;
     packet->ws_final_up_vector = p->ws_up_vector;
@@ -244,14 +247,14 @@ static void s_fill_predicted_data(
     // Because if it so happens that the client was cheating, when the client
     // thinks there was a hit, the server will know that it was incorrect because
     // the bullet wouldn't have been spawned on server-side
-    packet->predicted_hit_count = g_game->predicted_hits.data_count;
-    packet->hits = LN_MALLOC(predicted_projectile_hit_t, packet->predicted_hit_count);
+    packet->predicted_hit_count = state->predicted_hits.data_count;
+    packet->hits = LN_MALLOC(vkph::predicted_projectile_hit_t, packet->predicted_hit_count);
 
     uint32_t actual_predicted_count = 0;
 
     for (uint32_t i = 0; i < packet->predicted_hit_count; ++i) {
-        if (g_game->predicted_hits[i].flags.initialised) {
-            packet->hits[actual_predicted_count++] = g_game->predicted_hits[i];
+        if (state->predicted_hits[i].flags.initialised) {
+            packet->hits[actual_predicted_count++] = state->predicted_hits[i];
         }
     }
 
@@ -259,8 +262,9 @@ static void s_fill_predicted_data(
 }
 
 static void s_fill_with_accumulated_chunk_modifications(
-    packet_client_commands_t *packet) {
-    accumulated_predicted_modification_t *next_acc = accumulate_history();
+    packet_client_commands_t *packet,
+    vkph::state_t *state) {
+    accumulated_predicted_modification_t *next_acc = accumulate_history(state);
     if (next_acc) {
         // Packet will just take from the accumulation stuff
         packet->modified_chunk_count = next_acc->acc_predicted_chunk_mod_count;
@@ -283,17 +287,17 @@ static void s_fill_with_accumulated_chunk_modifications(
 }
 
 // PT_CLIENT_COMMANDS
-static void s_send_packet_client_commands() {
-    int32_t local_id = g_game->get_local_id(current_client_id);
+static void s_send_packet_client_commands(vkph::state_t *state) {
+    int32_t local_id = state->get_local_id(current_client_id);
     int32_t p_index = wd_get_local_player();
     
     // DEAD by default
-    static player_alive_state_t previous_alive_state = PAS_DEAD;
+    static bool was_alive = false;
 
     // Means that world hasn't been initialised yet (could be timing issues when submitting ENTER_SERVER
     // event and send commands interval, so just to make sure, check that player is not NULL)
     if (p_index >= 0) {
-        player_t *p = g_game->get_player(p_index);
+        vkph::player_t *p = state->get_player(p_index);
                                                
         if (simulate_lag) {
             p->cached_player_action_count = 0;
@@ -306,23 +310,23 @@ static void s_send_packet_client_commands() {
             packet.did_correction = c->waiting_on_correction;
 
             // Tell server if player just died and update the "previous alive state" variable
-            s_inform_on_death(p, previous_alive_state, &packet);
-            previous_alive_state = (player_alive_state_t)p->flags.alive_state;
+            s_inform_on_death(p, was_alive, &packet);
+            was_alive = p->flags.is_alive;
 
             // Fill packet with the actions
             s_fill_commands_with_actions(p, &packet);
 
             // Fill predicted state
-            s_fill_predicted_data(p, &packet);
+            s_fill_predicted_data(p, &packet, state);
             packet.player_flags = p->flags.u32;
 
             // Fill with chunk modifications that were made during past few frames
-            s_fill_with_accumulated_chunk_modifications(&packet);
-            g_game->reset_modification_tracker();
+            s_fill_with_accumulated_chunk_modifications(&packet, state);
+            state->reset_modification_tracker();
                         
             packet_header_t header = {};
             { // Fill header
-                header.current_tick = g_game->current_tick;
+                header.current_tick = state->current_tick;
                 header.current_packet_count = g_net_data.current_packet;
                 header.client_id = current_client_id;
                 header.flags.packet_type = PT_CLIENT_COMMANDS;
@@ -342,22 +346,23 @@ static void s_send_packet_client_commands() {
             c->waiting_on_correction = 0;
 
             // Clear projectiles
-            for (uint32_t i = 0; i < g_game->predicted_hits.data_count; ++i) {
-                g_game->predicted_hits[i].flags.initialised = 0;
+            for (uint32_t i = 0; i < state->predicted_hits.data_count; ++i) {
+                state->predicted_hits[i].flags.initialised = 0;
             }
 
-            g_game->predicted_hits.clear();
-            g_game->rocks.clear_recent();
+            state->predicted_hits.clear();
+            state->rocks.clear_recent();
         }
     }
 }
 
 // Just for one accumulated_predicted_modification_t structure
 static void s_revert_history_instance(
-    accumulated_predicted_modification_t *apm_ptr) {
+    accumulated_predicted_modification_t *apm_ptr,
+    vkph::state_t *state) {
     for (uint32_t cm_index = 0; cm_index < apm_ptr->acc_predicted_chunk_mod_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &apm_ptr->acc_predicted_modifications[cm_index];
-        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+        vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
@@ -374,10 +379,11 @@ static void s_revert_history_instance(
 }
 
 static void s_revert_accumulated_modifications(
-    uint64_t tick_until) {
+    uint64_t tick_until,
+    vkph::state_t *state) {
     // First push all modifications that were done, so that we can revert most previous changes too
-    accumulate_history();
-    g_game->reset_modification_tracker();
+    accumulate_history(state);
+    state->reset_modification_tracker();
 
     // Starts peeling off from the head
     accumulated_predicted_modification_t *current = g_net_data.acc_predicted_modifications.get_next_item_head();
@@ -392,7 +398,7 @@ static void s_revert_accumulated_modifications(
         while (current) {
             if (current->tick >= tick_until) {
                 // Revert these changes
-                s_revert_history_instance(current);
+                s_revert_history_instance(current, state);
                 //LOG_INFOV("- Reverted to tick %llu\n", (unsigned long long)current->tick);
 
                 ++removed_count;
@@ -416,10 +422,11 @@ static void s_revert_accumulated_modifications(
 }}
 
 static void s_correct_chunks(
-    packet_game_state_snapshot_t *snapshot) {
+    packet_game_state_snapshot_t *snapshot,
+    vkph::state_t *state) {
     for (uint32_t cm_index = 0; cm_index < snapshot->modified_chunk_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &snapshot->chunk_modifications[cm_index];
-        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+        vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         //LOG_INFOV("Correcting chunk (%i %i %i)\n", cm_ptr->x, cm_ptr->y, cm_ptr->z);
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
@@ -432,12 +439,12 @@ static void s_correct_chunks(
     }
 }
 
-static void s_set_voxels_to_final_interpolated_values() {
+static void s_set_voxels_to_final_interpolated_values(vkph::state_t *state) {
     chunks_to_interpolate_t *cti_ptr = wd_get_chunks_to_interpolate();
     for (uint32_t cm_index = 0; cm_index < cti_ptr->modification_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &cti_ptr->modifications[cm_index];
 
-        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+        vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
@@ -453,7 +460,8 @@ static void s_set_voxels_to_final_interpolated_values() {
 }
 
 static void s_merge_all_recent_modifications(
-    player_snapshot_t *snapshot) {
+    vkph::player_snapshot_t *snapshot,
+    vkph::state_t *state) {
     uint32_t apm_index = g_net_data.acc_predicted_modifications.tail;
     for (uint32_t apm = 0; apm < g_net_data.acc_predicted_modifications.head_tail_difference; ++apm) {
         accumulated_predicted_modification_t *apm_ptr = &g_net_data.acc_predicted_modifications.buffer[apm_index];
@@ -465,7 +473,8 @@ static void s_merge_all_recent_modifications(
                 g_net_data.merged_recent_modifications.acc_predicted_modifications,
                 &g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count,
                 apm_ptr->acc_predicted_modifications,
-                apm_ptr->acc_predicted_chunk_mod_count);
+                apm_ptr->acc_predicted_chunk_mod_count,
+                state);
         }
 
         apm_index = g_net_data.acc_predicted_modifications.increment_index(apm_index);
@@ -474,11 +483,12 @@ static void s_merge_all_recent_modifications(
 
 static void s_create_voxels_that_need_to_be_interpolated(
     uint32_t modified_chunk_count,
-    chunk_modifications_t *chunk_modifications) {
+    chunk_modifications_t *chunk_modifications,
+    vkph::state_t *state) {
     chunks_to_interpolate_t *cti_ptr = wd_get_chunks_to_interpolate();
     for (uint32_t recv_cm_index = 0; recv_cm_index < modified_chunk_count; ++recv_cm_index) {
         chunk_modifications_t *recv_cm_ptr = &chunk_modifications[recv_cm_index];
-        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(recv_cm_ptr->x, recv_cm_ptr->y, recv_cm_ptr->z));
+        vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(recv_cm_ptr->x, recv_cm_ptr->y, recv_cm_ptr->z));
 
         if (c_ptr->flags.modified_marker) {
             chunk_modifications_t *dst_cm_ptr = &cti_ptr->modifications[cti_ptr->modification_count];
@@ -491,7 +501,7 @@ static void s_create_voxels_that_need_to_be_interpolated(
             uint32_t count = 0;
             for (uint32_t recv_vm_index = 0; recv_vm_index < recv_cm_ptr->modified_voxels_count; ++recv_vm_index) {
                 voxel_modification_t *recv_vm_ptr = &recv_cm_ptr->modifications[recv_vm_index];
-                if (g_net_data.dummy_voxels[recv_vm_ptr->index] == CHUNK_SPECIAL_VALUE) {
+                if (g_net_data.dummy_voxels[recv_vm_ptr->index] == vkph::CHUNK_SPECIAL_VALUE) {
                     if (recv_vm_ptr->final_value != c_ptr->voxels[recv_vm_ptr->index].value) {
                         // Was not modified, can push this
                         dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].index = recv_vm_ptr->index;
@@ -541,7 +551,7 @@ static void s_create_voxels_that_need_to_be_interpolated(
 }
 
 static void s_clear_outdated_modifications_from_history(
-    player_snapshot_t *snapshot) {
+    vkph::player_snapshot_t *snapshot) {
     if (snapshot->terraformed) {
         // Need to remove all modifications from tail to tick
         accumulated_predicted_modification_t *current = g_net_data.acc_predicted_modifications.get_next_item_tail();
@@ -572,13 +582,14 @@ static void s_clear_outdated_modifications_from_history(
 }
 
 static void s_add_projectiles_from_snapshot(
-    packet_game_state_snapshot_t *snapshot) {
+    packet_game_state_snapshot_t *snapshot,
+    vkph::state_t *state) {
     for (uint32_t i = 0; i < snapshot->rock_count; ++i) {
-        rock_snapshot_t *rock_snapshot = &snapshot->rock_snapshots[i];
+        vkph::rock_snapshot_t *rock_snapshot = &snapshot->rock_snapshots[i];
 
         if (rock_snapshot->client_id != current_client_id) {
             // Spawn this rock
-            g_game->rocks.spawn(
+            state->rocks.spawn(
                 rock_snapshot->position,
                 rock_snapshot->direction,
                 rock_snapshot->up,
@@ -591,12 +602,12 @@ static void s_add_projectiles_from_snapshot(
 
 static void s_handle_incorrect_state(
     client_t *c,
-    player_t *p,
-    player_snapshot_t *snapshot,
+    vkph::player_t *p,
+    vkph::player_snapshot_t *snapshot,
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser,
-    event_submissions_t *events) {
-    player_flags_t real_player_flags = {};
+    vkph::state_t *state) {
+    vkph::player_flags_t real_player_flags = {};
     real_player_flags.u32 = snapshot->player_local_flags;
 
     // Do correction!
@@ -609,9 +620,9 @@ static void s_handle_incorrect_state(
     p->next_random_spawn_position = snapshot->ws_next_random_spawn;
     p->ws_velocity = snapshot->ws_velocity;
     p->flags.interaction_mode = snapshot->interaction_mode;
-    p->animated_state = (player_animated_state_t)snapshot->animated_state;
+    p->animated_state = (vkph::player_animated_state_t)snapshot->animated_state;
     p->frame_displacement = snapshot->frame_displacement;
-    p->flags.contact = real_player_flags.contact;
+    p->flags.is_on_ground = real_player_flags.is_on_ground;
     p->flags.moving = real_player_flags.moving;
 
     debug_log("\t\tSetting position to (%f %f %f)\n", 0, p->ws_position.x, p->ws_position.y, p->ws_position.z);
@@ -619,19 +630,19 @@ static void s_handle_incorrect_state(
     debug_log("\t\tSetting view direction to (%f %f %f)\n", 0, p->ws_view_direction.x, p->ws_view_direction.y, p->ws_view_direction.z);
     debug_log("\t\tSetting up vector to (%f %f %f)\n", 0, p->ws_up_vector.x, p->ws_up_vector.y, p->ws_up_vector.z);
 
-    if (p->flags.alive_state == PAS_ALIVE && snapshot->alive_state == PAS_DEAD) {
+    if (p->flags.is_alive && !snapshot->alive_state) {
         // Handle death
-        wd_kill_local_player(events);
+        wd_kill_local_player();
     }
 
-    p->flags.alive_state = snapshot->alive_state;
+    p->flags.is_alive = snapshot->alive_state;
 
     // Revert voxel modifications up from tick that server processed
     if (snapshot->terraformed)  {
         debug_log("Reverting all modifications from current to tick %lu\n", 0, snapshot->tick);
 
-        s_revert_accumulated_modifications(snapshot->tick);
-        s_correct_chunks(packet);
+        s_revert_accumulated_modifications(snapshot->tick, state);
+        s_correct_chunks(packet, state);
         // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
 
         // Now deserialise extra voxel corrections
@@ -642,7 +653,7 @@ static void s_handle_incorrect_state(
 
             for (uint32_t cm_index = 0; cm_index < modification_count; ++cm_index) {
                 chunk_modifications_t *cm_ptr = &modifications[cm_index];
-                chunk_t *c_ptr = g_game->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+                vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
                 for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
                     voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
                     c_ptr->voxels[vm_ptr->index].value = vm_ptr->final_value;
@@ -660,7 +671,7 @@ static void s_handle_incorrect_state(
 
         for (uint32_t cm_index = 0; cm_index < packet->modified_chunk_count; ++cm_index) {
             chunk_modifications_t *cm_ptr = &packet->chunk_modifications[cm_index];
-            chunk_t *c_ptr = g_game->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+            vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
             for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
                 voxel_modification_t *vm_ptr = &cm_ptr->modifications[v_index];
@@ -670,7 +681,7 @@ static void s_handle_incorrect_state(
         }
     }
                 
-    g_game->current_tick = snapshot->tick;
+    state->current_tick = snapshot->tick;
 
     // Basically says that the client just did a correction - set correction flag on next packet sent to server
     c->waiting_on_correction = 1;
@@ -678,10 +689,11 @@ static void s_handle_incorrect_state(
 
 static void s_handle_correct_state(
     client_t *c,
-    player_t *p,
-    player_snapshot_t *snapshot,
+    vkph::player_t *p,
+    vkph::player_snapshot_t *snapshot,
     packet_game_state_snapshot_t *packet,
-    serialiser_t *serialiser) {
+    serialiser_t *serialiser,
+    vkph::state_t *state) {
     if (snapshot->terraformed) {
         //LOG_INFOV("Syncing with tick: %llu\n", (unsigned long long)snapshot->terraform_tick);
     }
@@ -711,24 +723,27 @@ static void s_handle_correct_state(
         // Mark all chunks / voxels that were modified from tick that server just processed, to current tick
         // These voxels should not be interpolated, and just left alone, because client just modified them
         // First make sure to finish interpolation of previous voxels
-        s_set_voxels_to_final_interpolated_values();
+        s_set_voxels_to_final_interpolated_values(state);
 
         // Fill merged recent modifications
         acc_predicted_modification_init(&g_net_data.merged_recent_modifications, 0);
 
-        s_merge_all_recent_modifications(snapshot);
+        s_merge_all_recent_modifications(snapshot, state);
 
         flag_modified_chunks(
             g_net_data.merged_recent_modifications.acc_predicted_modifications,
-            g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count);
+            g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count,
+            state);
 
         s_create_voxels_that_need_to_be_interpolated(
             packet->modified_chunk_count,
-            packet->chunk_modifications);
+            packet->chunk_modifications,
+            state);
 
         unflag_modified_chunks(
             g_net_data.merged_recent_modifications.acc_predicted_modifications,
-            g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count);
+            g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count,
+            state);
 
         s_clear_outdated_modifications_from_history(snapshot);
     }
@@ -736,12 +751,12 @@ static void s_handle_correct_state(
 
 static void s_handle_local_player_snapshot(
     client_t *c,
-    player_t *p,
-    player_snapshot_t *snapshot,
+    vkph::player_t *p,
+    vkph::player_snapshot_t *snapshot,
     packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser,
-    event_submissions_t *events) {
-    s_add_projectiles_from_snapshot(packet);
+    vkph::state_t *state) {
+    s_add_projectiles_from_snapshot(packet, state);
 
     // TODO: Watch out for this:
     if (snapshot->client_needs_to_correct_state && !snapshot->server_waiting_for_correction) {
@@ -753,7 +768,7 @@ static void s_handle_local_player_snapshot(
             snapshot,
             packet,
             serialiser,
-            events);
+            state);
     }
     else {
         debug_log("\tClient predicted state correctly - no correction needed!\n", 0);
@@ -767,7 +782,8 @@ static void s_handle_local_player_snapshot(
             p,
             snapshot,
             packet,
-            serialiser);
+            serialiser,
+            state);
     }
 }
 
@@ -775,7 +791,7 @@ static void s_handle_local_player_snapshot(
 static void s_receive_packet_game_state_snapshot(
     serialiser_t *serialiser,
     uint64_t received_tick,
-    event_submissions_t *events) {
+    vkph::state_t *state) {
     debug_log("##### Received game state snapshot\n", 0);
 
     packet_game_state_snapshot_t packet = {};
@@ -783,12 +799,12 @@ static void s_receive_packet_game_state_snapshot(
     packet.chunk_modifications = deserialise_chunk_modifications(&packet.modified_chunk_count, serialiser, CST_SERIALISE_UNION_COLOR);
 
     for (uint32_t i = 0; i < packet.player_data_count; ++i) {
-        player_snapshot_t *snapshot = &packet.player_snapshots[i];
+        vkph::player_snapshot_t *snapshot = &packet.player_snapshots[i];
 
         if (snapshot->client_id == current_client_id) {
             client_t *c = &g_net_data.clients[snapshot->client_id];
-            int32_t local_id = g_game->get_local_id(snapshot->client_id);
-            player_t *p = g_game->get_player(local_id);
+            int32_t local_id = state->get_local_id(snapshot->client_id);
+            auto *p = state->get_player(local_id);
             if (p) {
                 s_handle_local_player_snapshot(
                     c,
@@ -796,12 +812,12 @@ static void s_receive_packet_game_state_snapshot(
                     snapshot,
                     &packet,
                     serialiser,
-                    events);
+                    state);
             }
         }
         else {
-            int32_t local_id = g_game->get_local_id(snapshot->client_id);
-            player_t *p = g_game->get_player(local_id);
+            int32_t local_id = state->get_local_id(snapshot->client_id);
+            auto *p = state->get_player(local_id);
 
             if (p) {
                 p->remote_snapshots.push_item(snapshot);
@@ -813,7 +829,7 @@ static void s_receive_packet_game_state_snapshot(
 // PT_CHUNK_VOXELS
 static void s_receive_packet_chunk_voxels(
     serialiser_t *serialiser,
-    event_submissions_t *events) {
+    vkph::state_t *state) {
     uint32_t loaded_chunk_count = serialiser->deserialise_uint32();
 
     for (uint32_t c = 0; c < loaded_chunk_count; ++c) {
@@ -821,34 +837,34 @@ static void s_receive_packet_chunk_voxels(
         int16_t y = serialiser->deserialise_int16();
         int16_t z = serialiser->deserialise_int16();
 
-        chunk_t *chunk = g_game->get_chunk(ivector3_t(x, y, z));
+        vkph::chunk_t *chunk = state->get_chunk(ivector3_t(x, y, z));
         chunk->flags.has_to_update_vertices = 1;
 
         // Also force update surrounding chunks
 #if 0
-        g_game->get_chunk(ivector3_t(x + 1, y, z))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x - 1, y, z))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x, y + 1, z))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x, y - 1, z))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x, y, z + 1))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x, y, z - 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x + 1, y, z))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x - 1, y, z))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x, y + 1, z))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x, y - 1, z))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x, y, z + 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x, y, z - 1))->flags.has_to_update_vertices = 1;
         
-        g_game->get_chunk(ivector3_t(x + 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x + 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x + 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x + 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x + 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x + 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x + 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x + 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
 
-        g_game->get_chunk(ivector3_t(x - 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x - 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x - 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
-        g_game->get_chunk(ivector3_t(x - 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x - 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x - 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x - 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
+        state->get_chunk(ivector3_t(x - 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
 #endif
         
-        for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
+        for (uint32_t v = 0; v < vkph::CHUNK_EDGE_LENGTH * vkph::CHUNK_EDGE_LENGTH * vkph::CHUNK_EDGE_LENGTH;) {
             uint8_t current_value = serialiser->deserialise_uint8();
             uint8_t current_color = serialiser->deserialise_uint8();
 
-            if (current_value == CHUNK_SPECIAL_VALUE) {
+            if (current_value == vkph::CHUNK_SPECIAL_VALUE) {
                 chunk->voxels[v].value = 0;
                 chunk->voxels[v].color = 0;
                 ++v;
@@ -877,43 +893,43 @@ static void s_receive_packet_chunk_voxels(
     }
 
     uint32_t loaded;
-    chunk_t **chunks = g_game->get_active_chunks(&loaded);
+    vkph::chunk_t **chunks = state->get_active_chunks(&loaded);
     LOG_INFOV("Currently there are %d loaded chunks\n", loaded);
 
     chunks_to_receive -= loaded_chunk_count;
 
     if (chunks_to_receive == 0) {
         for (uint32_t i = 0; i < loaded; ++i) {
-            chunk_t *c = g_game->chunks[i];
+            vkph::chunk_t *c = state->chunks[i];
             uint32_t x = c->chunk_coord.x;
             uint32_t y = c->chunk_coord.y;
             uint32_t z = c->chunk_coord.z;
 
-            chunk_t *a = NULL;
-            if ((a = g_game->access_chunk(ivector3_t(x + 1, y, z)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x - 1, y, z)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x, y + 1, z)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x, y - 1, z)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x, y, z + 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x, y, z - 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x + 1, y + 1, z + 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x + 1, y + 1, z - 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x + 1, y - 1, z + 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x + 1, y - 1, z - 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x - 1, y + 1, z + 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x - 1, y + 1, z - 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x - 1, y - 1, z + 1)))) a->flags.has_to_update_vertices = 1;
-            if ((a = g_game->access_chunk(ivector3_t(x - 1, y - 1, z - 1)))) a->flags.has_to_update_vertices = 1;
+            vkph::chunk_t *a = NULL;
+            if ((a = state->access_chunk(ivector3_t(x + 1, y, z)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x - 1, y, z)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x, y + 1, z)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x, y - 1, z)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x, y, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x, y, z - 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x + 1, y + 1, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x + 1, y + 1, z - 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x + 1, y - 1, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x + 1, y - 1, z - 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x - 1, y + 1, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x - 1, y + 1, z - 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x - 1, y - 1, z + 1)))) a->flags.has_to_update_vertices = 1;
+            if ((a = state->access_chunk(ivector3_t(x - 1, y - 1, z - 1)))) a->flags.has_to_update_vertices = 1;
         }
     }
 
-    g_game->get_active_chunks(&loaded);
+    state->get_active_chunks(&loaded);
     LOG_INFOV("Currently there are %d loaded chunks\n", loaded);
 }
 
 static void s_receive_player_team_change(
     serialiser_t *serialiser,
-    event_submissions_t *events) {
+    vkph::state_t *state) {
     packet_player_team_change_t packet = {};
     deserialise_packet_player_team_change(&packet, serialiser);
 
@@ -921,9 +937,9 @@ static void s_receive_player_team_change(
     // Otherwise, update ui roster and add player to team
 
     if (packet.client_id != nw_get_local_client_index()) {
-        int32_t p_id = g_game->get_local_id(packet.client_id);
+        int32_t p_id = state->get_local_id(packet.client_id);
 
-        g_game->change_player_team(g_game->get_player(p_id), (team_color_t)packet.color);
+        state->change_player_team(state->get_player(p_id), (vkph::team_color_t)packet.color);
 
         // Update the text on the game menu
         ui_init_game_menu_for_server();
@@ -932,9 +948,9 @@ static void s_receive_player_team_change(
 
 static void s_receive_ping(
     serialiser_t *in_serialiser,
-    event_submissions_t *events) {
+    vkph::state_t *state) {
     packet_header_t header = {};
-    header.current_tick = g_game->current_tick;
+    header.current_tick = state->current_tick;
     header.current_packet_count = g_net_data.current_packet;
     header.client_id = current_client_id;
     header.flags.packet_type = PT_PING;
@@ -947,8 +963,8 @@ static void s_receive_ping(
     send_to_game_server(&serialiser, bound_server_address);
 }
 
-static void s_check_incoming_game_server_packets(
-    event_submissions_t *events) {
+static void s_check_incominstate_server_packets(
+    vkph::state_t *state) {
     const app::raw_input_t *input = app::get_raw_input();
 
 #if 1
@@ -966,8 +982,8 @@ static void s_check_incoming_game_server_packets(
         elapsed += cl_delta_time();
         if (elapsed >= client_command_output_interval) {
             // Send commands to the server
-            debug_log("----- Sending client commands to the server at tick %llu\n", 0, g_game->current_tick);
-            s_send_packet_client_commands();
+            debug_log("----- Sending client commands to the server at tick %llu\n", 0, state->current_tick);
+            s_send_packet_client_commands(state);
 
             elapsed = 0.0f;
         }
@@ -995,45 +1011,45 @@ static void s_check_incoming_game_server_packets(
             case PT_CONNECTION_HANDSHAKE: {
                 s_receive_packet_connection_handshake(
                     &in_serialiser,
-                    events);
+                    state);
                 return;
             } break;
 
             case PT_PLAYER_JOINED: {
                 s_receive_packet_player_joined(
                     &in_serialiser,
-                    events);
+                    state);
             } break;
 
             case PT_PLAYER_LEFT: {
                 s_receive_packet_player_left(
                     &in_serialiser,
-                    events);
+                    state);
             } break;
 
             case PT_GAME_STATE_SNAPSHOT: {
                 s_receive_packet_game_state_snapshot(
                     &in_serialiser,
                     header.current_tick,
-                    events);
+                    state);
             } break;
 
             case PT_CHUNK_VOXELS: {
                 s_receive_packet_chunk_voxels(
                     &in_serialiser,
-                    events);
+                    state);
             } break;
 
             case PT_PLAYER_TEAM_CHANGE: {
                 s_receive_player_team_change(
                     &in_serialiser,
-                    events);
+                    state);
             } break;
 
             case PT_PING: {
                 s_receive_ping(
                     &in_serialiser,
-                    events);
+                    state);
             } break;
 
             default: {
@@ -1060,14 +1076,15 @@ static void s_check_incoming_game_server_packets(
             still_receiving_chunk_packets = 0;
 
             // Set voxels to be interpolated
-            player_snapshot_t dummy {};
+            vkph::player_snapshot_t dummy {};
             dummy.tick = 0;
 
-            s_merge_all_recent_modifications(&dummy);
+            s_merge_all_recent_modifications(&dummy, state);
 
             s_create_voxels_that_need_to_be_interpolated(
                 g_net_data.merged_recent_modifications.acc_predicted_chunk_mod_count,
-                g_net_data.merged_recent_modifications.acc_predicted_modifications);
+                g_net_data.merged_recent_modifications.acc_predicted_modifications,
+                state);
 
             g_net_data.acc_predicted_modifications.tail = 0;
             g_net_data.acc_predicted_modifications.head = 0;
@@ -1076,9 +1093,8 @@ static void s_check_incoming_game_server_packets(
     }
 }
 
-static void s_tick_client(
-    event_submissions_t *events) {
-    s_check_incoming_game_server_packets(events);
+static void s_tick_client(vkph::state_t *state) {
+    s_check_incominstate_server_packets(state);
 }
 
 // PT_CONNECTION_REQUEST
@@ -1112,12 +1128,12 @@ static void s_send_packet_connection_request(
 }
 
 // PT_TEAM_SELECT_REQUEST
-static void s_send_packet_team_select_request(team_color_t color) {
+static void s_send_packet_team_select_request(vkph::team_color_t color, const vkph::state_t *state) {
     serialiser_t serialiser = {};
     serialiser.init(100);
 
     packet_header_t header = {};
-    header.current_tick = g_game->current_tick;
+    header.current_tick = state->current_tick;
     header.current_packet_count = g_net_data.current_packet;
     header.client_id = current_client_id;
     header.flags.packet_type = PT_TEAM_SELECT_REQUEST;
@@ -1130,12 +1146,12 @@ static void s_send_packet_team_select_request(team_color_t color) {
 }
 
 // PT_CLIENT_DISCONNECT
-static void s_send_packet_client_disconnect() {
+static void s_send_packet_client_disconnect(const vkph::state_t *state) {
     serialiser_t serialiser = {};
     serialiser.init(100);
 
     packet_header_t header = {};
-    header.current_tick = g_game->current_tick;
+    header.current_tick = state->current_tick;
     header.current_packet_count = g_net_data.current_packet;
     header.client_id = current_client_id;
     header.flags.packet_type = PT_CLIENT_DISCONNECT;
@@ -1146,26 +1162,27 @@ static void s_send_packet_client_disconnect() {
     send_to_game_server(&serialiser, bound_server_address);
 }
 
-static listener_t net_listener_id;
+static vkph::listener_t net_listener_id;
 
 static void s_net_event_listener(
     void *object,
-    event_t *event,
-    event_submissions_t *events) {
+    vkph::event_t *event) {
+    auto *state = (vkph::state_t *)object;
+
     switch (event->type) {
 
-    case ET_START_CLIENT: {
-        event_start_client_t *data = (event_start_client_t *)event->data;
-        s_start_client(data);
+    case vkph::ET_START_CLIENT: {
+        auto *data = (vkph::event_start_client_t *)event->data;
+        s_start_client(data, state);
         FL_FREE(data);
     } break;
 
-    case ET_REQUEST_REFRESH_SERVER_PAGE: {
+    case vkph::ET_REQUEST_REFRESH_SERVER_PAGE: {
         nw_request_available_servers();
     } break;
 
-    case ET_REQUEST_TO_JOIN_SERVER: {
-        event_data_request_to_join_server_t *data = (event_data_request_to_join_server_t *)event->data;
+    case vkph::ET_REQUEST_TO_JOIN_SERVER: {
+        auto *data = (vkph::event_data_request_to_join_server_t *)event->data;
         local_client_info_t client_info;
         client_info.name = local_client_info.client_name;
 
@@ -1191,10 +1208,10 @@ static void s_net_event_listener(
         FL_FREE(data);
     } break;
 
-    case ET_LEAVE_SERVER: {
+    case vkph::ET_LEAVE_SERVER: {
         if (bound_server_address.ipv4_address > 0) {
             // Send to server message
-            s_send_packet_client_disconnect();
+            s_send_packet_client_disconnect(state);
         
             memset(&bound_server_address, 0, sizeof(bound_server_address));
             memset(g_net_data.clients.data, 0, sizeof(client_t) * g_net_data.clients.max_size);
@@ -1205,42 +1222,42 @@ static void s_net_event_listener(
         }
     } break;
 
-    case ET_ATTEMPT_SIGN_UP: {
-        event_attempt_sign_up_t *data = (event_attempt_sign_up_t *)event->data;
+    case vkph::ET_ATTEMPT_SIGN_UP: {
+        auto *data = (vkph::event_attempt_sign_up_t *)event->data;
 
         nw_request_sign_up(data->username, data->password);
     } break;
 
-    case ET_ATTEMPT_LOGIN: {
-        event_attempt_login_t *data = (event_attempt_login_t *)event->data;
+    case vkph::ET_ATTEMPT_LOGIN: {
+        auto *data = (vkph::event_attempt_login_t *)event->data;
 
         nw_request_login(data->username, data->password);
     } break;
 
-    case ET_SEND_SERVER_TEAM_SELECT_REQUEST: {
-        event_send_server_team_select_request_t *data = (event_send_server_team_select_request_t *)event->data;
+    case vkph::ET_SEND_SERVER_TEAM_SELECT_REQUEST: {
+        auto *data = (vkph::event_send_server_team_select_request_t *)event->data;
 
-        s_send_packet_team_select_request(data->color);
+        s_send_packet_team_select_request(data->color, state);
     } break;
 
-    case ET_CLOSED_WINDOW: {
+    case vkph::ET_CLOSED_WINDOW: {
         nw_notify_meta_disconnection();
     } break;
 
     }
 }
 
-void nw_init(event_submissions_t *events) {
-    net_listener_id = set_listener_callback(&s_net_event_listener, NULL, events);
+void nw_init(vkph::state_t *state) {
+    net_listener_id = vkph::set_listener_callback(&s_net_event_listener, state);
 
-    subscribe_to_event(ET_START_CLIENT, net_listener_id, events);
-    subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, net_listener_id, events);
-    subscribe_to_event(ET_LEAVE_SERVER, net_listener_id, events);
-    subscribe_to_event(ET_REQUEST_REFRESH_SERVER_PAGE, net_listener_id, events);
-    subscribe_to_event(ET_ATTEMPT_SIGN_UP, net_listener_id, events);
-    subscribe_to_event(ET_CLOSED_WINDOW, net_listener_id, events);
-    subscribe_to_event(ET_ATTEMPT_LOGIN, net_listener_id, events);
-    subscribe_to_event(ET_SEND_SERVER_TEAM_SELECT_REQUEST, net_listener_id, events);
+    vkph::subscribe_to_event(vkph::ET_START_CLIENT, net_listener_id);
+    vkph::subscribe_to_event(vkph::ET_REQUEST_TO_JOIN_SERVER, net_listener_id);
+    vkph::subscribe_to_event(vkph::ET_LEAVE_SERVER, net_listener_id);
+    vkph::subscribe_to_event(vkph::ET_REQUEST_REFRESH_SERVER_PAGE, net_listener_id);
+    vkph::subscribe_to_event(vkph::ET_ATTEMPT_SIGN_UP, net_listener_id);
+    vkph::subscribe_to_event(vkph::ET_CLOSED_WINDOW, net_listener_id);
+    vkph::subscribe_to_event(vkph::ET_ATTEMPT_LOGIN, net_listener_id);
+    vkph::subscribe_to_event(vkph::ET_SEND_SERVER_TEAM_SELECT_REQUEST, net_listener_id);
 
     socket_api_init();
 
@@ -1254,12 +1271,12 @@ void nw_init(event_submissions_t *events) {
     g_net_data.available_servers.name_to_server.init();
 }
 
-void nw_tick(struct event_submissions_t *events) {
+void nw_tick(vkph::state_t *state) {
     // check_incoming_meta_server_packets(events);
     // Check for meta server packets
-    nw_check_meta_request_status_and_handle(events);
+    nw_check_meta_request_status_and_handle();
 
-    s_tick_client(events);
+    s_tick_client(state);
 }
 
 bool nw_connected_to_server() {

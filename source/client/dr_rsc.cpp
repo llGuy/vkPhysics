@@ -1,6 +1,6 @@
 #include "dr_rsc.hpp"
 #include "dr_chunk.hpp"
-#include <common/chunk.hpp>
+#include <vkph_chunk.hpp>
 #include <common/files.hpp>
 #include <common/constant.hpp>
 #include <common/serialiser.hpp>
@@ -194,7 +194,7 @@ void dr_resources_init() {
     s_create_player_shaders_and_meshes();
     s_create_chunk_shaders();
 
-    tmp.mesh_vertices = FL_MALLOC(compressed_chunk_mesh_vertex_t, CHUNK_MAX_VERTICES_PER_CHUNK);
+    tmp.mesh_vertices = FL_MALLOC(compressed_chunk_mesh_vertex_t, vkph::CHUNK_MAX_VERTICES_PER_CHUNK);
 }
 
 void dr_player_animated_instance_init(vk::animated_instance_t *instance) {

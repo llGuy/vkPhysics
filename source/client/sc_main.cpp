@@ -7,8 +7,8 @@
 #include "cl_main.hpp"
 #include "nw_client.hpp"
 #include "wd_spectate.hpp"
-#include <common/event.hpp>
-#include <common/player.hpp>
+#include <vkph_events.hpp>
+#include <vkph_player.hpp>
 #include <cstddef>
 #include <app.hpp>
 #include <vk.hpp>
@@ -16,17 +16,17 @@
 
 static fixed_premade_scene_t scene;
 
-void sc_main_init(listener_t listener, event_submissions_t *events) {
+void sc_main_init(vkph::listener_t listener) {
     scene = dr_read_premade_rsc("assets/misc/startup/default.startup");
 
-    subscribe_to_event(ET_ENTER_MAIN_MENU_SCENE, listener, events);
-    subscribe_to_event(ET_REQUEST_TO_JOIN_SERVER, listener, events);
-    subscribe_to_event(ET_REQUEST_USER_INFORMATION, listener, events);
-    subscribe_to_event(ET_ENTER_MAP_CREATOR_SCENE, listener, events);
+    vkph::subscribe_to_event(vkph::ET_ENTER_MAIN_MENU_SCENE, listener);
+    vkph::subscribe_to_event(vkph::ET_REQUEST_TO_JOIN_SERVER, listener);
+    vkph::subscribe_to_event(vkph::ET_REQUEST_USER_INFORMATION, listener);
+    vkph::subscribe_to_event(vkph::ET_ENTER_MAP_CREATOR_SCENE, listener);
 }
 
 void sc_bind_main() {
-    player_t *spect = wd_get_spectator();
+    vkph::player_t *spect = wd_get_spectator();
 
     // Position the player at the right place and view in the right direction
     spect->ws_position = scene.position;
@@ -37,10 +37,10 @@ void sc_bind_main() {
     fx_disable_ssao();
 }
 
-static void s_handle_input(event_submissions_t *events) {
-    ui_handle_input(events);
+static void s_handle_input() {
+    ui_handle_input();
 
-    player_t *spect = wd_get_spectator();
+    vkph::player_t *spect = wd_get_spectator();
     const app::game_input_t *game_input = app::get_game_input();
 
     static bool rotating = 0;
@@ -79,10 +79,10 @@ static void s_handle_input(event_submissions_t *events) {
     }
 }
 
-void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, event_submissions_t *events) {
-    s_handle_input(events);
+void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, vkph::state_t *state) {
+    s_handle_input();
 
-    nw_tick(events);
+    nw_tick(state);
 
     // Submit the mesh
     begin_mesh_submission(render, dr_get_shader_rsc(GS_BALL));
@@ -93,13 +93,13 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
     // Update UI
     // Submits quads to a list that will get sent to the GPU
-    ui_tick(events);
+    ui_tick();
     // (from renderer module) - submits the quads to the GPU
     ui::render_submitted_ui(transfer, ui);
 
     vk::eye_3d_info_t *eye_info = sc_get_eye_info();
     memset(eye_info, 0, sizeof(vk::eye_3d_info_t));
-    player_t *player = wd_get_spectator();
+    vkph::player_t *player = wd_get_spectator();
 
     eye_info->position = player->ws_position;
     eye_info->direction = player->ws_view_direction;
@@ -116,29 +116,31 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     light_info->lights_count = 0;
 }
 
-void sc_handle_main_event(void *object, struct event_t *event, struct event_submissions_t *events) {
+void sc_handle_main_event(void *object, vkph::event_t *event) {
+    auto *state = (vkph::state_t *)object;
+
     switch (event->type) {
-    case ET_ENTER_MAIN_MENU_SCENE: {
+    case vkph::ET_ENTER_MAIN_MENU_SCENE: {
         ui_push_panel(USI_MAIN_MENU);
     } break;
 
-    case ET_REQUEST_TO_JOIN_SERVER: {
+    case vkph::ET_REQUEST_TO_JOIN_SERVER: {
         ui_clear_panels();
 
-        submit_event(ET_ENTER_GAME_PLAY_SCENE, NULL, events);
+        vkph::submit_event(vkph::ET_ENTER_GAME_PLAY_SCENE, NULL);
 
         sc_bind(ST_GAME_PLAY);
     } break;
 
-    case ET_REQUEST_USER_INFORMATION: {
+    case vkph::ET_REQUEST_USER_INFORMATION: {
         ui_clear_panels();
         ui_push_panel(USI_SIGN_UP);
     } break;
 
-    case ET_ENTER_MAP_CREATOR_SCENE: {
+    case vkph::ET_ENTER_MAP_CREATOR_SCENE: {
         ui_clear_panels();
 
-        submit_event(ET_BEGIN_MAP_EDITING, event->data, events);
+        vkph::submit_event(vkph::ET_BEGIN_MAP_EDITING, event->data);
 
         sc_bind(ST_MAP_CREATOR);
     } break;

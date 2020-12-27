@@ -1,14 +1,15 @@
 #include "cl_main.hpp"
 #include <common/log.hpp>
-#include <common/game.hpp>
+#include <vkph_state.hpp>
 #include <common/math.hpp>
-#include <common/event.hpp>
-#include <vk.hpp>
+#include <vkph_events.hpp>
+#include <vkph_event_data.hpp>
 #include <common/allocators.hpp>
+#include <vk.hpp>
 
 static linear_interpolation_f32_t current_screen_brightness;
 
-static event_begin_fade_effect_t data;
+static vkph::event_begin_fade_effect_t data;
 
 void fx_fader_init() {
     current_screen_brightness.in_animation = 0;
@@ -22,7 +23,7 @@ void fx_fader_init() {
 }
 
 void fx_begin_fade_effect(
-    event_begin_fade_effect_t *idata) {
+    vkph::event_begin_fade_effect_t *idata) {
     current_screen_brightness.set(
         1,
         current_screen_brightness.current,
@@ -32,29 +33,28 @@ void fx_begin_fade_effect(
     data = *idata;
 }
 
-void fx_tick_fade_effect(
-    event_submissions_t *events) {
+void fx_tick_fade_effect() {
     float duration = current_screen_brightness.max_time;
 
     if (current_screen_brightness.in_animation) {
         current_screen_brightness.animate(cl_delta_time());
 
         if (!current_screen_brightness.in_animation) {
-            submit_event(ET_FADE_FINISHED, NULL, events);
+            vkph::submit_event(vkph::ET_FADE_FINISHED, NULL);
 
             for (uint32_t i = 0; i < data.trigger_count; ++i) {
-                submit_event(data.triggers[i].trigger_type, data.triggers[i].next_event_data, events);
+                submit_event(data.triggers[i].trigger_type, data.triggers[i].next_event_data);
             }
 
             if (data.fade_back) {
                 // Fade back in
-                event_begin_fade_effect_t *fade_back_data = FL_MALLOC(event_begin_fade_effect_t, 1);
+                auto *fade_back_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
                 fade_back_data->dest_value = 1.0f;
                 fade_back_data->duration = duration;
                 fade_back_data->trigger_count = 0;
                 fade_back_data->fade_back = 0;
 
-                submit_event(ET_BEGIN_FADE, fade_back_data, events);
+                vkph::submit_event(vkph::ET_BEGIN_FADE, fade_back_data);
             }
         }
     }

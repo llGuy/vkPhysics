@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <vkph_state.hpp>
 
 struct local_client_info_t {
     const char *name;
@@ -16,8 +17,8 @@ struct local_client_info_t {
 #define LOG_NETWORK_DEBUGV(text, ...)
 #endif
 
-void nw_init(struct event_submissions_t *events);
-void nw_tick(struct event_submissions_t *events);
+void nw_init(vkph::state_t *state);
+void nw_tick(vkph::state_t *state);
 bool nw_connected_to_server();
 uint16_t nw_get_local_client_index();
-void nw_check_registration(event_submissions_t *events);
+void nw_check_registration(vkph::state_t *state);

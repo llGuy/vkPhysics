@@ -12,9 +12,9 @@ enum ui_stack_item_t {
     USI_INVALID,
 };
 
-void ui_init(struct event_submissions_t *events);
-void ui_handle_input(event_submissions_t *events);
-void ui_tick(struct event_submissions_t *events);
+void ui_init();
+void ui_handle_input();
+void ui_tick();
 
 void ui_push_panel(ui_stack_item_t item);
 void ui_pop_panel();

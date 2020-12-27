@@ -23,7 +23,7 @@ int32_t wd_get_local_player() {
 
 static player_t *s_get_local_player() {
     if (local_player >= 0) {
-        return g_game->get_player(local_player);
+        return state->get_player(local_player);
     }
     else {
         return NULL;
@@ -77,7 +77,7 @@ void wd_handle_local_player_input(float dt) {
         }
     }
 
-    actions.tick = g_game->current_tick;
+    actions.tick = state->current_tick;
     
     player_t *local_player_ptr = s_get_local_player();
 
@@ -175,6 +175,6 @@ void wd_add_predicted_projectile_hit(player_t *hit_player) {
     new_hit.tick_before = before->tick;
     new_hit.tick_after = after->tick;
 
-    uint32_t hit_idx = g_game->predicted_hits.add();
-    g_game->predicted_hits[hit_idx] = new_hit;
+    uint32_t hit_idx = state->predicted_hits.add();
+    state->predicted_hits[hit_idx] = new_hit;
 }

@@ -3,7 +3,7 @@
 #include "vkph_chunk.hpp"
 #include "vkph_player.hpp"
 #include "vkph_physics.hpp"
-#include "vkph_physics_triangle_table.hpp"
+#include "vkph_triangle_table.hpp"
 
 #include <glm/gtx/projection.hpp>
 

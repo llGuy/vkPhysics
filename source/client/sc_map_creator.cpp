@@ -1,8 +1,7 @@
 #include "cl_view.hpp"
 #include "ui_popup.hpp"
-#include <common/chunk.hpp>
-#include <common/event.hpp>
-#include <common/map.hpp>
+#include <vkph_chunk.hpp>
+#include <vkph_map.hpp>
 #include <app.hpp>
 #include <vk.hpp>
 #include "ui_hud.hpp"
@@ -15,9 +14,8 @@
 #include "wd_spectate.hpp"
 #include "dr_draw_scene.hpp"
 #include "sc_map_creator.hpp"
-#include <common/game.hpp>
 
-#include <common/player.hpp>
+#include <vkph_player.hpp>
 #include <cstddef>
 #include <cstdlib>
 
@@ -28,7 +26,7 @@ enum submode_t {
 };
 
 static submode_t submode;
-static map_t *map;
+static vkph::map_t *map;
 static bool need_to_save;
 static bool started_command;
 
@@ -36,22 +34,22 @@ static bool started_command;
 
 static uint32_t edit_char_count;
 static char edit_buffer[EDIT_BUFFER_MAX_CHAR_COUNT] = {};
-static voxel_color_t current_color;
+static vkph::voxel_color_t current_color;
 static bool display_text_in_minibuffer;
 
-void sc_map_creator_init(listener_t listener, event_submissions_t *events) {
-    subscribe_to_event(ET_PRESSED_ESCAPE, listener, events);
-    subscribe_to_event(ET_BEGIN_MAP_EDITING, listener, events);
-    subscribe_to_event(ET_CREATE_NEW_MAP, listener, events);
-    subscribe_to_event(ET_DONT_CREATE_NEW_MAP, listener, events);
-    subscribe_to_event(ET_MAP_EDITOR_CHOSE_COLOR, listener, events);
+void sc_map_creator_init(vkph::listener_t listener) {
+    vkph::subscribe_to_event(vkph::ET_PRESSED_ESCAPE, listener);
+    vkph::subscribe_to_event(vkph::ET_BEGIN_MAP_EDITING, listener);
+    vkph::subscribe_to_event(vkph::ET_CREATE_NEW_MAP, listener);
+    vkph::subscribe_to_event(vkph::ET_DONT_CREATE_NEW_MAP, listener);
+    vkph::subscribe_to_event(vkph::ET_MAP_EDITOR_CHOSE_COLOR, listener);
 
     edit_char_count = 0;
     started_command = 0;
     display_text_in_minibuffer = 0;
 }
 
-void sc_bind_map_creator() {
+void sc_bind_map_creator(vkph::state_t *state) {
     fx_disable_blur();
     fx_enable_ssao();
 
@@ -59,7 +57,7 @@ void sc_bind_map_creator() {
     wd_set_local_player(-1);
     wd_get_spectator()->current_camera_up = wd_get_spectator()->ws_up_vector = glm::normalize(vector3_t(1.0f, 1.0f, 1.0f));
 
-    g_game->flags.track_history = 0;
+    state->flags.track_history = 0;
 }
 
 // All commands end with an enter, and start with a keybinding

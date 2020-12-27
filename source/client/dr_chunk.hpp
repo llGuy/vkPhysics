@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vk.hpp>
+#include <vkph_chunk.hpp>
+#include <vkph_state.hpp>
 
 typedef vk::mesh_render_data_t chunk_render_data_t;
 
@@ -27,12 +29,20 @@ struct chunk_render_t {
 };
 
 // Temporary, just for refactoring
-chunk_render_t *dr_chunk_render_init(const struct chunk_t *c, const vector3_t &ws_position);
+chunk_render_t *dr_chunk_render_init(const vkph::chunk_t *c, const vector3_t &ws_position);
+
 void dr_destroy_chunk_render(chunk_render_t *render);
-uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, vector3_t *mesh_vertices);
+
+uint32_t dr_generate_chunk_verts(
+    uint8_t surface_level,
+    const vkph::chunk_t *c,
+    vector3_t *mesh_vertices,
+    const vkph::state_t *state);
+
 // Updates gpu buffers, etc...
 void dr_update_chunk_draw_rsc(
     VkCommandBuffer command_buffer,
     uint8_t surface_level,
-    chunk_t *c,
-    compressed_chunk_mesh_vertex_t *verts = NULL);
+    vkph::chunk_t *c,
+    compressed_chunk_mesh_vertex_t *verts,
+    const vkph::state_t *state);

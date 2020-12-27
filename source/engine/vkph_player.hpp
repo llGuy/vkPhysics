@@ -10,6 +10,8 @@
 #include "vkph_player_action.hpp"
 #include "vkph_player_snapshot.hpp"
 
+struct player_render_t;
+
 namespace vkph {
 
 /* 
@@ -110,7 +112,7 @@ struct player_t {
       Because the vkph module is common both to the client and server,
       this module won't contain ANY rendering code, hence the forward declaration.
      */
-    struct player_render_t *render;
+    player_render_t *render;
 
     uint32_t player_action_count;
     player_action_t player_actions[PLAYER_MAX_ACTIONS_COUNT];

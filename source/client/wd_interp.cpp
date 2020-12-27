@@ -18,7 +18,7 @@ void wd_finish_interp_step() {
 
     for (uint32_t cm_index = 0; cm_index < chunks_to_interpolate.modification_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &chunks_to_interpolate.modifications[cm_index];
-        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+        chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
@@ -43,7 +43,7 @@ void wd_chunks_interp_step(float dt) {
     
     for (uint32_t cm_index = 0; cm_index < chunks_to_interpolate.modification_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &chunks_to_interpolate.modifications[cm_index];
-        chunk_t *c_ptr = g_game->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+        chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {

@@ -7,10 +7,11 @@
 #include <common/log.hpp>
 #include <common/meta.hpp>
 #include <common/files.hpp>
-#include <common/event.hpp>
+#include <vkph_events.hpp>
 #include <common/socket.hpp>
 #include <common/string.hpp>
 #include "nw_client_meta.hpp"
+#include <vkph_event_data.hpp>
 #include <common/serialiser.hpp>
 #include <common/allocators.hpp>
 
@@ -29,7 +30,7 @@ void nw_set_path_to_user_meta_info(const char *path) {
     path_to_user_meta_info = path;
 }
 
-void nw_check_registration(event_submissions_t *events) {
+void nw_check_registration() {
     LOG_INFOV("Reading user information from path: %s\n", path_to_user_meta_info);
 
     file_handle_t file_handle = create_file(path_to_user_meta_info, FLF_TEXT);
@@ -68,19 +69,19 @@ void nw_check_registration(event_submissions_t *events) {
 
         send_request(R_AUTOMATIC_LOGIN, login_data);
 
-        event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
+        auto *start_client_data = FL_MALLOC(vkph::event_start_client_t, 1);
         start_client_data->client_name = current_username;
-        submit_event(ET_START_CLIENT, start_client_data, events);
+        vkph::submit_event(vkph::ET_START_CLIENT, start_client_data);
     }
     else {
         LOG_INFO("No user information has been found in /assets/.user_meta - requesting user to sign up or login...\n");
 
         // Request the user to register a name
-        submit_event(ET_REQUEST_USER_INFORMATION, NULL, events);
+        vkph::submit_event(vkph::ET_REQUEST_USER_INFORMATION, NULL);
     }
 }
 
-void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
+void nw_check_meta_request_status_and_handle() {
     uint32_t size = 0;
     request_t request_type;
     char *data = check_request_finished(&size, &request_type);
@@ -91,7 +92,7 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
         case R_SIGN_UP: case R_LOGIN: {
             if (data[0] == '1') {
                 // Exit sign up menu
-                submit_event(ET_SIGN_UP_SUCCESS, NULL, events);
+                vkph::submit_event(vkph::ET_SIGN_UP_SUCCESS, NULL);
 
                 // The 2 bytes corresond to the 1 and the new line
                 char *user_tag_str = data + 2;
@@ -116,13 +117,13 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 // Request available servers list
                 nw_request_available_servers();
 
-                event_start_client_t *start_client_data = FL_MALLOC(event_start_client_t, 1);
+                auto *start_client_data = FL_MALLOC(vkph::event_start_client_t, 1);
                 start_client_data->client_name = current_username;
-                submit_event(ET_START_CLIENT, start_client_data, events);
+                vkph::submit_event(vkph::ET_START_CLIENT, start_client_data);
             }
             else {
                 // Failed to sign up or login
-                event_meta_request_error_t *data = FL_MALLOC(event_meta_request_error_t, 1);
+                auto *data = FL_MALLOC(vkph::event_meta_request_error_t, 1);
 
                 if (request_type == R_SIGN_UP) {
                     data->error_type = RE_USERNAME_EXISTS;
@@ -131,7 +132,7 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                     data->error_type = RE_INCORRECT_PASSWORD_OR_USERNAME;
                 }
 
-                submit_event(ET_META_REQUEST_ERROR, data, events);
+                vkph::submit_event(vkph::ET_META_REQUEST_ERROR, data);
             }
         } break;
 
@@ -147,7 +148,7 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
                 LOG_INFO("Failed to login\n");
 
                 // Request the user to login (or sign up) a name
-                submit_event(ET_REQUEST_USER_INFORMATION, NULL, events);
+                vkph::submit_event(vkph::ET_REQUEST_USER_INFORMATION, NULL);
             }
         } break;
 
@@ -202,7 +203,7 @@ void nw_check_meta_request_status_and_handle(event_submissions_t *events) {
 
             g_net_data.available_servers.server_count = i;
 
-            submit_event(ET_RECEIVED_AVAILABLE_SERVERS, NULL, events);
+            vkph::submit_event(vkph::ET_RECEIVED_AVAILABLE_SERVERS, NULL);
         } break;
         }
     }

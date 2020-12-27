@@ -7,6 +7,11 @@
 #include "vkph_voxel.hpp"
 #include "vkph_constant.hpp"
 
+/*
+  Gets defined in the client code.
+*/
+struct chunk_render_t;
+
 namespace vkph {
 
 struct chunk_history_t {
@@ -43,7 +48,7 @@ struct chunk_t {
 
     chunk_history_t history;
 
-    struct chunk_render_t *render;
+    chunk_render_t *render;
 
     void init(uint32_t chunk_stack_index, const ivector3_t &chunk_coord);
     void destroy();

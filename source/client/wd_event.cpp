@@ -33,7 +33,7 @@ static void s_handle_event_enter_server(
     event_enter_server_t *data = (event_enter_server_t *)event->data;
 
     for (uint32_t i = 0; i < data->info_count; ++i) {
-        player_t *player = g_game->add_player();
+        player_t *player = state->add_player();
         fill_player_info(player, &data->infos[i]);
 
         if (player->flags.is_local) {
@@ -54,7 +54,7 @@ static void s_handle_event_enter_server(
             player->elapsed = 0.0f;
         }
 
-        g_game->add_player_to_team(player, (team_color_t)player->flags.team_color);
+        state->add_player_to_team(player, (team_color_t)player->flags.team_color);
 
         player->render = dr_player_render_init();
         dr_player_animated_instance_init(&player->render->animations);
@@ -81,8 +81,8 @@ static void s_handle_event_spawn(
 
     LOG_INFOV("Client %i spawned\n", data->client_id);
 
-    int32_t local_id = g_game->get_local_id(id);
-    player_t *p = g_game->get_player(local_id);
+    int32_t local_id = state->get_local_id(id);
+    player_t *p = state->get_player(local_id);
     p->ws_position = p->next_random_spawn_position;
     p->ws_view_direction = glm::normalize(-p->ws_position);
     // Calculate up vector
@@ -107,7 +107,7 @@ static void s_handle_event_new_player(
     event_t *event) {
     event_new_player_t *data = (event_new_player_t *)event->data;
 
-    player_t *player = g_game->add_player();
+    player_t *player = state->add_player();
     fill_player_info(player, &data->info);
 
     if (!player->flags.is_local) {
@@ -128,11 +128,11 @@ static void s_handle_event_player_disconnected(
     if (wd_am_i_in_server()) {
         event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
 
-        int32_t local_id = g_game->get_local_id(data->client_id);
-        player_t *p = g_game->get_player(local_id);
+        int32_t local_id = state->get_local_id(data->client_id);
+        player_t *p = state->get_player(local_id);
 
         if (p->idx_in_chunk_list > -1) {
-            chunk_t *chunk = g_game->access_chunk(p->chunk_coord);
+            chunk_t *chunk = state->access_chunk(p->chunk_coord);
             chunk->players_in_chunk.remove(p->idx_in_chunk_list);
             p->idx_in_chunk_list = -1;
         }
@@ -141,12 +141,12 @@ static void s_handle_event_player_disconnected(
 
         if (team_color != team_color_t::INVALID) {
             // Remove player from team
-            g_game->remove_player_from_team(p);
+            state->remove_player_from_team(p);
             ui_init_game_menu_for_server();
         }
             
         if (p) {
-            g_game->remove_player(p->local_id);
+            state->remove_player(p->local_id);
         }
 
         FL_FREE(event->data);

@@ -1,21 +1,22 @@
 #include "dr_rsc.hpp"
-#include <common/game.hpp>
+#include <vkph_state.hpp>
 #include "dr_chunk.hpp"
 #include <common/log.hpp>
 #include <common/math.hpp>
-#include <common/chunk.hpp>
+#include <vkph_chunk.hpp>
 #include <common/constant.hpp>
 #include <common/allocators.hpp>
+#include <vkph_triangle_table.hpp>
 
 static uint32_t id = 0;
 
-chunk_render_t *dr_chunk_render_init(const chunk_t *chunk, const vector3_t &ws_position) {
+chunk_render_t *dr_chunk_render_init(const vkph::chunk_t *chunk, const vector3_t &ws_position) {
     chunk_render_t *chunk_render = FL_MALLOC(chunk_render_t, 1);
 
     memset(chunk_render, 0, sizeof(chunk_render_t));
 
     // Color of each vertex: uint32_t
-    uint32_t buffer_size = sizeof(compressed_chunk_mesh_vertex_t) * CHUNK_MAX_VERTICES_PER_CHUNK;
+    uint32_t buffer_size = sizeof(compressed_chunk_mesh_vertex_t) * vkph::CHUNK_MAX_VERTICES_PER_CHUNK;
 
     chunk_render->mesh.push_buffer(vk::BT_VERTEX);
     vk::mesh_buffer_t *vertex_gpu_buffer = chunk_render->mesh.get_mesh_buffer(vk::BT_VERTEX);
@@ -55,24 +56,25 @@ void dr_destroy_chunk_render(chunk_render_t *render) {
     }
 }
 
-static voxel_t s_chunk_edge_voxel_value(
+static vkph::voxel_t s_chunk_edge_voxel_value(
     int32_t x,
     int32_t y,
     int32_t z,
     bool *doesnt_exist,
-    ivector3_t chunk_coord) {
+    ivector3_t chunk_coord,
+    const vkph::state_t *state) {
     int32_t chunk_coord_offset_x = 0, chunk_coord_offset_y = 0, chunk_coord_offset_z = 0;
     int32_t final_x = x, final_y = y, final_z = z;
 
-    if (x == CHUNK_EDGE_LENGTH) {
+    if (x == vkph::CHUNK_EDGE_LENGTH) {
         final_x = 0;
         chunk_coord_offset_x = 1;
     }
-    if (y == CHUNK_EDGE_LENGTH) {
+    if (y == vkph::CHUNK_EDGE_LENGTH) {
         final_y = 0;
         chunk_coord_offset_y = 1;
     }
-    if (z == CHUNK_EDGE_LENGTH) {
+    if (z == vkph::CHUNK_EDGE_LENGTH) {
         final_z = 0;
         chunk_coord_offset_z = 1;
     }
@@ -82,14 +84,14 @@ static voxel_t s_chunk_edge_voxel_value(
         chunk_coord.y + chunk_coord_offset_y,
         chunk_coord.z + chunk_coord_offset_z);
 
-    chunk_t *chunk_ptr = g_game->access_chunk(coord);
+    const vkph::chunk_t *chunk_ptr = state->access_chunk(coord);
     
     *doesnt_exist = (bool)(chunk_ptr == nullptr);
 
     if (*doesnt_exist)
         return { 0, 0 };
     
-    return chunk_ptr->voxels[get_voxel_index(final_x, final_y, final_z)];
+    return chunk_ptr->voxels[vkph::get_voxel_index(final_x, final_y, final_z)];
 }
 
 static const vector3_t NORMALIZED_CUBE_VERTICES[8] = {
@@ -115,11 +117,11 @@ static const ivector3_t NORMALIZED_CUBE_VERTEX_INDICES[8] = {
 };
 
 static void s_push_vertex_to_triangle_array(
-    voxel_color_t color,
+    vkph::voxel_color_t color,
     uint8_t v0,
     uint8_t v1,
     uncompressed_chunk_mesh_vertex_t *vertices,
-    voxel_t *voxel_values,
+    vkph::voxel_t *voxel_values,
     uint8_t surface_level,
     compressed_chunk_mesh_vertex_t *mesh_vertices,
     uint32_t *vertex_count) {
@@ -175,7 +177,7 @@ static void s_push_vertex_to_triangle_array(
 #include <common/triangle_table.inc>
 
 static void s_update_chunk_mesh_voxel_pair(
-    voxel_t *voxel_values,
+    vkph::voxel_t *voxel_values,
     uint32_t x,
     uint32_t y,
     uint32_t z,
@@ -188,7 +190,7 @@ static void s_update_chunk_mesh_voxel_pair(
         bit_combination |= is_over_surface << i;
     }
 
-    const int8_t *triangle_entry = &TRIANGLE_TABLE[bit_combination][0];
+    const int8_t *triangle_entry = &vkph::TRIANGLE_TABLE[bit_combination][0];
 
     uint32_t edge = 0;
 
@@ -199,7 +201,7 @@ static void s_update_chunk_mesh_voxel_pair(
         edge_pair[edge % 3] = edge_index;
 
         if (edge % 3 == 2) {
-            voxel_color_t color;
+            vkph::voxel_color_t color;
             uint32_t dominant_voxel = 0;
 
             uncompressed_chunk_mesh_vertex_t vertices[8] = {};
@@ -236,35 +238,39 @@ static void s_update_chunk_mesh_voxel_pair(
     }
 }
 
-uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, compressed_chunk_mesh_vertex_t *mesh_vertices) {
+uint32_t dr_generate_chunk_verts(
+    uint8_t surface_level,
+    const vkph::chunk_t *c,
+    compressed_chunk_mesh_vertex_t *mesh_vertices,
+    const vkph::state_t *state) {
     if (!mesh_vertices)
         mesh_vertices = dr_get_tmp_mesh_verts();
 
     uint32_t vertex_count = 0;
 
-    chunk_t *x_superior = g_game->access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z));
-    chunk_t *y_superior = g_game->access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z));
-    chunk_t *z_superior = g_game->access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1));
+    const vkph::chunk_t *x_superior = state->access_chunk(ivector3_t(c->chunk_coord.x + 1, c->chunk_coord.y, c->chunk_coord.z));
+    const vkph::chunk_t *y_superior = state->access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y + 1, c->chunk_coord.z));
+    const vkph::chunk_t *z_superior = state->access_chunk(ivector3_t(c->chunk_coord.x, c->chunk_coord.y, c->chunk_coord.z + 1));
     
     bool doesnt_exist = 0;
     if (x_superior) {
         // x_superior
-        for (uint32_t z = 0; z < CHUNK_EDGE_LENGTH; ++z) {
-            for (uint32_t y = 0; y < CHUNK_EDGE_LENGTH - 1; ++y) {
+        for (uint32_t z = 0; z < vkph::CHUNK_EDGE_LENGTH; ++z) {
+            for (uint32_t y = 0; y < vkph::CHUNK_EDGE_LENGTH - 1; ++y) {
                 doesnt_exist = 0;
                 
-                uint32_t x = CHUNK_EDGE_LENGTH - 1;
+                uint32_t x = vkph::CHUNK_EDGE_LENGTH - 1;
 
-                voxel_t voxel_values[8] = {
-                    c->voxels[get_voxel_index(x, y, z)],
-                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
-                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
-                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x]    [y][z + 1],
+                vkph::voxel_t voxel_values[8] = {
+                    c->voxels[vkph::get_voxel_index(x, y, z)],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x]    [y][z + 1],
                     
-                    c->voxels[get_voxel_index(x, y + 1, z)],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z,&doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
-                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
+                    c->voxels[vkph::get_voxel_index(x, y + 1, z)],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z,&doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, state) };//voxels[x]    [y + 1][z + 1] };
 
                 if (!doesnt_exist)
                     s_update_chunk_mesh_voxel_pair(voxel_values, x, y, z, surface_level, mesh_vertices, &vertex_count);
@@ -274,22 +280,22 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, compre
 
     if (y_superior) {
         // y_superior    
-        for (uint32_t z = 0; z < CHUNK_EDGE_LENGTH; ++z) {
-            for (uint32_t x = 0; x < CHUNK_EDGE_LENGTH; ++x) {
+        for (uint32_t z = 0; z < vkph::CHUNK_EDGE_LENGTH; ++z) {
+            for (uint32_t x = 0; x < vkph::CHUNK_EDGE_LENGTH; ++x) {
                 doesnt_exist = 0;
                 
-                uint32_t y = CHUNK_EDGE_LENGTH - 1;
+                uint32_t y = vkph::CHUNK_EDGE_LENGTH - 1;
 
-                voxel_t voxel_values[8] = {
-                    c->voxels[get_voxel_index(x, y, z)],
-                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
-                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
-                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x]    [y][z + 1],
+                vkph::voxel_t voxel_values[8] = {
+                    c->voxels[vkph::get_voxel_index(x, y, z)],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x]    [y][z + 1],
                     
-                    s_chunk_edge_voxel_value(x, y + 1, z, &doesnt_exist, c->chunk_coord),
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
-                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
+                    s_chunk_edge_voxel_value(x, y + 1, z, &doesnt_exist, c->chunk_coord, state),
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, state) };//voxels[x]    [y + 1][z + 1] };
 
                 if (!doesnt_exist)
                     s_update_chunk_mesh_voxel_pair(voxel_values, x, y, z, surface_level, mesh_vertices, &vertex_count);
@@ -300,22 +306,22 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, compre
 
     if (z_superior) {
         // z_superior
-        for (uint32_t y = 0; y < CHUNK_EDGE_LENGTH - 1; ++y) {
-            for (uint32_t x = 0; x < CHUNK_EDGE_LENGTH - 1; ++x) {
+        for (uint32_t y = 0; y < vkph::CHUNK_EDGE_LENGTH - 1; ++y) {
+            for (uint32_t x = 0; x < vkph::CHUNK_EDGE_LENGTH - 1; ++x) {
                 doesnt_exist = 0;
                 
-                uint32_t z = CHUNK_EDGE_LENGTH - 1;
+                uint32_t z = vkph::CHUNK_EDGE_LENGTH - 1;
 
-                voxel_t voxel_values[8] = {
-                    c->voxels[get_voxel_index(x, y, z)],
-                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z],
-                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y][z + 1],
-                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x]    [y][z + 1],
+                vkph::voxel_t voxel_values[8] = {
+                    c->voxels[vkph::get_voxel_index(x, y, z)],
+                    s_chunk_edge_voxel_value(x + 1, y, z, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y][z],
+                    s_chunk_edge_voxel_value(x + 1, y, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y][z + 1],
+                    s_chunk_edge_voxel_value(x,     y, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x]    [y][z + 1],
                     
-                    c->voxels[get_voxel_index(x, y + 1, z)],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z],
-                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord),//voxels[x + 1][y + 1][z + 1],
-                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord) };//voxels[x]    [y + 1][z + 1] };
+                    c->voxels[vkph::get_voxel_index(x, y + 1, z)],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y + 1][z],
+                    s_chunk_edge_voxel_value(x + 1, y + 1, z + 1, &doesnt_exist, c->chunk_coord, state),//voxels[x + 1][y + 1][z + 1],
+                    s_chunk_edge_voxel_value(x,     y + 1, z + 1, &doesnt_exist, c->chunk_coord, state) };//voxels[x]    [y + 1][z + 1] };
 
                 if (!doesnt_exist)
                     s_update_chunk_mesh_voxel_pair(voxel_values, x, y, z, surface_level, mesh_vertices, &vertex_count);
@@ -323,19 +329,19 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, compre
         }
     }
     
-    for (uint32_t z = 0; z < CHUNK_EDGE_LENGTH - 1; ++z) {
-        for (uint32_t y = 0; y < CHUNK_EDGE_LENGTH - 1; ++y) {
-            for (uint32_t x = 0; x < CHUNK_EDGE_LENGTH - 1; ++x) {
-                voxel_t voxel_values[8] = {
-                    c->voxels[get_voxel_index(x, y, z)],
-                    c->voxels[get_voxel_index(x + 1, y, z)],
-                    c->voxels[get_voxel_index(x + 1, y, z + 1)],
-                    c->voxels[get_voxel_index(x, y, z + 1)],
+    for (uint32_t z = 0; z < vkph::CHUNK_EDGE_LENGTH - 1; ++z) {
+        for (uint32_t y = 0; y < vkph::CHUNK_EDGE_LENGTH - 1; ++y) {
+            for (uint32_t x = 0; x < vkph::CHUNK_EDGE_LENGTH - 1; ++x) {
+                vkph::voxel_t voxel_values[8] = {
+                    c->voxels[vkph::get_voxel_index(x, y, z)],
+                    c->voxels[vkph::get_voxel_index(x + 1, y, z)],
+                    c->voxels[vkph::get_voxel_index(x + 1, y, z + 1)],
+                    c->voxels[vkph::get_voxel_index(x, y, z + 1)],
                     
-                    c->voxels[get_voxel_index(x, y + 1, z)],
-                    c->voxels[get_voxel_index(x + 1, y + 1, z)],
-                    c->voxels[get_voxel_index(x + 1, y + 1, z + 1)],
-                    c->voxels[get_voxel_index(x, y + 1, z + 1)] };
+                    c->voxels[vkph::get_voxel_index(x, y + 1, z)],
+                    c->voxels[vkph::get_voxel_index(x + 1, y + 1, z)],
+                    c->voxels[vkph::get_voxel_index(x + 1, y + 1, z + 1)],
+                    c->voxels[vkph::get_voxel_index(x, y + 1, z + 1)] };
 
                 s_update_chunk_mesh_voxel_pair(voxel_values, x, y, z, surface_level, mesh_vertices, &vertex_count);
             }
@@ -345,17 +351,22 @@ uint32_t dr_generate_chunk_verts(uint8_t surface_level, const chunk_t *c, compre
     return vertex_count;
 }
 
-void dr_update_chunk_draw_rsc(VkCommandBuffer command_buffer, uint8_t surface_level, chunk_t *c, compressed_chunk_mesh_vertex_t *mesh_vertices) {
+void dr_update_chunk_draw_rsc(
+    VkCommandBuffer command_buffer,
+    uint8_t surface_level,
+    vkph::chunk_t *c,
+    compressed_chunk_mesh_vertex_t *mesh_vertices,
+    const vkph::state_t *state) {
     if (!mesh_vertices) {
         mesh_vertices = dr_get_tmp_mesh_verts();
     }
 
-    uint32_t vertex_count = dr_generate_chunk_verts(surface_level, c, mesh_vertices);
+    uint32_t vertex_count = dr_generate_chunk_verts(surface_level, c, mesh_vertices, state);
     if (vertex_count) {
         c->flags.active_vertices = 1;
 
         if (!c->render) {
-            c->render = dr_chunk_render_init(c, space_chunk_to_world(c->chunk_coord));
+            c->render = dr_chunk_render_init(c, vkph::space_chunk_to_world(c->chunk_coord));
         }
 
         static const uint32_t MAX_UPDATE_BUFFER_SIZE = 65536;
