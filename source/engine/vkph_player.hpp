@@ -36,7 +36,7 @@ union player_flags_t {
         uint32_t is_remote: 1;
         uint32_t is_local: 1;
         uint32_t just_spawned: 1;
-        uint32_t is_alive: 1;
+        uint32_t is_alive: 2;
         uint32_t interaction_mode: 3;
         uint32_t is_third_person: 1;
         uint32_t is_on_ground: 1;

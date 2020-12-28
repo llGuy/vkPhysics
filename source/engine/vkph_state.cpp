@@ -164,7 +164,7 @@ bool state_t::check_team_joinable(team_color_t color) const {
 }
 
 void state_t::timestep_begin(float dt_in) {
-    dt = dt_in;
+    delta_time = dt_in;
 }
 
 void state_t::timestep_end() {
@@ -787,7 +787,7 @@ bool state_t::terraform_with_history(terraform_info_t *info) {
 
                         int32_t current_voxel_value = (int32_t)voxel->value;
 
-                        int32_t new_value = (int32_t)(proportion * coeff * dt * info->speed) + current_voxel_value;
+                        int32_t new_value = (int32_t)(proportion * coeff * info->dt * info->speed) + current_voxel_value;
 
                         uint8_t *vh = &chunk->history.modification_pool[voxel_index];
                                     
@@ -883,7 +883,7 @@ bool state_t::terraform_without_history(terraform_info_t *info) {
 
                                 int32_t current_voxel_value = (int32_t)voxel->value;
 
-                                int32_t new_value = (int32_t)(proportion * coeff * dt * info->speed) + current_voxel_value;
+                                int32_t new_value = (int32_t)(proportion * coeff * info->dt * info->speed) + current_voxel_value;
 
                                 uint8_t voxel_value = 0;
                                     

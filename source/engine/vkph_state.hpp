@@ -27,7 +27,7 @@ struct chunk_t;
 struct state_t {
 
     // Core ///////////////////////////////////////////////////////////////////
-    float dt;
+    float delta_time;
     uint64_t current_tick;
     game_mode_t game_mode;
 

@@ -261,7 +261,7 @@ void srv_game_tick(vkph::state_t *state) {
                 state->rocks.list.remove(i);
             }
 
-            rock->tick(state->dt);
+            rock->tick(state->delta_time);
         }
     }
 }

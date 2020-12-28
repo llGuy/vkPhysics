@@ -31,7 +31,7 @@ static void s_end_time() {
     tick_end = current_time();
 
     dt = time_difference(tick_end, tick_start);
-    state->dt = dt;
+    state->delta_time = dt;
 }
 
 static void s_run() {
