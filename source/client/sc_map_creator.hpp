@@ -6,7 +6,7 @@
 
 // Scene where we are building a map
 void sc_map_creator_init(vkph::listener_t listener);
-void sc_bind_map_creator();
+void sc_bind_map_creator(vkph::state_t *state);
 void sc_map_creator_tick(
     VkCommandBuffer render,
     VkCommandBuffer transfer,

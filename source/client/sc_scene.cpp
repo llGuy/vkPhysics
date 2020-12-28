@@ -3,30 +3,29 @@
 #include "sc_main.hpp"
 #include "sc_play.hpp"
 #include <vk.hpp>
-#include <common/event.hpp>
+#include <vkph_events.hpp>
 
 static scene_type_t bound_scene;
 
 static vk::eye_3d_info_t eye_info;
 static vk::lighting_info_t lighting_info;
 
-static listener_t scene_listener;
+static vkph::listener_t scene_listener;
 
 static void s_scene_event_listener(
     void *object,
-    event_t *event,
-    event_submissions_t *events) {
+    vkph::event_t *event) {
     switch (bound_scene) {
     case ST_GAME_PLAY: {
-        sc_handle_play_event(object, event, events);
+        sc_handle_play_event(object, event);
     } break;
 
     case ST_MAIN_MENU: {
-        sc_handle_main_event(object, event, events);
+        sc_handle_main_event(object, event);
     } break;
 
     case ST_MAP_CREATOR: {
-        sc_handle_map_creator_event(object, event, events);
+        sc_handle_map_creator_event(object, event);
     } break;
 
     default: {
@@ -34,15 +33,15 @@ static void s_scene_event_listener(
     }
 }
 
-void sc_scenes_init(event_submissions_t *events) {
-    scene_listener = set_listener_callback(s_scene_event_listener, NULL, events);
+void sc_scenes_init(vkph::state_t *state) {
+    scene_listener = set_listener_callback(s_scene_event_listener, state);
 
-    sc_main_init(scene_listener, events);
-    sc_play_init(scene_listener, events);
-    sc_map_creator_init(scene_listener, events);
+    sc_main_init(scene_listener);
+    sc_play_init(scene_listener);
+    sc_map_creator_init(scene_listener);
 }
 
-void sc_bind(scene_type_t scene_type) {
+void sc_bind(scene_type_t scene_type, vkph::state_t *state) {
     bound_scene = scene_type;
 
     switch (scene_type) {
@@ -51,11 +50,11 @@ void sc_bind(scene_type_t scene_type) {
     } break;
 
     case ST_GAME_PLAY: {
-        sc_bind_play();
+        sc_bind_play(state);
     } break;
 
     case ST_MAP_CREATOR: {
-        sc_bind_map_creator();
+        sc_bind_map_creator(state);
     } break;
 
     default: {
@@ -68,18 +67,18 @@ void sc_tick(
     VkCommandBuffer transfer,
     VkCommandBuffer ui,
     VkCommandBuffer shadow,
-    event_submissions_t *events) {
+    vkph::state_t *state) {
     switch (bound_scene) {
     case ST_MAIN_MENU: {
-        sc_main_tick(render, transfer, ui, events);
+        sc_main_tick(render, transfer, ui, state);
     } break;
 
     case ST_GAME_PLAY: {
-        sc_play_tick(render, transfer, ui, shadow, events);
+        sc_play_tick(render, transfer, ui, shadow, state);
     } break;
 
     case ST_MAP_CREATOR: {
-        sc_map_creator_tick(render, transfer, ui, shadow, events);
+        sc_map_creator_tick(render, transfer, ui, shadow, state);
     } break;
 
     default: {

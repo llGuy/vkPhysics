@@ -150,7 +150,7 @@ void state_t::remove_player_from_team(player_t *player) {
     }
 }
 
-bool state_t::check_team_joinable(team_color_t color) {
+bool state_t::check_team_joinable(team_color_t color) const {
     // Make sure that player count in team == min(player counts of teams)
     uint32_t min_player_count = teams[0].player_count();
     

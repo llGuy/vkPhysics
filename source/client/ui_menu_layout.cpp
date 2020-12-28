@@ -109,9 +109,7 @@ void menu_layout_t::submit() {
 
 #define MENU_SLIDER_SPEED 0.3f
 
-bool menu_layout_t::input(
-    event_submissions_t *events,
-    const app::raw_input_t *input) {
+bool menu_layout_t::input(const app::raw_input_t *input) {
     menu_slider.animate(app::g_delta_time);
     current_menu.gls_current_size.fx = menu_slider.current;
 
@@ -153,11 +151,10 @@ bool menu_layout_t::input(
         if (!widgets[current_button].locked) {
             menu_click_handler_t proc = procs[current_button];
             if (proc) {
-                proc(events);
+                proc();
             }
             else {
-                open_menu(
-                    current_button);
+                open_menu(current_button);
             }
         }
     }

@@ -81,7 +81,7 @@ struct state_t {
     void change_player_team(player_t *player, team_color_t color);
     void add_player_to_team(player_t *player, team_color_t color);
     void remove_player_from_team(player_t *player);
-    bool check_team_joinable(team_color_t color);
+    bool check_team_joinable(team_color_t color) const;
 
     void timestep_begin(float dt_in);
     void timestep_end();

@@ -52,7 +52,7 @@ void dispatch_events() {
 
         for (uint32_t event_listener = 0; event_listener < subscription->count; ++event_listener) {
             listener_callback_t callback = events.callbacks[subscription->listeners[event_listener]];
-            void *object = events.listener_objects[event_listener];
+            void *object = events.listener_objects[subscription->listeners[event_listener]];
 
             (*callback)(object, current_event);
         }

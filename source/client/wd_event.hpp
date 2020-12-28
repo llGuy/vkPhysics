@@ -1,6 +1,7 @@
 #pragma once
 
-#include <common/event.hpp>
+#include <vkph_events.hpp>
+#include <vkph_state.hpp>
 
-void wd_subscribe_to_events(listener_t world_listener, event_submissions_t *events);
-void wd_world_event_listener(void *object, event_t *event, event_submissions_t *events);
+void wd_subscribe_to_events(vkph::listener_t world_listener);
+void wd_world_event_listener(void *object, vkph::event_t *event);

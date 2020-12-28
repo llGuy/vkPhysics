@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/math.hpp>
-#include <common/event.hpp>
+#include <vkph_events.hpp>
 #include <vk.hpp>
 #include <ui.hpp>
 #include <app.hpp>
@@ -30,8 +30,7 @@ struct menu_widget_t {
 #define MENU_WIDGET_CURRENT_MENU_BACKGROUND 0x13131336
 #define MENU_WIDGET_HOVER_COLOR_FADE_SPEED 0.3f
 
-typedef void (*menu_click_handler_t)(
-    event_submissions_t *events);
+typedef void (*menu_click_handler_t)();
 
 // In this game, all menus have a sort of similar layout, so just group in this object
 // There will always however be a maximum of 4 buttons
@@ -60,9 +59,7 @@ struct menu_layout_t {
 
     void submit();
 
-    bool input(
-        event_submissions_t *events,
-        const app::raw_input_t *input);
+    bool input(const app::raw_input_t *input);
 
     bool menu_opened();
 

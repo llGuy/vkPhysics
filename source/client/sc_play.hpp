@@ -6,7 +6,7 @@
 
 // Scene where we are in game
 void sc_play_init(vkph::listener_t listener);
-void sc_bind_play();
+void sc_bind_play(vkph::state_t *state);
 void sc_play_tick(
     VkCommandBuffer render,
     VkCommandBuffer transfer,

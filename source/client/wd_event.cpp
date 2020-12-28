@@ -1,46 +1,46 @@
 #include "client/ui_game_menu.hpp"
-#include "common/game.hpp"
+#include <vkph_state.hpp>
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
 #include "wd_event.hpp"
 #include "dr_player.hpp"
+#include <vkph_chunk.hpp>
+#include <vkph_event_data.hpp>
 #include "wd_predict.hpp"
 #include <common/log.hpp>
-#include <common/player.hpp>
 #include <common/constant.hpp>
 #include <common/allocators.hpp>
 
-void wd_subscribe_to_events(listener_t world_listener, event_submissions_t *events) {
-    subscribe_to_event(ET_ENTER_SERVER, world_listener, events);
-    subscribe_to_event(ET_NEW_PLAYER, world_listener, events);
-    subscribe_to_event(ET_LEAVE_SERVER, world_listener, events);
-    subscribe_to_event(ET_PLAYER_DISCONNECTED, world_listener, events);
-    subscribe_to_event(ET_SPAWN, world_listener, events);
-    subscribe_to_event(ET_BEGIN_AI_TRAINING, world_listener, events);
-    subscribe_to_event(ET_RESET_AI_ARENA, world_listener, events);
-    subscribe_to_event(ET_FINISH_GENERATION, world_listener, events);
+void wd_subscribe_to_events(vkph::listener_t world_listener) {
+    subscribe_to_event(vkph::ET_ENTER_SERVER, world_listener);
+    subscribe_to_event(vkph::ET_NEW_PLAYER, world_listener);
+    subscribe_to_event(vkph::ET_LEAVE_SERVER, world_listener);
+    subscribe_to_event(vkph::ET_PLAYER_DISCONNECTED, world_listener);
+    subscribe_to_event(vkph::ET_SPAWN, world_listener);
+    subscribe_to_event(vkph::ET_BEGIN_AI_TRAINING, world_listener);
+    subscribe_to_event(vkph::ET_RESET_AI_ARENA, world_listener);
+    subscribe_to_event(vkph::ET_FINISH_GENERATION, world_listener);
 }
 
-static void s_handle_event_enter_server(
-    event_t *event) {
+static void s_handle_event_enter_server(vkph::event_t *event, vkph::state_t *state) {
     LOG_INFO("Entering server world\n");
 
     wd_set_i_am_in_server(1);
 
     // Reinitialise chunks / players
-    wd_clear_world();
+    wd_clear_world(state);
 
-    event_enter_server_t *data = (event_enter_server_t *)event->data;
+    auto *data = (vkph::event_enter_server_t *)event->data;
 
     for (uint32_t i = 0; i < data->info_count; ++i) {
-        player_t *player = state->add_player();
-        fill_player_info(player, &data->infos[i]);
+        vkph::player_t *player = state->add_player();
+        player->init(&data->infos[i], state->client_to_local_id_map);
 
         if (player->flags.is_local) {
             wd_set_local_player(player->local_id);
 
             player->cached_player_action_count = 0;
-            player->cached_player_actions = FL_MALLOC(player_action_t, PLAYER_MAX_ACTIONS_COUNT * 2);
+            player->cached_player_actions = FL_MALLOC(vkph::player_action_t, vkph::PLAYER_MAX_ACTIONS_COUNT * 2);
 
             player->flags.is_remote = 0;
             player->flags.is_local = 1;
@@ -54,7 +54,7 @@ static void s_handle_event_enter_server(
             player->elapsed = 0.0f;
         }
 
-        state->add_player_to_team(player, (team_color_t)player->flags.team_color);
+        state->add_player_to_team(player, (vkph::team_color_t)player->flags.team_color);
 
         player->render = dr_player_render_init();
         dr_player_animated_instance_init(&player->render->animations);
@@ -68,34 +68,33 @@ static void s_handle_event_enter_server(
 //     context_ptr->in_meta_menu = 1;
 // }
 
-static void s_handle_event_leave_server() {
+static void s_handle_event_leave_server(vkph::state_t *state) {
     wd_set_i_am_in_server(0);
 
-    wd_clear_world();
+    wd_clear_world(state);
 }
 
-static void s_handle_event_spawn(
-    event_t *event) {
-    event_spawn_t *data = (event_spawn_t *)event->data;
+static void s_handle_event_spawn(vkph::event_t *event, vkph::state_t *state) {
+    auto *data = (vkph::event_spawn_t *)event->data;
     uint32_t id = data->client_id;
 
     LOG_INFOV("Client %i spawned\n", data->client_id);
 
     int32_t local_id = state->get_local_id(id);
-    player_t *p = state->get_player(local_id);
+    vkph::player_t *p = state->get_player(local_id);
     p->ws_position = p->next_random_spawn_position;
     p->ws_view_direction = glm::normalize(-p->ws_position);
     // Calculate up vector
     vector3_t right = glm::cross(p->ws_view_direction, vector3_t(0.0f, 1.0f, 0.0f));
     p->ws_up_vector = glm::cross(right, p->ws_view_direction);
-    p->flags.alive_state = PAS_ALIVE;
+    p->flags.is_alive = true;
     // Meteorite when player spawns
-    p->flags.interaction_mode = PIM_METEORITE;
+    p->flags.interaction_mode = vkph::PIM_METEORITE;
     p->ws_velocity = vector3_t(0.0f);
     p->health = 200;
 
     if (p->flags.is_local) {
-        p->flags.camera_type = CT_THIRD_PERSON;
+        p->flags.is_third_person = true;
 
         p->camera_distance.set(1, 12.0f, 10.0f, 1.0f);
         p->camera_fov.set(1, 80.0f, 60.0f);
@@ -103,12 +102,11 @@ static void s_handle_event_spawn(
     }
 }
 
-static void s_handle_event_new_player(
-    event_t *event) {
-    event_new_player_t *data = (event_new_player_t *)event->data;
+static void s_handle_event_new_player(vkph::event_t *event, vkph::state_t *state) {
+    auto *data = (vkph::event_new_player_t *)event->data;
 
-    player_t *player = state->add_player();
-    fill_player_info(player, &data->info);
+    vkph::player_t *player = state->add_player();
+    player->init(&data->info, state->client_to_local_id_map);
 
     if (!player->flags.is_local) {
         player->flags.is_remote = 1;
@@ -123,26 +121,25 @@ static void s_handle_event_new_player(
     FL_FREE(event->data);
 }
 
-static void s_handle_event_player_disconnected(
-    event_t *event) {
+static void s_handle_event_player_disconnected(vkph::event_t *event, vkph::state_t *state) {
     if (wd_am_i_in_server()) {
-        event_player_disconnected_t *data = (event_player_disconnected_t *)event->data;
+        auto *data = (vkph::event_player_disconnected_t *)event->data;
 
         int32_t local_id = state->get_local_id(data->client_id);
-        player_t *p = state->get_player(local_id);
+        vkph::player_t *p = state->get_player(local_id);
 
         if (p->idx_in_chunk_list > -1) {
-            chunk_t *chunk = state->access_chunk(p->chunk_coord);
+            vkph::chunk_t *chunk = state->access_chunk(p->chunk_coord);
             chunk->players_in_chunk.remove(p->idx_in_chunk_list);
             p->idx_in_chunk_list = -1;
         }
 
         uint32_t team_color = p->flags.team_color;
 
-        if (team_color != team_color_t::INVALID) {
+        if (team_color != vkph::team_color_t::INVALID) {
             // Remove player from team
             state->remove_player_from_team(p);
-            ui_init_game_menu_for_server();
+            ui_init_game_menu_for_server(state);
         }
             
         if (p) {
@@ -165,8 +162,7 @@ static void s_handle_event_launch_main_menu_screen() {
     // w_reposition_spectator();
 }
 
-static void s_handle_event_begin_ai_training(
-    event_t *event) {
+static void s_handle_event_begin_ai_training(vkph::event_t *event) {
 #if 0
     event_begin_ai_training_t *data = (event_begin_ai_training_t *)event->data;
 
@@ -184,38 +180,40 @@ static void s_handle_event_reset_ai_arena() {
     // w_begin_ai_training_chunks(context_ptr->training_type);
 }
 
-void wd_world_event_listener(void *object, event_t *event, event_submissions_t *events) {
+void wd_world_event_listener(void *object, vkph::event_t *event) {
+    auto *state = (vkph::state_t *)object;
+
     switch(event->type) {
 
-    case ET_ENTER_SERVER: {
-        s_handle_event_enter_server(event);
+    case vkph::ET_ENTER_SERVER: {
+        s_handle_event_enter_server(event, state);
     } break;
 
-    case ET_LEAVE_SERVER: {
-        s_handle_event_leave_server();
+    case vkph::ET_LEAVE_SERVER: {
+        s_handle_event_leave_server(state);
     } break;
 
-    case ET_SPAWN: {
-        s_handle_event_spawn(event);
+    case vkph::ET_SPAWN: {
+        s_handle_event_spawn(event, state);
     } break;
         
-    case ET_NEW_PLAYER: {
-        s_handle_event_new_player(event);
+    case vkph::ET_NEW_PLAYER: {
+        s_handle_event_new_player(event, state);
     } break;
 
-    case ET_PLAYER_DISCONNECTED: {
-        s_handle_event_player_disconnected(event);
+    case vkph::ET_PLAYER_DISCONNECTED: {
+        s_handle_event_player_disconnected(event, state);
     } break;
 
-    case ET_BEGIN_AI_TRAINING: {
+    case vkph::ET_BEGIN_AI_TRAINING: {
         s_handle_event_begin_ai_training(event);
     } break;
 
-    case ET_FINISH_GENERATION: {
+    case vkph::ET_FINISH_GENERATION: {
         s_handle_event_finish_generation();
     } break;
 
-    case ET_RESET_AI_ARENA: {
+    case vkph::ET_RESET_AI_ARENA: {
         // s_handle_event_reset_ai_arena();
     } break;
 

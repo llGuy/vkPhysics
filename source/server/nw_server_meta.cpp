@@ -15,7 +15,7 @@ void nw_init_meta_connection() {
     begin_meta_client_thread();
 }
 
-void nw_check_registration(event_submissions_t *events) {
+void nw_check_registration() {
     file_handle_t file_handle = create_file("assets/.server_meta", FLF_TEXT);
     file_contents_t contents = read_file(file_handle);
 

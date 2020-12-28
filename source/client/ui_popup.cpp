@@ -31,7 +31,7 @@ ui_popup_t *ui_add_popup(uint32_t vertical_section_count) {
 void ui_push_popup_section_button_double(
     ui_popup_t *popup,
     const char **button_text,
-    void (** handle_press_proc)(ui_popup_t *, event_submissions_t *)) {
+    void (** handle_press_proc)(ui_popup_t *)) {
     popup_section_t *section = &popup->sections[popup->vertical_section_count++];
     memset(section, 0, sizeof(popup_section_t));
 
@@ -47,7 +47,7 @@ void ui_push_popup_section_button_double(
 void ui_push_popup_section_button_single(
     ui_popup_t *popup,
     const char *button_text,
-    void (* handle_press_proc)(ui_popup_t *, event_submissions_t *)) {
+    void (* handle_press_proc)(ui_popup_t *)) {
     popup_section_t *section = &popup->sections[popup->vertical_section_count++];
     memset(section, 0, sizeof(popup_section_t));
 
@@ -240,13 +240,13 @@ void ui_submit_popups() {
     }
 }
 
-void ui_popup_input(event_submissions_t *events, const app::raw_input_t *input) {
+void ui_popup_input(const app::raw_input_t *input) {
     if (popup_count) {
         ui_popup_t *popup = &popups[popup_count - 1];
 
         bool hovering = 0;
 
-        void (* input_proc)(ui_popup_t *, event_submissions_t *) = NULL;
+        void (* input_proc)(ui_popup_t *) = NULL;
         uint32_t hovering_over_typing = 0;
 
         for (uint32_t i = 0; i < popup->vertical_section_count; ++i) {
@@ -285,7 +285,7 @@ void ui_popup_input(event_submissions_t *events, const app::raw_input_t *input) 
                 if ((hovering = ui_hover_over_box(
                     &section->input.box,
                     vector2_t(input->cursor_pos_x, input->cursor_pos_y)))) {
-                    input_proc = [](ui_popup_t *popup, event_submissions_t *) {
+                    input_proc = [](ui_popup_t *popup) {
                         popup->current_typing_section = popup->dummy;
                     };
 
@@ -301,7 +301,7 @@ void ui_popup_input(event_submissions_t *events, const app::raw_input_t *input) 
 
         if (input->buttons[app::BT_MOUSE_LEFT].instant)
             if (input_proc)
-                input_proc(popup, events);
+                input_proc(popup);
 
         if (!hovering_over_typing) {
             popup->current_typing_section = INVALID_TYPING_INDEX;

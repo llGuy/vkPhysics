@@ -632,7 +632,7 @@ static void s_handle_incorrect_state(
 
     if (p->flags.is_alive && !snapshot->alive_state) {
         // Handle death
-        wd_kill_local_player();
+        wd_kill_local_player(state);
     }
 
     p->flags.is_alive = snapshot->alive_state;
@@ -667,7 +667,7 @@ static void s_handle_incorrect_state(
         LOG_INFOV("Hard-sync chunks with server's chunks (%d)\n", packet->modified_chunk_count);
 
         // Need to finish all interpolation of chunks
-        wd_finish_interp_step();
+        wd_finish_interp_step(state);
 
         for (uint32_t cm_index = 0; cm_index < packet->modified_chunk_count; ++cm_index) {
             chunk_modifications_t *cm_ptr = &packet->chunk_modifications[cm_index];
@@ -942,7 +942,7 @@ static void s_receive_player_team_change(
         state->change_player_team(state->get_player(p_id), (vkph::team_color_t)packet.color);
 
         // Update the text on the game menu
-        ui_init_game_menu_for_server();
+        ui_init_game_menu_for_server(state);
     }
 }
 

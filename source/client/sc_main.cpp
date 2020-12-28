@@ -37,8 +37,8 @@ void sc_bind_main() {
     fx_disable_ssao();
 }
 
-static void s_handle_input() {
-    ui_handle_input();
+static void s_handle_input(vkph::state_t *state) {
+    ui_handle_input(state);
 
     vkph::player_t *spect = wd_get_spectator();
     const app::game_input_t *game_input = app::get_game_input();
@@ -80,7 +80,7 @@ static void s_handle_input() {
 }
 
 void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, vkph::state_t *state) {
-    s_handle_input();
+    s_handle_input(state);
 
     nw_tick(state);
 
@@ -93,7 +93,7 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
 
     // Update UI
     // Submits quads to a list that will get sent to the GPU
-    ui_tick();
+    ui_tick(state);
     // (from renderer module) - submits the quads to the GPU
     ui::render_submitted_ui(transfer, ui);
 
@@ -129,7 +129,7 @@ void sc_handle_main_event(void *object, vkph::event_t *event) {
 
         vkph::submit_event(vkph::ET_ENTER_GAME_PLAY_SCENE, NULL);
 
-        sc_bind(ST_GAME_PLAY);
+        sc_bind(ST_GAME_PLAY, state);
     } break;
 
     case vkph::ET_REQUEST_USER_INFORMATION: {
@@ -142,7 +142,7 @@ void sc_handle_main_event(void *object, vkph::event_t *event) {
 
         vkph::submit_event(vkph::ET_BEGIN_MAP_EDITING, event->data);
 
-        sc_bind(ST_MAP_CREATOR);
+        sc_bind(ST_MAP_CREATOR, state);
     } break;
 
     default: {

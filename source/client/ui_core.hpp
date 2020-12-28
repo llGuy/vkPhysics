@@ -2,6 +2,7 @@
 
 #include <vk.hpp>
 #include <ui.hpp>
+#include <vkph_state.hpp>
 
 enum ui_stack_item_t {
     USI_MAIN_MENU,
@@ -12,9 +13,9 @@ enum ui_stack_item_t {
     USI_INVALID,
 };
 
-void ui_init();
-void ui_handle_input();
-void ui_tick();
+void ui_init(vkph::state_t *state);
+void ui_handle_input(vkph::state_t *state);
+void ui_tick(vkph::state_t *state);
 
 void ui_push_panel(ui_stack_item_t item);
 void ui_pop_panel();

@@ -1,7 +1,7 @@
 #include "wd_interp.hpp"
-#include <common/game.hpp>
+#include <vkph_state.hpp>
+#include <vkph_chunk.hpp>
 #include "common/constant.hpp"
-#include "common/player.hpp"
 #include <common/net.hpp>
 
 static chunks_to_interpolate_t chunks_to_interpolate;
@@ -13,17 +13,17 @@ void wd_interp_init() {
     memset(chunks_to_interpolate.modifications, 0, sizeof(chunk_modifications_t) * chunks_to_interpolate.max_modified);
 }
 
-void wd_finish_interp_step() {
+void wd_finish_interp_step(vkph::state_t *state) {
     chunks_to_interpolate.elapsed = 0.0f;
 
     for (uint32_t cm_index = 0; cm_index < chunks_to_interpolate.modification_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &chunks_to_interpolate.modifications[cm_index];
-        chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+        vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-            voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
+            vkph::voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
             current_value->value = vm_ptr->final_value;
         }
 
@@ -33,7 +33,7 @@ void wd_finish_interp_step() {
     chunks_to_interpolate.modification_count = 0;
 }
 
-void wd_chunks_interp_step(float dt) {
+void wd_chunks_interp_step(float dt, vkph::state_t *state) {
     chunks_to_interpolate.elapsed += dt;
     float progression = chunks_to_interpolate.elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
 
@@ -43,12 +43,12 @@ void wd_chunks_interp_step(float dt) {
     
     for (uint32_t cm_index = 0; cm_index < chunks_to_interpolate.modification_count; ++cm_index) {
         chunk_modifications_t *cm_ptr = &chunks_to_interpolate.modifications[cm_index];
-        chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
+        vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
-            voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
+            vkph::voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
             float fcurrent_value = (float)(current_value->value);
             float initial_value = (float)(vm_ptr->initial_value);
             float final_value = (float)(vm_ptr->final_value);
@@ -65,9 +65,7 @@ void wd_chunks_interp_step(float dt) {
     }
 }
 
-void wd_player_interp_step(
-    float dt,
-    player_t *p) {
+void wd_player_interp_step(float dt, vkph::player_t *p, vkph::state_t *state) {
     // This adds a little delay
     // Makes sure that there is always snapshots to interpolate between
     if (p->remote_snapshots.head_tail_difference >= 3) {
@@ -106,11 +104,11 @@ void wd_player_interp_step(
         p->snapshot_before = previous_snapshot_index;
         p->snapshot_after = next_snapshot_index;
 
-        player_snapshot_t *previous_snapshot = &p->remote_snapshots.buffer[previous_snapshot_index];
-        player_snapshot_t *next_snapshot = &p->remote_snapshots.buffer[next_snapshot_index];
+        vkph::player_snapshot_t *previous_snapshot = &p->remote_snapshots.buffer[previous_snapshot_index];
+        vkph::player_snapshot_t *next_snapshot = &p->remote_snapshots.buffer[next_snapshot_index];
 
         // For things that cannot be interpolated
-        player_snapshot_t *middle_snapshot = previous_snapshot;
+        vkph::player_snapshot_t *middle_snapshot = previous_snapshot;
         if (progression > 0.5f) {
             middle_snapshot = next_snapshot;
         }
@@ -122,7 +120,7 @@ void wd_player_interp_step(
 
         // Just so that it's not zero
         p->ws_velocity = p->ws_position - previous_position;
-        p->flags.contact = middle_snapshot->contact;
+        p->flags.is_on_ground = middle_snapshot->contact;
 
         bool switch_shapes = (p->flags.interaction_mode != middle_snapshot->interaction_mode);
 
@@ -130,18 +128,18 @@ void wd_player_interp_step(
             LOG_INFOV("Switching shapes: %d to %d\n", p->flags.interaction_mode, middle_snapshot->interaction_mode);
         }
 
-        handle_shape_switch(p, switch_shapes, dt);
+        p->handle_shape_switch(switch_shapes, dt);
         p->flags.interaction_mode = middle_snapshot->interaction_mode;
 
-        p->animated_state = (player_animated_state_t)middle_snapshot->animated_state;
+        p->animated_state = (vkph::player_animated_state_t)middle_snapshot->animated_state;
 
-        if (p->flags.contact == PCS_ON_GROUND) {
+        if (p->flags.is_on_ground) {
             p->frame_displacement = glm::length(previous_position - p->ws_position);
         }
 
-        p->flags.alive_state = middle_snapshot->alive_state;
+        p->flags.is_alive = middle_snapshot->alive_state;
 
-        update_player_chunk_status(p);
+        p->update_player_chunk_status(state);
     }
 }
 

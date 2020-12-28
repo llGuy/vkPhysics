@@ -105,7 +105,7 @@ endif()
 # Create client (recheck if statement for clarity - TODO: merge renderer with client)
 if(BUILD_CLIENT)
   add_executable(vkPhysics_client "${CLIENT_SOURCES}")
-  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "${CURL_LIBRARIES}")
+  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "engine" "${CURL_LIBRARIES}")
   target_compile_definitions(vkPhysics_client PUBLIC "LINK_AGAINST_RENDERER")
 endif()
 

@@ -11,7 +11,7 @@ struct ui_list_button_t {
     ui::text_t text;
     widget_color_t color;
 
-    void (* handle_input_proc)(struct ui_list_t *list, event_submissions_t *events);
+    void (* handle_input_proc)(struct ui_list_t *list);
 };
 
 struct ui_list_item_t {
@@ -20,7 +20,7 @@ struct ui_list_item_t {
     widget_color_t button_color;
     widget_color_t color;
 
-    void *data;
+    const void *data;
 };
 
 struct typing_box_t {
@@ -54,16 +54,16 @@ void ui_list_init(
     ui_list_t *list,
     uint32_t right_buttons_count,
     const char **right_button_text,
-    void (** handle_input_procs)(ui_list_t *, event_submissions_t *),
+    void (** handle_input_procs)(ui_list_t *),
     void (* fill_item_proc)(ui_list_item_t *));
 // Clears all the items in a list
 void ui_list_clear(ui_list_t *list);
 // Allocates enough memory for the list
 void ui_list_begin(ui_list_t *list, uint32_t count);
 // Adds an item to the list
-void ui_list_add(ui_list_t *list, void *data);
+void ui_list_add(ui_list_t *list, const void *data);
 // Initialises all of the items in the list and all the rendering data
 void ui_list_end(ui_list_t *list);
 // Submits a list for rendering
 void ui_submit_list(ui_list_t *list);
-void ui_list_input(ui_list_t *list, event_submissions_t *events, const app::raw_input_t *raw_input);
+void ui_list_input(ui_list_t *list, const app::raw_input_t *raw_input);

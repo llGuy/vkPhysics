@@ -7,7 +7,8 @@
 #include "ui_hud.hpp"
 #include "ui_sign_up.hpp"
 #include <common/meta.hpp>
-#include <common/event.hpp>
+#include <vkph_events.hpp>
+#include <vkph_event_data.hpp>
 #include <app.hpp>
 #include <vk.hpp>
 #include <common/allocators.hpp>
@@ -19,47 +20,48 @@ static int32_t stack_item_count;
 
 static void s_ui_event_listener(
     void *object,
-    event_t *event,
-    event_submissions_t *events) {
+    vkph::event_t *event) {
+    auto *state = (vkph::state_t *)object;
+
     // ...
     switch(event->type) {
 
-    case ET_RECEIVED_AVAILABLE_SERVERS: {
+    case vkph::ET_RECEIVED_AVAILABLE_SERVERS: {
         ui_refresh_main_menu_server_page();
     } break;
 
-    case ET_RESIZE_SURFACE: {
+    case vkph::ET_RESIZE_SURFACE: {
         // Need to reinitialise UI system
-        ui_main_menu_init();
+        ui_main_menu_init(state);
         ui_game_menu_init();
         ui_sign_up_menu_init();
         ui_hud_init();
 
-        ui_init_game_menu_for_server();
+        ui_init_game_menu_for_server(state);
     } break;
 
-    case ET_META_REQUEST_ERROR: {
-        event_meta_request_error_t *data = (event_meta_request_error_t *)event->data;
+    case vkph::ET_META_REQUEST_ERROR: {
+        auto *data = (vkph::event_meta_request_error_t *)event->data;
 
-        ui_handle_sign_up_failed(data->error_type);
+        ui_handle_sign_up_failed((request_error_t)data->error_type);
 
         FL_FREE(data);
     } break;
 
-    case ET_SIGN_UP_SUCCESS: case ET_LOGIN_SUCCESS: {
+    case vkph::ET_SIGN_UP_SUCCESS: case vkph::ET_LOGIN_SUCCESS: {
         ui_clear_panels();
         ui_push_panel(USI_MAIN_MENU);
     } break;
 
-    case ET_ENTER_SERVER: {
-        ui_init_game_menu_for_server();
+    case vkph::ET_ENTER_SERVER: {
+        ui_init_game_menu_for_server(state);
     } break;
 
-    case ET_SPAWN: {
+    case vkph::ET_SPAWN: {
         ui_lock_spawn_button();
     } break;
 
-    case ET_LOCAL_PLAYER_DIED: {
+    case vkph::ET_LOCAL_PLAYER_DIED: {
         ui_unlock_spawn_button();
     } break;
 
@@ -69,7 +71,7 @@ static void s_ui_event_listener(
     }
 }
 
-static listener_t ui_listener;
+static vkph::listener_t ui_listener;
 
 static ui::font_t *global_font;
 static vk::texture_t ui_textures[UT_INVALID_TEXTURE];
@@ -94,23 +96,18 @@ static void s_ui_textures_init() {
     ui_textures[UT_TEAM_SELECT].init("assets/textures/gui/team.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
-void ui_init(
-    event_submissions_t *events) {
+void ui_init(vkph::state_t *state) {
     stack_item_count = 0;
 
-    ui_listener = set_listener_callback(
-        &s_ui_event_listener,
-        NULL,
-        events);
-
-    subscribe_to_event(ET_RECEIVED_AVAILABLE_SERVERS, ui_listener, events);
-    subscribe_to_event(ET_RESIZE_SURFACE, ui_listener, events);
-    subscribe_to_event(ET_META_REQUEST_ERROR, ui_listener, events);
-    subscribe_to_event(ET_SIGN_UP_SUCCESS, ui_listener, events);
-    subscribe_to_event(ET_PRESSED_ESCAPE, ui_listener, events);
-    subscribe_to_event(ET_ENTER_SERVER, ui_listener, events);
-    subscribe_to_event(ET_SPAWN, ui_listener, events);
-    subscribe_to_event(ET_LOCAL_PLAYER_DIED, ui_listener, events);
+    ui_listener = vkph::set_listener_callback(&s_ui_event_listener, state);
+    vkph::subscribe_to_event(vkph::ET_RECEIVED_AVAILABLE_SERVERS, ui_listener);
+    vkph::subscribe_to_event(vkph::ET_RESIZE_SURFACE, ui_listener);
+    vkph::subscribe_to_event(vkph::ET_META_REQUEST_ERROR, ui_listener);
+    vkph::subscribe_to_event(vkph::ET_SIGN_UP_SUCCESS, ui_listener);
+    vkph::subscribe_to_event(vkph::ET_PRESSED_ESCAPE, ui_listener);
+    vkph::subscribe_to_event(vkph::ET_ENTER_SERVER, ui_listener);
+    vkph::subscribe_to_event(vkph::ET_SPAWN, ui_listener);
+    vkph::subscribe_to_event(vkph::ET_LOCAL_PLAYER_DIED, ui_listener);
 
     global_font = flmalloc<ui::font_t>();
     global_font->load(
@@ -119,15 +116,14 @@ void ui_init(
 
     // Initialise some textures
     s_ui_textures_init();
-    ui_main_menu_init();
+    ui_main_menu_init(state);
     ui_hud_init();
     ui_game_menu_init();
     ui_sign_up_menu_init();
     ui_popups_init();
 }
 
-void ui_handle_input(
-    event_submissions_t *events) {
+void ui_handle_input(vkph::state_t *state) {
     const app::raw_input_t *raw_input = app::get_raw_input();
 
     if (stack_item_count) {
@@ -135,23 +131,23 @@ void ui_handle_input(
 
         switch (last) {
         case USI_MAIN_MENU: {
-            ui_main_menu_input(events, raw_input);
+            ui_main_menu_input(raw_input);
         } break;
 
         case USI_GAME_MENU: {
-            ui_game_menu_input(events, raw_input);
+            ui_game_menu_input(raw_input, state);
         } break;
 
         case USI_SIGN_UP: {
-            ui_sign_up_menu_input(events, raw_input);
+            ui_sign_up_menu_input(raw_input);
         } break;
 
         case USI_POPUP: {
-            ui_popup_input(events, raw_input);
+            ui_popup_input(raw_input);
         } break;
 
         case USI_HUD: {
-            ui_hud_input(events, raw_input);
+            ui_hud_input(raw_input);
         } break;
 
         default: {
@@ -161,8 +157,7 @@ void ui_handle_input(
     }
 }
 
-void ui_tick(
-    event_submissions_t *events) {
+void ui_tick(vkph::state_t *state) {
     for (uint32_t i = 0; i < stack_item_count; ++i) {
         switch (stack_items[i]) {
         case USI_MAIN_MENU: {
@@ -170,7 +165,7 @@ void ui_tick(
         } break;
 
         case USI_HUD: {
-            ui_submit_hud();
+            ui_submit_hud(state);
         } break;
 
         case USI_GAME_MENU: {

@@ -1,6 +1,7 @@
 #include "common/allocators.hpp"
-#include "common/event.hpp"
+#include <vkph_events.hpp>
 #include "common/string.hpp"
+#include <vkph_event_data.hpp>
 #include "ui_core.hpp"
 #include "ui_menu_layout.hpp"
 #include <cstdio>
@@ -167,7 +168,7 @@ void ui_submit_sign_up_menu() {
         ui::push_text(&error_text);
 }
 
-void ui_sign_up_menu_input(event_submissions_t *events, const app::raw_input_t *input) {
+void ui_sign_up_menu_input(const app::raw_input_t *input) {
     button_t hovering_over = B_INVALID;
     bool hovering = 0;
 
@@ -242,18 +243,18 @@ void ui_sign_up_menu_input(event_submissions_t *events, const app::raw_input_t *
             }
 
             if (hovering_over == B_SIGNUP) {
-                event_attempt_sign_up_t *event_data = FL_MALLOC(event_attempt_sign_up_t, 1);
+                auto *event_data = FL_MALLOC(vkph::event_attempt_sign_up_t, 1);
                 event_data->username = username;
                 event_data->password = password;
 
-                submit_event(ET_ATTEMPT_SIGN_UP, event_data, events);
+                vkph::submit_event(vkph::ET_ATTEMPT_SIGN_UP, event_data);
             }
             else {
-                event_attempt_login_t *event_data = FL_MALLOC(event_attempt_login_t, 1);
+                auto *event_data = FL_MALLOC(vkph::event_attempt_login_t, 1);
                 event_data->username = username;
                 event_data->password = password;
 
-                submit_event(ET_ATTEMPT_LOGIN, event_data, events);
+                vkph::submit_event(vkph::ET_ATTEMPT_LOGIN, event_data);
             }
 
             error_happened = 0;

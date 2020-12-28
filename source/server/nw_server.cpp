@@ -1115,7 +1115,7 @@ void nw_init(vkph::state_t *state) {
 
     // meta_socket_init();
     nw_init_meta_connection();
-    nw_check_registration(NULL);
+    nw_check_registration();
 }
 
 void nw_tick(vkph::state_t *state) {

@@ -10,8 +10,8 @@ enum scene_type_t {
     ST_INVALID
 };
 
-void sc_scenes_init();
-void sc_bind(scene_type_t type);
+void sc_scenes_init(vkph::state_t *state);
+void sc_bind(scene_type_t type, vkph::state_t *state);
 void sc_tick(
     VkCommandBuffer render,
     VkCommandBuffer transfer,

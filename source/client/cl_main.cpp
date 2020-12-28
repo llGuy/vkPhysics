@@ -127,12 +127,12 @@ int32_t main(
 
     dr_resources_init();
     wd_init(state);
-    ui_init();
+    ui_init(state);
 
     // Initialise scenes
-    sc_scenes_init();
+    sc_scenes_init(state);
     // Bind main menu
-    sc_bind(ST_MAIN_MENU);
+    sc_bind(ST_MAIN_MENU, state);
 
     fx_get_frame_info()->debug_window = 1;
 

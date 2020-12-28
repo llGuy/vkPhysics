@@ -204,6 +204,8 @@ struct player_t {
       state of the game (terrain, other players, etc...).
     */
     void execute_action(player_action_t *action, state_t *state);
+    void handle_shape_switch(bool switch_shapes, float dt);
+    void update_player_chunk_status(state_t *state);
 
     /*
       View position here corresponds to the eye position -> need to add player height.
@@ -218,7 +220,6 @@ private:
     /*
       Called in execute_action().
     */
-    void handle_shape_switch(bool switch_shapes, float dt);
     void handle_weapon_switch(player_action_t *action);
     void execute_player_triggers(player_action_t *action, state_t *state);
     void accelerate_meteorite_player(player_action_t *action, const state_t *state);
@@ -227,7 +228,6 @@ private:
     void execute_standing_player_movement(player_action_t *action, const state_t *state);
     void execute_ball_player_movement(player_action_t *action, const state_t *state);
     void check_player_dead(player_action_t *action, state_t *state);
-    void update_player_chunk_status(state_t *state);
 
 };
 

@@ -2,14 +2,13 @@
 #include "ui_game_menu.hpp"
 #include "ui_hover.hpp"
 #include "wd_predict.hpp"
-#include "common/chunk.hpp"
-#include "common/event.hpp"
-#include "common/player.hpp"
+#include <vkph_events.hpp>
+#include <vkph_event_data.hpp>
+#include <vkph_state.hpp>
 #include "ui_popup.hpp"
-#include <common/team.hpp>
+#include <vkph_team.hpp>
 #include "ui_menu_layout.hpp"
 #include "ui_team_select.hpp"
-#include <common/game.hpp>
 #include <cstdio>
 #include <app.hpp>
 #include "ui_hover.hpp"
@@ -19,7 +18,7 @@ static ui::box_t head_box;
 static ui::text_t head_text;
 
 struct team_button_t {
-    team_color_t color;
+    vkph::team_color_t color;
 
     // Display color
     ui::box_t box;
@@ -36,8 +35,7 @@ static uint32_t button_count;
 static team_button_t *buttons;
 static ui::box_t main_box;
 
-void ui_team_select_init(
-    menu_layout_t *layout) {
+void ui_team_select_init(menu_layout_t *layout) {
     head_box.init(ui::RT_LEFT_UP, 10.0f, {0.025f, -0.025f}, {0.3, 0.1f}, &layout->current_menu, 0);
     head_text.init(&head_box, ui_game_font(), ui::text_t::BOTTOM, 0.2f, 0.2f, 15, 1.3f);
 
@@ -48,9 +46,10 @@ void ui_team_select_init(
 }
 
 void ui_update_team_roster_layout(
-    menu_layout_t *layout) {
+    menu_layout_t *layout,
+    const vkph::state_t *state) {
     uint32_t team_count = state->team_count;
-    team_t *teams = state->teams;
+    const auto *teams = state->teams;
 
     button_count = team_count;
 
@@ -69,11 +68,11 @@ void ui_update_team_roster_layout(
     float scale = 1.0f / (float)team_count;
 
     for (uint32_t i = 0; i < team_count; ++i) {
-        team_color_t color = teams[i].make_team_info().color;
+        vkph::team_color_t color = teams[i].make_team_info().color;
         uint32_t rgb_hovered;
         uint32_t rgb_unhovered;
 
-        team_info_t info = teams[i].make_team_info();
+        vkph::team_info_t info = teams[i].make_team_info();
 
         rgb_hovered = ui::vec4_color_to_ui32b(team_color_to_v4(info.color, 0.9f));
         rgb_unhovered = ui::vec4_color_to_ui32b(team_color_to_v4(info.color, 0.9f) * 0.8f);
@@ -86,14 +85,14 @@ void ui_update_team_roster_layout(
     }
 }
 
-void ui_update_team_roster_display_text(menu_layout_t *layout) {
+void ui_update_team_roster_display_text(menu_layout_t *layout, const vkph::state_t *state) {
     char buf[10] = {};
 
     uint32_t team_count = state->team_count;
-    team_t *teams = state->teams;
+    const auto *teams = state->teams;
 
     for (uint32_t i = 0; i < button_count; ++i) {
-        team_info_t info = teams[i].make_team_info();
+        vkph::team_info_t info = teams[i].make_team_info();
         sprintf(buf, "%d / %d", info.player_count, info.max_players);
 
         buttons[i].player_count_text.init(&buttons[i].text_box, ui_game_font(), ui::text_t::BOTTOM, 0.1f, 0.1f, 7, 1.3f);
@@ -112,7 +111,8 @@ void ui_submit_team_select() {
     }
 }
 
-void ui_team_select_input(const app::raw_input_t *raw_input, event_submissions_t *events) {
+// TODO: Make sure there vkph::state_t *state is const
+void ui_team_select_input(const app::raw_input_t *raw_input, vkph::state_t *state) {
     int32_t hovered_button = -1;
     for (int32_t i = 0; i < button_count; ++i) {
         bool hovered_over = ui_hover_over_box(
@@ -139,30 +139,30 @@ void ui_team_select_input(const app::raw_input_t *raw_input, event_submissions_t
 
         if (team > -1) {
             // Check if we can join this team (if it is full compared to the other teams)
-            team_color_t color = buttons[team].color;
+            vkph::team_color_t color = buttons[team].color;
 
             if (state->check_team_joinable(color)) {
                 // Submit even saying that player just joined team
                 LOG_INFO("Local client trying to join team\n");
 
-                event_send_server_team_select_request_t *d = FL_MALLOC(event_send_server_team_select_request_t, 1);
+                auto *d = FL_MALLOC(vkph::event_send_server_team_select_request_t, 1);
                 d->color = color;
-                submit_event(ET_SEND_SERVER_TEAM_SELECT_REQUEST, d, events);
+                vkph::submit_event(vkph::ET_SEND_SERVER_TEAM_SELECT_REQUEST, d);
 
-                player_t *p = state->get_player(wd_get_local_player());
+                vkph::player_t *p = state->get_player(wd_get_local_player());
 
                 state->change_player_team(p, color);
 
                 { // Update UI components
-                    ui_init_game_menu_for_server();
+                    ui_init_game_menu_for_server(state);
                     ui_unlock_spawn_button();
                 }
 
                 p->terraform_package.color = team_color_to_voxel_color(color);
 
-                if (p->flags.alive_state == PAS_ALIVE) {
+                if (p->flags.is_alive) {
                     // Trigger a dead event
-                    wd_kill_local_player(events);
+                    wd_kill_local_player(state);
                 }
             }
         }

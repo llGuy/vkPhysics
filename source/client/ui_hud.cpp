@@ -1,12 +1,12 @@
 #include "ui_hover.hpp"
-#include <common/game.hpp>
-#include "common/event.hpp"
+#include <vkph_state.hpp>
+#include <vkph_events.hpp>
+#include <vkph_event_data.hpp>
 #include "wd_predict.hpp"
 #include "ui_list.hpp"
 #include <common/allocators.hpp>
 #include "ui_hud.hpp"
 #include "ui_core.hpp"
-#include <common/event.hpp>
 #include "ui_menu_layout.hpp"
 #include <cstdio>
 #include <app.hpp>
@@ -158,7 +158,7 @@ void ui_hud_init() {
     ui_color_table_init();
 }
 
-void ui_submit_hud() {
+void ui_submit_hud(const vkph::state_t *state) {
     float unit = (1.0f / 8.0f);
 
     vector2_t start = vector2_t(crosshair_selection.current_crosshair % 8, crosshair_selection.current_crosshair / 8) / 8.0f;
@@ -174,7 +174,7 @@ void ui_submit_hud() {
     if (gameplay_display) {
         // Check if main player health has changed
         int32_t p_idx = wd_get_local_player();
-        player_t *p = state->get_player(p_idx);
+        const vkph::player_t *p = state->get_player(p_idx);
 
         if (p) {
             uint32_t current_health = p->health;
@@ -268,7 +268,7 @@ void ui_submit_color_table() {
     }
 }
 
-void ui_hud_input(event_submissions_t *events, const app::raw_input_t *input) {
+void ui_hud_input(const app::raw_input_t *input) {
     if (display_color_table) {
         if (input->buttons[app::BT_MOUSE_LEFT].instant) {
             vector2_t color = vector2_t(0.0f);
@@ -289,12 +289,12 @@ void ui_hud_input(event_submissions_t *events, const app::raw_input_t *input) {
                 // Blue
                 float b = floor(color.x * 2.0f) + floor(color.y * 2.0f) * 2.0f;
 
-                event_map_editor_chose_color_t *data = FL_MALLOC(event_map_editor_chose_color_t, 1);
+                auto *data = FL_MALLOC(vkph::event_map_editor_chose_color_t, 1);
                 data->r = (uint8_t)r_x;
                 data->g = (uint8_t)g_y;
                 data->b = (uint8_t)b;
 
-                submit_event(ET_MAP_EDITOR_CHOSE_COLOR, data, events);
+                vkph::submit_event(vkph::ET_MAP_EDITOR_CHOSE_COLOR, data);
             }
         }
     }

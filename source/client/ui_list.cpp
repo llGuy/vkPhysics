@@ -7,7 +7,7 @@ void ui_list_init(
     ui_list_t *list,
     uint32_t right_buttons_count,
     const char **right_button_text,
-    void (** handle_input_procs)(ui_list_t *, event_submissions_t *),
+    void (** handle_input_procs)(ui_list_t *),
     void (* fill_item_proc)(ui_list_item_t *item)) {
     { // Initialise the list box
         list->list_box.init(
@@ -103,7 +103,7 @@ void ui_list_begin(ui_list_t *list, uint32_t count) {
     list->items = FL_MALLOC(ui_list_item_t, count);
 }
 
-void ui_list_add(ui_list_t *list, void *data) {
+void ui_list_add(ui_list_t *list, const void *data) {
     list->items[list->item_count].data = data;
     list->item_count++;
 }
@@ -164,7 +164,7 @@ void ui_submit_list(ui_list_t *list) {
     }
 }
 
-void ui_list_input(ui_list_t *list, event_submissions_t *events, const app::raw_input_t *input) {
+void ui_list_input(ui_list_t *list, const app::raw_input_t *input) {
     { // For the typing space
         bool hovered_over_ip_address = ui_hover_over_box(&list->typing_box.box, vector2_t(input->cursor_pos_x, input->cursor_pos_y));
         color_pair_t pair = list->typing_box.color.update(MENU_WIDGET_HOVER_COLOR_FADE_SPEED, hovered_over_ip_address);
@@ -190,7 +190,7 @@ void ui_list_input(ui_list_t *list, event_submissions_t *events, const app::raw_
             button->box.color = pair.current_background;
 
             if (hovered_over && input->buttons[app::BT_MOUSE_LEFT].instant) {
-                button->handle_input_proc(list, events);
+                button->handle_input_proc(list);
             }
         }
     }
