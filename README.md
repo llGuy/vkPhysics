@@ -19,5 +19,4 @@ For now, an engine which will hopefully become a real-time multiplayer game!
 
 ## Screenshots
 
-![photo](/assets/screenshots/ingame.png)
 ![photo](/assets/screenshots/opening_screen.png)
