@@ -85,10 +85,3 @@ float host_to_network_byte_order_f32(
 
 float network_to_host_byte_order_f32(
     float bytes);
-
-// Port that meta uses to commmunicate with servers / clients
-#define SERVER_META_OUTPUT_PORT 6499
-// Port that clients / servers uses to communicate with meta
-#define GAME_OUTPUT_META_PORT 5999
-#define GAME_OUTPUT_PORT_CLIENT 6001
-#define GAME_OUTPUT_PORT_SERVER 6000

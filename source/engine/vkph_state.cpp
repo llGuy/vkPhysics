@@ -315,6 +315,24 @@ void state_t::reset_modification_tracker() {
     modified_chunk_count = 0;
 }
 
+void state_t::flag_modified_chunks(net::chunk_modifications_t *modifications, uint32_t count) {
+    for (uint32_t i = 0; i < count; ++i) {
+        net::chunk_modifications_t *m_ptr = &modifications[i];
+        vkph::chunk_t *c_ptr = get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
+        c_ptr->flags.modified_marker = 1;
+        c_ptr->flags.index_of_modification_struct = i;
+    }
+}
+
+void state_t::unflag_modified_chunks(net::chunk_modifications_t *modifications, uint32_t count) {
+    for (uint32_t i = 0; i < count; ++i) {
+        net::chunk_modifications_t *m_ptr = &modifications[i];
+        vkph::chunk_t *c_ptr = get_chunk(ivector3_t(m_ptr->x, m_ptr->y, m_ptr->z));
+        c_ptr->flags.modified_marker = 0;
+        c_ptr->flags.index_of_modification_struct = 0;
+    }
+}
+
 map_t *state_t::load_map(const char *path) {
     map_t *current_loaded_map = FL_MALLOC(map_t, 1);
 

@@ -63,8 +63,6 @@ enum player_animated_state_t {
 };
 
 struct player_init_info_t {
-    // A bunch of shit will come
-
     const char *client_name;
     uint16_t client_id;
     vector3_t ws_position;

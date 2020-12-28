@@ -13,6 +13,8 @@
 #include <common/files.hpp>
 #include <common/containers.hpp>
 
+#include <net_chunk_tracker.hpp>
+
 namespace vkph {
 
 enum class game_mode_t { DEATHMATCH, CAPTURE_THE_FLAG, INVALID };
@@ -105,6 +107,8 @@ struct state_t {
     const chunk_t **get_active_chunks(uint32_t *count) const;
     chunk_t **get_modified_chunks(uint32_t *count);
     void reset_modification_tracker();
+    void flag_modified_chunks(net::chunk_modifications_t *modifications, uint32_t count);
+    void unflag_modified_chunks(net::chunk_modifications_t *modifications, uint32_t count);
 
     // Some terrain modification stuff
     void generate_sphere(sphere_create_info_t *info);

@@ -16,6 +16,7 @@ file(GLOB_RECURSE CLIENT_SOURCES "source/client/*.cpp" "source/client/*.hpp")
 file(GLOB_RECURSE SERVER_SOURCES "source/server/*.cpp" "source/server/*.hpp")
 file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
 file(GLOB_RECURSE ENGINE_SOURCES "source/engine/*.cpp" "source/engine/*.hpp")
+file(GLOB_RECURSE NET_SOURCES "source/net/*.cpp" "source/net/*.hpp")
 
 # Include directories for all targets
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/stb")
@@ -23,6 +24,8 @@ include_directories("${CMAKE_SOURCE_DIR}/dependencies/glm")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/sha")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies/imgui/include")
 include_directories("${CMAKE_SOURCE_DIR}/source")
+include_directories("${CMAKE_SOURCE_DIR}/source/net")
+include_directories("${CMAKE_SOURCE_DIR}/source/engine")
 include_directories("${CMAKE_SOURCE_DIR}/source/renderer/include")
 
 # Find packages
@@ -42,9 +45,14 @@ target_compile_definitions(common PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 add_library(engine STATIC "${ENGINE_SOURCES}")
 target_compile_definitions(engine PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 
+# Create net
+add_library(net STATIC "${NET_SOURCES}")
+target_compile_definitions(net PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
+
 # Do not worry, this will be cleaned up after net refactor
 target_include_directories(common PUBLIC "${CMAKE_SOURCE_DIR}/source/engine/")
-target_include_directories(engine PUBLIC "${CMAKE_SOURCE_DIR}/source/common/")
+target_include_directories(engine PUBLIC "${CMAKE_SOURCE_DIR}/source/common/" "${CMAKE_SOURCE_DIR}/source/net")
+target_include_directories(net PUBLIC "${CMAKE_SOURCE_DIR}/source/engine/")
 
 if(Vulkan_FOUND)
   message(STATUS "Found Vulkan package in system")
@@ -107,13 +115,13 @@ endif()
 # Create client (recheck if statement for clarity - TODO: merge renderer with client)
 if(BUILD_CLIENT)
   add_executable(vkPhysics_client "${CLIENT_SOURCES}")
-  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "engine" "${CURL_LIBRARIES}")
+  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "engine" "net" "${CURL_LIBRARIES}")
   target_compile_definitions(vkPhysics_client PUBLIC "LINK_AGAINST_RENDERER")
 endif()
 
 # Create server (server can get built on whatever platform with or without vulkan support)
 add_executable(vkPhysics_server "${SERVER_SOURCES}")
-target_link_libraries(vkPhysics_server PUBLIC "common" "engine" "${CURL_LIBRARIES}")
+target_link_libraries(vkPhysics_server PUBLIC "common" "engine" "net" "${CURL_LIBRARIES}")
 message("${$CURL_LIBRARIES}")
 
 if(WIN32)

@@ -243,7 +243,7 @@ static uint32_t s_prepare_packet_chunk_voxels(
             i + 1 == count) {
             // Need to send in new packet
             serialiser.serialise_uint32(chunks_in_packet, chunk_count_byte);
-            client_chunk_packet_t *packet_to_save = &client->chunk_packets[client->chunk_packet_count++];
+            packet_chunk_voxels_t *packet_to_save = &client->chunk_packets[client->chunk_packet_count++];
             packet_to_save->chunk_data = FL_MALLOC(vkph::voxel_t, serialiser.data_buffer_head);
             memcpy(packet_to_save->chunk_data, serialiser.data_buffer, serialiser.data_buffer_head);
             //packet_to_save->chunk_data = serialiser.data_buffer;
@@ -930,7 +930,7 @@ static void s_send_pending_chunks() {
 
         LOG_INFOV("Need to send %d packets\n", c_ptr->chunk_packet_count);
         if (c_ptr->current_chunk_sending < c_ptr->chunk_packet_count) {
-            client_chunk_packet_t *packet = &c_ptr->chunk_packets[c_ptr->current_chunk_sending];
+            packet_chunk_voxels_t *packet = &c_ptr->chunk_packets[c_ptr->current_chunk_sending];
             serialiser_t serialiser = {};
             serialiser.data_buffer_head = packet->size;
             serialiser.data_buffer = (uint8_t *)packet->chunk_data;
