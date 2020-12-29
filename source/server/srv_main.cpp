@@ -3,10 +3,9 @@
 #include "nw_server_meta.hpp"
 #include "srv_game.hpp"
 #include "nw_server.hpp"
-#include <common/time.hpp>
-#include <common/meta.hpp>
-#include <common/files.hpp>
-#include <common/allocators.hpp>
+#include <time.hpp>
+#include <files.hpp>
+#include <allocators.hpp>
 
 #include <vkph_state.hpp>
 #include <vkph_events.hpp>

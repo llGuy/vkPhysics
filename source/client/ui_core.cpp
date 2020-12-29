@@ -6,12 +6,11 @@
 #include "ui_game_menu.hpp"
 #include "ui_hud.hpp"
 #include "ui_sign_up.hpp"
-#include <common/meta.hpp>
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
 #include <app.hpp>
 #include <vk.hpp>
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 // Whenever a new menu gets opened, it gets added to this stack to which the mouse pointer will be
 // having effect (or just be rendered)
@@ -43,7 +42,7 @@ static void s_ui_event_listener(
     case vkph::ET_META_REQUEST_ERROR: {
         auto *data = (vkph::event_meta_request_error_t *)event->data;
 
-        ui_handle_sign_up_failed((request_error_t)data->error_type);
+        ui_handle_sign_up_failed((net::request_error_t)data->error_type);
 
         FL_FREE(data);
     } break;

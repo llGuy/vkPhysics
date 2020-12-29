@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/math.hpp>
+#include <math.hpp>
 #include <vkph_events.hpp>
 #include <vk.hpp>
 #include <ui.hpp>

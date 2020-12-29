@@ -1,9 +1,9 @@
 #include "vk_skeleton.hpp"
 
-#include <common/files.hpp>
-#include <common/string.hpp>
-#include <common/serialiser.hpp>
-#include <common/allocators.hpp>
+#include <files.hpp>
+#include <string.hpp>
+#include <serialiser.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

@@ -1,11 +1,11 @@
 #include "vkph_state.hpp"
-#include "engine/vkph_map.hpp"
-#include "engine/vkph_terraform.hpp"
+#include "vkph_map.hpp"
+#include "vkph_terraform.hpp"
 #include "vkph_chunk.hpp"
 
-#include <common/string.hpp>
-#include <common/tokeniser.hpp>
-#include <common/serialiser.hpp>
+#include <string.hpp>
+#include <tokeniser.hpp>
+#include <serialiser.hpp>
 
 namespace vkph {
 

@@ -1,18 +1,19 @@
-#include <common/log.hpp>
-#include <common/meta.hpp>
+#include <log.hpp>
 #include <vkph_events.hpp>
-#include <common/files.hpp>
-#include "common/string.hpp"
+#include <files.hpp>
+#include "string.hpp"
 #include "nw_server_meta.hpp"
 #include <vkph_event_data.hpp>
-#include <common/serialiser.hpp>
-#include <common/allocators.hpp>
+#include <serialiser.hpp>
+#include <allocators.hpp>
+
+#include <net_meta.hpp>
 
 static const char *current_server_name;
 static uint32_t current_server_id;
 
 void nw_init_meta_connection() {
-    begin_meta_client_thread();
+    net::begin_meta_client_thread();
 }
 
 void nw_check_registration() {
@@ -46,9 +47,9 @@ void nw_check_registration() {
         // Just send to the meta server that this server is active
         LOG_INFOV("Server information found: \"%s\" with ID %d - telling meta server that game server just started\n", server_name, id);
 
-        request_server_active_t *data = FL_MALLOC(request_server_active_t, 1);
+        net::request_server_active_t *data = FL_MALLOC(net::request_server_active_t, 1);
         data->server_id = id;
-        send_request(R_SERVER_ACTIVE, data);
+        send_request(net::R_SERVER_ACTIVE, data);
 
         vkph::event_start_server_t *event_data = FL_MALLOC(vkph::event_start_server_t, 1);
         event_data->server_name = server_name;
@@ -67,16 +68,16 @@ void nw_check_registration() {
                 if (*c == '\n') *c = 0;
             }
 
-            request_register_server_t *data = FL_MALLOC(request_register_server_t, 1);
+            net::request_register_server_t *data = FL_MALLOC(net::request_register_server_t, 1);
             data->server_name = create_fl_string(name);
             current_server_name = data->server_name;
 
-            send_request(R_REGISTER_SERVER, data);
+            send_request(net::R_REGISTER_SERVER, data);
 
             // Check for server to reply
             char *request_result = NULL;
             uint32_t request_result_size = 0;
-            request_t request_type = R_INVALID;
+            net::request_t request_type = net::R_INVALID;
             while (
                 !(request_result = check_request_finished(
                       &request_result_size,
@@ -115,14 +116,14 @@ void nw_check_registration() {
 }
 
 void nw_deactivate_server() {
-    request_server_inactive_t *data = FL_MALLOC(request_server_inactive_t, 1);
+    net::request_server_inactive_t *data = FL_MALLOC(net::request_server_inactive_t, 1);
     data->server_id = current_server_id;
-    send_request(R_SERVER_INACTIVE, data);
+    send_request(net::R_SERVER_INACTIVE, data);
 
-    join_meta_thread();
+    net::join_meta_thread();
 }
 
 void nw_stop_request_thread() {
-    send_request(R_QUIT, NULL);
-    join_meta_thread();
+    send_request(net::R_QUIT, NULL);
+    net::join_meta_thread();
 }

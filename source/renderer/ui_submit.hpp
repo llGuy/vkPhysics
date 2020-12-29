@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ui.hpp>
-#include <common/math.hpp>
+#include <math.hpp>
 #include <vulkan/vulkan.h>
 
 namespace ui {

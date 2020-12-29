@@ -10,8 +10,8 @@
 #include "vkph_projectile_tracker.hpp"
 
 #include <stdint.h>
-#include <common/files.hpp>
-#include <common/containers.hpp>
+#include <files.hpp>
+#include <containers.hpp>
 
 #include <net_chunk_tracker.hpp>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/tools.hpp>
+#include <tools.hpp>
 
 // Engine settings:
 enum graphics_quality_t {

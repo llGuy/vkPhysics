@@ -1,7 +1,7 @@
 #include "cl_view.hpp"
 #include "cl_main.hpp"
 #include "fx_post.hpp"
-#include <common/log.hpp>
+#include <log.hpp>
 #include <app.hpp>
 
 static game_view_type_t current_view_type;

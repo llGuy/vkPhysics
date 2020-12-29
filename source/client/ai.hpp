@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/tools.hpp>
+#include <tools.hpp>
 
 // The inputs to the neural network are:
 // - 3 floats for the position of the player

@@ -1,10 +1,9 @@
-#include "client/sc_play.hpp"
+#include "sc_play.hpp"
 #include <vkph_state.hpp>
 #include <vkph_team.hpp>
 #include <vkph_physics.hpp>
 #include "dr_rsc.hpp"
 #include "cl_main.hpp"
-#include "renderer/vk_present.hpp"
 #include "sc_scene.hpp"
 #include "dr_chunk.hpp"
 #include "dr_player.hpp"

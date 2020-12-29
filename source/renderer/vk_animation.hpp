@@ -4,7 +4,7 @@
 #include "vk_skeleton.hpp"
 #include "vk_descriptor.hpp"
 
-#include <common/math.hpp>
+#include <math.hpp>
 
 namespace vk {
 

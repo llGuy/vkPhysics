@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <common/math.hpp>
+#include <math.hpp>
 
 namespace vkph {
 

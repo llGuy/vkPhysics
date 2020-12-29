@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/math.hpp>
+#include <math.hpp>
 #include "net_chunk_tracker.hpp"
 #include <vkph_player.hpp>
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vk.hpp>
-#include <common/tools.hpp>
+#include <tools.hpp>
 
 // Shaders, meshes, etc...
 void dr_resources_init();

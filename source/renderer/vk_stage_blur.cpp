@@ -1,10 +1,10 @@
-#include "renderer/vk_render_pipeline.hpp"
+#include "vk_render_pipeline.hpp"
 #include "vk_shader.hpp"
 #include "vk_context.hpp"
 #include "vk_stage_blur.hpp"
 #include "vk_descriptor.hpp"
 
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

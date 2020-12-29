@@ -1,15 +1,16 @@
 #pragma once
 
 #include <vkph_player.hpp>
-#include <common/tools.hpp>
+#include <tools.hpp>
 #include <vkph_state.hpp>
+#include <net_chunk_tracker.hpp>
 
 // Interpolation between player / chunk snapshots
 struct chunks_to_interpolate_t {
     float elapsed;
     uint32_t max_modified;
     uint32_t modification_count;
-    struct chunk_modifications_t *modifications;
+    net::chunk_modifications_t *modifications;
 };
 
 void wd_interp_init();

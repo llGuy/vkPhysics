@@ -1,11 +1,11 @@
 #include "dr_rsc.hpp"
 #include <vkph_state.hpp>
 #include "dr_chunk.hpp"
-#include <common/log.hpp>
-#include <common/math.hpp>
+#include <log.hpp>
+#include <math.hpp>
 #include <vkph_chunk.hpp>
-#include <common/constant.hpp>
-#include <common/allocators.hpp>
+#include <constant.hpp>
+#include <allocators.hpp>
 #include <vkph_triangle_table.hpp>
 
 static uint32_t id = 0;
@@ -174,7 +174,7 @@ static void s_push_vertex_to_triangle_array(
     ++(*vertex_count);
 }
 
-#include <common/triangle_table.inc>
+#include <triangle_table.inc>
 
 static void s_update_chunk_mesh_voxel_pair(
     vkph::voxel_t *voxel_values,

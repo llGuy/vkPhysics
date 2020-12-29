@@ -1,9 +1,9 @@
 #include "vk_gpu.hpp"
 #include "vk_context.hpp"
 
-#include <common/log.hpp>
-#include <common/tools.hpp>
-#include <common/allocators.hpp>
+#include <log.hpp>
+#include <tools.hpp>
+#include <allocators.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace vk {

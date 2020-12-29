@@ -1,7 +1,7 @@
 #include "vk_context.hpp"
 #include "vk_stage_shadow.hpp"
 
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

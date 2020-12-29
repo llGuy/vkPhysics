@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <common/log.hpp>
-#include <common/time.hpp>
+#include <log.hpp>
+#include <time.hpp>
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
 

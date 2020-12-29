@@ -1,11 +1,12 @@
+#include "nw_server.hpp"
 #include "srv_main.hpp"
 #include <vkph_chunk.hpp>
 #include <vkph_state.hpp>
 #include <vkph_events.hpp>
 #include <vkph_physics.hpp>
 #include <vkph_event_data.hpp>
-
-#include <common/net.hpp>
+#include <net_game_client.hpp>
+#include <net_context.hpp>
 
 static vkph::listener_t game_listener;
 
@@ -141,14 +142,14 @@ static bool s_check_projectile_player_collision_lag(
             auto *target = state->get_player(player_local_id);
 
             // Get lag compensated position of the player
-            auto *shooter_client = &g_net_data.clients[rock->client_id];
+            const auto *shooter_client = get_client(rock->client_id);
             float shooter_half_roundtrip = shooter_client->ping / 2.0f;
 
-            auto *target_client = &g_net_data.clients[target->client_id];
+            const auto *target_client = get_client(target->client_id);
             float target_half_roundtrip = target_client->ping / 2.0f;
 
             // Get the two snapshots that encompass the latency of the shooting_player
-            float snapshot_from_head = (shooter_half_roundtrip + target_half_roundtrip) / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+            float snapshot_from_head = (shooter_half_roundtrip + target_half_roundtrip) / net::NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
             float snapshot_from_head_trunc = floor(snapshot_from_head);
             float progression = snapshot_from_head - snapshot_from_head_trunc;
 
@@ -159,8 +160,8 @@ static bool s_check_projectile_player_collision_lag(
             uint32_t s0_idx = target_client->previous_locations.decrement_index(
                 s1_idx);
 
-            auto *s1 = &target_client->previous_locations.buffer[s1_idx];
-            auto *s0 = &target_client->previous_locations.buffer[s0_idx];
+            const auto *s1 = &target_client->previous_locations.buffer[s1_idx];
+            const auto *s0 = &target_client->previous_locations.buffer[s0_idx];
 
             vector3_t approx_target_position = s0->ws_position + (s1->ws_position - s0->ws_position) * progression;
 

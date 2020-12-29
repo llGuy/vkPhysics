@@ -6,8 +6,8 @@
 #include "app_context.hpp"
 
 #include <ui.hpp>
-#include <common/log.hpp>
-#include <common/math.hpp>
+#include <log.hpp>
+#include <math.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace ui {

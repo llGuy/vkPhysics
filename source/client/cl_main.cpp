@@ -1,9 +1,5 @@
 #include <cstddef>
 #include <ctime>
-#include "common/net.hpp"
-#include "renderer/ui_submit.hpp"
-#include "renderer/vk_cmdbuf.hpp"
-#include "renderer/vk_context.hpp"
 #include "ui_core.hpp"
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
@@ -14,13 +10,13 @@
 #include "nw_client.hpp"
 #include "cl_render.hpp"
 #include <vkph_state.hpp>
-#include <common/files.hpp>
+#include <files.hpp>
 #include <vkph_events.hpp>
 #include "nw_client_meta.hpp"
 #include "nw_client_meta.hpp"
 #include <ui.hpp>
 #include <app.hpp>
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 static bool running;
 

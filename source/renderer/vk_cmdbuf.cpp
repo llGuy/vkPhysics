@@ -1,7 +1,7 @@
 #include "vk_cmdbuf.hpp"
 #include "vk_context.hpp"
 
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

@@ -10,7 +10,7 @@
 #include "app_context.hpp"
 #include "vk_descriptor.hpp"
 
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

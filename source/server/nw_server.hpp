@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <vkph_state.hpp>
+#include <net_game_client.hpp>
 
 // #define DEBUG_NETWORKING
 
@@ -15,3 +16,4 @@
 
 void nw_init(vkph::state_t *state);
 void nw_tick(vkph::state_t *state);
+const net::client_t *get_client(uint32_t i);

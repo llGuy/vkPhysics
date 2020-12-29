@@ -3,7 +3,7 @@
 #include <vk.hpp>
 #include <app.hpp>
 #include <vulkan/vulkan.h>
-#include <common/math.hpp>
+#include <math.hpp>
 
 namespace ui {
 

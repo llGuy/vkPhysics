@@ -1,28 +1,28 @@
 #include "wd_interp.hpp"
 #include <vkph_state.hpp>
 #include <vkph_chunk.hpp>
-#include "common/constant.hpp"
-#include <common/net.hpp>
+#include "constant.hpp"
+#include <net_context.hpp>
 
 static chunks_to_interpolate_t chunks_to_interpolate;
 
 void wd_interp_init() {
     chunks_to_interpolate.max_modified = 40;
     chunks_to_interpolate.modification_count = 0;
-    chunks_to_interpolate.modifications = FL_MALLOC(chunk_modifications_t, chunks_to_interpolate.max_modified);
-    memset(chunks_to_interpolate.modifications, 0, sizeof(chunk_modifications_t) * chunks_to_interpolate.max_modified);
+    chunks_to_interpolate.modifications = FL_MALLOC(net::chunk_modifications_t, chunks_to_interpolate.max_modified);
+    memset(chunks_to_interpolate.modifications, 0, sizeof(net::chunk_modifications_t) * chunks_to_interpolate.max_modified);
 }
 
 void wd_finish_interp_step(vkph::state_t *state) {
     chunks_to_interpolate.elapsed = 0.0f;
 
     for (uint32_t cm_index = 0; cm_index < chunks_to_interpolate.modification_count; ++cm_index) {
-        chunk_modifications_t *cm_ptr = &chunks_to_interpolate.modifications[cm_index];
+        net::chunk_modifications_t *cm_ptr = &chunks_to_interpolate.modifications[cm_index];
         vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
-            voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+            net::voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
             vkph::voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
             current_value->value = vm_ptr->final_value;
         }
@@ -35,19 +35,19 @@ void wd_finish_interp_step(vkph::state_t *state) {
 
 void wd_chunks_interp_step(float dt, vkph::state_t *state) {
     chunks_to_interpolate.elapsed += dt;
-    float progression = chunks_to_interpolate.elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+    float progression = chunks_to_interpolate.elapsed / net::NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
 
     if (progression >= 1.0f) {
         progression = 1.0f;
     }
     
     for (uint32_t cm_index = 0; cm_index < chunks_to_interpolate.modification_count; ++cm_index) {
-        chunk_modifications_t *cm_ptr = &chunks_to_interpolate.modifications[cm_index];
+        net::chunk_modifications_t *cm_ptr = &chunks_to_interpolate.modifications[cm_index];
         vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(cm_ptr->x, cm_ptr->y, cm_ptr->z));
 
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
-            voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+            net::voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
             vkph::voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
             float fcurrent_value = (float)(current_value->value);
             float initial_value = (float)(vm_ptr->initial_value);
@@ -78,7 +78,7 @@ void wd_player_interp_step(float dt, vkph::player_t *p, vkph::state_t *state) {
 
         p->elapsed += dt;
 
-        float progression = p->elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+        float progression = p->elapsed / net::NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
 
         // It is possible that progression went way past maximum (in case of extreme lag, so need to
         // take into account how many times over maximum time we went)
@@ -86,7 +86,7 @@ void wd_player_interp_step(float dt, vkph::player_t *p, vkph::state_t *state) {
             int32_t skip_count = (int32_t)(floor(progression));
             //progression = fmod(progression, 1.0f);
             progression -= (float)skip_count;
-            p->elapsed = progression * NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+            p->elapsed = progression * net::NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
             // p->elapsed -= NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL * (float)skip_count;
 
             for (int32_t i = 0; i < skip_count; ++i) {

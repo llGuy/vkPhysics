@@ -1,10 +1,10 @@
 #include "vk_animation.hpp"
 
-#include <common/files.hpp>
-#include <common/string.hpp>
-#include <common/tokeniser.hpp>
-#include <common/serialiser.hpp>
-#include <common/containers.hpp>
+#include <files.hpp>
+#include <string.hpp>
+#include <tokeniser.hpp>
+#include <serialiser.hpp>
+#include <containers.hpp>
 
 namespace vk {
 

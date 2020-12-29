@@ -1,11 +1,10 @@
 #include "ui_core.hpp"
 #include "ui_menu_layout.hpp"
+#include "nw_client.hpp"
 #include <vkph_state.hpp>
 #include "ui_list.hpp"
 #include <cstddef>
 #include <vkph_map.hpp>
-#include <common/net.hpp>
-#include <common/math.hpp>
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
 #include <app.hpp>
@@ -33,7 +32,7 @@ static ui_list_t servers_list_menu;
 static ui_list_t build_map_list_menu;
 
 void ui_refresh_main_menu_server_page() {
-    available_servers_t *servers = &g_net_data.available_servers;
+    net::available_servers_t *servers = nw_get_available_servers();
 
     ui_list_clear(&servers_list_menu);
     ui_list_begin(&servers_list_menu, servers->server_count);
@@ -53,7 +52,7 @@ static void s_browse_server_menu_init() {
             if (list->selected_item != 0xFFFF) {
                 auto *event_data = FL_MALLOC(vkph::event_data_request_to_join_server_t, 1);
                 const void *item_data = list->items[list->selected_item].data;
-                const auto *server = (const game_server_t *)item_data;
+                const auto *server = (const net::game_server_t *)item_data;
 
                 event_data->server_name = server->server_name;
 
@@ -99,7 +98,7 @@ static void s_browse_server_menu_init() {
         2, button_texts,
         handle_input_procs,
         [] (ui_list_item_t *item) {
-            game_server_t *server = (game_server_t *)item->data;
+            auto *server = (net::game_server_t *)item->data;
             item->text.draw_string(server->server_name, 0xFFFFFFFF);
             item->text.null_terminate();
         });

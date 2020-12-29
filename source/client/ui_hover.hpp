@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ui.hpp>
-#include <common/math.hpp>
+#include <math.hpp>
 
 struct color_pair_t {
     uint32_t current_foreground, current_background;

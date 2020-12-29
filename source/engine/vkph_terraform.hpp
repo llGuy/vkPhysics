@@ -2,7 +2,7 @@
 
 #include "vkph_voxel.hpp"
 
-#include <common/math.hpp>
+#include <math.hpp>
 
 namespace vkph {
 

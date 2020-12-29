@@ -388,7 +388,7 @@ template <
     }
 
     uint32_t decrement_index(
-        uint32_t index) {
+        uint32_t index) const {
         if (index == 0) {
             return (buffer_size - 1);
         }
@@ -479,7 +479,7 @@ template <
 
     uint32_t decrement_index(
         uint32_t index,
-        uint32_t by = 1) {
+        uint32_t by = 1)  const{
         if (index < by) {
             return (buffer_size - (by - index));
         }
@@ -490,7 +490,7 @@ template <
 
     uint32_t increment_index(
         uint32_t index,
-        uint32_t by = 1) {
+        uint32_t by = 1) const {
         if (index >= buffer_size - by) {
             return by - (buffer_size - 1 - index);
         }

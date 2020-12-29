@@ -1,5 +1,5 @@
 #include "sc_scene.hpp"
-#include "client/sc_map_creator.hpp"
+#include "sc_map_creator.hpp"
 #include "sc_main.hpp"
 #include "sc_play.hpp"
 #include <vk.hpp>

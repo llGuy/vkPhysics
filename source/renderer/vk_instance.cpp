@@ -1,8 +1,8 @@
 #include "vk_context.hpp"
 #include "vk_instance.hpp"
 
-#include <common/log.hpp>
-#include <common/tools.hpp>
+#include <log.hpp>
+#include <tools.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace vk {

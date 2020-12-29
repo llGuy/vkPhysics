@@ -18,8 +18,8 @@ namespace net {
 #if NET_DEBUG_TERRAFORMING
 template <typename ...T> void debug_log(
     const char *format,
-    bool print_to_console,
     FILE *log_file,
+    bool print_to_console,
     T ...values) {
     fprintf(log_file, format, values...);
 
@@ -30,8 +30,8 @@ template <typename ...T> void debug_log(
 #else
 template<typename ...T> void debug_log(
     const char *format,
-    bool print_to_console,
     FILE *log_file,
+    bool print_to_console,
     T ...values) {
     // Don't do anything
 }

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <vkph_voxel.hpp>
-#include <common/serialiser.hpp>
+#include <serialiser.hpp>
 
 namespace vkph {
 

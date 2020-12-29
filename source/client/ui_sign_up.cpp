@@ -1,12 +1,12 @@
-#include "common/allocators.hpp"
+#include "allocators.hpp"
 #include <vkph_events.hpp>
-#include "common/string.hpp"
+#include "string.hpp"
+#include <net_meta.hpp>
 #include <vkph_event_data.hpp>
 #include "ui_core.hpp"
 #include "ui_menu_layout.hpp"
 #include <cstdio>
 #include <sha1.hpp>
-#include <common/meta.hpp>
 #include <app.hpp>
 #include <vk.hpp>
 
@@ -125,7 +125,7 @@ static void s_typing_boxes_init() {
 
 static ui::box_t error_box;
 static ui::text_t error_text;
-static request_error_t error_type;
+static net::request_error_t error_type;
 static bool error_happened;
 
 static void s_error_section_init() {
@@ -280,17 +280,17 @@ void ui_sign_up_menu_input(const app::raw_input_t *input) {
         type_password_text.input(input);
 }
 
-void ui_handle_sign_up_failed(request_error_t ierror_type) {
+void ui_handle_sign_up_failed(net::request_error_t ierror_type) {
     error_happened = 1;
     error_type = ierror_type;
 
     switch (error_type) {
-    case RE_USERNAME_EXISTS: {
+    case net::RE_USERNAME_EXISTS: {
         error_text.char_count = 0;
         error_text.draw_string("Username already exists", 0xFF0000FF);
     } break;
 
-    case RE_INCORRECT_PASSWORD_OR_USERNAME: {
+    case net::RE_INCORRECT_PASSWORD_OR_USERNAME: {
         error_text.char_count = 0;
         error_text.draw_string("Incorrect username or password", 0xFF0000FF);
     } break;

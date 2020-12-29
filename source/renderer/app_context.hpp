@@ -2,7 +2,7 @@
 
 #include <app.hpp>
 #include <stdint.h>
-#include <common/math.hpp>
+#include <math.hpp>
 
 #include "vk_context.hpp"
 

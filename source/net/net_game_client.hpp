@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/math.hpp>
+#include <math.hpp>
 #include "net_socket.hpp"
 #include "net_packets.hpp"
 #include "net_chunk_tracker.hpp"

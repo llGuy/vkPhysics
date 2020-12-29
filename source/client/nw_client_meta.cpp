@@ -3,27 +3,28 @@
 #include <stdio.h>
 #include <sha1.hpp>
 #include <string.h>
-#include <common/net.hpp>
-#include <common/log.hpp>
-#include <common/meta.hpp>
-#include <common/files.hpp>
+#include "nw_client.hpp"
+#include <log.hpp>
+#include <files.hpp>
 #include <vkph_events.hpp>
-#include <common/socket.hpp>
-#include <common/string.hpp>
+#include <string.hpp>
+#include <net_context.hpp>
 #include "nw_client_meta.hpp"
 #include <vkph_event_data.hpp>
-#include <common/serialiser.hpp>
-#include <common/allocators.hpp>
+#include <serialiser.hpp>
+#include <allocators.hpp>
 
-static const char *current_username;
+#include <net_meta.hpp>
+
+static net::meta_client_t current_client;
 // Default path is to "assets/.user_meta", although, for debugging,
 // it is often useful to have other users
 static const char *path_to_user_meta_info = "assets/.user_meta";
 
 void nw_init_meta_connection() {
-    begin_meta_client_thread();
+    net::begin_meta_client_thread();
 
-    current_username = NULL;
+    current_client.username = NULL;
 }
 
 void nw_set_path_to_user_meta_info(const char *path) {
@@ -57,20 +58,20 @@ void nw_check_registration() {
         serialiser.data_buffer_size = contents.size;
 
         const char *username = serialiser.deserialise_string();
-        current_username = username;
+        current_client.username = username;
         uint32_t usertag = serialiser.deserialise_uint32();
         uint32_t uid = serialiser.deserialise_uint32();
 
         // Automatically log into the server
         LOG_INFOV("User information found: \"%s\" with tag %d and user ID %d - attempting to login in...\n", username, usertag, uid);
-        request_automatic_login_t *login_data = FL_MALLOC(request_automatic_login_t, 1);
+        net::request_automatic_login_t *login_data = FL_MALLOC(net::request_automatic_login_t, 1);
         login_data->userid = uid;
         login_data->usertag = usertag;
 
-        send_request(R_AUTOMATIC_LOGIN, login_data);
+        send_request(net::R_AUTOMATIC_LOGIN, login_data);
 
         auto *start_client_data = FL_MALLOC(vkph::event_start_client_t, 1);
-        start_client_data->client_name = current_username;
+        start_client_data->client_name = current_client.username;
         vkph::submit_event(vkph::ET_START_CLIENT, start_client_data);
     }
     else {
@@ -83,13 +84,13 @@ void nw_check_registration() {
 
 void nw_check_meta_request_status_and_handle() {
     uint32_t size = 0;
-    request_t request_type;
+    net::request_t request_type;
     char *data = check_request_finished(&size, &request_type);
 
     if (data) {
         // Request was finished
         switch (request_type) {
-        case R_SIGN_UP: case R_LOGIN: {
+        case net::R_SIGN_UP: case net::R_LOGIN: {
             if (data[0] == '1') {
                 // Exit sign up menu
                 vkph::submit_event(vkph::ET_SIGN_UP_SUCCESS, NULL);
@@ -103,8 +104,8 @@ void nw_check_meta_request_status_and_handle() {
 
                 // Save the userid and usertag
                 serialiser_t serialiser = {};
-                serialiser.init(strlen(current_username) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
-                serialiser.serialise_string(current_username);
+                serialiser.init(strlen(current_client.username) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
+                serialiser.serialise_string(current_client.username);
                 serialiser.serialise_uint32(usertag);
                 serialiser.serialise_uint32(userid);
 
@@ -118,31 +119,31 @@ void nw_check_meta_request_status_and_handle() {
                 nw_request_available_servers();
 
                 auto *start_client_data = FL_MALLOC(vkph::event_start_client_t, 1);
-                start_client_data->client_name = current_username;
+                start_client_data->client_name = current_client.username;
                 vkph::submit_event(vkph::ET_START_CLIENT, start_client_data);
             }
             else {
                 // Failed to sign up or login
                 auto *data = FL_MALLOC(vkph::event_meta_request_error_t, 1);
 
-                if (request_type == R_SIGN_UP) {
-                    data->error_type = RE_USERNAME_EXISTS;
+                if (request_type == net::R_SIGN_UP) {
+                    data->error_type = net::RE_USERNAME_EXISTS;
                 }
                 else {
-                    data->error_type = RE_INCORRECT_PASSWORD_OR_USERNAME;
+                    data->error_type = net::RE_INCORRECT_PASSWORD_OR_USERNAME;
                 }
 
                 vkph::submit_event(vkph::ET_META_REQUEST_ERROR, data);
             }
         } break;
 
-        case R_AUTOMATIC_LOGIN: {
+        case net::R_AUTOMATIC_LOGIN: {
             if (data[0] == '1') {
                 LOG_INFO("Succeeded to login - game may begin\n");
 
                 // Request meta server - which servers are online at the moment
-                request_available_server_t *data = FL_MALLOC(request_available_server_t, 1);
-                send_request(R_AVAILABLE_SERVERS, data);
+                net::request_available_server_t *data = FL_MALLOC(net::request_available_server_t, 1);
+                send_request(net::R_AVAILABLE_SERVERS, data);
             }
             else {
                 LOG_INFO("Failed to login\n");
@@ -152,8 +153,8 @@ void nw_check_meta_request_status_and_handle() {
             }
         } break;
 
-        case R_AVAILABLE_SERVERS: {
-            g_net_data.available_servers.name_to_server.clear();
+        case net::R_AVAILABLE_SERVERS: {
+            nw_get_available_servers()->name_to_server.clear();
 
             uint32_t server_count = atoi(data);
 
@@ -192,16 +193,16 @@ void nw_check_meta_request_status_and_handle() {
 
                     LOG_INFOV("Server (%d) called \"%s\" (ip: %s) has %d player(s) active\n", server_id, server_name, ip_address, player_count);
 
-                    game_server_t *dst = &g_net_data.available_servers.servers[i];
+                    net::game_server_t *dst = &nw_get_available_servers()->servers[i];
                     dst->server_name = server_name;
-                    dst->ipv4_address = str_to_ipv4_int32(ip_address, GAME_OUTPUT_PORT_SERVER, SP_UDP);
-                    g_net_data.available_servers.name_to_server.insert(simple_string_hash(server_name), i);
+                    dst->ipv4_address = str_to_ipv4_int32(ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
+                    nw_get_available_servers()->name_to_server.insert(simple_string_hash(server_name), i);
 
                     ++i;
                 }
             }
 
-            g_net_data.available_servers.server_count = i;
+            nw_get_available_servers()->server_count = i;
 
             vkph::submit_event(vkph::ET_RECEIVED_AVAILABLE_SERVERS, NULL);
         } break;
@@ -212,43 +213,46 @@ void nw_check_meta_request_status_and_handle() {
 void nw_request_sign_up(
     const char *username,
     const char *password) {
-    request_sign_up_data_t *sign_up_data = FL_MALLOC(request_sign_up_data_t, 1);
-    current_username = username;
+    net::request_sign_up_data_t *sign_up_data = FL_MALLOC(net::request_sign_up_data_t, 1);
+    current_client.username = username;
 
     sign_up_data->username = username;
     sign_up_data->password = password;
 
     // Sends request to the web server
-    send_request(R_SIGN_UP, sign_up_data);
+    send_request(net::R_SIGN_UP, sign_up_data);
 }
 
 void nw_request_login(
     const char *username,
     const char *password) {
-    request_login_data_t *login_data = FL_MALLOC(request_login_data_t, 1);
-    current_username = username;
+    net::request_login_data_t *login_data = FL_MALLOC(net::request_login_data_t, 1);
+    current_client.username = username;
 
     login_data->username = username;
     login_data->password = password;
 
     // Sends request to the web server
-    send_request(R_LOGIN, login_data);
+    send_request(net::R_LOGIN, login_data);
 }
 
 void nw_request_available_servers() {
     LOG_INFO("Requesting available servers from meta server\n");
 
     // Request meta server - which servers are online at the moment
-    request_available_server_t *data = FL_MALLOC(request_available_server_t, 1);
-    send_request(R_AVAILABLE_SERVERS, data);
+    net::request_available_server_t *data = FL_MALLOC(net::request_available_server_t, 1);
+    send_request(net::R_AVAILABLE_SERVERS, data);
 }
 
 void nw_notify_meta_disconnection() {
-    send_request(R_QUIT, NULL);
+    send_request(net::R_QUIT, NULL);
     LOG_INFO("Telling meta server we disconnected\n");
 }
 
 void nw_stop_request_thread() {
-    join_meta_thread();
+    net::join_meta_thread();
 }
 
+net::meta_client_t *nw_get_local_meta_client() {
+    return &current_client;
+}

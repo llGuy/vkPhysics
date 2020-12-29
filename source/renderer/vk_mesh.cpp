@@ -7,12 +7,12 @@
 #include "vk_stage_shadow.hpp"
 #include "vk_render_pipeline.hpp"
 
-#include <common/log.hpp>
+#include <log.hpp>
 #include <vulkan/vulkan.h>
-#include <common/math.hpp>
-#include <common/files.hpp>
-#include <common/serialiser.hpp>
-#include <common/allocators.hpp>
+#include <math.hpp>
+#include <files.hpp>
+#include <serialiser.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

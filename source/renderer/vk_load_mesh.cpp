@@ -1,9 +1,9 @@
 #include "vk_load_mesh.hpp"
 
-#include <common/math.hpp>
-#include <common/tools.hpp>
-#include <common/serialiser.hpp>
-#include <common/allocators.hpp>
+#include <math.hpp>
+#include <tools.hpp>
+#include <serialiser.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

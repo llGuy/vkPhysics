@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <common/tools.hpp>
-#include <common/containers.hpp>
+#include <tools.hpp>
+#include <containers.hpp>
 
 #include "vkph_voxel.hpp"
 

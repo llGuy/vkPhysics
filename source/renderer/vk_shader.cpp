@@ -5,9 +5,9 @@
 #include "vk_stage_deferred.hpp"
 #include "vk_render_pipeline.hpp"
 
-#include <common/tools.hpp>
-#include <common/files.hpp>
-#include <common/allocators.hpp>
+#include <tools.hpp>
+#include <files.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

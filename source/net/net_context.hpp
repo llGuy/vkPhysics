@@ -6,6 +6,8 @@
 #include "net_game_client.hpp"
 #include "net_game_server.hpp"
 
+#include <containers.hpp>
+
 namespace net {
 
 constexpr uint32_t NET_MAX_CLIENT_COUNT = 50;

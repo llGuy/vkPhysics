@@ -1,10 +1,10 @@
 #include "cl_main.hpp"
-#include "client/cl_view.hpp"
+#include "cl_view.hpp"
 #include "fx_fade.hpp"
 #include "cl_view.hpp"
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 #include <vk.hpp>
 

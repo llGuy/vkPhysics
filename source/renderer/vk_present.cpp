@@ -3,8 +3,8 @@
 #include "app_context.hpp"
 #include "vk_render_pipeline.hpp"
 
-#include <common/tools.hpp>
-#include <common/allocators.hpp>
+#include <tools.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

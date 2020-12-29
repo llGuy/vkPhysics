@@ -6,7 +6,8 @@
 #include <vkph_events.hpp>
 #include <vkph_player.hpp>
 #include <app.hpp>
-#include <common/constant.hpp>
+#include <constant.hpp>
+#include <net_context.hpp>
 
 static int32_t local_player;
 
@@ -168,7 +169,7 @@ void wd_add_predicted_projectile_hit(vkph::player_t *hit_player, vkph::state_t *
     vkph::predicted_projectile_hit_t new_hit = {};
     new_hit.flags.initialised = 1;
     new_hit.client_id = hit_player->client_id;
-    new_hit.progression = hit_player->elapsed / NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
+    new_hit.progression = hit_player->elapsed / net::NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
 
     vkph::player_snapshot_t *before = &hit_player->remote_snapshots.buffer[hit_player->snapshot_before];
     vkph::player_snapshot_t *after = &hit_player->remote_snapshots.buffer[hit_player->snapshot_after];

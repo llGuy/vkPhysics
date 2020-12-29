@@ -5,8 +5,8 @@
 #include "vk_context.hpp"
 #include "vk_texture.hpp"
 
-#include <common/log.hpp>
-#include <common/files.hpp>
+#include <log.hpp>
+#include <files.hpp>
 
 namespace vk {
 

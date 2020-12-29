@@ -1,7 +1,7 @@
 #include "vk_present.hpp"
 
 #include <ui.hpp>
-#include <common/math.hpp>
+#include <math.hpp>
 
 namespace ui {
 

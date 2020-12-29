@@ -2,7 +2,7 @@
 #include "vk_stage_ui.hpp"
 #include "vk_descriptor.hpp"
 
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

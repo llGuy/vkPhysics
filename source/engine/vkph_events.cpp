@@ -1,6 +1,6 @@
 #include "vkph_events.hpp"
 
-#include <common/log.hpp>
+#include <log.hpp>
 
 namespace vkph {
 

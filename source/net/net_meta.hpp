@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+namespace net {
+
 enum request_t {
     // Requests to create an account
     R_SIGN_UP,
@@ -61,11 +63,17 @@ struct request_server_inactive_t {
     uint32_t server_id;
 };
 
-// TODO: Free memory that is used to create the request in the main thread
-
-// Starts the thread from which HTTP requests to the meta server
-// will be made
+/* 
+  Starts the thread from which HTTP requests to the meta server will be made
+*/
 void begin_meta_client_thread();
 char *check_request_finished(uint32_t *size, request_t *request);
 void send_request(request_t request, void *request_data);
 void join_meta_thread();
+
+struct meta_client_t {
+    const char *username;
+    // May fill this with other stuff...
+};
+
+}

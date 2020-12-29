@@ -9,9 +9,9 @@
 #include "vk_render_pipeline.hpp"
 
 #include <vk.hpp>
-#include <common/log.hpp>
+#include <log.hpp>
 #include <vulkan/vulkan.h>
-#include <common/containers.hpp>
+#include <containers.hpp>
 
 #define VK_CHECK(call) \
     if (call != VK_SUCCESS) { LOG_ERRORV("%s failed\n", #call); }

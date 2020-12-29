@@ -4,13 +4,13 @@
 #include <vkph_event_data.hpp>
 #include "wd_predict.hpp"
 #include "ui_list.hpp"
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 #include "ui_hud.hpp"
 #include "ui_core.hpp"
 #include "ui_menu_layout.hpp"
 #include <cstdio>
 #include <app.hpp>
-#include <common/log.hpp>
+#include <log.hpp>
 #include <cstring>
 #include <vk.hpp>
 

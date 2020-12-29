@@ -4,7 +4,7 @@
 #include <vkph_team.hpp>
 #include <vkph_player.hpp>
 #include <vkph_projectile.hpp>
-#include <common/serialiser.hpp>
+#include <serialiser.hpp>
 
 #include "net_chunk_tracker.hpp"
 #include "net_client_prediction.hpp"

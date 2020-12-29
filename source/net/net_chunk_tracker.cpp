@@ -2,7 +2,7 @@
 
 #include <vkph_chunk.hpp>
 #include <vkph_state.hpp>
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 namespace net {
 
@@ -121,7 +121,7 @@ void deserialise_chunk_modification_values_with_initial_values(
     }
 }
 
-static void s_deserialise_chunk_modification_colors_from_array(
+void deserialise_chunk_modification_colors_from_array(
     serialiser_t *serialiser,
     chunk_modifications_t *c) {
     for (uint32_t v = 0; v < c->modified_voxels_count; ++v) {

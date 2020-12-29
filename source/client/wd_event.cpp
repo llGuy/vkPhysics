@@ -1,4 +1,4 @@
-#include "client/ui_game_menu.hpp"
+#include "ui_game_menu.hpp"
 #include <vkph_state.hpp>
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
@@ -7,9 +7,9 @@
 #include <vkph_chunk.hpp>
 #include <vkph_event_data.hpp>
 #include "wd_predict.hpp"
-#include <common/log.hpp>
-#include <common/constant.hpp>
-#include <common/allocators.hpp>
+#include <log.hpp>
+#include <constant.hpp>
+#include <allocators.hpp>
 
 void wd_subscribe_to_events(vkph::listener_t world_listener) {
     subscribe_to_event(vkph::ET_ENTER_SERVER, world_listener);

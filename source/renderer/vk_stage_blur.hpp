@@ -3,7 +3,7 @@
 #include "vk_shader.hpp"
 #include "vk_render_pipeline.hpp"
 
-#include <common/math.hpp>
+#include <math.hpp>
 
 namespace vk {
 

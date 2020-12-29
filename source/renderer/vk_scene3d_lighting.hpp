@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vk.hpp>
-#include <common/math.hpp>
+#include <math.hpp>
 
 namespace vk {
 

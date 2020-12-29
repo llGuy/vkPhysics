@@ -4,7 +4,7 @@
 
 #include <vk.hpp>
 #include <vulkan/vulkan.h>
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 namespace vk {
 

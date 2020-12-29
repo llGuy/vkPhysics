@@ -1,6 +1,6 @@
 #include "ui_list.hpp"
 #include <app.hpp>
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 void ui_list_init(
     ui::box_t *parent,

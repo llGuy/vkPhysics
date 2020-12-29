@@ -3,7 +3,7 @@
 #include "vkph_voxel.hpp"
 #include "vkph_terraform.hpp"
 
-#include <common/math.hpp>
+#include <math.hpp>
 
 namespace vkph {
 

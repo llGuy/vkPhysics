@@ -1,5 +1,5 @@
 #include <cstddef>
-#include "client/ui_team_select.hpp"
+#include "ui_team_select.hpp"
 #include "nw_client.hpp"
 #include "ui_menu_layout.hpp"
 #include "ui_game_menu.hpp"
@@ -8,7 +8,7 @@
 #include <vkph_event_data.hpp>
 #include <app.hpp>
 #include <vk.hpp>
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 
 enum button_t {
     B_SPAWN,

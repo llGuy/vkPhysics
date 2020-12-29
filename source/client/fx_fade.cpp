@@ -1,10 +1,10 @@
 #include "cl_main.hpp"
-#include <common/log.hpp>
+#include <log.hpp>
 #include <vkph_state.hpp>
-#include <common/math.hpp>
+#include <math.hpp>
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
-#include <common/allocators.hpp>
+#include <allocators.hpp>
 #include <vk.hpp>
 
 static linear_interpolation_f32_t current_screen_brightness;

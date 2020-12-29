@@ -1,16 +1,19 @@
+#include "net_meta.hpp"
+
 #include <mutex>
 #include <cstdio>
 #include <thread>
 #include <chrono>
-#include "log.hpp"
+#include <log.hpp>
 #include <string.h>
-#include "meta.hpp"
 #include <curl/curl.h>
-#include "serialiser.hpp"
-#include "allocators.hpp"
+#include <allocators.hpp>
+#include <serialiser.hpp>
 #include <condition_variable>
 
-#define REQUEST_RESULT_MAX_SIZE 4096
+namespace net {
+
+static constexpr uint32_t REQUEST_RESULT_MAX_SIZE = 4096;
 
 static const char *meta_server_hostname = "meta.llguy.fun";
 
@@ -51,7 +54,7 @@ static size_t s_write_callback(char *ptr, size_t size, size_t nmemb, void *userd
     return byte_count;
 }
 
-#define REQUEST_MAX_SIZE 100
+constexpr uint32_t REQUEST_MAX_SIZE = 100;
 
 static serialiser_t s_fill_request(bool null_terminate = 0) {
 
@@ -248,4 +251,6 @@ void send_request(request_t request, void *data) {
 
 void join_meta_thread() {
     meta_thread.join();
+}
+
 }

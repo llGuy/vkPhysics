@@ -1,8 +1,8 @@
 #include "ai.hpp"
 #include "a_internal.hpp"
 #include <vkph_player.hpp>
-#include <common/time.hpp>
-#include "common/allocators.hpp"
+#include <time.hpp>
+#include "allocators.hpp"
 
 struct ai_t {
     uint32_t player_id;

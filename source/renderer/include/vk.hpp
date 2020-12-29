@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <vulkan/vulkan.h>
-#include <common/math.hpp>
+#include <math.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace vk {
