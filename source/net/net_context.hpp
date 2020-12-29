@@ -59,18 +59,21 @@ struct context_t {
     */
     circular_buffer_array_t<
         accumulated_predicted_modification_t,
-        NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PACK_COUNT> acc_predicted_modifications;
+        NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PACK_COUNT> accumulated_modifications;
     arena_allocator_t chunk_modification_allocator;
     accumulated_predicted_modification_t merged_recent_modifications;
 
     /*
       This will contain the result of the HTTP request to the meta server, containing the servers
       which are currently online, and that the client can connect to.
-     */
+    */
     available_servers_t available_servers;
 
     FILE *log_file;
 
+    /*
+      Methods:
+    */
     void init_main_udp_socket(uint16_t output_post);
     bool main_udp_send_to(serialiser_t *serialiser, address_t address);
     int32_t main_udp_recv_from(char *message_buffer, uint32_t max_size, address_t *addr);
@@ -78,7 +81,24 @@ struct context_t {
     accumulated_predicted_modification_t *add_acc_predicted_modification();
     void fill_dummy_voxels(chunk_modifications_t *modifications);
     void unfill_dummy_voxels(chunk_modifications_t *modifications);
-    uint32_t fill_chunk_modification_array_with_initial_values(chunk_modifications_t *modifications, vkph::state_t *state);
+
+    /*
+      Creates a new accumulated_predicted_modifications of all the modfied chunks and voxels
+      since last time vkph::state_t::reset_modification_tracker() was called.
+    */
+    accumulated_predicted_modification_t *accumulate_history(const vkph::state_t *state);
+
+    /*
+      'vkph::state_t *state' cannot be const because this function is going to flag all the modified
+      chunks which requires modifying data in chunks.
+      
+      Combines while resolving conflicts, two chunk_modifications_t arrays.
+      The result is stored in dst.
+     */
+    void merge_chunk_modifications(
+        chunk_modifications_t *dst, uint32_t *dst_count,
+        const chunk_modifications_t *src, uint32_t src_count,
+        vkph::state_t *state);
 
 private:
 

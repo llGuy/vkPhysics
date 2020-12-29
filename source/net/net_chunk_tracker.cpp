@@ -1,5 +1,7 @@
 #include "net_chunk_tracker.hpp"
 
+#include <vkph_chunk.hpp>
+#include <vkph_state.hpp>
 #include <common/allocators.hpp>
 
 namespace net {
@@ -151,6 +153,73 @@ chunk_modifications_t *deserialise_chunk_modifications(
     }
 
     return chunk_modifications;
+}
+
+uint32_t fill_chunk_modification_array_with_initial_values(chunk_modifications_t *modifications, const vkph::state_t *state) {
+    uint32_t modified_chunk_count = 0;
+    const vkph::chunk_t **chunks = state->get_modified_chunks(&modified_chunk_count);
+
+    uint32_t current = 0;
+            
+    for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
+        chunk_modifications_t *cm_ptr = &modifications[current];
+        const vkph::chunk_t *c_ptr = chunks[c_index];
+        const vkph::chunk_history_t *h_ptr = &chunks[c_index]->history;
+
+        if (h_ptr->modification_count == 0) {
+            // Chunk doesn't actually have modifications, it was just flagged
+        }
+        else {
+            cm_ptr->x = c_ptr->chunk_coord.x;
+            cm_ptr->y = c_ptr->chunk_coord.y;
+            cm_ptr->z = c_ptr->chunk_coord.z;
+            cm_ptr->modified_voxels_count = h_ptr->modification_count;
+            for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
+                cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
+                cm_ptr->modifications[v_index].initial_value = h_ptr->modification_pool[cm_ptr->modifications[v_index].index];
+                cm_ptr->modifications[v_index].final_value = c_ptr->voxels[cm_ptr->modifications[v_index].index].value;
+                cm_ptr->colors[v_index] = c_ptr->voxels[cm_ptr->modifications[v_index].index].color;
+            }
+
+            ++current;
+        }
+    }
+
+    return current;
+}
+
+uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications, const vkph::state_t *state) {
+    uint32_t modified_chunk_count = 0;
+    const vkph::chunk_t **chunks = state->get_modified_chunks(&modified_chunk_count);
+
+    uint32_t current = 0;
+            
+    for (uint32_t c_index = 0; c_index < modified_chunk_count; ++c_index) {
+        chunk_modifications_t *cm_ptr = &modifications[current];
+        const vkph::chunk_t *c_ptr = chunks[c_index];
+        const vkph::chunk_history_t *h_ptr = &chunks[c_index]->history;
+
+        if (h_ptr->modification_count == 0) {
+            // Chunk doesn't actually have modifications, it was just flagged
+        }
+        else {
+            cm_ptr->x = c_ptr->chunk_coord.x;
+            cm_ptr->y = c_ptr->chunk_coord.y;
+            cm_ptr->z = c_ptr->chunk_coord.z;
+            cm_ptr->modified_voxels_count = h_ptr->modification_count;
+            for (uint32_t v_index = 0; v_index < cm_ptr->modified_voxels_count; ++v_index) {
+                cm_ptr->modifications[v_index].index = (uint16_t)h_ptr->modification_stack[v_index];
+                // Difference is here because the server will just send the voxel values array, not the colors array
+                cm_ptr->modifications[v_index].color = c_ptr->voxels[cm_ptr->modifications[v_index].index].color;
+                cm_ptr->modifications[v_index].final_value = c_ptr->voxels[cm_ptr->modifications[v_index].index].value;
+                cm_ptr->colors[v_index] = c_ptr->voxels[cm_ptr->modifications[v_index].index].color;
+            }
+
+            ++current;
+        }
+    }
+
+    return current;
 }
 
 }

@@ -4,6 +4,12 @@
 #include <vkph_voxel.hpp>
 #include <common/serialiser.hpp>
 
+namespace vkph {
+
+struct state_t;
+
+}
+
 namespace net {
 
 constexpr uint32_t MAX_PREDICTED_CHUNK_MODIFICATIONS = 20;
@@ -55,6 +61,16 @@ struct chunk_modifications_t {
         };
     };
 };
+
+/*
+  The first one fills in voxel_modification_t::initial_value whereas the second
+  fills in voxel_modification_t::color (it's a union).
+  
+  Given the vkph::state_t's chunk history, these functions will fill in the passed in
+  'chunk_modifications_t *modifications' structures.
+*/
+uint32_t fill_chunk_modification_array_with_initial_values(chunk_modifications_t *modifications, const vkph::state_t *state);
+uint32_t fill_chunk_modification_array_with_colors(chunk_modifications_t *modifications, const vkph::state_t *state);
 
 enum color_serialisation_type_t { CST_SERIALISE_UNION_COLOR = 0, CST_SERIALISE_SEPARATE_COLOR = 1 };
 

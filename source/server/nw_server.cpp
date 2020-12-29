@@ -1,3 +1,4 @@
+#include "allocators.hpp"
 #include "common/constant.hpp"
 #include <vkph_player.hpp>
 #include "common/t_types.hpp"
@@ -18,6 +19,14 @@
 #include <vkph_chunk.hpp>
 #include <vkph_physics.hpp>
 
+#include <net_context.hpp>
+#include <net_packets.hpp>
+
+/*
+  Net code main state:
+*/
+static net::context_t *ctx;
+
 static flexible_stack_container_t<uint32_t> clients_to_send_chunks_to;
 
 // Local server information
@@ -26,29 +35,28 @@ struct server_info_t {
 };
 
 static server_info_t local_server_info;
-
 static bool started_server = 0;
 
 static void s_start_server(vkph::event_start_server_t *data, vkph::state_t *state) {
     clients_to_send_chunks_to.init(50);
 
-    memset(g_net_data.dummy_voxels, vkph::CHUNK_SPECIAL_VALUE, sizeof(g_net_data.dummy_voxels));
+    memset(ctx->dummy_voxels, vkph::CHUNK_SPECIAL_VALUE, sizeof(ctx->dummy_voxels));
 
-    main_udp_socket_init(GAME_OUTPUT_PORT_SERVER);
+    ctx->init_main_udp_socket(net::GAME_OUTPUT_PORT_SERVER);
 
-    g_net_data.clients.init(NET_MAX_CLIENT_COUNT);
+    ctx->clients.init(net::NET_MAX_CLIENT_COUNT);
 
     started_server = 1;
 
     state->flags.track_history = 1;
 
-    g_net_data.acc_predicted_modifications.init();
+    ctx->accumulated_modifications.init();
 
-    uint32_t sizeof_chunk_mod_pack = sizeof(chunk_modifications_t) * MAX_PREDICTED_CHUNK_MODIFICATIONS;
+    uint32_t sizeof_chunk_mod_pack = sizeof(net::chunk_modifications_t) * net::MAX_PREDICTED_CHUNK_MODIFICATIONS;
 
-    g_net_data.chunk_modification_allocator.pool_init(
+    ctx->chunk_modification_allocator.pool_init(
         sizeof_chunk_mod_pack,
-        sizeof_chunk_mod_pack * NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4);
+        sizeof_chunk_mod_pack * net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4);
 }
 
 // PT_CONNECTION_HANDSHAKE
@@ -57,52 +65,44 @@ static bool s_send_packet_connection_handshake(
     vkph::event_new_player_t *player_info,
     uint32_t loaded_chunk_count,
     const vkph::state_t *state) {
-    packet_connection_handshake_t connection_handshake = {};
+    net::packet_connection_handshake_t connection_handshake = {};
     connection_handshake.loaded_chunk_count = loaded_chunk_count;
 
     LOG_INFOV("Loaded chunk count: %d\n", connection_handshake.loaded_chunk_count);
 
-    connection_handshake.player_infos = LN_MALLOC(full_player_info_t, g_net_data.clients.data_count);
+    connection_handshake.player_infos = LN_MALLOC(vkph::player_init_info_t, ctx->clients.data_count);
 
     { // Fill in the data on the players
-        for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
-            client_t *client = g_net_data.clients.get(i);
+        for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
+            net::client_t *client = ctx->clients.get(i);
             if (client->initialised) {
-                full_player_info_t *info = &connection_handshake.player_infos[connection_handshake.player_count];
+                vkph::player_init_info_t *info = &connection_handshake.player_infos[connection_handshake.player_count];
 
                 if (i == client_id) {
-                    info->name = client->name;
+                    *info = player_info->info;
+                    info->client_name = client->name;
                     info->client_id = client->client_id;
-                    info->ws_position = player_info->info.ws_position;
-                    info->ws_view_direction = player_info->info.ws_view_direction;
-                    info->ws_up_vector = player_info->info.ws_up_vector;
-                    info->ws_next_random_position = player_info->info.next_random_spawn_position;
-                    info->default_speed = player_info->info.default_speed;
 
                     vkph::player_flags_t flags = {};
                     flags.u32 = player_info->info.flags;
                     flags.is_local = 1;
                     flags.team_color = vkph::team_color_t::INVALID;
 
-                    info->flags = flags;
+                    info->flags = flags.u32;
                 }
                 else {
                     int32_t local_id = state->get_local_id(i);
                     const vkph::player_t *p = state->get_player(local_id);
 
-                    info->name = client->name;
+                    p->make_player_init_info(info);
+                    info->client_name = client->name;
                     info->client_id = client->client_id;
-                    info->ws_position = p->ws_position;
-                    info->ws_view_direction = p->ws_view_direction;
-                    info->ws_up_vector = p->ws_up_vector;
-                    info->ws_next_random_position = p->next_random_spawn_position;
-                    info->default_speed = p->default_speed;
 
                     vkph::player_flags_t flags = {};
                     flags.u32 = p->flags.u32;
                     flags.is_local = 0;
                 
-                    info->flags = flags;
+                    info->flags = flags.u32;
                 }
             
                 ++connection_handshake.player_count;
@@ -121,18 +121,18 @@ static bool s_send_packet_connection_handshake(
         }
     }
 
-    packet_header_t header = {};
+    net::packet_header_t header = {};
     header.current_tick = state->current_tick;
-    header.flags.total_packet_size = packed_packet_header_size() + packed_connection_handshake_size(&connection_handshake);
-    header.flags.packet_type = PT_CONNECTION_HANDSHAKE;
+    header.flags.total_packet_size = header.size() + connection_handshake.size();
+    header.flags.packet_type = net::PT_CONNECTION_HANDSHAKE;
 
     serialiser_t serialiser = {};
     serialiser.init(header.flags.total_packet_size);
 
-    serialise_packet_header(&header, &serialiser);
-    serialise_connection_handshake(&connection_handshake, &serialiser);
+    header.serialise(&serialiser);
+    connection_handshake.serialise(&serialiser);
 
-    client_t *c = g_net_data.clients.get(client_id);
+    client_t *c = ctx->clients.get(client_id);
 
     if (send_to_client(&serialiser, c->address)) {
         LOG_INFOV("Sent handshake to client: %s\n", c->name);
@@ -213,7 +213,7 @@ static uint32_t s_prepare_packet_chunk_voxels(
     header.flags.packet_type = PT_CHUNK_VOXELS;
     header.flags.total_packet_size = s_maximum_chunks_per_packet() * (3 * sizeof(int16_t) + vkph::CHUNK_BYTE_SIZE);
     header.current_tick = state->current_tick;
-    header.current_packet_count = g_net_data.current_packet;
+    header.current_packet_count = ctx->current_packet;
     
     serialiser_t serialiser = {};
     serialiser.init(header.flags.total_packet_size);
@@ -269,7 +269,7 @@ static void s_send_game_state_to_new_client(
     uint32_t loaded_chunk_count = 0;
     const vkph::chunk_t **chunks = state->get_active_chunks(&loaded_chunk_count);
 
-    client_t *client = g_net_data.clients.get(client_id);
+    client_t *client = ctx->clients.get(client_id);
 
     // Send chunk information
     uint32_t max_chunks_per_packet = s_maximum_chunks_per_packet();
@@ -316,7 +316,7 @@ static void s_send_packet_player_joined(
 
     packet_header_t header = {};
     header.current_tick = state->current_tick;
-    header.current_packet_count = g_net_data.current_packet;
+    header.current_packet_count = ctx->current_packet;
     header.flags.total_packet_size = packed_packet_header_size() + packed_player_joined_size(&packet);
     header.flags.packet_type = PT_PLAYER_JOINED;
     
@@ -326,9 +326,9 @@ static void s_send_packet_player_joined(
     serialise_packet_header(&header, &serialiser);
     serialise_player_joined(&packet, &serialiser);
     
-    for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
+    for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
         if (i != packet.player_info.client_id) {
-            client_t *c = g_net_data.clients.get(i);
+            client_t *c = ctx->clients.get(i);
             if (c->initialised) {
                 send_to_client(&serialiser, c->address);
             }
@@ -344,11 +344,11 @@ static void s_receive_packet_connection_request(
     packet_connection_request_t request = {};
     deserialise_connection_request(&request, serialiser);
 
-    uint32_t client_id = g_net_data.clients.add();
+    uint32_t client_id = ctx->clients.add();
 
     LOG_INFOV("New client with ID %i\n", client_id);
 
-    client_t *client = g_net_data.clients.get(client_id);
+    client_t *client = ctx->clients.get(client_id);
     
     client->initialised = 1;
     client->client_id = client_id;
@@ -356,7 +356,7 @@ static void s_receive_packet_connection_request(
     client->address = address;
     client->received_first_commands_packet = 0;
     client->predicted_chunk_mod_count = 0;
-    client->predicted_modifications = (chunk_modifications_t *)g_net_data.chunk_modification_allocator.allocate_arena();
+    client->predicted_modifications = (chunk_modifications_t *)ctx->chunk_modification_allocator.allocate_arena();
     client->previous_locations.init();
 
     // Force a ping in the next loop
@@ -404,9 +404,9 @@ static void s_receive_packet_client_disconnect(
     (void)serialiser;
     LOG_INFO("Client disconnected\n");
 
-    g_net_data.clients[client_id].previous_locations.destroy();
-    g_net_data.clients[client_id].initialised = 0;
-    g_net_data.clients.remove(client_id);
+    ctx->clients[client_id].previous_locations.destroy();
+    ctx->clients[client_id].initialised = 0;
+    ctx->clients.remove(client_id);
 
     vkph::event_player_disconnected_t *data = FL_MALLOC(vkph::event_player_disconnected_t, 1);
     data->client_id = client_id;
@@ -416,15 +416,15 @@ static void s_receive_packet_client_disconnect(
     out_serialiser.init(100);
     packet_header_t header = {};
     header.current_tick = state->current_tick;
-    header.current_packet_count = g_net_data.current_packet;
+    header.current_packet_count = ctx->current_packet;
     header.flags.packet_type = PT_PLAYER_LEFT;
     header.flags.total_packet_size = packed_packet_header_size() + sizeof(uint16_t);
 
     serialise_packet_header(&header, &out_serialiser);
     out_serialiser.serialise_uint16(client_id);
     
-    for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
-        client_t *c = &g_net_data.clients[i];
+    for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
+        client_t *c = &ctx->clients[i];
         if (c->initialised) {
             send_to_client(&out_serialiser, c->address);
         }
@@ -453,7 +453,7 @@ static void s_receive_packet_client_commands(
     vkph::player_t *p = state->get_player(local_id);
 
     if (p) {
-        client_t *c = &g_net_data.clients[p->client_id];
+        client_t *c = &ctx->clients[p->client_id];
 
         c->received_first_commands_packet = 1;
 
@@ -584,7 +584,7 @@ static void s_receive_packet_team_select_request(
 
         packet_header_t header = {};
         header.current_tick = state->current_tick;
-        header.current_packet_count = g_net_data.current_packet;
+        header.current_packet_count = ctx->current_packet;
         header.flags.packet_type = PT_PLAYER_TEAM_CHANGE;
         header.flags.total_packet_size = packed_packet_header_size() + packed_player_team_change_size();
 
@@ -596,8 +596,8 @@ static void s_receive_packet_team_select_request(
         serialise_packet_player_team_change(&change, &out_serialiser);
 
         // Send to all players
-        for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
-            send_to_client(&out_serialiser, g_net_data.clients.get(i)->address);
+        for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
+            send_to_client(&out_serialiser, ctx->clients.get(i)->address);
         }
     }
     else {
@@ -776,7 +776,7 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
     
     packet_game_state_snapshot_t packet = {};
     packet.player_data_count = 0;
-    packet.player_snapshots = LN_MALLOC(vkph::player_snapshot_t, g_net_data.clients.data_count);
+    packet.player_snapshots = LN_MALLOC(vkph::player_snapshot_t, ctx->clients.data_count);
 
     s_add_chunk_modifications_to_game_state_snapshot(&packet, state);
 
@@ -784,8 +784,8 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
     // Need to clear the "newly spawned rocks" stack
     state->rocks.clear_recent();
     
-    for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
-        client_t *c = &g_net_data.clients[i];
+    for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
+        client_t *c = &ctx->clients[i];
 
         if (c->initialised && c->received_first_commands_packet) {
             c->should_set_tick = 1;
@@ -877,7 +877,7 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
 
     packet_header_t header = {};
     header.current_tick = state->current_tick;
-    header.current_packet_count = g_net_data.current_packet;
+    header.current_packet_count = ctx->current_packet;
     // Don't need to fill this
     header.client_id = 0;
     header.flags.packet_type = PT_GAME_STATE_SNAPSHOT;
@@ -895,8 +895,8 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
     
     uint32_t data_head_before = serialiser.data_buffer_head;
     
-    for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
-        client_t *c = &g_net_data.clients[i];
+    for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
+        client_t *c = &ctx->clients[i];
 
         if (c->send_corrected_predicted_voxels) {
             // Serialise
@@ -926,7 +926,7 @@ static void s_send_pending_chunks() {
     uint32_t *to_remove = LN_MALLOC(uint32_t, clients_to_send_chunks_to.data_count);
     for (uint32_t i = 0; i < clients_to_send_chunks_to.data_count; ++i) {
         uint32_t client_id = clients_to_send_chunks_to[i];
-        client_t *c_ptr = &g_net_data.clients[client_id];
+        client_t *c_ptr = &ctx->clients[client_id];
 
         LOG_INFOV("Need to send %d packets\n", c_ptr->chunk_packet_count);
         if (c_ptr->current_chunk_sending < c_ptr->chunk_packet_count) {
@@ -959,8 +959,8 @@ static void s_ping_clients(const vkph::state_t *state) {
     serialiser_t serialiser = {};
     serialiser.init(30);
 
-    for (uint32_t i = 0; i < g_net_data.clients.data_count; ++i) {
-        client_t *c = &g_net_data.clients[i];
+    for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
+        client_t *c = &ctx->clients[i];
 
         if (c->time_since_ping > NET_CLIENT_TIMEOUT) {
             // TODO: Kick the client out of the server
@@ -970,7 +970,7 @@ static void s_ping_clients(const vkph::state_t *state) {
             serialiser.data_buffer_head = 0;
             
             packet_header_t header = {};
-            header.current_packet_count = g_net_data.current_packet;
+            header.current_packet_count = ctx->current_packet;
             header.current_tick = state->current_tick;
             header.client_id = c->client_id;
             header.flags.packet_type = PT_PING;
@@ -995,7 +995,7 @@ static void s_receive_packet_ping(
     serialiser_t *serialiser,
     uint16_t client_id,
     uint64_t current_tick) {
-    client_t *c = &g_net_data.clients[client_id];
+    client_t *c = &ctx->clients[client_id];
 
     c->received_ping = 1;
     c->ping = c->ping_in_progress;
@@ -1025,16 +1025,16 @@ static void s_tick_server(vkph::state_t *state) {
         world_elapsed = 0.0f;
     }
 
-    for (uint32_t i = 0; i < g_net_data.clients.data_count + 1; ++i) {
+    for (uint32_t i = 0; i < ctx->clients.data_count + 1; ++i) {
         network_address_t received_address = {};
         int32_t received = receive_from_client(
-            g_net_data.message_buffer,
+            ctx->message_buffer,
             sizeof(char) * NET_MAX_MESSAGE_SIZE,
             &received_address);
 
         if (received > 0) {
             serialiser_t in_serialiser = {};
-            in_serialiser.data_buffer = (uint8_t *)g_net_data.message_buffer;
+            in_serialiser.data_buffer = (uint8_t *)ctx->message_buffer;
             in_serialiser.data_buffer_size = received;
 
             packet_header_t header = {};
@@ -1106,12 +1106,14 @@ static void s_net_event_listener(void *object, vkph::event_t *event) {
 }
 
 void nw_init(vkph::state_t *state) {
+    ctx = flmalloc<net::context_t>();
+
     net_listener_id = vkph::set_listener_callback(&s_net_event_listener, state);
     vkph::subscribe_to_event(vkph::ET_START_SERVER, net_listener_id);
 
     socket_api_init();
 
-    g_net_data.message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
+    ctx->message_buffer = FL_MALLOC(char, NET_MAX_MESSAGE_SIZE);
 
     // meta_socket_init();
     nw_init_meta_connection();

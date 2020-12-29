@@ -294,10 +294,14 @@ const chunk_t **state_t::get_active_chunks(uint32_t *count) const {
     return (const chunk_t **)chunks.data;
 }
 
-chunk_t **state_t::get_modified_chunks(
-    uint32_t *count) {
+chunk_t **state_t::get_modified_chunks(uint32_t *count) {
     *count = modified_chunk_count;
     return modified_chunks;
+}
+
+const chunk_t **state_t::get_modified_chunks(uint32_t *count) const {
+    *count = modified_chunk_count;
+    return (const chunk_t **)modified_chunks;
 }
  
 void state_t::reset_modification_tracker() {

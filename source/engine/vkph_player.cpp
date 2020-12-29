@@ -46,6 +46,17 @@ void player_t::init(player_init_info_t *info, int16_t *client_to_local_id_map) {
     flags.u32 = info->flags;
 }
 
+void player_t::make_player_init_info(player_init_info_t *dst) const {
+    dst->client_name = name;
+    dst->client_id = client_id;
+    dst->ws_position = ws_position;
+    dst->ws_view_direction = ws_view_direction;
+    dst->ws_up_vector = ws_up_vector;
+    dst->next_random_spawn_position = next_random_spawn_position;
+    dst->default_speed = default_speed;
+    dst->flags = flags.u32;
+}
+
 void player_t::push_actions(player_action_t *action, bool override_adt) {
     if (player_action_count < PLAYER_MAX_ACTIONS_COUNT) {
         if (override_adt) {

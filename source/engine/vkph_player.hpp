@@ -195,6 +195,7 @@ struct player_t {
 
 
     void init(player_init_info_t *info, int16_t *client_to_local_id_map);
+    void make_player_init_info(player_init_info_t *dst) const;
     void push_actions(player_action_t *action, bool override_adt);
 
     /*

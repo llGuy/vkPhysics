@@ -106,6 +106,7 @@ struct state_t {
     chunk_t **get_active_chunks(uint32_t *count);
     const chunk_t **get_active_chunks(uint32_t *count) const;
     chunk_t **get_modified_chunks(uint32_t *count);
+    const chunk_t **get_modified_chunks(uint32_t *count) const;
     void reset_modification_tracker();
     void flag_modified_chunks(net::chunk_modifications_t *modifications, uint32_t count);
     void unflag_modified_chunks(net::chunk_modifications_t *modifications, uint32_t count);
