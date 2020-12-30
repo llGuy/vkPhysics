@@ -39,7 +39,10 @@ struct event_enter_server_t {
 };
 
 struct event_spawn_t {
-    uint32_t client_id;
+    /*
+      If the client_id is -1, the local player is requesting to spawn.
+     */
+    int32_t client_id;
 };
 
 struct event_new_player_t {

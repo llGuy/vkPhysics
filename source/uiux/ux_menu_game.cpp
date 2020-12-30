@@ -1,14 +1,13 @@
-#include <cstddef>
-#include "ui_team_select.hpp"
-#include "nw_client.hpp"
-#include "ui_menu_layout.hpp"
-#include "ui_game_menu.hpp"
-#include "ui_core.hpp"
+#include "ux.hpp"
+#include "ux_menu_game.hpp"
+#include "ux_menu_layout.hpp"
+#include "ux_page_team_select.hpp"
+
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
-#include <app.hpp>
-#include <vk.hpp>
 #include <allocators.hpp>
+
+namespace ux {
 
 enum button_t {
     B_SPAWN,
@@ -35,11 +34,11 @@ static void s_menu_layout_disconnect_proc() {
 
 static void s_menu_layout_spawn_proc() {
     auto *spawn = FL_MALLOC(vkph::event_spawn_t, 1);
-    spawn->client_id = nw_get_local_client_index();
+    spawn->client_id = -1;
     vkph::submit_event(vkph::ET_SPAWN, spawn);
 }
 
-void ui_game_menu_init() {
+void init_game_menu() {
     menu_click_handler_t procs[] = {
         &s_menu_layout_spawn_proc,
         NULL,
@@ -50,10 +49,10 @@ void ui_game_menu_init() {
     const char *widget_icon_paths[] = { NULL, NULL, NULL, NULL };
 
     VkDescriptorSet sets[] = {
-        ui_texture(UT_SPAWN_ICON),
-        ui_texture(UT_TEAM_SELECT),
-        ui_texture(UT_SETTINGS_ICON),
-        ui_texture(UT_QUIT_ICON),
+        get_texture(UT_SPAWN_ICON),
+        get_texture(UT_TEAM_SELECT),
+        get_texture(UT_SETTINGS_ICON),
+        get_texture(UT_QUIT_ICON),
     };
 
     game_menu_layout.init(
@@ -64,15 +63,15 @@ void ui_game_menu_init() {
 
     game_menu_layout.lock_button(B_SPAWN);
 
-    ui_team_select_init(&game_menu_layout);
+    init_team_select_page(&game_menu_layout);
 }
 
-void ui_init_game_menu_for_server(const vkph::state_t *state) {
-    ui_update_team_roster_layout(&game_menu_layout, state);
-    ui_update_team_roster_display_text(&game_menu_layout, state);
+void init_game_menu_for_server(const vkph::state_t *state) {
+    update_team_roster_layout(&game_menu_layout, state);
+    update_team_roster_display_text(&game_menu_layout, state);
 }
 
-void ui_submit_game_menu() {
+void submit_game_menu() {
     game_menu_layout.submit();
 
     enum { TEAM_SELECT = 1, SETTINGS = 2 };
@@ -80,7 +79,7 @@ void ui_submit_game_menu() {
     if (game_menu_layout.menu_opened()) {
         switch (game_menu_layout.current_open_menu) {
         case TEAM_SELECT: {
-            ui_submit_team_select();
+            submit_team_select_page();
         } break;
 
         case SETTINGS: {
@@ -90,7 +89,7 @@ void ui_submit_game_menu() {
     }
 }
 
-void ui_game_menu_input(
+void game_menu_input(
     const app::raw_input_t *input,
     vkph::state_t *state) {
     if (game_menu_layout.input(input)) {
@@ -98,20 +97,22 @@ void ui_game_menu_input(
 
         switch (game_menu_layout.current_open_menu) {
         case TEAM_SELECT: {
-            ui_team_select_input(input, state);
+            team_select_page_input(input, state);
         } break;
         }
     }
 }
 
-void ui_set_play_button_function(play_button_function_t function) {
+void set_play_button_function(play_button_function_t function) {
     // TODO:
 }
 
-void ui_lock_spawn_button() {
+void lock_spawn_button() {
     game_menu_layout.lock_button(B_SPAWN);
 }
 
-void ui_unlock_spawn_button() {
+void unlock_spawn_button() {
     game_menu_layout.unlock_button(B_SPAWN);
+}
+
 }

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <ui.hpp>
-#include <app.hpp>
-#include "ui_hover.hpp"
-#include <vkph_events.hpp>
+#include "ui_box.hpp"
+#include "ui_font.hpp"
+#include "ux_menu_layout.hpp"
+
+namespace ux {
 
 enum popup_section_type_t { PST_BUTTON_DOUBLE, PST_BUTTON_SINGLE, PST_TEXT, PST_INPUT, PST_INVALID };
 
@@ -12,7 +13,7 @@ struct popup_button_t {
     ui::text_t text;
     widget_color_t color;
     const char *button_string;
-    void (* handle_press_proc)(struct ui_popup_t *);
+    void (* handle_press_proc)(struct popup_t *);
 
     popup_button_t() = default;
 };
@@ -46,7 +47,7 @@ struct popup_section_t {
 
 #define MAX_SECTIONS_IN_POPUP 8
 
-struct ui_popup_t {
+struct popup_t {
     // Section in which the input (that the user is currently typing in) is contained
     uint32_t current_typing_section;
     // Used to pass parameters
@@ -58,20 +59,22 @@ struct ui_popup_t {
     popup_section_t sections[MAX_SECTIONS_IN_POPUP];
 };
 
-void ui_popups_init();
+void init_popups();
 // Pushes a popup to the ui stack and returns a pointer to continue initialisation
-ui_popup_t *ui_add_popup(uint32_t vertical_section_count);
-void ui_push_popup_section_button_double(
-    ui_popup_t *popup,
+popup_t *add_popup(uint32_t vertical_section_count);
+void push_popup_section_button_double(
+    popup_t *popup,
     const char **button_text,
-    void (** handle_press_proc)(ui_popup_t *));
-void ui_push_popup_section_button_single(
-    ui_popup_t *popup,
+    void (** handle_press_proc)(popup_t *));
+void push_popup_section_button_single(
+    popup_t *popup,
     const char *button_text,
-    void (* handle_press_proc)(ui_popup_t *));
-void ui_push_popup_section_text(ui_popup_t *popup, const char *text);
-void ui_push_popup_section_input(ui_popup_t *popup);
-// Initialise all the ui_box_t and ui_text_t, etc...
-void ui_prepare_popup_for_render(ui_popup_t *popup);
-void ui_submit_popups();
-void ui_popup_input(const app::raw_input_t *input);
+    void (* handle_press_proc)(popup_t *));
+void push_popup_section_text(popup_t *popup, const char *text);
+void push_popup_section_input(popup_t *popup);
+// Initialise all the box_t and text_t, etc...
+void prepare_popup_for_render(popup_t *popup);
+void submit_popups();
+void popup_input(const app::raw_input_t *input);
+
+}

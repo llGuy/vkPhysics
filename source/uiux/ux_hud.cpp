@@ -1,18 +1,21 @@
-#include "ui_hover.hpp"
+#include "ux_hud.hpp"
+
+#include "ux.hpp"
+#include "ux_hover.hpp"
 #include <vkph_state.hpp>
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
-#include "wd_predict.hpp"
-#include "ui_list.hpp"
+#include "ux_list.hpp"
 #include <allocators.hpp>
-#include "ui_hud.hpp"
-#include "ui_core.hpp"
-#include "ui_menu_layout.hpp"
+#include "ux_menu_layout.hpp"
+#include "ui_submit.hpp"
 #include <cstdio>
 #include <app.hpp>
 #include <log.hpp>
 #include <cstring>
 #include <vk.hpp>
+
+namespace ux {
 
 // HUD for now, just contains a crosshair
 static ui::box_t crosshair;
@@ -84,7 +87,7 @@ static struct {
     widget_color_t ip_address_color;
 } browse_server_menu;
 
-void ui_hud_init() {
+void init_hud() {
     { // Crosshair
         crosshair.init(
             ui::RT_CENTER,
@@ -94,7 +97,7 @@ void ui_hud_init() {
             NULL,
             0xFFFFFFFF);
 
-        crosshair_texture = ui_texture(UT_CROSSHAIRS);
+        crosshair_texture = get_texture(UT_CROSSHAIRS);
         crosshair_selection.current_crosshair = 1;
     }
 
@@ -109,7 +112,7 @@ void ui_hud_init() {
 
         health_display.text.init(
             &health_display.box,
-            ui_game_font(),
+            get_game_font(),
             ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.7f,
@@ -137,7 +140,7 @@ void ui_hud_init() {
 
         minibuffer.input_text.text.init(
             &minibuffer.box,
-            ui_game_font(),
+            get_game_font(),
             ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.7f,
@@ -155,10 +158,10 @@ void ui_hud_init() {
         minibuffer.is_typing = 0;
     }
 
-    ui_color_table_init();
+    color_table_init();
 }
 
-void ui_submit_hud(const vkph::state_t *state) {
+void submit_hud(const vkph::state_t *state) {
     float unit = (1.0f / 8.0f);
 
     vector2_t start = vector2_t(crosshair_selection.current_crosshair % 8, crosshair_selection.current_crosshair / 8) / 8.0f;
@@ -173,7 +176,7 @@ void ui_submit_hud(const vkph::state_t *state) {
 
     if (gameplay_display) {
         // Check if main player health has changed
-        int32_t p_idx = wd_get_local_player();
+        int32_t p_idx = state->local_player_id;
         const vkph::player_t *p = state->get_player(p_idx);
 
         if (p) {
@@ -187,24 +190,24 @@ void ui_submit_hud(const vkph::state_t *state) {
             }
 
             ui::push_color_box(&health_display.box);
-            ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+            ui::mark_ui_textured_section(get_game_font()->font_img.descriptor);
             ui::push_text(&health_display.text);
         }
     }
 
-    ui_submit_minibuffer();
-    ui_submit_color_table();
+    submit_minibuffer();
+    submit_color_table();
 }
 
-void ui_begin_minibuffer() {
+void begin_minibuffer() {
     display_minibuffer = 1;
 }
 
-void ui_end_minibuffer() {
+void end_minibuffer() {
     display_minibuffer = 0;
 }
 
-void ui_minibuffer_update_text(const char *text) {
+void minibuffer_update_text(const char *text) {
     if (display_minibuffer) {
         uint32_t str_length = strlen(text);
         for (uint32_t i = 0; i < str_length; ++i) {
@@ -218,13 +221,15 @@ void ui_minibuffer_update_text(const char *text) {
     }
 }
 
-void ui_submit_minibuffer() {
+void submit_minibuffer() {
     if (display_minibuffer) {
-        ui_submit_typing_box(&minibuffer);
+        ui::push_color_box(&minibuffer.box);
+        ui::mark_ui_textured_section(get_game_font()->font_img.descriptor);
+        ui::push_ui_input_text(1, 0, 0xFFFFFFFF, &minibuffer.input_text);
     }
 }
 
-void ui_color_table_init() {
+void color_table_init() {
     display_color_table = 0;
 
     table_widget.box.init(
@@ -244,37 +249,37 @@ void ui_color_table_init() {
         0x000000FF);
 }
  
-void ui_begin_gameplay_display() {
+void begin_gameplay_display() {
     gameplay_display = 1;
 }
 
-void ui_end_gameplay_display() {
+void end_gameplay_display() {
     gameplay_display = 0;
 }
 
-void ui_begin_color_table() {
+void begin_color_table() {
     display_color_table = 1;
 }
 
-void ui_end_color_table() {
+void end_color_table() {
     display_color_table = 0;
 }
 
-void ui_submit_color_table() {
+void submit_color_table() {
     if (display_color_table) {
         ui::push_color_box(&table_widget.box);
-        ui::mark_ui_textured_section(ui_texture(UT_COLOR_TABLE));
+        ui::mark_ui_textured_section(get_texture(UT_COLOR_TABLE));
         ui::push_textured_box(&table_widget.image_box);
     }
 }
 
-void ui_hud_input(const app::raw_input_t *input) {
+void hud_input(const app::raw_input_t *input) {
     if (display_color_table) {
         if (input->buttons[app::BT_MOUSE_LEFT].instant) {
             vector2_t color = vector2_t(0.0f);
 
             // Check where user clicked
-            if (ui_hover_over_box(
+            if (is_hovering_over_box(
                     &table_widget.image_box,
                     vector2_t(input->cursor_pos_x, input->cursor_pos_y),
                     &color)) {
@@ -298,4 +303,6 @@ void ui_hud_input(const app::raw_input_t *input) {
             }
         }
     }
+}
+
 }

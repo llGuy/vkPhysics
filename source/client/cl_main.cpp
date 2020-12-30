@@ -52,7 +52,7 @@ static void s_run() {
 
         frame_command_buffers_t frame = cl_prepare_frame();
 
-        // // Tick whatever scene was bound
+        // Tick whatever scene was bound
         sc_tick(
             frame.render_command_buffer,
             frame.transfer_command_buffer,

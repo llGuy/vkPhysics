@@ -1,3 +1,4 @@
+#include "nw_client.hpp"
 #include "ui_game_menu.hpp"
 #include <vkph_state.hpp>
 #include "dr_rsc.hpp"
@@ -76,7 +77,15 @@ static void s_handle_event_leave_server(vkph::state_t *state) {
 
 static void s_handle_event_spawn(vkph::event_t *event, vkph::state_t *state) {
     auto *data = (vkph::event_spawn_t *)event->data;
-    uint32_t id = data->client_id;
+
+    uint32_t id = 0;
+
+    if (data->client_id == -1) {
+        id = nw_get_local_client_index();
+    }
+    else {
+        id = data->client_id;
+    }
 
     LOG_INFOV("Client %i spawned\n", data->client_id);
 

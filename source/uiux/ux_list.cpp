@@ -1,3 +1,4 @@
+#include "ux.hpp"
 #include "ux_list.hpp"
 #include "ui_submit.hpp"
 #include "ux_menu_layout.hpp"
@@ -31,7 +32,7 @@ void list_t::init(
 
         typing_box.input_text.text.init(
             &typing_box.box,
-            ux_game_font(),
+            get_game_font(),
             ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.9f,
@@ -75,7 +76,7 @@ void list_t::init(
 
             button->text.init(
                 &button->box,
-                ux_game_font(),
+                get_game_font(),
                 ui::text_t::font_stream_box_relative_to_t::BOTTOM,
                 0.8f, 0.9f,
                 10, 1.8f);
@@ -127,7 +128,7 @@ void list_t::end() {
 
         item->text.init(
             &item->box,
-            ux_game_font(),
+            get_game_font(),
             ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f,
             0.8f,
@@ -153,7 +154,7 @@ void list_tsubmit_typing_box(typing_box_t *box) {
 #endif
 
 void list_t::submit() {
-    ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+    ui::mark_ui_textured_section(get_game_font()->font_img.descriptor);
     ui::push_color_box(&list_box);
 
     for (uint32_t i = 0; i < button_count; ++i) {
@@ -162,7 +163,7 @@ void list_t::submit() {
     }
 
     ui::push_color_box(&typing_box.box);
-    ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+    ui::mark_ui_textured_section(get_game_font()->font_img.descriptor);
     ui::push_ui_input_text(1, 0, 0xFFFFFFFF, &typing_box.input_text);
 
     for (uint32_t i = 0; i < item_count; ++i) {

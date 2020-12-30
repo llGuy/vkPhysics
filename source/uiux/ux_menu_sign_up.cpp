@@ -1,14 +1,22 @@
-#include "allocators.hpp"
+#include "ux.hpp"
+#include "ux_menu_sign_up.hpp"
+
+#include <allocators.hpp>
 #include <vkph_events.hpp>
 #include "string.hpp"
 #include <net_meta.hpp>
 #include <vkph_event_data.hpp>
-#include "ui_core.hpp"
-#include "ui_menu_layout.hpp"
+#include "ux_menu_layout.hpp"
 #include <cstdio>
 #include <sha1.hpp>
 #include <app.hpp>
 #include <vk.hpp>
+
+#include "ui_font.hpp"
+#include "ui_box.hpp"
+#include "ui_submit.hpp"
+
+namespace ux {
 
 enum button_t { B_SIGNUP, B_LOGIN, B_USERNAME, B_PASSWORD, B_INVALID };
 
@@ -35,7 +43,7 @@ static widget_color_t login_color;
 static void s_buttons_init() {
     signup_box.init(ui::RT_LEFT_DOWN, 3.0f, ui::vector2_t(0.07f, 0.2f), ui::vector2_t(0.4f, 0.4f), &panel_box, 0x09090956);
     signup_color.init(0x05050536, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
-    signup_text.init(&signup_box, ui_game_font(),
+    signup_text.init(&signup_box, get_game_font(),
         ui::text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 7, 1.8f);
 
@@ -46,7 +54,7 @@ static void s_buttons_init() {
 
     login_box.init(ui::RT_RIGHT_DOWN, 3.0f, ui::vector2_t(-0.07f, 0.2f), ui::vector2_t(0.4f, 0.4f), &panel_box, 0x09090956);
     login_color.init(0x05050536, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
-    login_text.init(&login_box, ui_game_font(),
+    login_text.init(&login_box, get_game_font(),
         ui::text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 7, 1.8f);
 
@@ -77,7 +85,7 @@ static void s_typing_boxes_init() {
     { // For typing username
         prompt_username_box.init(ui::RT_RELATIVE_CENTER, 8.0f, ui::vector2_t(0.0f, 0.4f), ui::vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         prompt_username_text.init(
-            &prompt_username_box, ui_game_font(),
+            &prompt_username_box, get_game_font(),
             ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f, 0.9f, 25, 1.8f);
 
@@ -89,7 +97,7 @@ static void s_typing_boxes_init() {
         type_username_box.init(ui::RT_RELATIVE_CENTER, 8.0f, ui::vector2_t(0.0f, 0.3f), ui::vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         type_username_color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
         type_username_text.text.init(
-            &type_username_box, ui_game_font(),
+            &type_username_box, get_game_font(),
             ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f, 0.9f, 25, 1.8f);
 
@@ -100,7 +108,7 @@ static void s_typing_boxes_init() {
     { // For typing password
         prompt_password_box.init(ui::RT_RELATIVE_CENTER, 8.0f, ui::vector2_t(0.0f, 0.2f), ui::vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         prompt_password_text.init(
-            &prompt_password_box, ui_game_font(),
+            &prompt_password_box, get_game_font(),
             ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f, 0.9f, 25, 1.8f);
 
@@ -112,7 +120,7 @@ static void s_typing_boxes_init() {
         type_password_box.init(ui::RT_RELATIVE_CENTER, 8.0f, ui::vector2_t(0.0f, 0.1f), ui::vector2_t(0.9f, 0.2f), &panel_box, 0x09090936);
         type_password_color.init(0x09090936, MENU_WIDGET_HOVERED_OVER_BACKGROUND_COLOR, 0xFFFFFFFF, 0xFFFFFFFF);
         type_password_text.text.init(
-            &type_password_box, ui_game_font(),
+            &type_password_box, get_game_font(),
             ui::text_t::font_stream_box_relative_to_t::BOTTOM,
             0.8f, 0.9f, 25, 1.8f);
 
@@ -131,7 +139,7 @@ static bool error_happened;
 static void s_error_section_init() {
     error_box.init(ui::RT_RELATIVE_CENTER, 8.0f, ui::vector2_t(0.07f, 0.01f), ui::vector2_t(0.8f, 0.8f), &panel_box, 0x0);
 
-    error_text.init(&error_box, ui_game_font(),
+    error_text.init(&error_box, get_game_font(),
         ui::text_t::font_stream_box_relative_to_t::BOTTOM,
         1.5f, 1.3f, 30, 1.8f);
 
@@ -141,21 +149,21 @@ static void s_error_section_init() {
     }
 }
 
-void ui_sign_up_menu_init() {
+void init_sign_up_menu() {
     s_panel_init();
     s_buttons_init();
     s_typing_boxes_init();
     s_error_section_init();
 }
 
-void ui_submit_sign_up_menu() {
+void submit_sign_up_menu() {
     ui::push_color_box(&panel_box);
     ui::push_color_box(&signup_box);
     ui::push_color_box(&login_box);
     ui::push_color_box(&type_password_box);
     ui::push_color_box(&type_username_box);
     
-    ui::mark_ui_textured_section(ui_game_font()->font_img.descriptor);
+    ui::mark_ui_textured_section(get_game_font()->font_img.descriptor);
 
     ui::push_text(&signup_text);
     ui::push_text(&login_text);
@@ -168,14 +176,14 @@ void ui_submit_sign_up_menu() {
         ui::push_text(&error_text);
 }
 
-void ui_sign_up_menu_input(const app::raw_input_t *input) {
+void sign_up_menu_input(const app::raw_input_t *input) {
     button_t hovering_over = B_INVALID;
     bool hovering = 0;
 
     vector2_t cursor_position = vector2_t(input->cursor_pos_x, input->cursor_pos_y);
 
     { // Hover over sign up button
-        if ((hovering = ui_hover_over_box(
+        if ((hovering = is_hovering_over_box(
                  &signup_box,
                  cursor_position)))
             hovering_over = B_SIGNUP;
@@ -186,7 +194,7 @@ void ui_sign_up_menu_input(const app::raw_input_t *input) {
     }
 
     { // Hover over sign up button
-        if ((hovering = ui_hover_over_box(
+        if ((hovering = is_hovering_over_box(
                  &login_box,
                  cursor_position)))
             hovering_over = B_LOGIN;
@@ -197,7 +205,7 @@ void ui_sign_up_menu_input(const app::raw_input_t *input) {
     }
 
     { // Hover over username box
-        if ((hovering = ui_hover_over_box(
+        if ((hovering = is_hovering_over_box(
                  &type_username_box,
                  cursor_position)))
             hovering_over = B_USERNAME;
@@ -208,7 +216,7 @@ void ui_sign_up_menu_input(const app::raw_input_t *input) {
     }
 
     { // Hover over password box
-        if ((hovering = ui_hover_over_box(
+        if ((hovering = is_hovering_over_box(
                  &type_password_box,
                  cursor_position)))
             hovering_over = B_PASSWORD;
@@ -280,7 +288,7 @@ void ui_sign_up_menu_input(const app::raw_input_t *input) {
         type_password_text.input(input);
 }
 
-void ui_handle_sign_up_failed(net::request_error_t ierror_type) {
+void handle_sign_up_failed(net::request_error_t ierror_type) {
     error_happened = 1;
     error_type = ierror_type;
 
@@ -295,4 +303,6 @@ void ui_handle_sign_up_failed(net::request_error_t ierror_type) {
         error_text.draw_string("Incorrect username or password", 0xFF0000FF);
     } break;
     }
+}
+
 }

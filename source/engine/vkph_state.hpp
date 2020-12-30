@@ -41,6 +41,8 @@ struct state_t {
     // Players ////////////////////////////////////////////////////////////////
     stack_container_t<player_t *> players;
     int16_t client_to_local_id_map[PLAYER_MAX_COUNT];
+    // This is only used in the client code (there's no "local" player in the server)
+    int32_t local_player_id;
 
     // Map ////////////////////////////////////////////////////////////////////
     const char *current_map_path;

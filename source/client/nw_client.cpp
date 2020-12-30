@@ -1170,9 +1170,11 @@ static void s_net_event_listener(
         client_info.name = local_meta_client->username;
 
         if (data->server_name) {
-            uint32_t *game_server_index = ctx->available_servers.name_to_server.get(simple_string_hash(data->server_name));
+            auto *available_servers = net::get_available_servers();
+
+            uint32_t *game_server_index = available_servers->name_to_server.get(simple_string_hash(data->server_name));
             if (game_server_index) {
-                uint32_t ip_address = ctx->available_servers.servers[*game_server_index].ipv4_address;
+                uint32_t ip_address = available_servers->servers[*game_server_index].ipv4_address;
             
                 s_send_packet_connection_request(ip_address, &client_info);
             }
@@ -1250,10 +1252,12 @@ void nw_init(vkph::state_t *state) {
 
     nw_init_meta_connection();
 
-    ctx->available_servers.server_count = 0;
-    ctx->available_servers.servers = FL_MALLOC(net::game_server_t, net::NET_MAX_AVAILABLE_SERVER_COUNT);
-    memset(ctx->available_servers.servers, 0, sizeof(net::game_server_t) * net::NET_MAX_AVAILABLE_SERVER_COUNT);
-    ctx->available_servers.name_to_server.init();
+    auto *available_servers = net::get_available_servers();
+
+    available_servers->server_count = 0;
+    available_servers->servers = FL_MALLOC(net::game_server_t, net::NET_MAX_AVAILABLE_SERVER_COUNT);
+    memset(available_servers->servers, 0, sizeof(net::game_server_t) * net::NET_MAX_AVAILABLE_SERVER_COUNT);
+    available_servers->name_to_server.init();
 }
 
 void nw_tick(vkph::state_t *state) {
@@ -1270,8 +1274,4 @@ bool nw_connected_to_server() {
 
 uint16_t nw_get_local_client_index() {
     return current_client_id;
-}
-
-net::available_servers_t *nw_get_available_servers() {
-    return &ctx->available_servers;
 }

@@ -1,5 +1,6 @@
 #include "vkph_state.hpp"
 #include "vkph_map.hpp"
+#include "vkph_team.hpp"
 #include "vkph_terraform.hpp"
 #include "vkph_chunk.hpp"
 
@@ -130,6 +131,8 @@ void state_t::change_player_team(player_t *player, team_color_t color) {
             uint32_t index = team_color_to_index[color];
             teams[index].add_player(player->local_id);
             player->flags.team_color = color;
+
+            player->terraform_package.color = team_color_to_voxel_color(color);
         }
     }
 }

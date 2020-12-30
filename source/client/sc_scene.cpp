@@ -34,7 +34,7 @@ static void s_scene_event_listener(
 }
 
 void sc_scenes_init(vkph::state_t *state) {
-    scene_listener = set_listener_callback(s_scene_event_listener, state);
+    scene_listener = vkph::set_listener_callback(s_scene_event_listener, state);
 
     sc_main_init(scene_listener);
     sc_play_init(scene_listener);

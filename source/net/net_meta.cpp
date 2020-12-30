@@ -1,4 +1,5 @@
 #include "net_meta.hpp"
+#include "net_game_server.hpp"
 
 #include <mutex>
 #include <cstdio>
@@ -14,8 +15,9 @@
 namespace net {
 
 static constexpr uint32_t REQUEST_RESULT_MAX_SIZE = 4096;
-
 static const char *meta_server_hostname = "meta.llguy.fun";
+
+static available_servers_t available_servers;
 
 static std::thread meta_thread;
 
@@ -251,6 +253,10 @@ void send_request(request_t request, void *data) {
 
 void join_meta_thread() {
     meta_thread.join();
+}
+
+available_servers_t *get_available_servers() {
+    return &available_servers;
 }
 
 }

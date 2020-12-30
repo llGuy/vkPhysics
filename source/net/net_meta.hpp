@@ -1,5 +1,6 @@
 #pragma once
 
+#include "net_game_server.hpp"
 #include <stdint.h>
 
 namespace net {
@@ -70,6 +71,8 @@ void begin_meta_client_thread();
 char *check_request_finished(uint32_t *size, request_t *request);
 void send_request(request_t request, void *request_data);
 void join_meta_thread();
+
+available_servers_t *get_available_servers();
 
 struct meta_client_t {
     const char *username;

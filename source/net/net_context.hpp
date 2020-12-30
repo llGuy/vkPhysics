@@ -65,12 +65,6 @@ struct context_t {
     arena_allocator_t chunk_modification_allocator;
     accumulated_predicted_modification_t merged_recent_modifications;
 
-    /*
-      This will contain the result of the HTTP request to the meta server, containing the servers
-      which are currently online, and that the client can connect to.
-    */
-    available_servers_t available_servers;
-
     FILE *log_file;
 
     /*

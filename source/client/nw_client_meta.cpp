@@ -154,7 +154,7 @@ void nw_check_meta_request_status_and_handle() {
         } break;
 
         case net::R_AVAILABLE_SERVERS: {
-            nw_get_available_servers()->name_to_server.clear();
+            net::get_available_servers()->name_to_server.clear();
 
             uint32_t server_count = atoi(data);
 
@@ -193,16 +193,16 @@ void nw_check_meta_request_status_and_handle() {
 
                     LOG_INFOV("Server (%d) called \"%s\" (ip: %s) has %d player(s) active\n", server_id, server_name, ip_address, player_count);
 
-                    net::game_server_t *dst = &nw_get_available_servers()->servers[i];
+                    net::game_server_t *dst = &net::get_available_servers()->servers[i];
                     dst->server_name = server_name;
                     dst->ipv4_address = str_to_ipv4_int32(ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
-                    nw_get_available_servers()->name_to_server.insert(simple_string_hash(server_name), i);
+                    net::get_available_servers()->name_to_server.insert(simple_string_hash(server_name), i);
 
                     ++i;
                 }
             }
 
-            nw_get_available_servers()->server_count = i;
+            net::get_available_servers()->server_count = i;
 
             vkph::submit_event(vkph::ET_RECEIVED_AVAILABLE_SERVERS, NULL);
         } break;

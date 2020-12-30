@@ -211,6 +211,11 @@ struct player_t {
      */
     vector3_t compute_view_position();
 
+    /*
+      Sets the appropriate state so that player dies.
+     */
+    void die();
+
 private:
 
     void init_default_values(player_init_info_t *info);
