@@ -1,14 +1,6 @@
-#include "vk.hpp"
-#include "vk_buffer.hpp"
-#include "vk_shader.hpp"
 #include "ui_submit.hpp"
-#include "vk_present.hpp"
-#include "app_context.hpp"
-
-#include <ui.hpp>
+#include <allocators.hpp>
 #include <log.hpp>
-#include <math.hpp>
-#include <vulkan/vulkan_core.h>
 
 namespace ui {
 

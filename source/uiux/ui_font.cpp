@@ -1,11 +1,5 @@
-#include "app.hpp"
-#include "app_context.hpp"
+#include "ui_font.hpp"
 
-#include <ui.hpp>
-#include <stdint.h>
-#include <stddef.h>
-#include <string.h>
-#include <stdlib.h>
 #include <files.hpp>
 
 namespace ui {
