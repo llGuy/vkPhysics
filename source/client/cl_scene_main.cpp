@@ -8,6 +8,7 @@
 #include "ux_scene.hpp"
 #include "wd_spectate.hpp"
 #include <vkph_events.hpp>
+#include <ux_menu_main.hpp>
 #include <vkph_player.hpp>
 #include <cstddef>
 #include <app.hpp>
@@ -26,6 +27,8 @@ void main_scene_t::subscribe_to_events(vkph::listener_t listener) {
 }
 
 void main_scene_t::prepare_for_binding(vkph::state_t *state) {
+    ux::clear_main_menu();
+
     vkph::player_t *spect = wd_get_spectator();
 
     // Position the player at the right place and view in the right direction

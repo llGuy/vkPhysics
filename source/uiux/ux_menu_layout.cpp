@@ -205,14 +205,18 @@ void menu_layout_t::open_menu(
         }
     }
     else {
-        current_open_menu = widget_count;
-
-        menu_slider.set(
-            1,
-            menu_slider.current,
-            0.0f,
-            MENU_SLIDER_SPEED);
+        close_menus();
     }
+}
+
+void menu_layout_t::close_menus() {
+    current_open_menu = widget_count;
+
+    menu_slider.set(
+        1,
+        menu_slider.current,
+        0.0f,
+        MENU_SLIDER_SPEED);
 }
 
 void menu_layout_t::lock_button(

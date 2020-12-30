@@ -216,6 +216,9 @@ void submit_main_menu() {
         case B_BUILD_MAP: {
             build_map_list_menu.submit();
         } break;
+
+        default: {
+        } break;
         }
     }
 }
@@ -230,6 +233,9 @@ void main_menu_input(const app::raw_input_t *input) {
         case B_BUILD_MAP: {
             build_map_list_menu.input(input);
         } break;
+
+        default: {
+        } break;
         }
     }
 }
@@ -237,8 +243,10 @@ void main_menu_input(const app::raw_input_t *input) {
 void clear_main_menu() {
     servers_list_menu.selected_item = 0xFFFF;
     main_menu_layout.current_button = B_INVALID_MENU_BUTTON;
-    main_menu_layout.current_open_menu = B_INVALID_MENU_BUTTON;
+    main_menu_layout.current_open_menu = main_menu_layout.widget_count;
     main_menu_layout.current_menu.gls_current_size.fx = 0.0f;
+    main_menu_layout.close_menus();
+    servers_list_menu.typing_box.input_text.reset();
 }
 
 }

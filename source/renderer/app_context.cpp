@@ -252,7 +252,7 @@ void poll_input_events() {
 
     const float FRAME_TIME = 1.0f / 100.0f;
 
-#if 0
+#if 1
     if (g_delta_time < FRAME_TIME) {
         double wait_time = (FRAME_TIME - g_delta_time);
 

@@ -63,6 +63,7 @@ struct menu_layout_t {
     void open_menu(uint32_t button);
     void lock_button(uint32_t button);
     void unlock_button(uint32_t button);
+    void close_menus();
 };
 
 }

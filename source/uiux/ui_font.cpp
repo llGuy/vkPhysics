@@ -1,5 +1,6 @@
 #include "ui_font.hpp"
 
+#include <cstring>
 #include <files.hpp>
 
 namespace ui {
@@ -220,6 +221,11 @@ void text_t::null_terminate() {
     characters[char_count] = 0;
 }
 
+void text_t::reset() {
+    char_count = 0;
+    memset(characters, 0, MAX_CHARS);
+}
+
 void input_text_t::input(
     const app::raw_input_t *raw_input) {
     for (uint32_t i = 0; i < raw_input->char_count; ++i) {
@@ -243,6 +249,11 @@ void input_text_t::input(
 const char *input_text_t::get_string() {
     text.null_terminate();
     return text.characters;
+}
+
+void input_text_t::reset() {
+    text.reset();
+    cursor_position = 0;
 }
 
 }

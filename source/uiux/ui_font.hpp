@@ -29,9 +29,10 @@ struct text_t {
     box_t *dst_box;
     struct font_t *font;
     
-    // Max characters = 500
-    uint32_t colors[500] = {};
-    char characters[500] = {};
+    static constexpr uint32_t MAX_CHARS = 500;
+
+    uint32_t colors[MAX_CHARS] = {};
+    char characters[MAX_CHARS] = {};
     uint32_t char_count = 0;
 
     enum font_stream_box_relative_to_t { TOP, BOTTOM, CENTER };
@@ -60,6 +61,8 @@ struct text_t {
     void draw_string(const char *string, uint32_t color);
 
     void null_terminate();
+
+    void reset();
 };
 
 struct input_text_t {
@@ -73,6 +76,8 @@ struct input_text_t {
 
     void input(const app::raw_input_t *raw_input);
     const char *get_string();
+
+    void reset();
 };
 
 }
