@@ -21,5 +21,5 @@ void prepare_scenes(vkph::state_t *state) {
     ux::push_scene(play_scene);
     ux::push_scene(map_creator_scene);
 
-    ux::prepare_scene_event_subscription(state);
+    ux::init_scenes(state);
 }

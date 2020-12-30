@@ -1,12 +1,11 @@
-#include "sc_play.hpp"
 #include <vkph_state.hpp>
 #include <vkph_team.hpp>
 #include <vkph_physics.hpp>
 #include "dr_rsc.hpp"
 #include "cl_main.hpp"
-#include "sc_scene.hpp"
 #include "dr_chunk.hpp"
 #include "dr_player.hpp"
+#include "ux_scene.hpp"
 #include "wd_predict.hpp"
 #include "dr_draw_scene.hpp"
 #include <app.hpp>
@@ -190,7 +189,7 @@ static void s_players_gpu_sync_and_render(
                 p->render->render_data.pbr_info.y = 0.1f;
 
                 if ((int32_t)i == (int32_t)wd_get_local_player(state)) {
-                    if (!sc_is_in_first_person()) {
+                    if (!dr_is_first_person()) {
                         if (p->switching_shapes) {
                             // Render transition
                             s_render_transition(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);
@@ -256,7 +255,8 @@ static void s_chunks_gpu_sync_and_render(
     vkph::chunk_t **chunks = state->get_active_chunks(&chunk_count);
     uint8_t surface_level = vkph::CHUNK_SURFACE_LEVEL;
 
-    const vk::eye_3d_info_t *eye_info = sc_get_eye_info();
+    ux::scene_info_t *scene_info = ux::get_scene_info();
+    const vk::eye_3d_info_t *eye_info = &scene_info->eye;
 
     for (uint32_t i = 0; i < chunk_count; ++i) {
         vkph::chunk_t *c = chunks[i];
@@ -330,7 +330,8 @@ void dr_draw_game(
     VkCommandBuffer transfer,
     VkCommandBuffer shadow,
     vkph::state_t *state) {
-    const vk::eye_3d_info_t *eye_info = sc_get_eye_info();
+    ux::scene_info_t *scene_info = ux::get_scene_info();
+    const vk::eye_3d_info_t *eye_info = &scene_info->eye;
     vk::swapchain_information_t swapchain_info = vk::get_swapchain_info();
 
     float aspect_ratio = (float)swapchain_info.width / (float)swapchain_info.height;

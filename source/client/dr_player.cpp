@@ -2,6 +2,12 @@
 #include <vkph_player.hpp>
 #include <allocators.hpp>
 
+bool is_first_person = 0;
+
+bool &dr_is_first_person() {
+    return is_first_person;
+}
+
 player_render_t *dr_player_render_init() {
     player_render_t *player_render = FL_MALLOC(player_render_t, 1);
     memset(player_render, 0, sizeof(player_render_t));

@@ -20,3 +20,5 @@ struct player_render_t {
 
 player_render_t *dr_player_render_init();
 bool dr_is_animation_repeating(vkph::player_animated_state_t state);
+
+bool &dr_is_first_person();

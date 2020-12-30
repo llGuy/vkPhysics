@@ -51,7 +51,6 @@ private:
     };
 
     submode_t submode_;
-    bool is_first_person_;
 };
 
 struct map_creator_scene_t : ux::scene_t {

@@ -434,6 +434,10 @@ map_t *state_t::load_map(const char *path) {
 }
 
 void state_t::save_map(map_t *map) {
+    if (!map) {
+        map = current_map_data;
+    }
+
     // Serialise stuff
     char full_path[50] = {};
     sprintf(full_path, "assets/maps/%s", map->path);

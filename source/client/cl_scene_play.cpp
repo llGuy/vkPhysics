@@ -1,13 +1,12 @@
 #include <vkph_player.hpp>
 #include "cl_render.hpp"
 #include "cl_view.hpp"
+#include "dr_player.hpp"
 #include <vkph_chunk.hpp>
 #include "nw_client.hpp"
 #include <ux.hpp>
 #include "ux_scene.hpp"
 #include "wd_core.hpp"
-#include "sc_play.hpp"
-#include "sc_scene.hpp"
 #include "fx_post.hpp"
 #include "cl_main.hpp"
 #include "wd_predict.hpp"
@@ -99,7 +98,7 @@ void play_scene_t::calculate_pos_and_dir(vkph::player_t *player, vector3_t *posi
         }
     }
 
-    is_first_person_ = !render_player;
+    dr_is_first_person() = !render_player;
 
     *position = player->ws_position - player->ws_view_direction * camera_distance * vkph::PLAYER_SCALE;
     *position += player->current_camera_up * vkph::PLAYER_SCALE * 2.0f;

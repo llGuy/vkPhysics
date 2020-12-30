@@ -35,7 +35,7 @@ void bind_scene(uint32_t id, vkph::state_t *state);
 /*
   Calls the init and subscribe_to_events functions of all the pushed scenes.
  */
-void init_scene(vkph::state_t *);
+void init_scenes(vkph::state_t *);
 
 /*
   Calls the bound tick function.

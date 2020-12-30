@@ -12,7 +12,6 @@
 #include "ux_scene.hpp"
 #include "vkph_terraform.hpp"
 #include "wd_core.hpp"
-#include "sc_scene.hpp"
 #include "wd_predict.hpp"
 #include "wd_spectate.hpp"
 #include <ui_submit.hpp>

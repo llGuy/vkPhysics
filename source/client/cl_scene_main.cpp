@@ -2,8 +2,6 @@
 #include "cl_scene.hpp"
 #include <ux.hpp>
 #include "dr_rsc.hpp"
-#include "sc_main.hpp"
-#include "sc_scene.hpp"
 #include "fx_post.hpp"
 #include "cl_main.hpp"
 #include "nw_client.hpp"

@@ -1,6 +1,7 @@
 #include "fx_post.hpp"
 #include "cl_render.hpp"
 #include <vkph_events.hpp>
+#include <ux_scene.hpp>
 
 #include <vk.hpp>
 
@@ -58,8 +59,9 @@ static void s_render() {
 
     vk::frame_t frame = vk::begin_frame();
 
-    vk::eye_3d_info_t *eye_info = sc_get_eye_info();
-    vk::lighting_info_t *lighting_info = sc_get_lighting_info();
+    ux::scene_info_t *scene_info = ux::get_scene_info();
+    vk::eye_3d_info_t *eye_info = &scene_info->eye;
+    vk::lighting_info_t *lighting_info = &scene_info->lighting;
 
     vk::gpu_sync_scene3d_data(frame.cmdbuf, eye_info, lighting_info);
     // All data transfers

@@ -17,7 +17,7 @@ uint32_t push_scene(scene_t *scene) {
 }
 
 void bind_scene(uint32_t id, vkph::state_t *state) {
-    scenes[bound_scene]->prepare_for_binding(state);
+    scenes[bound_scene]->prepare_for_unbinding(state);
 
     bound_scene = id;
 
@@ -28,15 +28,13 @@ static void s_event_listener(void *object, vkph::event_t *event) {
     scenes[bound_scene]->handle_event(object, event);
 }
 
-vkph::listener_t prepare_scene_event_subscription(vkph::state_t *state) {
+void init_scenes(vkph::state_t *state) {
     listener = vkph::set_listener_callback(s_event_listener, state);
 
     for (uint32_t i = 0; i < scene_count; ++i) {
         scenes[i]->init();
         scenes[i]->subscribe_to_events(listener);
     }
-
-    return listener;
 }
 
 void tick_scene(frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
