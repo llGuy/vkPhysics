@@ -1,5 +1,5 @@
 #include "nw_client.hpp"
-#include "ui_game_menu.hpp"
+#include <ux_menu_game.hpp>
 #include <vkph_state.hpp>
 #include "dr_rsc.hpp"
 #include "wd_core.hpp"
@@ -38,7 +38,7 @@ static void s_handle_event_enter_server(vkph::event_t *event, vkph::state_t *sta
         player->init(&data->infos[i], state->client_to_local_id_map);
 
         if (player->flags.is_local) {
-            wd_set_local_player(player->local_id);
+            wd_set_local_player(player->local_id, state);
 
             player->cached_player_action_count = 0;
             player->cached_player_actions = FL_MALLOC(vkph::player_action_t, vkph::PLAYER_MAX_ACTIONS_COUNT * 2);
@@ -148,7 +148,7 @@ static void s_handle_event_player_disconnected(vkph::event_t *event, vkph::state
         if (team_color != vkph::team_color_t::INVALID) {
             // Remove player from team
             state->remove_player_from_team(p);
-            ui_init_game_menu_for_server(state);
+            ux::init_game_menu_for_server(state);
         }
             
         if (p) {

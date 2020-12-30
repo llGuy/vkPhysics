@@ -49,10 +49,6 @@ target_compile_definitions(engine PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 add_library(net STATIC "${NET_SOURCES}")
 target_compile_definitions(net PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 
-# Create net
-add_library(uiux STATIC "${UIUX_SOURCES}")
-target_compile_definitions(uiux PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
-
 # Do not worry, this will be cleaned up after net refactor
 target_include_directories(common PUBLIC "${CMAKE_SOURCE_DIR}/source/engine/")
 target_include_directories(engine PUBLIC "${CMAKE_SOURCE_DIR}/source/common/" "${CMAKE_SOURCE_DIR}/source/net")
@@ -95,6 +91,12 @@ if(BUILD_CLIENT)
   else(WIN32)
     target_link_libraries(renderer PUBLIC "${Vulkan_LIBRARY}" "common" "glfw")
   endif()
+
+
+  # Create uiux
+  add_library(uiux STATIC "${UIUX_SOURCES}")
+  target_compile_definitions(uiux PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
+  target_link_libraries(uiux PUBLIC "renderer")
 endif()
 
 if(CURL_FOUND)
@@ -125,7 +127,7 @@ endif()
 
 # Create server (server can get built on whatever platform with or without vulkan support)
 add_executable(vkPhysics_server "${SERVER_SOURCES}")
-target_link_libraries(vkPhysics_server PUBLIC "common" "engine" "net" "${CURL_LIBRARIES}")
+target_link_libraries(vkPhysics_server PUBLIC "common" "engine" "net" "uiux" "${CURL_LIBRARIES}")
 message("${$CURL_LIBRARIES}")
 
 if(WIN32)

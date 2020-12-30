@@ -111,7 +111,7 @@ color_pair_t widget_color_t::update(
 }
 
 bool is_hovering_over_box(
-    ui::box_t *box,
+    const ui::box_t *box,
     const vector2_t &cursor_position,
     vector2_t *relative_position) {
     vector2_t cursor = ui::convert_pixel_to_ndc(cursor_position);

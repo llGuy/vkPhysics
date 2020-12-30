@@ -1,44 +1,50 @@
-#include "sc_play.hpp"
-#include "ui_core.hpp"
+#include "cl_render.hpp"
+#include "cl_scene.hpp"
+#include <ux.hpp>
 #include "dr_rsc.hpp"
 #include "sc_main.hpp"
 #include "sc_scene.hpp"
 #include "fx_post.hpp"
 #include "cl_main.hpp"
 #include "nw_client.hpp"
+#include "ux_scene.hpp"
 #include "wd_spectate.hpp"
 #include <vkph_events.hpp>
 #include <vkph_player.hpp>
 #include <cstddef>
 #include <app.hpp>
 #include <vk.hpp>
-#include <ui.hpp>
+#include <ui_submit.hpp>
 
-static fixed_premade_scene_t scene;
+void main_scene_t::init() {
+    structure_ = dr_read_premade_rsc("assets/misc/startup/default.startup");
+}
 
-void sc_main_init(vkph::listener_t listener) {
-    scene = dr_read_premade_rsc("assets/misc/startup/default.startup");
-
+void main_scene_t::subscribe_to_events(vkph::listener_t listener) {
     vkph::subscribe_to_event(vkph::ET_ENTER_MAIN_MENU_SCENE, listener);
     vkph::subscribe_to_event(vkph::ET_REQUEST_TO_JOIN_SERVER, listener);
     vkph::subscribe_to_event(vkph::ET_REQUEST_USER_INFORMATION, listener);
     vkph::subscribe_to_event(vkph::ET_ENTER_MAP_CREATOR_SCENE, listener);
 }
 
-void sc_bind_main() {
+void main_scene_t::prepare_for_binding(vkph::state_t *state) {
     vkph::player_t *spect = wd_get_spectator();
 
     // Position the player at the right place and view in the right direction
-    spect->ws_position = scene.position;
-    spect->ws_view_direction = scene.view_direction;
-    spect->ws_up_vector = scene.up_vector;
+    spect->ws_position = structure_.position;
+    spect->ws_view_direction = structure_.view_direction;
+    spect->ws_up_vector = structure_.up_vector;
 
     fx_enable_blur();
     fx_disable_ssao();
 }
 
-static void s_handle_input(vkph::state_t *state) {
-    ui_handle_input(state);
+void main_scene_t::prepare_for_unbinding(vkph::state_t *state) {
+    ux::clear_panels();
+}
+
+void main_scene_t::handle_input(vkph::state_t *state) {
+    ux::handle_input(state);
 
     vkph::player_t *spect = wd_get_spectator();
     const app::game_input_t *game_input = app::get_game_input();
@@ -79,25 +85,34 @@ static void s_handle_input(vkph::state_t *state) {
     }
 }
 
-void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuffer ui, vkph::state_t *state) {
-    s_handle_input(state);
+void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
+    handle_input(state);
 
     nw_tick(state);
 
     // Submit the mesh
-    begin_mesh_submission(render, dr_get_shader_rsc(GS_BALL));
-    scene.world_render_data.color = vector4_t(0.0f);
-    submit_mesh(render, &scene.world_mesh, dr_get_shader_rsc(GS_BALL), {&scene.world_render_data, vk::DEF_MESH_RENDER_DATA_SIZE});
+    begin_mesh_submission(cmdbufs->render_command_buffer, dr_get_shader_rsc(GS_BALL));
+    structure_.world_render_data.color = vector4_t(0.0f);
 
-    vk::render_environment(render);
+    submit_mesh(
+        cmdbufs->render_command_buffer,
+        &structure_.world_mesh,
+        dr_get_shader_rsc(GS_BALL),
+        {&structure_.world_render_data, vk::DEF_MESH_RENDER_DATA_SIZE});
+
+    vk::render_environment(cmdbufs->render_command_buffer);
 
     // Update UI
     // Submits quads to a list that will get sent to the GPU
-    ui_tick(state);
+    ux::tick(state);
     // (from renderer module) - submits the quads to the GPU
-    ui::render_submitted_ui(transfer, ui);
+    ui::render_submitted_ui(
+        cmdbufs->transfer_command_buffer,
+        cmdbufs->ui_command_buffer);
 
-    vk::eye_3d_info_t *eye_info = sc_get_eye_info();
+    ux::scene_info_t *scene_info = ux::get_scene_info();
+
+    vk::eye_3d_info_t *eye_info = &scene_info->eye;
     memset(eye_info, 0, sizeof(vk::eye_3d_info_t));
     vkph::player_t *player = wd_get_spectator();
 
@@ -110,39 +125,33 @@ void sc_main_tick(VkCommandBuffer render, VkCommandBuffer transfer, VkCommandBuf
     eye_info->far = 10000.0f;
     eye_info->dt = cl_delta_time();
 
-    vk::lighting_info_t *light_info = sc_get_lighting_info();
+    vk::lighting_info_t *light_info = &scene_info->lighting;
     memset(light_info, 0, sizeof(vk::lighting_info_t));
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
 }
 
-void sc_handle_main_event(void *object, vkph::event_t *event) {
+void main_scene_t::handle_event(void *object, vkph::event_t *event) {
     auto *state = (vkph::state_t *)object;
 
     switch (event->type) {
     case vkph::ET_ENTER_MAIN_MENU_SCENE: {
-        ui_push_panel(USI_MAIN_MENU);
+        ux::push_panel(ux::SI_MAIN_MENU);
     } break;
 
     case vkph::ET_REQUEST_TO_JOIN_SERVER: {
-        ui_clear_panels();
-
         vkph::submit_event(vkph::ET_ENTER_GAME_PLAY_SCENE, NULL);
-
-        sc_bind(ST_GAME_PLAY, state);
+        ux::bind_scene(ST_PLAY, state);
     } break;
 
     case vkph::ET_REQUEST_USER_INFORMATION: {
-        ui_clear_panels();
-        ui_push_panel(USI_SIGN_UP);
+        ux::clear_panels();
+        ux::push_panel(ux::SI_SIGN_UP);
     } break;
 
     case vkph::ET_ENTER_MAP_CREATOR_SCENE: {
-        ui_clear_panels();
-
         vkph::submit_event(vkph::ET_BEGIN_MAP_EDITING, event->data);
-
-        sc_bind(ST_MAP_CREATOR, state);
+        ux::bind_scene(ST_MAP_CREATOR, state);
     } break;
 
     default: {

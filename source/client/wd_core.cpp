@@ -27,7 +27,7 @@ void wd_init(vkph::state_t *state) {
 
     state->prepare();
     wd_create_spectator();
-    wd_set_local_player(-1);
+    wd_set_local_player(-1, state);
 
     wd_interp_init();
 
@@ -59,7 +59,7 @@ void wd_tick(vkph::state_t *state) {
     wd_predict_state(state);
 
     { // Local and remote projectiles (basically predicting the state)
-        vkph::player_t *local_player = state->get_player(wd_get_local_player());
+        vkph::player_t *local_player = state->get_player(wd_get_local_player(state));
 
         for (uint32_t i = 0; i < state->rocks.list.data_count; ++i) {
             vkph::rock_t *rock = &state->rocks.list[i];

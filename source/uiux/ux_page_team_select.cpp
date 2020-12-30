@@ -34,7 +34,7 @@ static uint32_t button_count;
 static team_button_t *buttons;
 static ui::box_t main_box;
 
-void ui_team_select_init(menu_layout_t *layout) {
+void init_team_select_page(menu_layout_t *layout) {
     head_box.init(ui::RT_LEFT_UP, 10.0f, {0.025f, -0.025f}, {0.3, 0.1f}, &layout->current_menu, 0);
     head_text.init(&head_box, get_game_font(), ui::text_t::BOTTOM, 0.2f, 0.2f, 15, 1.3f);
 
@@ -44,7 +44,7 @@ void ui_team_select_init(menu_layout_t *layout) {
     }
 }
 
-void ui_update_team_roster_layout(
+void update_team_roster_layout(
     menu_layout_t *layout,
     const vkph::state_t *state) {
     uint32_t team_count = state->team_count;
@@ -84,7 +84,7 @@ void ui_update_team_roster_layout(
     }
 }
 
-void ui_update_team_roster_display_text(menu_layout_t *layout, const vkph::state_t *state) {
+void update_team_roster_display_text(menu_layout_t *layout, const vkph::state_t *state) {
     char buf[10] = {};
 
     uint32_t team_count = state->team_count;
@@ -99,7 +99,7 @@ void ui_update_team_roster_display_text(menu_layout_t *layout, const vkph::state
     }
 }
 
-void ui_submit_team_select() {
+void submit_team_select_page() {
     ui::mark_ui_textured_section(get_game_font()->font_img.descriptor);
     ui::push_color_box(&head_box);
     ui::push_text(&head_text);
@@ -111,7 +111,7 @@ void ui_submit_team_select() {
 }
 
 // TODO: Make sure there vkph::state_t *state is const
-void ui_team_select_input(const app::raw_input_t *raw_input, vkph::state_t *state) {
+void team_select_page_input(const app::raw_input_t *raw_input, vkph::state_t *state) {
     int32_t hovered_button = -1;
     for (int32_t i = 0; i < button_count; ++i) {
         bool hovered_over = is_hovering_over_box(

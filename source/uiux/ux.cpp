@@ -84,8 +84,7 @@ ui::font_t *get_game_font() {
     return global_font;
 }
 
-VkDescriptorSet ui_texture(
-    ui_texture_t type) {
+VkDescriptorSet get_texture(ui_texture_t type) {
     return textures[type].descriptor;
 }
 
@@ -100,7 +99,7 @@ static void s_ui_textures_init() {
     textures[UT_TEAM_SELECT].init("assets/textures/gui/team.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
-void ui_init(vkph::state_t *state) {
+void init(vkph::state_t *state) {
     stack_item_count = 0;
 
     listener = vkph::set_listener_callback(&s_ui_event_listener, state);

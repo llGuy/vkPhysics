@@ -9,23 +9,17 @@
 #include <constant.hpp>
 #include <net_context.hpp>
 
-static int32_t local_player;
-
 static vkph::terraform_package_t local_current_terraform_package;
 
 static stack_container_t<vkph::predicted_projectile_hit_t> hits;
 
-void wd_set_local_player(int32_t id) {
-    local_player = id;
-}
-
-int32_t wd_get_local_player() {
-    return local_player;
+void wd_set_local_player(int32_t id, vkph::state_t *state) {
+    state->local_player_id = id;
 }
 
 static vkph::player_t *s_get_local_player(vkph::state_t *state) {
-    if (local_player >= 0) {
-        return state->get_player(local_player);
+    if (state->local_player_id >= 0) {
+        return state->get_player(state->local_player_id);
     }
     else {
         return NULL;
@@ -179,4 +173,8 @@ void wd_add_predicted_projectile_hit(vkph::player_t *hit_player, vkph::state_t *
 
     uint32_t hit_idx = state->predicted_hits.add();
     state->predicted_hits[hit_idx] = new_hit;
+}
+
+int32_t wd_get_local_player(vkph::state_t *state) {
+    return state->local_player_id;
 }

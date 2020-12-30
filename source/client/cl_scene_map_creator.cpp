@@ -1,65 +1,65 @@
+#include "cl_render.hpp"
 #include "cl_view.hpp"
-#include "ui_popup.hpp"
+#include <ux_popup.hpp>
 #include <vkph_chunk.hpp>
 #include <vkph_map.hpp>
 #include <app.hpp>
 #include <vk.hpp>
-#include "ui_hud.hpp"
-#include "ui_core.hpp"
+#include <ux_hud.hpp>
+#include <ux.hpp>
 #include "cl_main.hpp"
 #include "fx_post.hpp"
+#include "ux_scene.hpp"
 #include "vkph_terraform.hpp"
 #include "wd_core.hpp"
 #include "sc_scene.hpp"
 #include "wd_predict.hpp"
 #include "wd_spectate.hpp"
+#include <ui_submit.hpp>
 #include "dr_draw_scene.hpp"
-#include "sc_map_creator.hpp"
+#include "cl_scene.hpp"
 
 #include <vkph_player.hpp>
 #include <vkph_event_data.hpp>
 #include <cstddef>
 #include <cstdlib>
 
-enum submode_t {
-    S_IN_GAME,
-    S_PAUSE,
-    S_INVALID
-};
+void map_creator_scene_t::init() {
+    edit_char_count_ = 0;
+    started_command_ = 0;
+    display_text_in_minibuffer_ = 0;
+}
 
-static submode_t submode;
-static vkph::map_t *map;
-static bool need_to_save;
-static bool started_command;
-
-#define EDIT_BUFFER_MAX_CHAR_COUNT 20
-
-static uint32_t edit_char_count;
-static char edit_buffer[EDIT_BUFFER_MAX_CHAR_COUNT] = {};
-static vkph::voxel_color_t current_color;
-static bool display_text_in_minibuffer;
-
-void sc_map_creator_init(vkph::listener_t listener) {
+void map_creator_scene_t::subscribe_to_events(vkph::listener_t listener) {
     vkph::subscribe_to_event(vkph::ET_PRESSED_ESCAPE, listener);
     vkph::subscribe_to_event(vkph::ET_BEGIN_MAP_EDITING, listener);
     vkph::subscribe_to_event(vkph::ET_CREATE_NEW_MAP, listener);
     vkph::subscribe_to_event(vkph::ET_DONT_CREATE_NEW_MAP, listener);
     vkph::subscribe_to_event(vkph::ET_MAP_EDITOR_CHOSE_COLOR, listener);
-
-    edit_char_count = 0;
-    started_command = 0;
-    display_text_in_minibuffer = 0;
 }
 
-void sc_bind_map_creator(vkph::state_t *state) {
+void map_creator_scene_t::prepare_for_binding(vkph::state_t *state) {
     fx_disable_blur();
     fx_enable_ssao();
 
     // Set local player to the spectator
-    wd_set_local_player(-1);
+    wd_set_local_player(-1, state);
     wd_get_spectator()->current_camera_up = wd_get_spectator()->ws_up_vector = glm::normalize(vector3_t(1.0f, 1.0f, 1.0f));
 
     state->flags.track_history = 0;
+}
+
+void map_creator_scene_t::prepare_for_unbinding(vkph::state_t *state) {
+    state->save_map();
+
+    wd_clear_world(state);
+
+    ux::clear_panels();
+    vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
+
+    ux::end_minibuffer();
+    ux::end_color_table();
+    need_to_save_ = 0;
 }
 
 // All commands end with an enter, and start with a keybinding
@@ -72,12 +72,12 @@ void sc_bind_map_creator(vkph::state_t *state) {
 // Then, there is yet another parameter (often to do with dimensions)
 // number; another numbers; etc...
 
-static bool s_push_edit_character(char c) {
-    if (edit_char_count == EDIT_BUFFER_MAX_CHAR_COUNT) {
+bool map_creator_scene_t::push_edit_character(char c) {
+    if (edit_char_count_ == EDIT_BUFFER_MAX_CHAR_COUNT_) {
         return 0;
     }
     else {
-        edit_buffer[edit_char_count++] = c;
+        edit_buffer_[edit_char_count_++] = c;
         return 1;
     }
 }
@@ -85,7 +85,7 @@ static bool s_push_edit_character(char c) {
 enum edit_command_type_t : char { ECT_ADD = '+', ECT_DESTROY = '-', ECT_INVALID = 0 };
 enum edit_shape_type_t : char { EST_SPHERE = 's', EST_HOLLOW_SPHERE = 'h', EST_PLANE = 'p', EST_MATH = 'm', EST_INVALID = 0 };
 
-static void s_parse_and_generate_sphere(
+void map_creator_scene_t::parse_and_generate_sphere(
     vkph::generation_type_t type,
     const char *str,
     uint32_t str_len,
@@ -97,7 +97,7 @@ static void s_parse_and_generate_sphere(
     vkph::player_t *spectator = wd_get_spectator();
 
     vkph::sphere_create_info_t info = {};
-    info.color = current_color;
+    info.color = current_color_;
     info.max_value = 140;
     info.type = type;
     info.ws_center = spectator->ws_position;
@@ -105,7 +105,7 @@ static void s_parse_and_generate_sphere(
     state->generate_sphere(&info);
 }
 
-static void s_parse_and_generate_hollow_sphere(
+void map_creator_scene_t::parse_and_generate_hollow_sphere(
     vkph::generation_type_t type,
     const char *str,
     uint32_t str_len,
@@ -117,7 +117,7 @@ static void s_parse_and_generate_hollow_sphere(
     vkph::player_t *spectator = wd_get_spectator();
 
     vkph::sphere_create_info_t info = {};
-    info.color = current_color;
+    info.color = current_color_;
     info.max_value = 250;
     info.type = type;
     info.ws_center = spectator->ws_position;
@@ -125,23 +125,7 @@ static void s_parse_and_generate_hollow_sphere(
     state->generate_hollow_sphere(&info);
 }
 
-static void s_parse_and_generate_plane(
-    vkph::generation_type_t type,
-    const char *str,
-    uint32_t str_len,
-    vkph::state_t *state) {
-    // ...
-}
-
-static void s_parse_and_generate_math_equation(
-    vkph::generation_type_t type,
-    const char *str,
-    uint32_t str_len,
-    vkph::state_t *state) {
-    // ...
-}
-
-static void s_parse_and_execute_command(
+void map_creator_scene_t::parse_and_execute_command(
     const char *str, uint32_t str_len,
     vkph::state_t *state) {
     vkph::generation_type_t edit_type = vkph::GT_INVALID;
@@ -167,20 +151,12 @@ static void s_parse_and_execute_command(
     switch (str[1]) {
     case EST_SPHERE: {
         LOG_INFO("Generating sphere\n");
-        s_parse_and_generate_sphere(edit_type, str, str_len, state);
+        parse_and_generate_sphere(edit_type, str, str_len, state);
     } break;
 
     case EST_HOLLOW_SPHERE: {
         LOG_INFO("Generating hollow sphere\n");
-        s_parse_and_generate_hollow_sphere(edit_type, str, str_len, state);
-    } break;
-
-    case EST_PLANE: {
-        
-    } break;
-
-    case EST_MATH: {
-        
+        parse_and_generate_hollow_sphere(edit_type, str, str_len, state);
     } break;
     }
 }
@@ -190,41 +166,41 @@ static void s_editor_input(
     // ...
 }
 
-static void s_handle_input(vkph::state_t *state) {
+void map_creator_scene_t::handle_input(vkph::state_t *state) {
     static bool display_color_table = 0;
 
-    switch (submode) {
+    switch (submode_) {
 
     case S_IN_GAME: {
         const app::raw_input_t *raw_input = app::get_raw_input();
 
-        if (started_command) {
+        if (started_command_) {
             if (raw_input->buttons[app::BT_ENTER].instant) {
                 LOG_INFO("Executing edit command...\n");
 
                 // Parse and execute the command
-                started_command = 0;
-                s_parse_and_execute_command(edit_buffer, edit_char_count, state);
-                edit_char_count = 0;
-                memset(edit_buffer, 0, sizeof(char) * EDIT_BUFFER_MAX_CHAR_COUNT);
-                ui_minibuffer_update_text("");
+                started_command_ = 0;
+                parse_and_execute_command(edit_buffer_, edit_char_count_, state);
+                edit_char_count_ = 0;
+                memset(edit_buffer_, 0, sizeof(char) * EDIT_BUFFER_MAX_CHAR_COUNT_);
+                ux::minibuffer_update_text("");
 
-                display_text_in_minibuffer = 0;
+                display_text_in_minibuffer_ = 0;
             }
             else {
                 for (uint32_t i = 0; i < raw_input->char_count; ++i) {
                     if (raw_input->char_stack[i]) {
-                        if (!s_push_edit_character(raw_input->char_stack[i])) {
-                            started_command = 0;
-                            edit_char_count = 0;
+                        if (!push_edit_character(raw_input->char_stack[i])) {
+                            started_command_ = 0;
+                            edit_char_count_ = 0;
                             LOG_INFO("Exceeded edit characters limit\n");
 
-                            display_text_in_minibuffer = 0;
+                            display_text_in_minibuffer_ = 0;
 
                             break;
                         }
 
-                        ui_minibuffer_update_text(edit_buffer);
+                        ux::minibuffer_update_text(edit_buffer_);
                     }
                 }
             }
@@ -234,28 +210,28 @@ static void s_handle_input(vkph::state_t *state) {
                 if (raw_input->char_stack[i]) {
                     switch(raw_input->char_stack[i]) {
                     case '+': {
-                        started_command = 1;
-                        s_push_edit_character('+');
-                        display_text_in_minibuffer = 1;
-                        ui_minibuffer_update_text(edit_buffer);
+                        started_command_ = 1;
+                        push_edit_character('+');
+                        display_text_in_minibuffer_ = 1;
+                        ux::minibuffer_update_text(edit_buffer_);
                         LOG_INFO("Starting additive edit command\n");
                     } break;
                     case '-': {
-                        started_command = 1;
-                        s_push_edit_character('-');
-                        display_text_in_minibuffer = 1;
-                        ui_minibuffer_update_text(edit_buffer);
+                        started_command_ = 1;
+                        push_edit_character('-');
+                        display_text_in_minibuffer_ = 1;
+                        ux::minibuffer_update_text(edit_buffer_);
                         LOG_INFO("Starting destructive edit command\n");
                     } break;
                     case 'c': {
                         display_color_table = !display_color_table;
 
                         if (display_color_table) {
-                            ui_begin_color_table();
+                            ux::begin_color_table();
                             cl_change_view_type(GVT_MENU);
                         }
                         else {
-                            ui_end_color_table();
+                            ux::end_color_table();
                             cl_change_view_type(GVT_IN_GAME);
                         }
                     } break;
@@ -269,13 +245,13 @@ static void s_handle_input(vkph::state_t *state) {
                 wd_game_input(cl_delta_time(), state);
             }
             else {
-                ui_handle_input(state);
+                ux::handle_input(state);
             }
         }
     } break;
 
     case S_PAUSE: {
-        ui_handle_input(state);
+        ux::handle_input(state);
     } break;
 
     default: {
@@ -284,19 +260,15 @@ static void s_handle_input(vkph::state_t *state) {
     }
 }
 
-void sc_map_creator_tick(
-    VkCommandBuffer render,
-    VkCommandBuffer transfer,
-    VkCommandBuffer ui,
-    VkCommandBuffer render_shadow,
-    vkph::state_t *state) {
-    s_handle_input(state);
+void map_creator_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
+    handle_input(state);
 
     // The world always gets ticked - when menus get displayed, the world has to keep being simulated
     wd_execute_player_actions(wd_get_spectator(), state);
     wd_tick(state);
 
-    vk::eye_3d_info_t *eye_info = sc_get_eye_info();
+    ux::scene_info_t *scene_info = ux::get_scene_info();
+    vk::eye_3d_info_t *eye_info = &scene_info->eye;
     vkph::player_t *player = wd_get_spectator();
 
     eye_info->up = player->current_camera_up;
@@ -308,66 +280,58 @@ void sc_map_creator_tick(
     eye_info->direction = player->ws_view_direction;
     eye_info->position = player->ws_position;
 
-    dr_draw_game(render, transfer, render_shadow, state);
+    dr_draw_game(
+        cmdbufs->render_command_buffer,
+        cmdbufs->transfer_command_buffer,
+        cmdbufs->render_shadow_command_buffer,
+        state);
 
-    ui_tick(state);
-    ui::render_submitted_ui(transfer, ui);
+    ux::tick(state);
+    ui::render_submitted_ui(cmdbufs->transfer_command_buffer, cmdbufs->ui_command_buffer);
 
-    vk::lighting_info_t *light_info = sc_get_lighting_info();
+    vk::lighting_info_t *light_info = &scene_info->lighting;
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
     light_info->lights_count = 0;
 }
 
-static void s_exit_map_editor(vkph::state_t *state) {
-    state->save_map();
-
-    wd_clear_world(state);
-
-    ui_clear_panels();
-    vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
-
-    // Bind to main menu, and the main menu will then have to handle the ET_ENTER_MAIN_MENU event
-    sc_bind(ST_MAIN_MENU, state);
-}
-
-void sc_handle_map_creator_event(void *object, vkph::event_t *event) {
+void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
     auto *state = (vkph::state_t *)object;
 
     switch (event->type) {
     case vkph::ET_BEGIN_MAP_EDITING: {
-        ui_clear_panels();
+        ux::clear_panels();
 
-        submode = S_IN_GAME;
+        submode_ = S_IN_GAME;
         cl_change_view_type(GVT_IN_GAME);
 
         auto *event_data = (vkph::event_enter_map_creator_t *)event->data;
 
-        map = state->load_map(event_data->map_path);
-        map->name = event_data->map_name;
+        map_ = state->load_map(event_data->map_path);
+        map_->name = event_data->map_name;
         
-        if (map->is_new) {
+        if (map_->is_new) {
             // Create popup
-            ui_popup_t *popup = ui_add_popup(2);
-            ui_push_popup_section_text(popup, "Create new?");
+            ux::popup_t *popup = ux::add_popup(2);
+            ux::push_popup_section_text(popup, "Create new?");
 
             const char *texts[] = { "Yes", "No" };
-            void (* procs[2])(ui_popup_t *) = {
-                [] (ui_popup_t *) { vkph::submit_event(vkph::ET_CREATE_NEW_MAP, NULL); },
-                [] (ui_popup_t *) { vkph::submit_event(vkph::ET_DONT_CREATE_NEW_MAP, NULL); }
+            void (* procs[2])(ux::popup_t *) = {
+                [] (ux::popup_t *) { vkph::submit_event(vkph::ET_CREATE_NEW_MAP, NULL); },
+                [] (ux::popup_t *) { vkph::submit_event(vkph::ET_DONT_CREATE_NEW_MAP, NULL); }
             };
 
-            ui_push_popup_section_button_double(popup, texts, procs);
+            ux::push_popup_section_button_double(popup, texts, procs);
 
-            ui_prepare_popup_for_render(popup);
+            ux::prepare_popup_for_render(popup);
 
             cl_change_view_type(GVT_MENU);
-            submode = S_PAUSE;
+            submode_ = S_PAUSE;
         }
         else {
             // TODO: Load map contents from file
-            need_to_save = 1;
-            ui_begin_minibuffer();
-            ui_push_panel(USI_HUD);
+            need_to_save_ = 1;
+            ux::begin_minibuffer();
+            ux::push_panel(ux::SI_HUD);
         }
 
         FL_FREE(event->data);
@@ -375,23 +339,20 @@ void sc_handle_map_creator_event(void *object, vkph::event_t *event) {
 
     case vkph::ET_CREATE_NEW_MAP: {
         // Add map to map names
-        state->add_map_name(map->name, map->path);
-        ui_pop_panel();
-        ui_push_panel(USI_HUD);
+        state->add_map_name(map_->name, map_->path);
+        ux::pop_panel();
+        ux::push_panel(ux::SI_HUD);
 
-        submode = S_IN_GAME;
+        submode_ = S_IN_GAME;
         cl_change_view_type(GVT_IN_GAME);
 
-        need_to_save = 1;
+        need_to_save_ = 1;
 
-        ui_begin_minibuffer();
+        ux::begin_minibuffer();
     } break;
 
     case vkph::ET_EXIT_SCENE: {
-        ui_end_minibuffer();
-        ui_end_color_table();
-        s_exit_map_editor(state);
-        need_to_save = 0;
+        ux::bind_scene(ST_MAIN, state);
     } break;
 
     case vkph::ET_DONT_CREATE_NEW_MAP: {
@@ -407,27 +368,27 @@ void sc_handle_map_creator_event(void *object, vkph::event_t *event) {
     } break;
 
     case vkph::ET_PRESSED_ESCAPE: {
-        if (submode == S_IN_GAME) {
-            ui_push_panel(USI_GAME_MENU);
+        if (submode_ == S_IN_GAME) {
+            ux::push_panel(ux::SI_GAME_MENU);
             cl_change_view_type(GVT_MENU);
-            submode = S_PAUSE;
+            submode_ = S_PAUSE;
         }
         else {
-            ui_pop_panel();
+            ux::pop_panel();
             cl_change_view_type(GVT_IN_GAME);
-            submode = S_IN_GAME;
+            submode_ = S_IN_GAME;
         }
     } break;
 
     case vkph::ET_MAP_EDITOR_CHOSE_COLOR: {
         auto *data = (vkph::event_map_editor_chose_color_t *)event->data;
-        current_color = vkph::b8v_color_to_b8(data->r, data->g, data->b);
+        current_color_ = vkph::b8v_color_to_b8(data->r, data->g, data->b);
 
-        vector3_t v3_color = vkph::b8_color_to_v3(current_color);
+        vector3_t v3_color = vkph::b8_color_to_v3(current_color_);
 
         LOG_INFOV("%f %f %f\n", v3_color.r, v3_color.g, v3_color.b);
 
-        wd_get_spectator()->terraform_package.color = current_color;
+        wd_get_spectator()->terraform_package.color = current_color_;
 
         FL_FREE(data);
     } break;

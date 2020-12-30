@@ -8,26 +8,34 @@ struct frame_command_buffers_t;
 
 namespace ux {
 
-typedef void(* scene_tick_proc_t)(
-    frame_command_buffers_t *,
-    vkph::state_t *state);
-
-typedef void(* scene_event_handle_proc_t)(
-    void *object,
-    vkph::event_t *events);
+struct scene_t {
+    virtual void init() = 0;
+    virtual void subscribe_to_events(vkph::listener_t listener) = 0;
+    virtual void tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) = 0;
+    virtual void handle_event(void *object, vkph::event_t *events) = 0;
+    virtual void prepare_for_binding(vkph::state_t *state) = 0;
+    virtual void prepare_for_unbinding(vkph::state_t *state) = 0;
+};
 
 /*
-  The listener object will get passed on so that each scene can subscribe to their
-  events.
+  Before the game begins, client will need to push all the possible scenes
+  with this function. The order of pushing matters and needs to correlate with
+  the ID that the client will use to refer to them when binding.
+  Returns the scene ID.
  */
-vkph::listener_t prepare_scene_event_subscription(vkph::state_t *);
+uint32_t push_scene(scene_t *scene);
 
 /*
   When changing scenes, simply call this.
+  This will call the prepare_for_unbinding function of the currently bound scene
+  and then the prepare_for_binding function of the newly bound scene.
  */
-void bind_scene_procs(
-    scene_tick_proc_t,
-    scene_event_handle_proc_t);
+void bind_scene(uint32_t id, vkph::state_t *state);
+
+/*
+  Calls the init and subscribe_to_events functions of all the pushed scenes.
+ */
+void init_scene(vkph::state_t *);
 
 /*
   Calls the bound tick function.

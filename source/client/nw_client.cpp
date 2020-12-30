@@ -1,6 +1,5 @@
 #include "cl_main.hpp"
 #include "net_meta.hpp"
-#include "ui_game_menu.hpp"
 #include <vkph_chunk.hpp>
 #include <vkph_player.hpp>
 #include <vkph_weapon.hpp>
@@ -14,6 +13,7 @@
 #include "nw_client_meta.hpp"
 #include <constant.hpp>
 #include <cstddef>
+#include <ux_menu_game.hpp>
 
 #include <net_debug.hpp>
 #include <net_context.hpp>
@@ -292,7 +292,7 @@ static void s_fill_with_accumulated_chunk_modifications(
 // PT_CLIENT_COMMANDS
 static void s_send_packet_client_commands(vkph::state_t *state) {
     int32_t local_id = state->get_local_id(current_client_id);
-    int32_t p_index = wd_get_local_player();
+    int32_t p_index = wd_get_local_player(state);
     
     // DEAD by default
     static bool was_alive = false;
@@ -923,7 +923,7 @@ static void s_receive_player_team_change(
         state->change_player_team(state->get_player(p_id), (vkph::team_color_t)packet.color);
 
         // Update the text on the game menu
-        ui_init_game_menu_for_server(state);
+        ux::init_game_menu_for_server(state);
     }
 }
 

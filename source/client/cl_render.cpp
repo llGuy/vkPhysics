@@ -1,4 +1,3 @@
-#include "sc_scene.hpp"
 #include "fx_post.hpp"
 #include "cl_render.hpp"
 #include <vkph_events.hpp>
