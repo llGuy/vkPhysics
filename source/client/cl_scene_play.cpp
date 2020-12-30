@@ -1,5 +1,5 @@
 #include <vkph_player.hpp>
-#include "cl_render.hpp"
+#include "cl_frame.hpp"
 #include "cl_view.hpp"
 #include "dr_player.hpp"
 #include <vkph_chunk.hpp>
@@ -7,7 +7,6 @@
 #include <ux.hpp>
 #include "ux_scene.hpp"
 #include "wd_core.hpp"
-#include "fx_post.hpp"
 #include "cl_main.hpp"
 #include "wd_predict.hpp"
 #include <ux_hud.hpp>
@@ -18,6 +17,8 @@
 #include <vk.hpp>
 #include <ui_submit.hpp>
 #include "cl_scene.hpp"
+
+namespace cl {
 
 void play_scene_t::init() {
     /*
@@ -40,8 +41,8 @@ void play_scene_t::prepare_for_binding(vkph::state_t *state) {
     spect->ws_view_direction = glm::normalize(-spect->ws_position);
     spect->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
 
-    fx_disable_blur();
-    fx_enable_ssao();
+    get_frame_info()->blurred = 0;
+    get_frame_info()->ssao = 1;
 
     state->flags.track_history = 1;
 }
@@ -59,7 +60,7 @@ void play_scene_t::handle_input(vkph::state_t *state) {
     } break;
 
     case S_IN_GAME: {
-        wd_game_input(cl_delta_time(), state);
+        wd_game_input(delta_time(), state);
     } break;
 
     case S_PAUSE: {
@@ -108,8 +109,8 @@ void play_scene_t::calculate_pos_and_dir(vkph::player_t *player, vector3_t *posi
         // Add view bobbing
         static float angle = 0.0f;
         static float right = 0.0f;
-        angle += cl_delta_time() * 10.0f;
-        right += cl_delta_time() * 5.0f;
+        angle += delta_time() * 10.0f;
+        right += delta_time() * 5.0f;
         angle = fmod(angle, glm::radians(360.0f));
         right = fmod(right, glm::radians(360.0f));
 
@@ -122,7 +123,7 @@ void play_scene_t::calculate_pos_and_dir(vkph::player_t *player, vector3_t *posi
 }
 
 void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
-    state->timestep_begin(cl_delta_time());
+    state->timestep_begin(delta_time());
 
     handle_input(state);
 
@@ -160,20 +161,20 @@ void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     eye_info->fov = player->camera_fov.current;
     eye_info->near = 0.01f;
     eye_info->far = 10000.0f;
-    eye_info->dt = cl_delta_time();
+    eye_info->dt = delta_time();
 
 
     // Render what's in the 3D scene
     dr_draw_game(
-        cmdbufs->render_command_buffer,
-        cmdbufs->transfer_command_buffer,
-        cmdbufs->render_shadow_command_buffer,
+        cmdbufs->render_cmdbuf,
+        cmdbufs->transfer_cmdbuf,
+        cmdbufs->render_shadow_cmdbuf,
         state);
 
 
 
     ux::tick(state);
-    ui::render_submitted_ui(cmdbufs->transfer_command_buffer, cmdbufs->ui_command_buffer);
+    ui::render_submitted_ui(cmdbufs->transfer_cmdbuf, cmdbufs->ui_cmdbuf);
 
     vk::lighting_info_t *light_info = &scene_info->lighting;
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
@@ -244,4 +245,6 @@ void play_scene_t::handle_event(void *object, vkph::event_t *event) {
     default: {
     } break;
     }
+}
+
 }

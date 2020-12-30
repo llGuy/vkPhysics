@@ -1,17 +1,15 @@
-#include "cl_main.hpp"
-#include <log.hpp>
-#include <vkph_state.hpp>
-#include <math.hpp>
-#include <vkph_events.hpp>
-#include <vkph_event_data.hpp>
-#include <allocators.hpp>
 #include <vk.hpp>
+#include <math.hpp>
+#include "cl_main.hpp"
+#include <vkph_events.hpp>
+#include "cl_scene_transition.hpp"
+
+namespace cl {
 
 static linear_interpolation_f32_t current_screen_brightness;
-
 static vkph::event_begin_fade_effect_t data;
 
-void fx_fader_init() {
+void init_scene_transition() {
     current_screen_brightness.in_animation = 0;
     current_screen_brightness.current = 0.0f;
     current_screen_brightness.prev = 0.0f;
@@ -22,8 +20,7 @@ void fx_fader_init() {
     data = {};
 }
 
-void fx_begin_fade_effect(
-    vkph::event_begin_fade_effect_t *idata) {
+void begin_scene_transition(vkph::event_begin_fade_effect_t *idata) {
     current_screen_brightness.set(
         1,
         current_screen_brightness.current,
@@ -33,11 +30,11 @@ void fx_begin_fade_effect(
     data = *idata;
 }
 
-void fx_tick_fade_effect() {
+void tick_scene_transition() {
     float duration = current_screen_brightness.max_time;
 
     if (current_screen_brightness.in_animation) {
-        current_screen_brightness.animate(cl_delta_time());
+        current_screen_brightness.animate(delta_time());
 
         if (!current_screen_brightness.in_animation) {
             vkph::submit_event(vkph::ET_FADE_FINISHED, NULL);
@@ -60,4 +57,6 @@ void fx_tick_fade_effect() {
     }
 
     vk::set_main_screen_brightness(current_screen_brightness.current);
+}
+
 }

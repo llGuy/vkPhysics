@@ -1,4 +1,4 @@
-#include "cl_render.hpp"
+#include "cl_frame.hpp"
 #include "cl_view.hpp"
 #include <ux_popup.hpp>
 #include <vkph_chunk.hpp>
@@ -8,7 +8,6 @@
 #include <ux_hud.hpp>
 #include <ux.hpp>
 #include "cl_main.hpp"
-#include "fx_post.hpp"
 #include "ux_scene.hpp"
 #include "vkph_terraform.hpp"
 #include "wd_core.hpp"
@@ -22,6 +21,8 @@
 #include <vkph_event_data.hpp>
 #include <cstddef>
 #include <cstdlib>
+
+namespace cl {
 
 void map_creator_scene_t::init() {
     edit_char_count_ = 0;
@@ -38,8 +39,8 @@ void map_creator_scene_t::subscribe_to_events(vkph::listener_t listener) {
 }
 
 void map_creator_scene_t::prepare_for_binding(vkph::state_t *state) {
-    fx_disable_blur();
-    fx_enable_ssao();
+    get_frame_info()->blurred = 0;
+    get_frame_info()->ssao = 1;
 
     // Set local player to the spectator
     wd_set_local_player(-1, state);
@@ -241,7 +242,7 @@ void map_creator_scene_t::handle_input(vkph::state_t *state) {
             }
 
             if (!display_color_table) {
-                wd_game_input(cl_delta_time(), state);
+                wd_game_input(delta_time(), state);
             }
             else {
                 ux::handle_input(state);
@@ -275,18 +276,18 @@ void map_creator_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *
     eye_info->fov = player->camera_fov.current;
     eye_info->near = 0.01f;
     eye_info->far = 10000.0f;
-    eye_info->dt = cl_delta_time();
+    eye_info->dt = delta_time();
     eye_info->direction = player->ws_view_direction;
     eye_info->position = player->ws_position;
 
     dr_draw_game(
-        cmdbufs->render_command_buffer,
-        cmdbufs->transfer_command_buffer,
-        cmdbufs->render_shadow_command_buffer,
+        cmdbufs->render_cmdbuf,
+        cmdbufs->transfer_cmdbuf,
+        cmdbufs->render_shadow_cmdbuf,
         state);
 
     ux::tick(state);
-    ui::render_submitted_ui(cmdbufs->transfer_command_buffer, cmdbufs->ui_command_buffer);
+    ui::render_submitted_ui(cmdbufs->transfer_cmdbuf, cmdbufs->ui_cmdbuf);
 
     vk::lighting_info_t *light_info = &scene_info->lighting;
     light_info->ws_directional_light = vector4_t(0.1f, 0.422f, 0.714f, 0.0f);
@@ -395,4 +396,6 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
     default: {
     } break;
     }
+}
+
 }

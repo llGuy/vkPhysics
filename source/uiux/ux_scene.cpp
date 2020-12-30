@@ -37,7 +37,7 @@ void init_scenes(vkph::state_t *state) {
     }
 }
 
-void tick_scene(frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
+void tick_scene(cl::frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
     scenes[bound_scene]->tick(cmdbufs, state);
 }
 

@@ -1,8 +1,7 @@
-#include "cl_render.hpp"
+#include "cl_frame.hpp"
 #include "cl_scene.hpp"
 #include <ux.hpp>
 #include "dr_rsc.hpp"
-#include "fx_post.hpp"
 #include "cl_main.hpp"
 #include "nw_client.hpp"
 #include "ux_scene.hpp"
@@ -14,6 +13,8 @@
 #include <app.hpp>
 #include <vk.hpp>
 #include <ui_submit.hpp>
+
+namespace cl {
 
 void main_scene_t::init() {
     structure_ = dr_read_premade_rsc("assets/misc/startup/default.startup");
@@ -36,8 +37,8 @@ void main_scene_t::prepare_for_binding(vkph::state_t *state) {
     spect->ws_view_direction = structure_.view_direction;
     spect->ws_up_vector = structure_.up_vector;
 
-    fx_enable_blur();
-    fx_disable_ssao();
+    get_frame_info()->blurred = 1;
+    get_frame_info()->ssao = 0;
 }
 
 void main_scene_t::prepare_for_unbinding(vkph::state_t *state) {
@@ -92,24 +93,24 @@ void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     nw_tick(state);
 
     // Submit the mesh
-    begin_mesh_submission(cmdbufs->render_command_buffer, dr_get_shader_rsc(GS_BALL));
+    begin_mesh_submission(cmdbufs->render_cmdbuf, dr_get_shader_rsc(GS_BALL));
     structure_.world_render_data.color = vector4_t(0.0f);
 
     submit_mesh(
-        cmdbufs->render_command_buffer,
+        cmdbufs->render_cmdbuf,
         &structure_.world_mesh,
         dr_get_shader_rsc(GS_BALL),
         {&structure_.world_render_data, vk::DEF_MESH_RENDER_DATA_SIZE});
 
-    vk::render_environment(cmdbufs->render_command_buffer);
+    vk::render_environment(cmdbufs->render_cmdbuf);
 
     // Update UI
     // Submits quads to a list that will get sent to the GPU
     ux::tick(state);
     // (from renderer module) - submits the quads to the GPU
     ui::render_submitted_ui(
-        cmdbufs->transfer_command_buffer,
-        cmdbufs->ui_command_buffer);
+        cmdbufs->transfer_cmdbuf,
+        cmdbufs->ui_cmdbuf);
 
     ux::scene_info_t *scene_info = ux::get_scene_info();
 
@@ -124,7 +125,7 @@ void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     eye_info->fov = player->camera_fov.current;
     eye_info->near = 0.01f;
     eye_info->far = 10000.0f;
-    eye_info->dt = cl_delta_time();
+    eye_info->dt = delta_time();
 
     vk::lighting_info_t *light_info = &scene_info->lighting;
     memset(light_info, 0, sizeof(vk::lighting_info_t));
@@ -158,4 +159,6 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
     default: {
     } break;
     }
+}
+
 }

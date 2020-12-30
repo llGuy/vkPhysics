@@ -4,20 +4,21 @@
 #include "dr_rsc.hpp"
 #include "ux_scene.hpp"
 #include "wd_core.hpp"
-#include "fx_post.hpp"
-#include "fx_fade.hpp"
+#include "cl_frame.hpp"
 #include "cl_scene.hpp"
-#include "cl_event.hpp"
 #include "nw_client.hpp"
-#include "cl_render.hpp"
 #include <vkph_state.hpp>
 #include <files.hpp>
 #include <vkph_events.hpp>
 #include "nw_client_meta.hpp"
 #include "nw_client_meta.hpp"
+#include "cl_scene_transition.hpp"
 #include <ui_submit.hpp>
 #include <app.hpp>
 #include <allocators.hpp>
+#include "cl_main.hpp"
+
+namespace cl {
 
 static bool running;
 
@@ -31,19 +32,7 @@ static vkph::state_t *state;
 
 static float dt;
 
-// Starts a fade in effect into the main menu screen
-static void s_open() {
-    // Launch fade effect immediately
-    vkph::event_begin_fade_effect_t *fade_info = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
-    fade_info->dest_value = 1.0f;
-    fade_info->duration = 6.0f;
-    fade_info->trigger_count = 0;
-    vkph::submit_event(vkph::ET_BEGIN_FADE, fade_info);
-    
-    vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
-}
-
-static void s_run() {
+static void s_loop() {
     while (running) {
         app::poll_input_events();
         app::translate_input();
@@ -51,16 +40,17 @@ static void s_run() {
 
         LN_CLEAR();
 
-        frame_command_buffers_t frame = cl_prepare_frame();
+        frame_command_buffers_t frame = prepare_frame();
 
         // Tick whatever scene was bound
         ux::tick_scene(&frame, state);
 
         // This needs to always happen - quite an important part of the loop
         // Handles transitions between different game modes
-        fx_tick_fade_effect();
+        tick_scene_transition();
 
-        cl_finish_frame();
+        finish_frame();
+
         dt = app::g_delta_time;
     }
 }
@@ -92,16 +82,63 @@ static void s_parse_command_line_args(
     }
 }
 
-// Entry point for client program
-int32_t main(
+// Starts a fade in effect into the main menu screen
+static void s_open() {
+    // Launch fade effect immediately
+    vkph::event_begin_fade_effect_t *fade_info = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+    fade_info->dest_value = 1.0f;
+    fade_info->duration = 6.0f;
+    fade_info->trigger_count = 0;
+    vkph::submit_event(vkph::ET_BEGIN_FADE, fade_info);
+    vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
+}
+
+static void s_game_event_listener(
+    void *object,
+    vkph::event_t *event) {
+    switch(event->type) {
+        
+    case vkph::ET_CLOSED_WINDOW: {
+        terminate();
+    } break;
+
+    case vkph::ET_RESIZE_SURFACE: {
+        auto *data = (vkph::event_surface_resize_t *)event->data;
+
+        vk::resize_render_pipeline(data->width, data->height);
+
+        FL_FREE(data);
+    } break;
+
+    case vkph::ET_BEGIN_FADE: {
+        auto *data = (vkph::event_begin_fade_effect_t *)event->data;
+        
+        begin_scene_transition(data);
+
+        FL_FREE(data);
+    } break;
+
+    default: {
+    } break;
+        
+    }
+}
+
+int32_t run(
     int32_t argc,
     char *argv[]) {
     global_linear_allocator_init((uint32_t)megabytes(30));
     srand(time(NULL));
-    core_listener = set_listener_callback(cl_game_event_listener, NULL);
+
     running = 1;
     files_init();
-    cl_subscribe_to_events(core_listener);
+
+    core_listener = vkph::set_listener_callback(s_game_event_listener, NULL);
+    { // Subscribe to the core game events.
+        vkph::subscribe_to_event(vkph::ET_CLOSED_WINDOW, core_listener);
+        vkph::subscribe_to_event(vkph::ET_RESIZE_SURFACE, core_listener);
+        vkph::subscribe_to_event(vkph::ET_BEGIN_FADE, core_listener);
+    }
 
     s_parse_command_line_args(argc, argv);
 
@@ -110,12 +147,12 @@ int32_t main(
     app::init_settings();
     vk::init_context();
     ui::init_submission();
-    fx_fader_init();
+    init_scene_transition();
     nw_init(state);
 
     s_open();
 
-    cl_command_buffers_init();
+    init_frame_command_buffers();
 
     dr_resources_init();
     wd_init(state);
@@ -127,12 +164,12 @@ int32_t main(
     // Bind main menu
     ux::bind_scene(ST_MAIN, state);
 
-    fx_get_frame_info()->debug_window = 1;
+    get_frame_info()->debug_window = 1;
 
     // Check if the user has registered and can actually join servers
     nw_check_registration();
 
-    s_run();
+    s_loop();
 
     vkph::dispatch_events();
     vkph::dispatch_events();
@@ -142,12 +179,21 @@ int32_t main(
     return 0;
 }
 
-void cl_terminate() {
+void terminate() {
     running = 0;
     vkph::submit_event(vkph::ET_EXIT_SCENE, NULL);
     vkph::submit_event(vkph::ET_LEAVE_SERVER, NULL);
 }
 
-float cl_delta_time() {
+float delta_time() {
     return dt;
+}
+
+}
+
+// Entry point for client program
+int32_t main(
+    int32_t argc,
+    char *argv[]) {
+    return cl::run(argc, argv);
 }

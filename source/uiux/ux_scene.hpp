@@ -4,14 +4,18 @@
 #include <vkph_state.hpp>
 #include <vkph_events.hpp>
 
+namespace cl {
+
 struct frame_command_buffers_t;
+
+}
 
 namespace ux {
 
 struct scene_t {
     virtual void init() = 0;
     virtual void subscribe_to_events(vkph::listener_t listener) = 0;
-    virtual void tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) = 0;
+    virtual void tick(cl::frame_command_buffers_t *cmdbufs, vkph::state_t *state) = 0;
     virtual void handle_event(void *object, vkph::event_t *events) = 0;
     virtual void prepare_for_binding(vkph::state_t *state) = 0;
     virtual void prepare_for_unbinding(vkph::state_t *state) = 0;
@@ -40,7 +44,7 @@ void init_scenes(vkph::state_t *);
 /*
   Calls the bound tick function.
  */
-void tick_scene(frame_command_buffers_t *, vkph::state_t *);
+void tick_scene(cl::frame_command_buffers_t *, vkph::state_t *);
 
 /*
   Every scene needs to have an eye info and a lighting info because the end of every

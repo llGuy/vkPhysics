@@ -2,6 +2,8 @@
 
 #include <tools.hpp>
 
+namespace cl {
+
 // Engine settings:
 enum graphics_quality_t {
     GQ_FANCY,
@@ -34,6 +36,8 @@ struct game_flags_t {
     uint32_t startup: 1;
 };
 
-void cl_terminate();
+void terminate();
 
-float cl_delta_time();
+float delta_time();
+
+}

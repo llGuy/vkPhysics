@@ -1,11 +1,13 @@
 #pragma once
 
 #include <vkph_state.hpp>
-#include "cl_render.hpp"
+#include "cl_frame.hpp"
 #include "dr_rsc.hpp"
 #include <vkph_event.hpp>
 #include <vkph_state.hpp>
 #include <ux_scene.hpp>
+
+namespace cl {
 
 void prepare_scenes(vkph::state_t *state);
 
@@ -86,3 +88,5 @@ private:
     vkph::voxel_color_t current_color_;
     bool display_text_in_minibuffer_;
 };
+
+}

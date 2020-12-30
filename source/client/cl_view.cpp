@@ -1,8 +1,10 @@
 #include "cl_view.hpp"
 #include "cl_main.hpp"
-#include "fx_post.hpp"
+#include "cl_frame.hpp"
 #include <log.hpp>
 #include <app.hpp>
+
+namespace cl {
 
 static game_view_type_t current_view_type;
 
@@ -16,14 +18,14 @@ void cl_change_view_type(game_view_type_t view) {
         // also blurred for cool main menu kind of effect.
     case GVT_MENU: {
         app::enable_cursor();
-        fx_enable_blur();
-        fx_disable_ssao();
+        get_frame_info()->blurred = 1;
+        get_frame_info()->ssao = 0;
     } break;
 
     case GVT_IN_GAME: {
         app::disable_cursor();
-        fx_disable_blur();
-        fx_enable_ssao();
+        get_frame_info()->blurred = 0;
+        get_frame_info()->ssao = 1;
     } break;
 
     case GVT_INVALID: {
@@ -35,4 +37,6 @@ void cl_change_view_type(game_view_type_t view) {
 
 game_view_type_t cl_get_current_game_view_type() {
     return current_view_type;
+}
+
 }

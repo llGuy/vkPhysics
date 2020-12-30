@@ -1,7 +1,8 @@
 #include "cl_scene.hpp"
 #include <ux_scene.hpp>
 #include "allocators.hpp"
-#include "cl_scene_main.hpp"
+
+namespace cl {
 
 static ux::scene_t *main_scene;
 static ux::scene_t *play_scene;
@@ -22,4 +23,6 @@ void prepare_scenes(vkph::state_t *state) {
     ux::push_scene(map_creator_scene);
 
     ux::init_scenes(state);
+}
+
 }
