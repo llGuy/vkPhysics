@@ -160,7 +160,7 @@ void nw_check_meta_request_status_and_handle() {
 
             LOG_INFOV("There are %d servers\n", server_count);
 
-            char *server_str = &data[2];
+            char *server_str = skip_to(data, '\n') +1;
 
             uint32_t i = 0;
 

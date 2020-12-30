@@ -9,6 +9,7 @@
 #include "ux_menu_game.hpp"
 #include "ux_hud.hpp"
 #include "ux_menu_sign_up.hpp"
+#include "vkph_event.hpp"
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
 #include <app.hpp>
@@ -110,6 +111,7 @@ void init(vkph::state_t *state) {
     vkph::subscribe_to_event(vkph::ET_PRESSED_ESCAPE, listener);
     vkph::subscribe_to_event(vkph::ET_ENTER_SERVER, listener);
     vkph::subscribe_to_event(vkph::ET_SPAWN, listener);
+    vkph::subscribe_to_event(vkph::ET_RECEIVED_AVAILABLE_SERVERS, listener);
     vkph::subscribe_to_event(vkph::ET_LOCAL_PLAYER_DIED, listener);
 
     global_font = flmalloc<ui::font_t>();
