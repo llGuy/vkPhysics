@@ -1,7 +1,7 @@
 #include "cl_frame.hpp"
 #include "cl_scene.hpp"
 #include <ux.hpp>
-#include "dr_rsc.hpp"
+#include "cl_render.hpp"
 #include "cl_main.hpp"
 #include "nw_client.hpp"
 #include "ux_scene.hpp"
@@ -13,11 +13,12 @@
 #include <app.hpp>
 #include <vk.hpp>
 #include <ui_submit.hpp>
+#include <vulkan/vulkan_core.h>
 
 namespace cl {
 
 void main_scene_t::init() {
-    structure_ = dr_read_premade_rsc("assets/misc/startup/default.startup");
+    structure_.load("assets/misc/startup/default.startup");
 }
 
 void main_scene_t::subscribe_to_events(vkph::listener_t listener) {
@@ -93,14 +94,7 @@ void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     nw_tick(state);
 
     // Submit the mesh
-    begin_mesh_submission(cmdbufs->render_cmdbuf, dr_get_shader_rsc(GS_BALL));
-    structure_.world_render_data.color = vector4_t(0.0f);
-
-    submit_mesh(
-        cmdbufs->render_cmdbuf,
-        &structure_.world_mesh,
-        dr_get_shader_rsc(GS_BALL),
-        {&structure_.world_render_data, vk::DEF_MESH_RENDER_DATA_SIZE});
+    premade_scene_gpu_sync_and_render(cmdbufs->render_cmdbuf, &structure_);
 
     vk::render_environment(cmdbufs->render_cmdbuf);
 

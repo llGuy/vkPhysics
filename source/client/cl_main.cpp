@@ -1,7 +1,7 @@
 #include <cstddef>
 #include <ctime>
 #include <ux.hpp>
-#include "dr_rsc.hpp"
+#include "cl_render.hpp"
 #include "ux_scene.hpp"
 #include "wd_core.hpp"
 #include "cl_frame.hpp"
@@ -154,7 +154,7 @@ int32_t run(
 
     init_frame_command_buffers();
 
-    dr_resources_init();
+    init_render_resources();
     wd_init(state);
     ux::init(state);
 

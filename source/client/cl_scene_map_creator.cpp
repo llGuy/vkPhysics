@@ -14,7 +14,7 @@
 #include "wd_predict.hpp"
 #include "wd_spectate.hpp"
 #include <ui_submit.hpp>
-#include "dr_draw_scene.hpp"
+#include "cl_render.hpp"
 #include "cl_scene.hpp"
 
 #include <vkph_player.hpp>
@@ -280,11 +280,7 @@ void map_creator_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *
     eye_info->direction = player->ws_view_direction;
     eye_info->position = player->ws_position;
 
-    dr_draw_game(
-        cmdbufs->render_cmdbuf,
-        cmdbufs->transfer_cmdbuf,
-        cmdbufs->render_shadow_cmdbuf,
-        state);
+    draw_game(cmdbufs, state);
 
     ux::tick(state);
     ui::render_submitted_ui(cmdbufs->transfer_cmdbuf, cmdbufs->ui_cmdbuf);

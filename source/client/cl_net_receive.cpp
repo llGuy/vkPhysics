@@ -1,67 +1,27 @@
-#include "cl_main.hpp"
-#include "net_meta.hpp"
-#include <vkph_chunk.hpp>
-#include <vkph_player.hpp>
-#include <vkph_weapon.hpp>
-#include "nw_client.hpp"
+#include "cl_net.hpp"
 #include "wd_interp.hpp"
 #include "wd_predict.hpp"
-#include <vkph_state.hpp>
-#include <vkph_events.hpp>
+#include "cl_net_receive.hpp"
+
+#include <net_meta.hpp>
+#include <net_packets.hpp>
+#include <allocators.hpp>
 #include <vkph_event_data.hpp>
-#include <string.hpp>
-#include "nw_client_meta.hpp"
-#include <constant.hpp>
-#include <cstddef>
+#include <vkph_events.hpp>
+#include <vkph_chunk.hpp>
 #include <ux_menu_game.hpp>
-
-#include <net_debug.hpp>
 #include <net_context.hpp>
+#include <net_debug.hpp>
 
-#include <app.hpp>
+namespace cl {
 
-static net::context_t *ctx;
-
-static bool started_client = 0;
-static bool client_check_incoming_packets = 0;
 static bool still_receiving_chunk_packets;
-
-static uint16_t current_client_id;
 static uint32_t chunks_to_receive;
-
-static net::address_t bound_server_address = {};
-
-// Start the client sockets and initialize containers
-static void s_start_client(
-    vkph::event_start_client_t *data,
-    vkph::state_t *state) {
-    still_receiving_chunk_packets = 0;
-    chunks_to_receive = 0;
-
-    memset(ctx->dummy_voxels, vkph::CHUNK_SPECIAL_VALUE, sizeof(ctx->dummy_voxels));
-    ctx->init_main_udp_socket(net::GAME_OUTPUT_PORT_CLIENT);
-    ctx->clients.init(net::NET_MAX_CLIENT_COUNT);
-    started_client = 1;
-    state->flags.track_history = 1;
-    ctx->accumulated_modifications.init();
-
-    uint32_t sizeof_chunk_mod_pack = sizeof(net::chunk_modifications_t) * net::MAX_PREDICTED_CHUNK_MODIFICATIONS;
-
-    ctx->chunk_modification_allocator.pool_init(
-        sizeof_chunk_mod_pack,
-        sizeof_chunk_mod_pack * (net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4));
-
-    //s_acc_predicted_modification_init(&merged_recent_modifications, 0);
-    ctx->merged_recent_modifications.tick = 0;
-    ctx->merged_recent_modifications.acc_predicted_chunk_mod_count = 0;
-    ctx->merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(
-        net::chunk_modifications_t,
-        net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
-}
 
 static void s_fill_enter_server_data(
     net::packet_connection_handshake_t *handshake,
-    vkph::event_enter_server_t *data) {
+    vkph::event_enter_server_t *data,
+    net::context_t *ctx) {
     int32_t highest_client_index = -1;
     
     // Add all the players
@@ -93,7 +53,7 @@ static void s_fill_enter_server_data(
             ctx->clients.data[client_id].chunks_to_wait_for = handshake->loaded_chunk_count;
 
             data->local_client_id = ctx->clients.data[i].client_id;
-            current_client_id = data->local_client_id;
+            get_local_client_index() = data->local_client_id;
         }
     }
 }
@@ -101,7 +61,8 @@ static void s_fill_enter_server_data(
 // PT_CONNECTION_HANDSHAKE
 static void s_receive_packet_connection_handshake(
     serialiser_t *serialiser,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     net::packet_connection_handshake_t handshake = {};
     handshake.deserialise(serialiser);
 
@@ -115,7 +76,7 @@ static void s_receive_packet_connection_handshake(
     data->info_count = handshake.player_count;
     data->infos = FL_MALLOC(vkph::player_init_info_t, data->info_count);
 
-    s_fill_enter_server_data(&handshake, data);
+    s_fill_enter_server_data(&handshake, data, ctx);
 
     vkph::submit_event(vkph::ET_ENTER_SERVER, data);
 
@@ -128,7 +89,8 @@ static void s_receive_packet_connection_handshake(
 // PT_PLAYER_JOINED
 static void s_receive_packet_player_joined(
     serialiser_t *in_serialiser,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     net::packet_player_joined_t packet = {};
     packet.deserialise(in_serialiser);
 
@@ -149,9 +111,11 @@ static void s_receive_packet_player_joined(
     vkph::submit_event(vkph::ET_NEW_PLAYER, new_player);
 }
 
+// PT_PLAYER_LEFT
 static void s_receive_packet_player_left(
     serialiser_t *in_serialiser,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     uint16_t disconnected_client = in_serialiser->deserialise_uint16();
 
     ctx->clients.data[disconnected_client].initialised = 0;
@@ -161,202 +125,6 @@ static void s_receive_packet_player_left(
     vkph::submit_event(vkph::ET_PLAYER_DISCONNECTED, data);
 
     LOG_INFO("Player disconnected\n");
-}
-
-#include <app.hpp>
-
-// Debugging!
-static bool simulate_lag = 0;
-
-static void s_inform_on_death(
-    vkph::player_t *p,
-    bool was_alive,
-    net::packet_client_commands_t *packet) {
-    if (!was_alive && p->flags.is_alive) {
-        // Means player just spawned
-        LOG_INFO("Requesting to spawn\n");
-        packet->requested_spawn = 1;
-    }
-    else {
-        packet->requested_spawn = 0;
-    }
-}
-
-static void s_fill_commands_with_actions(
-    vkph::player_t *p,
-    net::packet_client_commands_t *packet) {
-    packet->command_count = (uint8_t)p->cached_player_action_count;
-    packet->actions = LN_MALLOC(vkph::player_action_t, packet->command_count);
-
-    if (packet->command_count) {
-        net::debug_log("\tClient has made %d actions\n", ctx->log_file, 0, packet->command_count);
-    }
-
-    for (uint32_t i = 0; i < packet->command_count; ++i) {
-        packet->actions[i].bytes = p->cached_player_actions[i].bytes;
-        packet->actions[i].dmouse_x = p->cached_player_actions[i].dmouse_x;
-        packet->actions[i].dmouse_y = p->cached_player_actions[i].dmouse_y;
-        packet->actions[i].dt = p->cached_player_actions[i].dt;
-        packet->actions[i].accumulated_dt = p->cached_player_actions[i].accumulated_dt;
-        packet->actions[i].tick = p->cached_player_actions[i].tick;
-
-        net::debug_log(
-            "\t\tAt tick %lu: actions %d, dmouse_x %f; dmouse_y %f; dt %f; accumulated dt %f\n",
-            ctx->log_file,
-            0,
-            packet->actions[i].tick,
-            packet->actions[i].bytes,
-            packet->actions[i].dmouse_x,
-            packet->actions[i].dmouse_y,
-            packet->actions[i].dt,
-            packet->actions[i].accumulated_dt);
-    }
-
-    if (packet->command_count) {
-        net::debug_log("\tWith these actions, predicted values were:\n", ctx->log_file, 0);
-        net::debug_log("\t\tPosition: %f %f %f\n", ctx->log_file, 0, p->ws_position.x, p->ws_position.y, p->ws_position.z);
-        net::debug_log("\t\tVelocity: %f %f %f\n", ctx->log_file, 0, p->ws_velocity.x, p->ws_velocity.y, p->ws_velocity.z);
-        net::debug_log("\t\tView Direction: %f %f %f\n", ctx->log_file, 0, p->ws_view_direction.x, p->ws_view_direction.y, p->ws_view_direction.z);
-        net::debug_log("\t\tUp vector: %f %f %f\n", ctx->log_file, 0, p->ws_up_vector.x, p->ws_up_vector.y, p->ws_up_vector.z);
-    }
-}
-
-static void s_fill_predicted_data(
-    vkph::player_t *p,
-    net::packet_client_commands_t *packet,
-    vkph::state_t *state) {
-    packet->prediction.ws_position = p->ws_position;
-    packet->prediction.ws_view_direction = p->ws_view_direction;
-    packet->prediction.ws_up_vector = p->ws_up_vector;
-    packet->prediction.ws_velocity = p->ws_velocity;
-
-    /* 
-      Add the players that the local client thinks it has hit with projectiles
-      Don't need to add the new bullets / rocks that the client spawns
-      Because if it so happens that the client was cheating, when the client
-      thinks there was a hit, the server will know that it was incorrect because
-      the bullet wouldn't have been spawned on server-side
-    */
-    packet->predicted_hit_count = state->predicted_hits.data_count;
-    packet->hits = LN_MALLOC(vkph::predicted_projectile_hit_t, packet->predicted_hit_count);
-
-    uint32_t actual_predicted_count = 0;
-
-    for (uint32_t i = 0; i < packet->predicted_hit_count; ++i) {
-        if (state->predicted_hits[i].flags.initialised) {
-            packet->hits[actual_predicted_count++] = state->predicted_hits[i];
-        }
-    }
-
-    packet->predicted_hit_count = actual_predicted_count;
-}
-
-static void s_fill_with_accumulated_chunk_modifications(
-    net::packet_client_commands_t *packet,
-    vkph::state_t *state) {
-    net::accumulated_predicted_modification_t *next_acc = ctx->accumulate_history(state);
-    if (next_acc) {
-        // Packet will just take from the accumulation stuff
-        packet->prediction.chunk_mod_count = next_acc->acc_predicted_chunk_mod_count;
-        packet->prediction.chunk_modifications = next_acc->acc_predicted_modifications;
-    }
-    else {
-        packet->prediction.chunk_mod_count = 0;
-        packet->prediction.chunk_modifications = NULL;
-    }
-
-    if (packet->prediction.chunk_mod_count) {
-        net::debug_log("\tModified %i chunks\n", ctx->log_file, 0, packet->prediction.chunk_mod_count);
-        for (uint32_t i = 0; i < packet->prediction.chunk_mod_count; ++i) {
-            net::debug_log(
-                "\t\tIn chunk (%i %i %i):\n",
-                ctx->log_file,
-                0,
-                packet->prediction.chunk_modifications[i].x,
-                packet->prediction.chunk_modifications[i].y,
-                packet->prediction.chunk_modifications[i].z);
-
-            for (uint32_t v = 0; v < packet->prediction.chunk_modifications[i].modified_voxels_count; ++v) {
-                net::debug_log(
-                    "\t\t- index %i \t| initial value %i \t| final value %i\n",
-                    ctx->log_file,
-                    0,
-                    (int32_t)packet->prediction.chunk_modifications[i].modifications[v].index,
-                    (int32_t)packet->prediction.chunk_modifications[i].modifications[v].initial_value,
-                    (int32_t)packet->prediction.chunk_modifications[i].modifications[v].final_value);
-            }
-        }
-    }
-}
-
-// PT_CLIENT_COMMANDS
-static void s_send_packet_client_commands(vkph::state_t *state) {
-    int32_t local_id = state->get_local_id(current_client_id);
-    int32_t p_index = wd_get_local_player(state);
-    
-    // DEAD by default
-    static bool was_alive = false;
-
-    // Means that world hasn't been initialised yet (could be timing issues when submitting ENTER_SERVER
-    // event and send commands interval, so just to make sure, check that player is not NULL)
-    if (p_index >= 0) {
-        vkph::player_t *p = state->get_player(p_index);
-                                               
-        if (simulate_lag) {
-            p->cached_player_action_count = 0;
-            net::debug_log("@@@@@@ ^^^ We are simulating lag so not sending anything\n", ctx->log_file, 0);
-        }
-        else if (p) {
-            net:: client_t *c = &ctx->clients[p->client_id];
-
-            net::packet_client_commands_t packet = {};
-            packet.did_correction = c->waiting_on_correction;
-
-            // Tell server if player just died and update the "previous alive state" variable
-            s_inform_on_death(p, was_alive, &packet);
-            was_alive = p->flags.is_alive;
-
-            // Fill packet with the actions
-            s_fill_commands_with_actions(p, &packet);
-
-            // Fill predicted state
-            s_fill_predicted_data(p, &packet, state);
-            packet.prediction.player_flags = p->flags;
-
-            // Fill with chunk modifications that were made during past few frames
-            s_fill_with_accumulated_chunk_modifications(&packet, state);
-            state->reset_modification_tracker();
-                        
-            net::packet_header_t header = {};
-            { // Fill header
-                header.current_tick = state->current_tick;
-                header.current_packet_count = ctx->current_packet;
-                header.client_id = current_client_id;
-                header.flags.packet_type = net::PT_CLIENT_COMMANDS;
-                header.flags.total_packet_size = header.size() + packet.size();
-            }
-
-            serialiser_t serialiser = {};
-            { // Serialise all the data
-                serialiser.init(header.flags.total_packet_size);
-                header.serialise(&serialiser);
-                packet.serialise(&serialiser);
-            }
-
-            ctx->main_udp_send_to(&serialiser, bound_server_address);
-    
-            p->cached_player_action_count = 0;
-            c->waiting_on_correction = 0;
-
-            // Clear projectiles
-            for (uint32_t i = 0; i < state->predicted_hits.data_count; ++i) {
-                state->predicted_hits[i].flags.initialised = 0;
-            }
-
-            state->predicted_hits.clear();
-            state->rocks.clear_recent();
-        }
-    }
 }
 
 // Just for one accumulated_predicted_modification_t structure
@@ -383,7 +151,8 @@ static void s_revert_history_instance(
 
 static void s_revert_accumulated_modifications(
     uint64_t tick_until,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     // First push all modifications that were done, so that we can revert most previous changes too
     ctx->accumulate_history(state);
     state->reset_modification_tracker();
@@ -464,7 +233,8 @@ static void s_set_voxels_to_final_interpolated_values(vkph::state_t *state) {
 
 static void s_merge_all_recent_modifications(
     vkph::player_snapshot_t *snapshot,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     uint32_t apm_index = ctx->accumulated_modifications.tail;
     for (uint32_t apm = 0; apm < ctx->accumulated_modifications.head_tail_difference; ++apm) {
         net::accumulated_predicted_modification_t *apm_ptr = &ctx->accumulated_modifications.buffer[apm_index];
@@ -487,7 +257,8 @@ static void s_merge_all_recent_modifications(
 static void s_create_voxels_that_need_to_be_interpolated(
     uint32_t modified_chunk_count,
     net::chunk_modifications_t *chunk_modifications,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     chunks_to_interpolate_t *cti_ptr = wd_get_chunks_to_interpolate();
     for (uint32_t recv_cm_index = 0; recv_cm_index < modified_chunk_count; ++recv_cm_index) {
         net::chunk_modifications_t *recv_cm_ptr = &chunk_modifications[recv_cm_index];
@@ -554,7 +325,8 @@ static void s_create_voxels_that_need_to_be_interpolated(
 }
 
 static void s_clear_outdated_modifications_from_history(
-    vkph::player_snapshot_t *snapshot) {
+    vkph::player_snapshot_t *snapshot,
+    net::context_t *ctx) {
     if (snapshot->terraformed) {
         // Need to remove all modifications from tail to tick
         net::accumulated_predicted_modification_t *current = ctx->accumulated_modifications.get_next_item_tail();
@@ -590,7 +362,7 @@ static void s_add_projectiles_from_snapshot(
     for (uint32_t i = 0; i < snapshot->rock_count; ++i) {
         vkph::rock_snapshot_t *rock_snapshot = &snapshot->rock_snapshots[i];
 
-        if (rock_snapshot->client_id != current_client_id) {
+        if (rock_snapshot->client_id != get_local_client_index()) {
             // Spawn this rock
             state->rocks.spawn(
                 rock_snapshot->position,
@@ -609,7 +381,8 @@ static void s_handle_incorrect_state(
     vkph::player_snapshot_t *snapshot,
     net::packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     vkph::player_flags_t real_player_flags = {};
     real_player_flags.u32 = snapshot->player_local_flags;
 
@@ -644,7 +417,7 @@ static void s_handle_incorrect_state(
     if (snapshot->terraformed)  {
         net::debug_log("Reverting all modifications from current to tick %lu\n", ctx->log_file, 0, snapshot->tick);
 
-        s_revert_accumulated_modifications(snapshot->tick, state);
+        s_revert_accumulated_modifications(snapshot->tick, state, ctx);
         s_correct_chunks(packet, state);
         // Sets all voxels to what the server has: client should be fully up to date, no need to interpolate between voxels
 
@@ -696,7 +469,8 @@ static void s_handle_correct_state(
     vkph::player_snapshot_t *snapshot,
     net::packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     if (snapshot->terraformed) {
         //LOG_INFOV("Syncing with tick: %llu\n", (unsigned long long)snapshot->terraform_tick);
     }
@@ -731,7 +505,7 @@ static void s_handle_correct_state(
         // Fill merged recent modifications
         ctx->acc_predicted_modification_init(&ctx->merged_recent_modifications, 0);
 
-        s_merge_all_recent_modifications(snapshot, state);
+        s_merge_all_recent_modifications(snapshot, state, ctx);
 
         state->flag_modified_chunks(
             ctx->merged_recent_modifications.acc_predicted_modifications,
@@ -740,13 +514,14 @@ static void s_handle_correct_state(
         s_create_voxels_that_need_to_be_interpolated(
             packet->modified_chunk_count,
             packet->chunk_modifications,
-            state);
+            state,
+            ctx);
 
         state->unflag_modified_chunks(
             ctx->merged_recent_modifications.acc_predicted_modifications,
             ctx->merged_recent_modifications.acc_predicted_chunk_mod_count);
 
-        s_clear_outdated_modifications_from_history(snapshot);
+        s_clear_outdated_modifications_from_history(snapshot, ctx);
     }
 }
 
@@ -756,7 +531,8 @@ static void s_handle_local_player_snapshot(
     vkph::player_snapshot_t *snapshot,
     net::packet_game_state_snapshot_t *packet,
     serialiser_t *serialiser,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     s_add_projectiles_from_snapshot(packet, state);
 
     // TODO: Watch out for this:
@@ -769,7 +545,8 @@ static void s_handle_local_player_snapshot(
             snapshot,
             packet,
             serialiser,
-            state);
+            state,
+            ctx);
     }
     else {
         net::debug_log("\tClient predicted state correctly - no correction needed!\n", ctx->log_file, 0);
@@ -784,7 +561,8 @@ static void s_handle_local_player_snapshot(
             snapshot,
             packet,
             serialiser,
-            state);
+            state,
+            ctx);
     }
 }
 
@@ -792,7 +570,8 @@ static void s_handle_local_player_snapshot(
 static void s_receive_packet_game_state_snapshot(
     serialiser_t *serialiser,
     uint64_t received_tick,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     net::debug_log("##### Received game state snapshot\n", ctx->log_file, 0);
 
     net::packet_game_state_snapshot_t packet = {};
@@ -802,7 +581,7 @@ static void s_receive_packet_game_state_snapshot(
     for (uint32_t i = 0; i < packet.player_data_count; ++i) {
         vkph::player_snapshot_t *snapshot = &packet.player_snapshots[i];
 
-        if (snapshot->client_id == current_client_id) {
+        if (snapshot->client_id == get_local_client_index()) {
             net::client_t *c = &ctx->clients[snapshot->client_id];
             int32_t local_id = state->get_local_id(snapshot->client_id);
             auto *p = state->get_player(local_id);
@@ -813,7 +592,8 @@ static void s_receive_packet_game_state_snapshot(
                     snapshot,
                     &packet,
                     serialiser,
-                    state);
+                    state,
+                    ctx);
             }
         }
         else {
@@ -917,7 +697,7 @@ static void s_receive_player_team_change(
     // If client ID == local client ID, don't do anything
     // Otherwise, update ui roster and add player to team
 
-    if (packet.client_id != nw_get_local_client_index()) {
+    if (packet.client_id != get_local_client_index()) {
         int32_t p_id = state->get_local_id(packet.client_id);
 
         state->change_player_team(state->get_player(p_id), (vkph::team_color_t)packet.color);
@@ -929,11 +709,12 @@ static void s_receive_player_team_change(
 
 static void s_receive_ping(
     serialiser_t *in_serialiser,
-    vkph::state_t *state) {
+    vkph::state_t *state,
+    net::context_t *ctx) {
     net::packet_header_t header = {};
     header.current_tick = state->current_tick;
     header.current_packet_count = ctx->current_packet;
-    header.client_id = current_client_id;
+    header.client_id = get_local_client_index();
     header.flags.packet_type = net::PT_PING;
     header.flags.total_packet_size = header.size();
 
@@ -944,8 +725,9 @@ static void s_receive_ping(
     ctx->main_udp_send_to(&serialiser, bound_server_address);
 }
 
-static void s_check_incominstate_server_packets(
-    vkph::state_t *state) {
+static void s_check_incoming_packets(
+    vkph::state_t *state,
+    net::context_t *ctx) {
     const app::raw_input_t *input = app::get_raw_input();
 
 #if 1
@@ -960,7 +742,7 @@ static void s_check_incominstate_server_packets(
     // Check packets from game server that we are connected to
     if (client_check_incoming_packets) {
         static float elapsed = 0.0f;
-        elapsed += cl_delta_time();
+        elapsed += delta_time();
         if (elapsed >= net::NET_CLIENT_COMMAND_OUTPUT_INTERVAL) {
             // Send commands to the server
             net::debug_log("----- Sending client commands to the server at tick %llu\n", ctx->log_file, 0, state->current_tick);
@@ -1074,204 +856,4 @@ static void s_check_incominstate_server_packets(
     }
 }
 
-static void s_tick_client(vkph::state_t *state) {
-    s_check_incominstate_server_packets(state);
-}
-
-// PT_CONNECTION_REQUEST
-static void s_send_packet_connection_request(
-    uint32_t ip_address,
-    local_client_info_t *info) {
-    bound_server_address.port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_SERVER);
-    bound_server_address.ipv4_address = ip_address;
-
-    serialiser_t serialiser = {};
-    serialiser.init(100);
-
-    net::packet_connection_request_t request = {};
-    request.name = info->name;
-    
-    net::packet_header_t header = {};
-    header.flags.packet_type = net::PT_CONNECTION_REQUEST;
-    header.flags.total_packet_size = header.size() + request.size();
-    header.current_packet_count = ctx->current_packet;
-
-    header.serialise(&serialiser);
-    request.serialise(&serialiser);
-
-    if (ctx->main_udp_send_to(&serialiser, bound_server_address)) {
-        LOG_INFO("Success sent connection request\n");
-        client_check_incoming_packets = 1;
-    }
-    else {
-        LOG_ERROR("Failed to send connection request\n");
-    }
-}
-
-// PT_TEAM_SELECT_REQUEST
-static void s_send_packet_team_select_request(vkph::team_color_t color, const vkph::state_t *state) {
-    serialiser_t serialiser = {};
-    serialiser.init(100);
-
-    net::packet_header_t header = {};
-    header.current_tick = state->current_tick;
-    header.current_packet_count = ctx->current_packet;
-    header.client_id = current_client_id;
-    header.flags.packet_type = net::PT_TEAM_SELECT_REQUEST;
-    header.flags.total_packet_size = header.size() + sizeof(uint32_t);
-
-    header.serialise(&serialiser);
-    serialiser.serialise_uint32((uint32_t)color);
-
-    ctx->main_udp_send_to(&serialiser, bound_server_address);
-}
-
-// PT_CLIENT_DISCONNECT
-static void s_send_packet_client_disconnect(const vkph::state_t *state) {
-    serialiser_t serialiser = {};
-    serialiser.init(100);
-
-    net::packet_header_t header = {};
-    header.current_tick = state->current_tick;
-    header.current_packet_count = ctx->current_packet;
-    header.client_id = current_client_id;
-    header.flags.packet_type = net::PT_CLIENT_DISCONNECT;
-    header.flags.total_packet_size = header.size();
-
-    header.serialise(&serialiser);
-    
-    ctx->main_udp_send_to(&serialiser, bound_server_address);
-}
-
-static vkph::listener_t net_listener_id;
-
-static void s_net_event_listener(
-    void *object,
-    vkph::event_t *event) {
-    auto *state = (vkph::state_t *)object;
-
-    switch (event->type) {
-
-    case vkph::ET_START_CLIENT: {
-        auto *data = (vkph::event_start_client_t *)event->data;
-        s_start_client(data, state);
-        FL_FREE(data);
-    } break;
-
-    case vkph::ET_REQUEST_REFRESH_SERVER_PAGE: {
-        nw_request_available_servers();
-    } break;
-
-    case vkph::ET_REQUEST_TO_JOIN_SERVER: {
-        auto *local_meta_client = nw_get_local_meta_client();
-
-        auto *data = (vkph::event_data_request_to_join_server_t *)event->data;
-        local_client_info_t client_info;
-        client_info.name = local_meta_client->username;
-
-        if (data->server_name) {
-            auto *available_servers = net::get_available_servers();
-
-            uint32_t *game_server_index = available_servers->name_to_server.get(simple_string_hash(data->server_name));
-            if (game_server_index) {
-                uint32_t ip_address = available_servers->servers[*game_server_index].ipv4_address;
-            
-                s_send_packet_connection_request(ip_address, &client_info);
-            }
-            else {
-                LOG_ERRORV("Couldn't find server name: %s\n", data->server_name);
-            }
-        }
-        else if (data->ip_address) {
-            uint32_t ip_address = str_to_ipv4_int32(data->ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
-            s_send_packet_connection_request(ip_address, &client_info);
-        }
-        else {
-            
-        }
-
-        FL_FREE(data);
-    } break;
-
-    case vkph::ET_LEAVE_SERVER: {
-        if (bound_server_address.ipv4_address > 0) {
-            // Send to server message
-            s_send_packet_client_disconnect(state);
-        
-            memset(&bound_server_address, 0, sizeof(bound_server_address));
-            memset(ctx->clients.data, 0, sizeof(net::client_t) * ctx->clients.max_size);
-
-            client_check_incoming_packets = 0;
-        
-            LOG_INFO("Disconnecting\n");
-        }
-    } break;
-
-    case vkph::ET_ATTEMPT_SIGN_UP: {
-        auto *data = (vkph::event_attempt_sign_up_t *)event->data;
-
-        nw_request_sign_up(data->username, data->password);
-    } break;
-
-    case vkph::ET_ATTEMPT_LOGIN: {
-        auto *data = (vkph::event_attempt_login_t *)event->data;
-
-        nw_request_login(data->username, data->password);
-    } break;
-
-    case vkph::ET_SEND_SERVER_TEAM_SELECT_REQUEST: {
-        auto *data = (vkph::event_send_server_team_select_request_t *)event->data;
-
-        s_send_packet_team_select_request(data->color, state);
-    } break;
-
-    case vkph::ET_CLOSED_WINDOW: {
-        nw_notify_meta_disconnection();
-    } break;
-
-    }
-}
-
-void nw_init(vkph::state_t *state) {
-    ctx = flmalloc<net::context_t>();
-
-    net_listener_id = vkph::set_listener_callback(&s_net_event_listener, state);
-
-    vkph::subscribe_to_event(vkph::ET_START_CLIENT, net_listener_id);
-    vkph::subscribe_to_event(vkph::ET_REQUEST_TO_JOIN_SERVER, net_listener_id);
-    vkph::subscribe_to_event(vkph::ET_LEAVE_SERVER, net_listener_id);
-    vkph::subscribe_to_event(vkph::ET_REQUEST_REFRESH_SERVER_PAGE, net_listener_id);
-    vkph::subscribe_to_event(vkph::ET_ATTEMPT_SIGN_UP, net_listener_id);
-    vkph::subscribe_to_event(vkph::ET_CLOSED_WINDOW, net_listener_id);
-    vkph::subscribe_to_event(vkph::ET_ATTEMPT_LOGIN, net_listener_id);
-    vkph::subscribe_to_event(vkph::ET_SEND_SERVER_TEAM_SELECT_REQUEST, net_listener_id);
-
-    net::init_socket_api();
-
-    ctx->message_buffer = FL_MALLOC(char, net::NET_MAX_MESSAGE_SIZE);
-
-    nw_init_meta_connection();
-
-    auto *available_servers = net::get_available_servers();
-
-    available_servers->server_count = 0;
-    available_servers->servers = FL_MALLOC(net::game_server_t, net::NET_MAX_AVAILABLE_SERVER_COUNT);
-    memset(available_servers->servers, 0, sizeof(net::game_server_t) * net::NET_MAX_AVAILABLE_SERVER_COUNT);
-    available_servers->name_to_server.init();
-}
-
-void nw_tick(vkph::state_t *state) {
-    // check_incoming_meta_server_packets(events);
-    // Check for meta server packets
-    nw_check_meta_request_status_and_handle();
-
-    s_tick_client(state);
-}
-
-bool nw_connected_to_server() {
-    return bound_server_address.ipv4_address != 0;
-}
-
-uint16_t nw_get_local_client_index() {
-    return current_client_id;
 }

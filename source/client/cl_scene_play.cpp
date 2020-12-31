@@ -1,7 +1,7 @@
 #include <vkph_player.hpp>
 #include "cl_frame.hpp"
 #include "cl_view.hpp"
-#include "dr_player.hpp"
+#include "cl_render.hpp"
 #include <vkph_chunk.hpp>
 #include "nw_client.hpp"
 #include <ux.hpp>
@@ -13,7 +13,6 @@
 #include "wd_spectate.hpp"
 #include <vkph_state.hpp>
 #include <vkph_event_data.hpp>
-#include "dr_draw_scene.hpp"
 #include <vk.hpp>
 #include <ui_submit.hpp>
 #include "cl_scene.hpp"
@@ -99,7 +98,7 @@ void play_scene_t::calculate_pos_and_dir(vkph::player_t *player, vector3_t *posi
         }
     }
 
-    dr_is_first_person() = !render_player;
+    is_first_person() = !render_player;
 
     *position = player->ws_position - player->ws_view_direction * camera_distance * vkph::PLAYER_SCALE;
     *position += player->current_camera_up * vkph::PLAYER_SCALE * 2.0f;
@@ -163,15 +162,8 @@ void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     eye_info->far = 10000.0f;
     eye_info->dt = delta_time();
 
-
     // Render what's in the 3D scene
-    dr_draw_game(
-        cmdbufs->render_cmdbuf,
-        cmdbufs->transfer_cmdbuf,
-        cmdbufs->render_shadow_cmdbuf,
-        state);
-
-
+    draw_game(cmdbufs, state);
 
     ux::tick(state);
     ui::render_submitted_ui(cmdbufs->transfer_cmdbuf, cmdbufs->ui_cmdbuf);

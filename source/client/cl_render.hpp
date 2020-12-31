@@ -20,6 +20,7 @@ struct object_shaders_t {
   actually renders the game.
  */
 void draw_game(frame_command_buffers_t *cmdbufs, vkph::state_t *state);
+void init_render_resources();
 
 
 
@@ -140,6 +141,7 @@ void projectiles_gpu_sync_and_render(
   NOTE: Premade scenes are scenes for which we don't need to generate the chunk information
   to render. For instance, one of them is used for the main menu screen.
  */
+void init_fixed_premade_scene_shaders();
 
 struct fixed_premade_scene_t {
     struct {
@@ -159,7 +161,6 @@ struct fixed_premade_scene_t {
 
 void premade_scene_gpu_sync_and_render(
     VkCommandBuffer render,
-    VkCommandBuffer transfer,
     fixed_premade_scene_t *scene);
 
 }
