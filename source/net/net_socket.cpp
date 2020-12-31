@@ -10,7 +10,7 @@ namespace net {
 
 #pragma comment(lib, "Ws2_32.lib")
 
-static inline stack_container_t<SOCKET> sockets;
+static stack_container_t<SOCKET> sockets;
 
 static inline void s_init_api() {
     sockets.init(50);

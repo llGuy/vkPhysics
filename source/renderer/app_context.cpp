@@ -250,13 +250,14 @@ void poll_input_events() {
 
     g_delta_time = (float)glfwGetTime() - current_time;
 
-    const float FRAME_TIME = 1.0f / 100.0f;
+    static constexpr float FRAME_TIME = 1.0f / 100.0f;
 
-#if 1
+#if 0
     if (g_delta_time < FRAME_TIME) {
-        double wait_time = (FRAME_TIME - g_delta_time);
+        float wait_time = FRAME_TIME - g_delta_time;
 
         sleep_seconds(wait_time);
+
         g_delta_time = FRAME_TIME;
     }
 #endif

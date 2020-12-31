@@ -28,6 +28,8 @@ include_directories("${CMAKE_SOURCE_DIR}/source/engine")
 include_directories("${CMAKE_SOURCE_DIR}/source/uiux/")
 include_directories("${CMAKE_SOURCE_DIR}/source/renderer/include")
 
+add_compile_definitions("CURL_STATICLIB")
+
 # Find packages
 find_package(Vulkan)
 find_package(CURL)
@@ -44,15 +46,6 @@ target_compile_definitions(common PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 # Create engine
 add_library(engine STATIC "${ENGINE_SOURCES}")
 target_compile_definitions(engine PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
-
-# Create net
-add_library(net STATIC "${NET_SOURCES}")
-target_compile_definitions(net PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
-
-# Do not worry, this will be cleaned up after net refactor
-target_include_directories(common PUBLIC "${CMAKE_SOURCE_DIR}/source/engine/")
-target_include_directories(engine PUBLIC "${CMAKE_SOURCE_DIR}/source/common/" "${CMAKE_SOURCE_DIR}/source/net")
-target_include_directories(net PUBLIC "${CMAKE_SOURCE_DIR}/source/engine/")
 
 if(Vulkan_FOUND)
   message(STATUS "Found Vulkan package in system")
@@ -112,11 +105,17 @@ else(CURL_FOUND)
     include_directories("${CMAKE_SOURCE_DIR}/dependencies/curl/x64/include")
 
     # set(CURL_LIBRARIES "${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib" PARENT_SCOPE)
-    target_link_libraries(common PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib")
+    # target_link_libraries(common PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib")
+    # target_link_libraries(net PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib")
+    link_libraries(${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib)
   else (WIN32)
     message(FATAL_ERROR "Not on Windows, cannot use bundled curl binaries")
   endif()
 endif()
+
+# Create net
+add_library(net STATIC "${NET_SOURCES}")
+target_compile_definitions(net PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 
 # Create client (recheck if statement for clarity - TODO: merge renderer with client)
 if(BUILD_CLIENT)

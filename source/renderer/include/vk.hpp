@@ -5,6 +5,11 @@
 #include <math.hpp>
 #include <vulkan/vulkan_core.h>
 
+#undef near
+#undef NEAR
+#undef far
+#undef FAR
+
 namespace vk {
 
 /*

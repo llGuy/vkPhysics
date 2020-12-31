@@ -3,6 +3,11 @@
 #include <vk.hpp>
 #include <math.hpp>
 
+#undef near
+#undef NEAR
+#undef far
+#undef FAR
+
 namespace vk {
 
 // This gets sent to the GPU when rendering 3D objects
