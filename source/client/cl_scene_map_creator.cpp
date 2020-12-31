@@ -1,4 +1,6 @@
 #include "cl_frame.hpp"
+#include "cl_game_spectate.hpp"
+#include "cl_game.hpp"
 #include "cl_view.hpp"
 #include <ux_popup.hpp>
 #include <vkph_chunk.hpp>
@@ -10,9 +12,7 @@
 #include "cl_main.hpp"
 #include "ux_scene.hpp"
 #include "vkph_terraform.hpp"
-#include "wd_core.hpp"
-#include "wd_predict.hpp"
-#include "wd_spectate.hpp"
+#include "cl_game_predict.hpp"
 #include <ui_submit.hpp>
 #include "cl_render.hpp"
 #include "cl_scene.hpp"
@@ -43,8 +43,8 @@ void map_creator_scene_t::prepare_for_binding(vkph::state_t *state) {
     get_frame_info()->ssao = 1;
 
     // Set local player to the spectator
-    wd_set_local_player(-1, state);
-    wd_get_spectator()->current_camera_up = wd_get_spectator()->ws_up_vector = glm::normalize(vector3_t(1.0f, 1.0f, 1.0f));
+    set_local_player(-1, state);
+    get_spectator()->current_camera_up = get_spectator()->ws_up_vector = glm::normalize(vector3_t(1.0f, 1.0f, 1.0f));
 
     state->flags.track_history = 0;
 }
@@ -52,7 +52,7 @@ void map_creator_scene_t::prepare_for_binding(vkph::state_t *state) {
 void map_creator_scene_t::prepare_for_unbinding(vkph::state_t *state) {
     state->save_map();
 
-    wd_clear_world(state);
+    clear_game(state);
 
     ux::clear_panels();
     vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
@@ -94,7 +94,7 @@ void map_creator_scene_t::parse_and_generate_sphere(
     char *end_pointer = const_cast<char *>(str + str_len);
     uint32_t sphere_radius = strtol(str + 2, &end_pointer, 10);
 
-    vkph::player_t *spectator = wd_get_spectator();
+    vkph::player_t *spectator = get_spectator();
 
     vkph::sphere_create_info_t info = {};
     info.color = current_color_;
@@ -114,7 +114,7 @@ void map_creator_scene_t::parse_and_generate_hollow_sphere(
     char *end_pointer = const_cast<char *>(str + str_len);
     uint32_t sphere_radius = strtol(str + 2, &end_pointer, 10);
 
-    vkph::player_t *spectator = wd_get_spectator();
+    vkph::player_t *spectator = get_spectator();
 
     vkph::sphere_create_info_t info = {};
     info.color = current_color_;
@@ -242,7 +242,7 @@ void map_creator_scene_t::handle_input(vkph::state_t *state) {
             }
 
             if (!display_color_table) {
-                wd_game_input(delta_time(), state);
+                game_input(delta_time(), state);
             }
             else {
                 ux::handle_input(state);
@@ -264,12 +264,12 @@ void map_creator_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *
     handle_input(state);
 
     // The world always gets ticked - when menus get displayed, the world has to keep being simulated
-    wd_execute_player_actions(wd_get_spectator(), state);
-    wd_tick(state);
+    execute_player_actions(get_spectator(), state);
+    tick_game(state);
 
     ux::scene_info_t *scene_info = ux::get_scene_info();
     vk::eye_3d_info_t *eye_info = &scene_info->eye;
-    vkph::player_t *player = wd_get_spectator();
+    vkph::player_t *player = get_spectator();
 
     eye_info->up = player->current_camera_up;
 
@@ -384,7 +384,7 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
 
         LOG_INFOV("%f %f %f\n", v3_color.r, v3_color.g, v3_color.b);
 
-        wd_get_spectator()->terraform_package.color = current_color_;
+        get_spectator()->terraform_package.color = current_color_;
 
         FL_FREE(data);
     } break;

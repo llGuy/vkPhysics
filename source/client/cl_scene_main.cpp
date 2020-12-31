@@ -1,11 +1,11 @@
 #include "cl_frame.hpp"
 #include "cl_scene.hpp"
 #include <ux.hpp>
+#include "cl_game_spectate.hpp"
 #include "cl_render.hpp"
 #include "cl_main.hpp"
-#include "nw_client.hpp"
 #include "ux_scene.hpp"
-#include "wd_spectate.hpp"
+#include "cl_net.hpp"
 #include <vkph_events.hpp>
 #include <ux_menu_main.hpp>
 #include <vkph_player.hpp>
@@ -31,7 +31,7 @@ void main_scene_t::subscribe_to_events(vkph::listener_t listener) {
 void main_scene_t::prepare_for_binding(vkph::state_t *state) {
     ux::clear_main_menu();
 
-    vkph::player_t *spect = wd_get_spectator();
+    vkph::player_t *spect = get_spectator();
 
     // Position the player at the right place and view in the right direction
     spect->ws_position = structure_.position;
@@ -49,7 +49,7 @@ void main_scene_t::prepare_for_unbinding(vkph::state_t *state) {
 void main_scene_t::handle_input(vkph::state_t *state) {
     ux::handle_input(state);
 
-    vkph::player_t *spect = wd_get_spectator();
+    vkph::player_t *spect = get_spectator();
     const app::game_input_t *game_input = app::get_game_input();
 
     static bool rotating = 0;
@@ -91,7 +91,7 @@ void main_scene_t::handle_input(vkph::state_t *state) {
 void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
     handle_input(state);
 
-    nw_tick(state);
+    tick_net(state);
 
     // Submit the mesh
     premade_scene_gpu_sync_and_render(cmdbufs->render_cmdbuf, &structure_);
@@ -110,7 +110,7 @@ void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
 
     vk::eye_3d_info_t *eye_info = &scene_info->eye;
     memset(eye_info, 0, sizeof(vk::eye_3d_info_t));
-    vkph::player_t *player = wd_get_spectator();
+    vkph::player_t *player = get_spectator();
 
     eye_info->position = player->ws_position;
     eye_info->direction = player->ws_view_direction;

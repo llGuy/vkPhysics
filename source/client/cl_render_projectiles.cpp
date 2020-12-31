@@ -5,7 +5,7 @@ namespace cl {
 static vk::mesh_t bullet_mesh;
 static object_shaders_t bullet_shaders;
 
-void init_projectiles_render_resources() {
+void init_projectile_render_resources() {
     vk::shader_binding_info_t bullet_sbi = {};
     bullet_mesh.load_external(&bullet_sbi, "assets/models/bullet.mesh");
 

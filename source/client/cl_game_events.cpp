@@ -1,35 +1,36 @@
-#include "nw_client.hpp"
+#include "cl_net.hpp"
 #include <ux_menu_game.hpp>
 #include <vkph_state.hpp>
-#include "dr_rsc.hpp"
-#include "wd_core.hpp"
-#include "wd_event.hpp"
-#include "dr_player.hpp"
+#include "cl_render.hpp"
 #include <vkph_chunk.hpp>
 #include <vkph_event_data.hpp>
-#include "wd_predict.hpp"
 #include <log.hpp>
+#include "cl_game.hpp"
+#include "cl_game_predict.hpp"
 #include <constant.hpp>
+#include <vkph_events.hpp>
 #include <allocators.hpp>
 
-void wd_subscribe_to_events(vkph::listener_t world_listener) {
-    subscribe_to_event(vkph::ET_ENTER_SERVER, world_listener);
-    subscribe_to_event(vkph::ET_NEW_PLAYER, world_listener);
-    subscribe_to_event(vkph::ET_LEAVE_SERVER, world_listener);
-    subscribe_to_event(vkph::ET_PLAYER_DISCONNECTED, world_listener);
-    subscribe_to_event(vkph::ET_SPAWN, world_listener);
-    subscribe_to_event(vkph::ET_BEGIN_AI_TRAINING, world_listener);
-    subscribe_to_event(vkph::ET_RESET_AI_ARENA, world_listener);
-    subscribe_to_event(vkph::ET_FINISH_GENERATION, world_listener);
+namespace cl {
+
+void subscribe_to_game_events(vkph::listener_t world_listener) {
+    vkph::subscribe_to_event(vkph::ET_ENTER_SERVER, world_listener);
+    vkph::subscribe_to_event(vkph::ET_NEW_PLAYER, world_listener);
+    vkph::subscribe_to_event(vkph::ET_LEAVE_SERVER, world_listener);
+    vkph::subscribe_to_event(vkph::ET_PLAYER_DISCONNECTED, world_listener);
+    vkph::subscribe_to_event(vkph::ET_SPAWN, world_listener);
+    vkph::subscribe_to_event(vkph::ET_BEGIN_AI_TRAINING, world_listener);
+    vkph::subscribe_to_event(vkph::ET_RESET_AI_ARENA, world_listener);
+    vkph::subscribe_to_event(vkph::ET_FINISH_GENERATION, world_listener);
 }
 
 static void s_handle_event_enter_server(vkph::event_t *event, vkph::state_t *state) {
     LOG_INFO("Entering server world\n");
 
-    wd_set_i_am_in_server(1);
+    set_i_am_in_server(1);
 
     // Reinitialise chunks / players
-    wd_clear_world(state);
+    clear_game(state);
 
     auto *data = (vkph::event_enter_server_t *)event->data;
 
@@ -38,7 +39,7 @@ static void s_handle_event_enter_server(vkph::event_t *event, vkph::state_t *sta
         player->init(&data->infos[i], state->client_to_local_id_map);
 
         if (player->flags.is_local) {
-            wd_set_local_player(player->local_id, state);
+            set_local_player(player->local_id, state);
 
             player->cached_player_action_count = 0;
             player->cached_player_actions = FL_MALLOC(vkph::player_action_t, vkph::PLAYER_MAX_ACTIONS_COUNT * 2);
@@ -57,8 +58,8 @@ static void s_handle_event_enter_server(vkph::event_t *event, vkph::state_t *sta
 
         state->add_player_to_team(player, (vkph::team_color_t)player->flags.team_color);
 
-        player->render = dr_player_render_init();
-        dr_player_animated_instance_init(&player->render->animations);
+        player->render = init_player_render();
+        init_player_animated_instance(&player->render->animations);
     }
 
     FL_FREE(data->infos);
@@ -70,9 +71,9 @@ static void s_handle_event_enter_server(vkph::event_t *event, vkph::state_t *sta
 // }
 
 static void s_handle_event_leave_server(vkph::state_t *state) {
-    wd_set_i_am_in_server(0);
+    set_i_am_in_server(0);
 
-    wd_clear_world(state);
+    clear_game(state);
 }
 
 static void s_handle_event_spawn(vkph::event_t *event, vkph::state_t *state) {
@@ -81,7 +82,7 @@ static void s_handle_event_spawn(vkph::event_t *event, vkph::state_t *state) {
     uint32_t id = 0;
 
     if (data->client_id == -1) {
-        id = nw_get_local_client_index();
+        id = get_local_client_index();
     }
     else {
         id = data->client_id;
@@ -124,14 +125,14 @@ static void s_handle_event_new_player(vkph::event_t *event, vkph::state_t *state
         player->elapsed = 0.0f;
     }
 
-    player->render = dr_player_render_init();
-    dr_player_animated_instance_init(&player->render->animations);
+    player->render = init_player_render();
+    init_player_animated_instance(&player->render->animations);
 
     FL_FREE(event->data);
 }
 
 static void s_handle_event_player_disconnected(vkph::event_t *event, vkph::state_t *state) {
-    if (wd_am_i_in_server()) {
+    if (am_i_in_server()) {
         auto *data = (vkph::event_player_disconnected_t *)event->data;
 
         int32_t local_id = state->get_local_id(data->client_id);
@@ -189,7 +190,7 @@ static void s_handle_event_reset_ai_arena() {
     // w_begin_ai_training_chunks(context_ptr->training_type);
 }
 
-void wd_world_event_listener(void *object, vkph::event_t *event) {
+void game_event_listener(void *object, vkph::event_t *event) {
     auto *state = (vkph::state_t *)object;
 
     switch(event->type) {
@@ -231,4 +232,6 @@ void wd_world_event_listener(void *object, vkph::event_t *event) {
 
     }
     
+}
+
 }

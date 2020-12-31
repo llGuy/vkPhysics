@@ -3,15 +3,14 @@
 #include <ux.hpp>
 #include "cl_render.hpp"
 #include "ux_scene.hpp"
-#include "wd_core.hpp"
+#include "cl_game.hpp"
 #include "cl_frame.hpp"
 #include "cl_scene.hpp"
-#include "nw_client.hpp"
+#include "cl_net.hpp"
 #include <vkph_state.hpp>
 #include <files.hpp>
 #include <vkph_events.hpp>
-#include "nw_client_meta.hpp"
-#include "nw_client_meta.hpp"
+#include "cl_net_meta.hpp"
 #include "cl_scene_transition.hpp"
 #include <ui_submit.hpp>
 #include <app.hpp>
@@ -75,7 +74,7 @@ static void s_parse_command_line_args(
             // This is information
             switch (current_option) {
             case O_USER_META_PATH: {
-                nw_set_path_to_user_meta_info(arg);
+                set_path_to_user_meta_info(arg);
             } break;
             }
         }
@@ -148,14 +147,14 @@ int32_t run(
     vk::init_context();
     ui::init_submission();
     init_scene_transition();
-    nw_init(state);
+    init_net(state);
 
     s_open();
 
     init_frame_command_buffers();
 
     init_render_resources();
-    wd_init(state);
+    init_game(state);
     ux::init(state);
 
     // Initialise scenes
@@ -167,14 +166,14 @@ int32_t run(
     get_frame_info()->debug_window = 1;
 
     // Check if the user has registered and can actually join servers
-    nw_check_registration();
+    check_registration();
 
     s_loop();
 
     vkph::dispatch_events();
     vkph::dispatch_events();
 
-    nw_stop_request_thread();
+    stop_request_thread();
 
     return 0;
 }

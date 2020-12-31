@@ -8,7 +8,7 @@ namespace cl {
 
 static game_view_type_t current_view_type;
 
-void cl_change_view_type(game_view_type_t view) {
+void change_view_type(game_view_type_t view) {
     current_view_type = view;
 
     switch (view) {
@@ -35,7 +35,7 @@ void cl_change_view_type(game_view_type_t view) {
     }
 }
 
-game_view_type_t cl_get_current_game_view_type() {
+game_view_type_t get_current_game_view_type() {
     return current_view_type;
 }
 

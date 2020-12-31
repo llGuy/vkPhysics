@@ -1,6 +1,6 @@
 #include "cl_main.hpp"
+#include "cl_game_predict.hpp"
 #include "cl_render.hpp"
-#include "wd_predict.hpp"
 #include <vkph_physics.hpp>
 
 namespace cl {
@@ -322,7 +322,7 @@ void players_gpu_sync_and_render(
                 p->render->render_data.pbr_info.x = 0.1f;
                 p->render->render_data.pbr_info.y = 0.1f;
 
-                if ((int32_t)i == (int32_t)wd_get_local_player(state)) {
+                if ((int32_t)i == (int32_t)get_local_player(state)) {
                     if (!is_first_person()) {
                         if (p->switching_shapes) {
                             // Render transition

@@ -1,19 +1,21 @@
-#include "nw_client.hpp"
-#include "dr_player.hpp"
-#include "wd_predict.hpp"
-#include "wd_spectate.hpp"
+#include "cl_game_predict.hpp"
+#include "cl_game_spectate.hpp"
 #include <vkph_state.hpp>
+#include "cl_render.hpp"
 #include <vkph_events.hpp>
 #include <vkph_player.hpp>
 #include <app.hpp>
 #include <constant.hpp>
 #include <net_context.hpp>
+#include "cl_net.hpp"
+
+namespace cl {
 
 static vkph::terraform_package_t local_current_terraform_package;
-
+// This is not necessary anymore TOOD: REMOVE
 static stack_container_t<vkph::predicted_projectile_hit_t> hits;
 
-void wd_set_local_player(int32_t id, vkph::state_t *state) {
+void set_local_player(int32_t id, vkph::state_t *state) {
     state->local_player_id = id;
 }
 
@@ -26,7 +28,7 @@ static vkph::player_t *s_get_local_player(vkph::state_t *state) {
     }
 }
 
-void wd_handle_local_player_input(float dt, vkph::state_t *state) {
+void handle_local_player_input(float dt, vkph::state_t *state) {
     const app::game_input_t *game_input = app::get_game_input();
 
     vkph::player_action_t actions;
@@ -82,21 +84,21 @@ void wd_handle_local_player_input(float dt, vkph::state_t *state) {
             local_player_ptr->push_actions(&actions, 0);
         }
         else {
-            wd_get_spectator()->push_actions(&actions, 0);
+            get_spectator()->push_actions(&actions, 0);
         }
     }
     else {
-        wd_get_spectator()->push_actions(&actions, 0);
+        get_spectator()->push_actions(&actions, 0);
     }
 }
 
-void wd_execute_player_actions(vkph::player_t *player, vkph::state_t *state) {
+void execute_player_actions(vkph::player_t *player, vkph::state_t *state) {
     for (uint32_t i = 0; i < player->player_action_count; ++i) {
         vkph::player_action_t *action = &player->player_actions[i];
 
         player->execute_action(action, state);
 
-        if (nw_connected_to_server()) {
+        if (is_connected_to_server()) {
             // If this is local player, need to cache these commands to later send to server
             player->camera_distance.animate(action->dt);
             player->camera_fov.animate(action->dt);
@@ -111,7 +113,7 @@ void wd_execute_player_actions(vkph::player_t *player, vkph::state_t *state) {
                 player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * action->dt * 1.5f);
             }
 
-            if (nw_connected_to_server()) {
+            if (is_connected_to_server()) {
                 if (player->cached_player_action_count < vkph::PLAYER_MAX_ACTIONS_COUNT * 2) {
                     player->cached_player_actions[player->cached_player_action_count++] = *action;
                 }
@@ -135,15 +137,15 @@ void wd_execute_player_actions(vkph::player_t *player, vkph::state_t *state) {
     player->player_action_count = 0;
 }
 
-void wd_predict_state(vkph::state_t *state) {
+void predict_state(vkph::state_t *state) {
     vkph::player_t *player = s_get_local_player(state);
     
     if (player) {
-        wd_execute_player_actions(player, state);
+        execute_player_actions(player, state);
     }
 }
 
-void wd_kill_local_player(vkph::state_t *state) {
+void kill_local_player(vkph::state_t *state) {
     LOG_INFO("Local player just died\n");
 
     vkph::submit_event(vkph::ET_LOCAL_PLAYER_DIED, NULL);
@@ -155,11 +157,11 @@ void wd_kill_local_player(vkph::state_t *state) {
     local_player_ptr->flags.is_alive = false;
 }
 
-vkph::terraform_package_t *wd_get_local_terraform_package() {
+vkph::terraform_package_t *get_local_terraform_package() {
     return &local_current_terraform_package;
 }
 
-void wd_add_predicted_projectile_hit(vkph::player_t *hit_player, vkph::state_t *state) {
+void add_predicted_projectile_hit(vkph::player_t *hit_player, vkph::state_t *state) {
     vkph::predicted_projectile_hit_t new_hit = {};
     new_hit.flags.initialised = 1;
     new_hit.client_id = hit_player->client_id;
@@ -175,6 +177,8 @@ void wd_add_predicted_projectile_hit(vkph::player_t *hit_player, vkph::state_t *
     state->predicted_hits[hit_idx] = new_hit;
 }
 
-int32_t wd_get_local_player(vkph::state_t *state) {
+int32_t get_local_player(vkph::state_t *state) {
     return state->local_player_id;
+}
+
 }

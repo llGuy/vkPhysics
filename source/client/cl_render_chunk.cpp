@@ -1,6 +1,6 @@
 #include <ux_scene.hpp>
+#include "cl_game_predict.hpp"
 #include "cl_render.hpp"
-#include "wd_predict.hpp"
 #include <vkph_triangle_table.hpp>
 
 namespace cl {
@@ -498,7 +498,7 @@ void chunks_gpu_sync_and_render(
     const uint32_t max_chunks_loaded_per_frame = 10;
     uint32_t chunks_loaded = 0;
 
-    vkph::terraform_package_t *current_terraform_package = wd_get_local_terraform_package();
+    vkph::terraform_package_t *current_terraform_package = get_local_terraform_package();
 
     if (current_terraform_package->ray_hit_terrain) {
         chunk_colors.data.pointer_radius = 3.0f;

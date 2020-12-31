@@ -3,35 +3,36 @@
 #include <stdio.h>
 #include <sha1.hpp>
 #include <string.h>
-#include "nw_client.hpp"
 #include <log.hpp>
 #include <files.hpp>
 #include <vkph_events.hpp>
 #include <string.hpp>
 #include <net_context.hpp>
-#include "nw_client_meta.hpp"
 #include <vkph_event_data.hpp>
 #include <serialiser.hpp>
 #include <allocators.hpp>
+#include "cl_net_meta.hpp"
 
 #include <net_meta.hpp>
+
+namespace cl {
 
 static net::meta_client_t current_client;
 // Default path is to "assets/.user_meta", although, for debugging,
 // it is often useful to have other users
 static const char *path_to_user_meta_info = "assets/.user_meta";
 
-void nw_init_meta_connection() {
+void init_meta_connection() {
     net::begin_meta_client_thread();
 
     current_client.username = NULL;
 }
 
-void nw_set_path_to_user_meta_info(const char *path) {
+void set_path_to_user_meta_info(const char *path) {
     path_to_user_meta_info = path;
 }
 
-void nw_check_registration() {
+void check_registration() {
     LOG_INFOV("Reading user information from path: %s\n", path_to_user_meta_info);
 
     file_handle_t file_handle = create_file(path_to_user_meta_info, FLF_TEXT);
@@ -82,7 +83,7 @@ void nw_check_registration() {
     }
 }
 
-void nw_check_meta_request_status_and_handle() {
+void check_meta_request_status_and_handle() {
     uint32_t size = 0;
     net::request_t request_type;
     char *data = check_request_finished(&size, &request_type);
@@ -116,7 +117,7 @@ void nw_check_meta_request_status_and_handle() {
                 free_file(file);
 
                 // Request available servers list
-                nw_request_available_servers();
+                request_available_servers();
 
                 auto *start_client_data = FL_MALLOC(vkph::event_start_client_t, 1);
                 start_client_data->client_name = current_client.username;
@@ -210,7 +211,7 @@ void nw_check_meta_request_status_and_handle() {
     }
 }
 
-void nw_request_sign_up(
+void request_sign_up(
     const char *username,
     const char *password) {
     net::request_sign_up_data_t *sign_up_data = FL_MALLOC(net::request_sign_up_data_t, 1);
@@ -223,7 +224,7 @@ void nw_request_sign_up(
     send_request(net::R_SIGN_UP, sign_up_data);
 }
 
-void nw_request_login(
+void request_login(
     const char *username,
     const char *password) {
     net::request_login_data_t *login_data = FL_MALLOC(net::request_login_data_t, 1);
@@ -236,7 +237,7 @@ void nw_request_login(
     send_request(net::R_LOGIN, login_data);
 }
 
-void nw_request_available_servers() {
+void request_available_servers() {
     LOG_INFO("Requesting available servers from meta server\n");
 
     // Request meta server - which servers are online at the moment
@@ -244,15 +245,17 @@ void nw_request_available_servers() {
     send_request(net::R_AVAILABLE_SERVERS, data);
 }
 
-void nw_notify_meta_disconnection() {
+void notify_meta_disconnection() {
     send_request(net::R_QUIT, NULL);
     LOG_INFO("Telling meta server we disconnected\n");
 }
 
-void nw_stop_request_thread() {
+void stop_request_thread() {
     net::join_meta_thread();
 }
 
-net::meta_client_t *nw_get_local_meta_client() {
+net::meta_client_t *get_local_meta_client() {
     return &current_client;
+}
+
 }

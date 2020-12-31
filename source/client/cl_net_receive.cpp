@@ -1,6 +1,7 @@
 #include "cl_net.hpp"
-#include "wd_interp.hpp"
-#include "wd_predict.hpp"
+#include "cl_game_predict.hpp"
+#include "cl_game_interp.hpp"
+#include "net_socket.hpp"
 #include "cl_net_receive.hpp"
 
 #include <net_meta.hpp>
@@ -17,6 +18,11 @@ namespace cl {
 
 static bool still_receiving_chunk_packets;
 static uint32_t chunks_to_receive;
+
+void prepare_receiving() {
+    still_receiving_chunk_packets = 0;
+    chunks_to_receive = 0;
+}
 
 static void s_fill_enter_server_data(
     net::packet_connection_handshake_t *handshake,
@@ -59,7 +65,7 @@ static void s_fill_enter_server_data(
 }
 
 // PT_CONNECTION_HANDSHAKE
-static void s_receive_packet_connection_handshake(
+void receive_packet_connection_handshake(
     serialiser_t *serialiser,
     vkph::state_t *state,
     net::context_t *ctx) {
@@ -87,7 +93,7 @@ static void s_receive_packet_connection_handshake(
 }
 
 // PT_PLAYER_JOINED
-static void s_receive_packet_player_joined(
+void receive_packet_player_joined(
     serialiser_t *in_serialiser,
     vkph::state_t *state,
     net::context_t *ctx) {
@@ -112,7 +118,7 @@ static void s_receive_packet_player_joined(
 }
 
 // PT_PLAYER_LEFT
-static void s_receive_packet_player_left(
+void receive_packet_player_left(
     serialiser_t *in_serialiser,
     vkph::state_t *state,
     net::context_t *ctx) {
@@ -212,7 +218,7 @@ static void s_correct_chunks(
 }
 
 static void s_set_voxels_to_final_interpolated_values(vkph::state_t *state) {
-    chunks_to_interpolate_t *cti_ptr = wd_get_chunks_to_interpolate();
+    chunks_to_interpolate_t *cti_ptr = get_chunks_to_interpolate();
     for (uint32_t cm_index = 0; cm_index < cti_ptr->modification_count; ++cm_index) {
         net::chunk_modifications_t *cm_ptr = &cti_ptr->modifications[cm_index];
 
@@ -259,7 +265,7 @@ static void s_create_voxels_that_need_to_be_interpolated(
     net::chunk_modifications_t *chunk_modifications,
     vkph::state_t *state,
     net::context_t *ctx) {
-    chunks_to_interpolate_t *cti_ptr = wd_get_chunks_to_interpolate();
+    chunks_to_interpolate_t *cti_ptr = get_chunks_to_interpolate();
     for (uint32_t recv_cm_index = 0; recv_cm_index < modified_chunk_count; ++recv_cm_index) {
         net::chunk_modifications_t *recv_cm_ptr = &chunk_modifications[recv_cm_index];
         vkph::chunk_t *c_ptr = state->get_chunk(ivector3_t(recv_cm_ptr->x, recv_cm_ptr->y, recv_cm_ptr->z));
@@ -408,7 +414,7 @@ static void s_handle_incorrect_state(
 
     if (p->flags.is_alive && !snapshot->alive_state) {
         // Handle death
-        wd_kill_local_player(state);
+        kill_local_player(state);
     }
 
     p->flags.is_alive = snapshot->alive_state;
@@ -443,7 +449,7 @@ static void s_handle_incorrect_state(
         LOG_INFOV("Hard-sync chunks with server's chunks (%d)\n", packet->modified_chunk_count);
 
         // Need to finish all interpolation of chunks
-        wd_finish_interp_step(state);
+        finish_interp_step(state);
 
         for (uint32_t cm_index = 0; cm_index < packet->modified_chunk_count; ++cm_index) {
             net::chunk_modifications_t *cm_ptr = &packet->chunk_modifications[cm_index];
@@ -567,7 +573,7 @@ static void s_handle_local_player_snapshot(
 }
 
 // PT_GAME_STATE_SNAPSHOT
-static void s_receive_packet_game_state_snapshot(
+void receive_packet_game_state_snapshot(
     serialiser_t *serialiser,
     uint64_t received_tick,
     vkph::state_t *state,
@@ -608,7 +614,7 @@ static void s_receive_packet_game_state_snapshot(
 }
 
 // PT_CHUNK_VOXELS
-static void s_receive_packet_chunk_voxels(
+void receive_packet_chunk_voxels(
     serialiser_t *serialiser,
     vkph::state_t *state) {
     uint32_t loaded_chunk_count = serialiser->deserialise_uint32();
@@ -688,7 +694,7 @@ static void s_receive_packet_chunk_voxels(
     LOG_INFOV("Currently there are %d loaded chunks\n", loaded);
 }
 
-static void s_receive_player_team_change(
+void receive_player_team_change(
     serialiser_t *serialiser,
     vkph::state_t *state) {
     net::packet_player_team_change_t packet = {};
@@ -707,10 +713,11 @@ static void s_receive_player_team_change(
     }
 }
 
-static void s_receive_ping(
+void receive_ping(
     serialiser_t *in_serialiser,
     vkph::state_t *state,
-    net::context_t *ctx) {
+    net::context_t *ctx,
+    net::address_t server_addr) {
     net::packet_header_t header = {};
     header.current_tick = state->current_tick;
     header.current_packet_count = ctx->current_packet;
@@ -722,137 +729,29 @@ static void s_receive_ping(
     serialiser.init(header.flags.total_packet_size);
     header.serialise(&serialiser);
 
-    ctx->main_udp_send_to(&serialiser, bound_server_address);
+    ctx->main_udp_send_to(&serialiser, server_addr);
 }
 
-static void s_check_incoming_packets(
-    vkph::state_t *state,
-    net::context_t *ctx) {
-    const app::raw_input_t *input = app::get_raw_input();
+void check_if_finished_recv_chunks(vkph::state_t *state, net::context_t *ctx) {
+    if (chunks_to_receive == 0 && still_receiving_chunk_packets) {
+        LOG_INFO("Finished receiving chunks\n");
+        still_receiving_chunk_packets = 0;
 
-#if 1
-    if (input->buttons[app::BT_F].instant) {
-        simulate_lag = !simulate_lag;
+        // Set voxels to be interpolated
+        vkph::player_snapshot_t dummy {};
+        dummy.tick = 0;
 
-        if (simulate_lag) {LOG_INFO("Simulating lag\n");}
-        else {LOG_INFO("Not simulating lag\n");}
-    }
-#endif
+        s_merge_all_recent_modifications(&dummy, state, ctx);
 
-    // Check packets from game server that we are connected to
-    if (client_check_incoming_packets) {
-        static float elapsed = 0.0f;
-        elapsed += delta_time();
-        if (elapsed >= net::NET_CLIENT_COMMAND_OUTPUT_INTERVAL) {
-            // Send commands to the server
-            net::debug_log("----- Sending client commands to the server at tick %llu\n", ctx->log_file, 0, state->current_tick);
-            s_send_packet_client_commands(state);
+        s_create_voxels_that_need_to_be_interpolated(
+            ctx->merged_recent_modifications.acc_predicted_chunk_mod_count,
+            ctx->merged_recent_modifications.acc_predicted_modifications,
+            state,
+            ctx);
 
-            elapsed = 0.0f;
-        }
-
-        net::address_t received_address = {};
-        int32_t received = ctx->main_udp_recv_from(
-            ctx->message_buffer,
-            sizeof(char) * net::NET_MAX_MESSAGE_SIZE,
-            &received_address);
-
-        // In future, separate thread will be capturing all these packets
-        static const uint32_t MAX_RECEIVED_PER_TICK = 4;
-        uint32_t i = 0;
-
-        while (received) {
-            serialiser_t in_serialiser = {};
-            in_serialiser.data_buffer = (uint8_t *)ctx->message_buffer;
-            in_serialiser.data_buffer_size = received;
-
-            net::packet_header_t header = {};
-            header.deserialise(&in_serialiser);
-
-            switch(header.flags.packet_type) {
-
-            case net::PT_CONNECTION_HANDSHAKE: {
-                s_receive_packet_connection_handshake(
-                    &in_serialiser,
-                    state);
-                return;
-            } break;
-
-            case net::PT_PLAYER_JOINED: {
-                s_receive_packet_player_joined(
-                    &in_serialiser,
-                    state);
-            } break;
-
-            case net::PT_PLAYER_LEFT: {
-                s_receive_packet_player_left(
-                    &in_serialiser,
-                    state);
-            } break;
-
-            case net::PT_GAME_STATE_SNAPSHOT: {
-                s_receive_packet_game_state_snapshot(
-                    &in_serialiser,
-                    header.current_tick,
-                    state);
-            } break;
-
-            case net::PT_CHUNK_VOXELS: {
-                s_receive_packet_chunk_voxels(
-                    &in_serialiser,
-                    state);
-            } break;
-
-            case net::PT_PLAYER_TEAM_CHANGE: {
-                s_receive_player_team_change(
-                    &in_serialiser,
-                    state);
-            } break;
-
-            case net::PT_PING: {
-                s_receive_ping(
-                    &in_serialiser,
-                    state);
-            } break;
-
-            default: {
-                LOG_INFO("Received unidentifiable packet\n");
-            } break;
-
-            }
-
-            if (i < MAX_RECEIVED_PER_TICK) {
-                received = ctx->main_udp_recv_from(
-                    ctx->message_buffer,
-                    sizeof(char) * net::NET_MAX_MESSAGE_SIZE,
-                    &received_address);
-            }
-            else {
-                received = false;
-            } 
-
-            ++i;
-        }
-
-        if (chunks_to_receive == 0 && still_receiving_chunk_packets) {
-            LOG_INFO("Finished receiving chunks\n");
-            still_receiving_chunk_packets = 0;
-
-            // Set voxels to be interpolated
-            vkph::player_snapshot_t dummy {};
-            dummy.tick = 0;
-
-            s_merge_all_recent_modifications(&dummy, state);
-
-            s_create_voxels_that_need_to_be_interpolated(
-                ctx->merged_recent_modifications.acc_predicted_chunk_mod_count,
-                ctx->merged_recent_modifications.acc_predicted_modifications,
-                state);
-
-            ctx->accumulated_modifications.tail = 0;
-            ctx->accumulated_modifications.head = 0;
-            ctx->accumulated_modifications.head_tail_difference = 0;
-        }
+        ctx->accumulated_modifications.tail = 0;
+        ctx->accumulated_modifications.head = 0;
+        ctx->accumulated_modifications.head_tail_difference = 0;
     }
 }
 

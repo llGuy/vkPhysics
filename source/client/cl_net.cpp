@@ -2,18 +2,18 @@
 #include "net_meta.hpp"
 #include <vkph_chunk.hpp>
 #include <vkph_player.hpp>
+#include "cl_net.hpp"
 #include <vkph_weapon.hpp>
-#include "nw_client.hpp"
-#include "wd_interp.hpp"
-#include "wd_predict.hpp"
+#include "cl_net_send.hpp"
+#include "cl_net_receive.hpp"
 #include <vkph_state.hpp>
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
 #include <string.hpp>
-#include "nw_client_meta.hpp"
 #include <constant.hpp>
 #include <cstddef>
 #include <ux_menu_game.hpp>
+#include "cl_net_meta.hpp"
 
 #include <net_debug.hpp>
 #include <net_context.hpp>
@@ -23,20 +23,21 @@
 namespace cl {
 
 static net::context_t *ctx;
+static vkph::listener_t net_listener_id;
 
 static bool started_client = 0;
 static bool client_check_incoming_packets = 0;
 
 static uint16_t current_client_id;
-
+static bool simulate_lag = 0; // For debugging purposes.
 static net::address_t bound_server_address = {};
+
 
 // Start the client sockets and initialize containers
 static void s_start_client(
     vkph::event_start_client_t *data,
     vkph::state_t *state) {
-    still_receiving_chunk_packets = 0;
-    chunks_to_receive = 0;
+    prepare_receiving();
 
     memset(ctx->dummy_voxels, vkph::CHUNK_SPECIAL_VALUE, sizeof(ctx->dummy_voxels));
     ctx->init_main_udp_socket(net::GAME_OUTPUT_PORT_CLIENT);
@@ -59,80 +60,101 @@ static void s_start_client(
         net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 }
 
-#include <app.hpp>
-
-
 
 static void s_tick_client(vkph::state_t *state) {
-    s_check_incominstate_server_packets(state);
-}
+    const app::raw_input_t *input = app::get_raw_input();
 
-// PT_CONNECTION_REQUEST
-static void s_send_packet_connection_request(
-    uint32_t ip_address,
-    local_client_info_t *info) {
-    bound_server_address.port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_SERVER);
-    bound_server_address.ipv4_address = ip_address;
+#if 1
+    if (input->buttons[app::BT_F].instant) {
+        simulate_lag = !simulate_lag;
 
-    serialiser_t serialiser = {};
-    serialiser.init(100);
-
-    net::packet_connection_request_t request = {};
-    request.name = info->name;
-    
-    net::packet_header_t header = {};
-    header.flags.packet_type = net::PT_CONNECTION_REQUEST;
-    header.flags.total_packet_size = header.size() + request.size();
-    header.current_packet_count = ctx->current_packet;
-
-    header.serialise(&serialiser);
-    request.serialise(&serialiser);
-
-    if (ctx->main_udp_send_to(&serialiser, bound_server_address)) {
-        LOG_INFO("Success sent connection request\n");
-        client_check_incoming_packets = 1;
+        if (simulate_lag) {LOG_INFO("Simulating lag\n");}
+        else {LOG_INFO("Not simulating lag\n");}
     }
-    else {
-        LOG_ERROR("Failed to send connection request\n");
+#endif
+
+    // Check packets from game server that we are connected to
+    if (client_check_incoming_packets) {
+        static float elapsed = 0.0f;
+        elapsed += delta_time();
+        if (elapsed >= net::NET_CLIENT_COMMAND_OUTPUT_INTERVAL) {
+            // Send commands to the server
+            net::debug_log("----- Sending client commands to the server at tick %llu\n", ctx->log_file, 0, state->current_tick);
+            send_packet_client_commands(state, ctx, bound_server_address, simulate_lag);
+
+            elapsed = 0.0f;
+        }
+
+        net::address_t received_address = {};
+        int32_t received = ctx->main_udp_recv_from(
+            ctx->message_buffer,
+            sizeof(char) * net::NET_MAX_MESSAGE_SIZE,
+            &received_address);
+
+        // In future, separate thread will be capturing all these packets
+        static const uint32_t MAX_RECEIVED_PER_TICK = 4;
+        uint32_t i = 0;
+
+        while (received) {
+            serialiser_t in_serialiser = {};
+            in_serialiser.data_buffer = (uint8_t *)ctx->message_buffer;
+            in_serialiser.data_buffer_size = received;
+
+            net::packet_header_t header = {};
+            header.deserialise(&in_serialiser);
+
+            switch(header.flags.packet_type) {
+
+            case net::PT_CONNECTION_HANDSHAKE: {
+                receive_packet_connection_handshake(&in_serialiser, state, ctx);
+            } return;
+
+            case net::PT_PLAYER_JOINED: {
+                receive_packet_player_joined(&in_serialiser, state, ctx);
+            } break;
+
+            case net::PT_PLAYER_LEFT: {
+                receive_packet_player_left(&in_serialiser, state, ctx);
+            } break;
+
+            case net::PT_GAME_STATE_SNAPSHOT: {
+                receive_packet_game_state_snapshot(&in_serialiser, header.current_tick, state, ctx);
+            } break;
+
+            case net::PT_CHUNK_VOXELS: {
+                receive_packet_chunk_voxels(&in_serialiser, state);
+            } break;
+
+            case net::PT_PLAYER_TEAM_CHANGE: {
+                receive_player_team_change(&in_serialiser, state);
+            } break;
+
+            case net::PT_PING: {
+                receive_ping(&in_serialiser, state, ctx, bound_server_address);
+            } break;
+
+            default: {
+                LOG_INFO("Received unidentifiable packet\n");
+            } break;
+
+            }
+
+            if (i < MAX_RECEIVED_PER_TICK) {
+                received = ctx->main_udp_recv_from(
+                    ctx->message_buffer,
+                    sizeof(char) * net::NET_MAX_MESSAGE_SIZE,
+                    &received_address);
+            }
+            else {
+                received = false;
+            } 
+
+            ++i;
+        }
+
+        check_if_finished_recv_chunks(state, ctx);
     }
 }
-
-// PT_TEAM_SELECT_REQUEST
-static void s_send_packet_team_select_request(vkph::team_color_t color, const vkph::state_t *state) {
-    serialiser_t serialiser = {};
-    serialiser.init(100);
-
-    net::packet_header_t header = {};
-    header.current_tick = state->current_tick;
-    header.current_packet_count = ctx->current_packet;
-    header.client_id = current_client_id;
-    header.flags.packet_type = net::PT_TEAM_SELECT_REQUEST;
-    header.flags.total_packet_size = header.size() + sizeof(uint32_t);
-
-    header.serialise(&serialiser);
-    serialiser.serialise_uint32((uint32_t)color);
-
-    ctx->main_udp_send_to(&serialiser, bound_server_address);
-}
-
-// PT_CLIENT_DISCONNECT
-static void s_send_packet_client_disconnect(const vkph::state_t *state) {
-    serialiser_t serialiser = {};
-    serialiser.init(100);
-
-    net::packet_header_t header = {};
-    header.current_tick = state->current_tick;
-    header.current_packet_count = ctx->current_packet;
-    header.client_id = current_client_id;
-    header.flags.packet_type = net::PT_CLIENT_DISCONNECT;
-    header.flags.total_packet_size = header.size();
-
-    header.serialise(&serialiser);
-    
-    ctx->main_udp_send_to(&serialiser, bound_server_address);
-}
-
-static vkph::listener_t net_listener_id;
 
 static void s_net_event_listener(
     void *object,
@@ -165,7 +187,7 @@ static void s_net_event_listener(
             if (game_server_index) {
                 uint32_t ip_address = available_servers->servers[*game_server_index].ipv4_address;
             
-                s_send_packet_connection_request(ip_address, &client_info);
+                client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server_address);
             }
             else {
                 LOG_ERRORV("Couldn't find server name: %s\n", data->server_name);
@@ -173,10 +195,10 @@ static void s_net_event_listener(
         }
         else if (data->ip_address) {
             uint32_t ip_address = str_to_ipv4_int32(data->ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
-            s_send_packet_connection_request(ip_address, &client_info);
+            client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server_address);
         }
         else {
-            
+            // Unable to connect to server
         }
 
         FL_FREE(data);
@@ -185,7 +207,7 @@ static void s_net_event_listener(
     case vkph::ET_LEAVE_SERVER: {
         if (bound_server_address.ipv4_address > 0) {
             // Send to server message
-            s_send_packet_client_disconnect(state);
+            send_packet_client_disconnect(state, ctx, bound_server_address);
         
             memset(&bound_server_address, 0, sizeof(bound_server_address));
             memset(ctx->clients.data, 0, sizeof(net::client_t) * ctx->clients.max_size);
@@ -198,20 +220,17 @@ static void s_net_event_listener(
 
     case vkph::ET_ATTEMPT_SIGN_UP: {
         auto *data = (vkph::event_attempt_sign_up_t *)event->data;
-
         request_sign_up(data->username, data->password);
     } break;
 
     case vkph::ET_ATTEMPT_LOGIN: {
         auto *data = (vkph::event_attempt_login_t *)event->data;
-
         request_login(data->username, data->password);
     } break;
 
     case vkph::ET_SEND_SERVER_TEAM_SELECT_REQUEST: {
         auto *data = (vkph::event_send_server_team_select_request_t *)event->data;
-
-        s_send_packet_team_select_request(data->color, state);
+        send_packet_team_select_request(data->color, state, ctx, bound_server_address);
     } break;
 
     case vkph::ET_CLOSED_WINDOW: {

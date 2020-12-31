@@ -1,19 +1,21 @@
-#include "wd_interp.hpp"
+#include "cl_game_interp.hpp"
 #include <vkph_state.hpp>
 #include <vkph_chunk.hpp>
 #include "constant.hpp"
 #include <net_context.hpp>
 
+namespace cl {
+
 static chunks_to_interpolate_t chunks_to_interpolate;
 
-void wd_interp_init() {
+void init_game_interpolation() {
     chunks_to_interpolate.max_modified = 40;
     chunks_to_interpolate.modification_count = 0;
     chunks_to_interpolate.modifications = FL_MALLOC(net::chunk_modifications_t, chunks_to_interpolate.max_modified);
     memset(chunks_to_interpolate.modifications, 0, sizeof(net::chunk_modifications_t) * chunks_to_interpolate.max_modified);
 }
 
-void wd_finish_interp_step(vkph::state_t *state) {
+void finish_interp_step(vkph::state_t *state) {
     chunks_to_interpolate.elapsed = 0.0f;
 
     for (uint32_t cm_index = 0; cm_index < chunks_to_interpolate.modification_count; ++cm_index) {
@@ -33,7 +35,7 @@ void wd_finish_interp_step(vkph::state_t *state) {
     chunks_to_interpolate.modification_count = 0;
 }
 
-void wd_chunks_interp_step(float dt, vkph::state_t *state) {
+void chunks_interp_step(float dt, vkph::state_t *state) {
     chunks_to_interpolate.elapsed += dt;
     float progression = chunks_to_interpolate.elapsed / net::NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL;
 
@@ -65,7 +67,7 @@ void wd_chunks_interp_step(float dt, vkph::state_t *state) {
     }
 }
 
-void wd_player_interp_step(float dt, vkph::player_t *p, vkph::state_t *state) {
+void player_interp_step(float dt, vkph::player_t *p, vkph::state_t *state) {
     // This adds a little delay
     // Makes sure that there is always snapshots to interpolate between
     if (p->remote_snapshots.head_tail_difference >= 3) {
@@ -143,6 +145,8 @@ void wd_player_interp_step(float dt, vkph::player_t *p, vkph::state_t *state) {
     }
 }
 
-chunks_to_interpolate_t *wd_get_chunks_to_interpolate() {
+chunks_to_interpolate_t *get_chunks_to_interpolate() {
     return &chunks_to_interpolate;
+}
+
 }

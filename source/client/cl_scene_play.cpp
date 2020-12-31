@@ -1,17 +1,17 @@
 #include <vkph_player.hpp>
+#include "cl_game_predict.hpp"
 #include "cl_frame.hpp"
 #include "cl_view.hpp"
 #include "cl_render.hpp"
 #include <vkph_chunk.hpp>
-#include "nw_client.hpp"
+#include "cl_net.hpp"
 #include <ux.hpp>
 #include "ux_scene.hpp"
-#include "wd_core.hpp"
 #include "cl_main.hpp"
-#include "wd_predict.hpp"
 #include <ux_hud.hpp>
-#include "wd_spectate.hpp"
 #include <vkph_state.hpp>
+#include "cl_game_spectate.hpp"
+#include "cl_game.hpp"
 #include <vkph_event_data.hpp>
 #include <vk.hpp>
 #include <ui_submit.hpp>
@@ -35,7 +35,7 @@ void play_scene_t::subscribe_to_events(vkph::listener_t listener) {
 }
 
 void play_scene_t::prepare_for_binding(vkph::state_t *state) {
-    vkph::player_t *spect = wd_get_spectator();
+    vkph::player_t *spect = get_spectator();
     spect->ws_position = vector3_t(-2500.0f, -1000.0f, 5000.0f);
     spect->ws_view_direction = glm::normalize(-spect->ws_position);
     spect->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
@@ -59,7 +59,7 @@ void play_scene_t::handle_input(vkph::state_t *state) {
     } break;
 
     case S_IN_GAME: {
-        wd_game_input(delta_time(), state);
+        game_input(delta_time(), state);
     } break;
 
     case S_PAUSE: {
@@ -127,19 +127,19 @@ void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     handle_input(state);
 
     // The world always gets ticked - when menus get displayed, the world has to keep being simulated
-    wd_tick(state);
-    nw_tick(state);
+    tick_game(state);
+    tick_net(state);
 
     ux::scene_info_t *scene_info = ux::get_scene_info();
 
     vk::eye_3d_info_t *eye_info = &scene_info->eye;
     vkph::player_t *player = NULL;
-    int32_t local_id = wd_get_local_player(state);
+    int32_t local_id = get_local_player(state);
 
     switch (submode_) {
     case S_IN_GAME: case S_PAUSE: {
         if (local_id == -1)
-            player = wd_get_spectator();
+            player = get_spectator();
         else
             player = state->get_player(local_id);
 
@@ -148,7 +148,7 @@ void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     } break;
 
     case S_MENU: {
-        player = wd_get_spectator();
+        player = get_spectator();
     } break;
 
     default: {

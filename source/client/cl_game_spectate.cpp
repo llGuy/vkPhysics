@@ -1,9 +1,10 @@
-#include "wd_core.hpp"
-#include <vkph_player.hpp>
+#include "cl_game_spectate.hpp"
+
+namespace cl {
 
 static vkph::player_t *spectator;
 
-void wd_create_spectator() {
+void create_spectator() {
     spectator = FL_MALLOC(vkph::player_t, 1);
     memset(spectator, 0, sizeof(vkph::player_t));
     spectator->default_speed = 40.0f;
@@ -16,6 +17,8 @@ void wd_create_spectator() {
     spectator->idx_in_chunk_list = -1;
 }
 
-vkph::player_t *wd_get_spectator() {
+vkph::player_t *get_spectator() {
     return spectator;
+}
+
 }

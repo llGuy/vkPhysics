@@ -1,10 +1,9 @@
 #include "cl_net_send.hpp"
+#include "cl_game_predict.hpp"
 #include <vkph_player.hpp>
 #include <log.hpp>
 #include "cl_net.hpp"
 #include "net_socket.hpp"
-#include "wd_interp.hpp"
-#include "wd_predict.hpp"
 #include "cl_net_receive.hpp"
 
 #include <net_meta.hpp>
@@ -142,13 +141,10 @@ static void s_fill_with_accumulated_chunk_modifications(
     }
 }
 
-// Debugging!
-static bool simulate_lag = 0;
-
 // PT_CLIENT_COMMANDS
-static void s_send_packet_client_commands(vkph::state_t *state, net::context_t *ctx, net::address_t server_addr) {
+void send_packet_client_commands(vkph::state_t *state, net::context_t *ctx, net::address_t server_addr, bool simulate_lag) {
     int32_t local_id = state->get_local_id(get_local_client_index());
-    int32_t p_index = wd_get_local_player(state);
+    int32_t p_index = get_local_player(state);
     
     // DEAD by default
     static bool was_alive = false;
@@ -213,6 +209,78 @@ static void s_send_packet_client_commands(vkph::state_t *state, net::context_t *
             state->rocks.clear_recent();
         }
     }
+}
+
+// PT_CONNECTION_REQUEST
+bool send_packet_connection_request(
+    uint32_t ip_address,
+    local_client_info_t *info,
+    net::context_t *ctx,
+    net::address_t *server_addr) {
+    server_addr->port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_SERVER);
+    server_addr->ipv4_address = ip_address;
+
+    serialiser_t serialiser = {};
+    serialiser.init(100);
+
+    net::packet_connection_request_t request = {};
+    request.name = info->name;
+    
+    net::packet_header_t header = {};
+    header.flags.packet_type = net::PT_CONNECTION_REQUEST;
+    header.flags.total_packet_size = header.size() + request.size();
+    header.current_packet_count = ctx->current_packet;
+
+    header.serialise(&serialiser);
+    request.serialise(&serialiser);
+
+    if (ctx->main_udp_send_to(&serialiser, *server_addr)) {
+        LOG_INFO("Success sent connection request\n");
+        return true;
+    }
+    else {
+        LOG_ERROR("Failed to send connection request\n");
+        return false;
+    }
+}
+
+// PT_TEAM_SELECT_REQUEST
+void send_packet_team_select_request(
+    vkph::team_color_t color,
+    const vkph::state_t *state,
+    net::context_t *ctx,
+    net::address_t server_addr) {
+    serialiser_t serialiser = {};
+    serialiser.init(100);
+
+    net::packet_header_t header = {};
+    header.current_tick = state->current_tick;
+    header.current_packet_count = ctx->current_packet;
+    header.client_id = get_local_client_index();
+    header.flags.packet_type = net::PT_TEAM_SELECT_REQUEST;
+    header.flags.total_packet_size = header.size() + sizeof(uint32_t);
+
+    header.serialise(&serialiser);
+    serialiser.serialise_uint32((uint32_t)color);
+
+    ctx->main_udp_send_to(&serialiser, server_addr);
+}
+
+// PT_CLIENT_DISCONNECT
+void send_packet_client_disconnect(const vkph::state_t *state, net::context_t *ctx, net::address_t server_addr) {
+    serialiser_t serialiser = {};
+    serialiser.init(100);
+
+    net::packet_header_t header = {};
+    header.current_tick = state->current_tick;
+    header.current_packet_count = ctx->current_packet;
+    header.client_id = get_local_client_index();
+    header.flags.packet_type = net::PT_CLIENT_DISCONNECT;
+    header.flags.total_packet_size = header.size();
+
+    header.serialise(&serialiser);
+    
+    ctx->main_udp_send_to(&serialiser, server_addr);
 }
 
 }
