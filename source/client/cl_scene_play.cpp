@@ -193,7 +193,7 @@ void play_scene_t::handle_event(void *object, vkph::event_t *event) {
         ux::push_panel(ux::SI_GAME_MENU);
         submode_ = S_MENU;
 
-        cl_change_view_type(GVT_MENU);
+        change_view_type(GVT_MENU);
     } break;
 
     case vkph::ET_EXIT_SCENE: {
@@ -208,7 +208,7 @@ void play_scene_t::handle_event(void *object, vkph::event_t *event) {
         ux::push_panel(ux::SI_HUD);
         ux::begin_gameplay_display();
 
-        cl_change_view_type(GVT_IN_GAME);
+        change_view_type(GVT_IN_GAME);
 
         submode_ = S_IN_GAME;
     } break;
@@ -216,7 +216,7 @@ void play_scene_t::handle_event(void *object, vkph::event_t *event) {
     case vkph::ET_PRESSED_ESCAPE: {
         if (submode_ == S_IN_GAME) {
             ux::push_panel(ux::SI_GAME_MENU);
-            cl_change_view_type(GVT_MENU);
+            change_view_type(GVT_MENU);
             ux::end_gameplay_display();
             submode_ = S_PAUSE;
 
@@ -224,7 +224,7 @@ void play_scene_t::handle_event(void *object, vkph::event_t *event) {
         }
         else {
             ux::pop_panel();
-            cl_change_view_type(GVT_IN_GAME);
+            change_view_type(GVT_IN_GAME);
             submode_ = S_IN_GAME;
             ux::begin_gameplay_display();
 
@@ -237,7 +237,7 @@ void play_scene_t::handle_event(void *object, vkph::event_t *event) {
         ux::push_panel(ux::SI_GAME_MENU);
         ux::end_gameplay_display();
 
-        cl_change_view_type(GVT_MENU);
+        change_view_type(GVT_MENU);
 
         submode_ = S_MENU;
     } break;

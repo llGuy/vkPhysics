@@ -228,11 +228,11 @@ void map_creator_scene_t::handle_input(vkph::state_t *state) {
 
                         if (display_color_table) {
                             ux::begin_color_table();
-                            cl_change_view_type(GVT_MENU);
+                            change_view_type(GVT_MENU);
                         }
                         else {
                             ux::end_color_table();
-                            cl_change_view_type(GVT_IN_GAME);
+                            change_view_type(GVT_IN_GAME);
                         }
                     } break;
                     }
@@ -302,7 +302,7 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
         ux::clear_panels();
 
         submode_ = S_IN_GAME;
-        cl_change_view_type(GVT_IN_GAME);
+        change_view_type(GVT_IN_GAME);
 
         auto *event_data = (vkph::event_enter_map_creator_t *)event->data;
 
@@ -324,7 +324,7 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
 
             ux::prepare_popup_for_render(popup);
 
-            cl_change_view_type(GVT_MENU);
+            change_view_type(GVT_MENU);
             submode_ = S_PAUSE;
         }
         else {
@@ -344,7 +344,7 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
         ux::push_panel(ux::SI_HUD);
 
         submode_ = S_IN_GAME;
-        cl_change_view_type(GVT_IN_GAME);
+        change_view_type(GVT_IN_GAME);
 
         need_to_save_ = 1;
 
@@ -370,12 +370,12 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
     case vkph::ET_PRESSED_ESCAPE: {
         if (submode_ == S_IN_GAME) {
             ux::push_panel(ux::SI_GAME_MENU);
-            cl_change_view_type(GVT_MENU);
+            change_view_type(GVT_MENU);
             submode_ = S_PAUSE;
         }
         else {
             ux::pop_panel();
-            cl_change_view_type(GVT_IN_GAME);
+            change_view_type(GVT_IN_GAME);
             submode_ = S_IN_GAME;
         }
     } break;

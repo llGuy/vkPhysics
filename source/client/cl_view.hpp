@@ -10,7 +10,7 @@ enum game_view_type_t {
     GVT_INVALID
 };
 
-void cl_change_view_type(game_view_type_t view_type);
-game_view_type_t cl_get_current_game_view_type();
+void change_view_type(game_view_type_t view_type);
+game_view_type_t get_current_game_view_type();
 
 }
