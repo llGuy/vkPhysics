@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdint.h>
 #include <vkph_state.hpp>
 #include <net_game_client.hpp>
 
@@ -14,6 +13,10 @@
 #define LOG_NETWORK_DEBUGV(text, ...)
 #endif
 
-void nw_init(vkph::state_t *state);
-void nw_tick(vkph::state_t *state);
+namespace srv {
+
+void init_net(vkph::state_t *state);
+void tick_net(vkph::state_t *state);
 const net::client_t *get_client(uint32_t i);
+
+}

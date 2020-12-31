@@ -1,22 +1,24 @@
+#include "srv_net_meta.hpp"
 #include <log.hpp>
 #include <vkph_events.hpp>
 #include <files.hpp>
 #include "string.hpp"
-#include "nw_server_meta.hpp"
 #include <vkph_event_data.hpp>
 #include <serialiser.hpp>
 #include <allocators.hpp>
 
 #include <net_meta.hpp>
 
+namespace srv {
+
 static const char *current_server_name;
 static uint32_t current_server_id;
 
-void nw_init_meta_connection() {
+void init_meta_connection() {
     net::begin_meta_client_thread();
 }
 
-void nw_check_registration() {
+void check_registration() {
     file_handle_t file_handle = create_file("assets/.server_meta", FLF_TEXT);
     file_contents_t contents = read_file(file_handle);
 
@@ -115,7 +117,7 @@ void nw_check_registration() {
     }
 }
 
-void nw_deactivate_server() {
+void deactivate_server() {
     net::request_server_inactive_t *data = FL_MALLOC(net::request_server_inactive_t, 1);
     data->server_id = current_server_id;
     send_request(net::R_SERVER_INACTIVE, data);
@@ -123,7 +125,9 @@ void nw_deactivate_server() {
     net::join_meta_thread();
 }
 
-void nw_stop_request_thread() {
+void stop_request_thread() {
     send_request(net::R_QUIT, NULL);
     net::join_meta_thread();
+}
+
 }

@@ -1,4 +1,4 @@
-#include "nw_server.hpp"
+#include "srv_net.hpp"
 #include "srv_main.hpp"
 #include <vkph_chunk.hpp>
 #include <vkph_state.hpp>
@@ -7,6 +7,8 @@
 #include <vkph_event_data.hpp>
 #include <net_game_client.hpp>
 #include <net_context.hpp>
+
+namespace srv {
 
 static vkph::listener_t game_listener;
 
@@ -108,7 +110,7 @@ static float s_tube(float x, float y, float z) {
     }
 }
 
-void srv_game_init(vkph::state_t *state) {
+void init_game(vkph::state_t *state) {
     game_listener = set_listener_callback(&s_game_listener, state);
 
     vkph::subscribe_to_event(vkph::ET_NEW_PLAYER, game_listener);
@@ -204,7 +206,7 @@ static bool s_check_projectile_player_collision_lag(
     return collided;
 }
 
-void srv_game_tick(vkph::state_t *state) {
+void tick_game(vkph::state_t *state) {
     for (uint32_t i = 0; i < state->players.data_count; ++i) {
         auto *player = state->get_player(i);
 
@@ -265,4 +267,6 @@ void srv_game_tick(vkph::state_t *state) {
             rock->tick(state->delta_time);
         }
     }
+}
+
 }

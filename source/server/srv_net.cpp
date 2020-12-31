@@ -1,12 +1,12 @@
+#include "srv_net.hpp"
 #include "allocators.hpp"
+#include "srv_net_meta.hpp"
 #include "constant.hpp"
 #include <vkph_player.hpp>
 #include "t_types.hpp"
 #include <vkph_team.hpp>
 #include <vkph_weapon.hpp>
-#include "nw_server_meta.hpp"
 #include "srv_main.hpp"
-#include "nw_server.hpp"
 #include "srv_game.hpp"
 #include <vkph_state.hpp>
 #include <vkph_events.hpp>
@@ -18,6 +18,8 @@
 
 #include <net_context.hpp>
 #include <net_packets.hpp>
+
+namespace srv {
 
 /*
   Net code main state:
@@ -1000,8 +1002,8 @@ static void s_ping_clients(const vkph::state_t *state) {
             serialiser.data_buffer_head = 0;
         }
 
-        c->time_since_ping += srv_delta_time();
-        c->ping_in_progress += srv_delta_time();
+        c->time_since_ping += delta_time();
+        c->ping_in_progress += delta_time();
     }
 }
 
@@ -1020,7 +1022,7 @@ static void s_tick_server(vkph::state_t *state) {
     s_ping_clients(state);
 
     static float snapshot_elapsed = 0.0f;
-    snapshot_elapsed += srv_delta_time();
+    snapshot_elapsed += delta_time();
     
     if (snapshot_elapsed >= net::NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL) {
         // Send commands to the server
@@ -1031,7 +1033,7 @@ static void s_tick_server(vkph::state_t *state) {
 
     // For sending chunks to new players
     static float world_elapsed = 0.0f;
-    world_elapsed += srv_delta_time();
+    world_elapsed += delta_time();
 
     if (world_elapsed >= net::NET_SERVER_CHUNK_WORLD_OUTPUT_INTERVAL) {
         s_send_pending_chunks();
@@ -1119,7 +1121,7 @@ static void s_net_event_listener(void *object, vkph::event_t *event) {
     }
 }
 
-void nw_init(vkph::state_t *state) {
+void init_net(vkph::state_t *state) {
     ctx = flmalloc<net::context_t>();
 
     net_listener_id = vkph::set_listener_callback(&s_net_event_listener, state);
@@ -1130,14 +1132,17 @@ void nw_init(vkph::state_t *state) {
     ctx->message_buffer = FL_MALLOC(char, net::NET_MAX_MESSAGE_SIZE);
 
     // meta_socket_init();
-    nw_init_meta_connection();
-    nw_check_registration();
+    init_meta_connection();
+    check_registration();
 }
 
-void nw_tick(vkph::state_t *state) {
+void tick_net(vkph::state_t *state) {
     s_tick_server(state);
 }
 
 const net::client_t *get_client(uint32_t i) {
     return &ctx->clients[i];
+}
+
+
 }

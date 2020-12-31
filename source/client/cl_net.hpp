@@ -4,12 +4,6 @@
 #include <vkph_state.hpp>
 #include <net_game_server.hpp>
 
-namespace cl {
-
-struct local_client_info_t {
-    const char *name;
-};
-
 // #define DEBUG_NETWORKING
 
 #if defined (DEBUG_NETWORKING)
@@ -19,6 +13,12 @@ struct local_client_info_t {
 #define LOG_NETWORK_DEBUG(text)
 #define LOG_NETWORK_DEBUGV(text, ...)
 #endif
+
+namespace cl {
+
+struct local_client_info_t {
+    const char *name;
+};
 
 void init_net(vkph::state_t *state);
 void tick_net(vkph::state_t *state);

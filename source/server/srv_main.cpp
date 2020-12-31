@@ -1,14 +1,16 @@
 #include <sha1.hpp>
 #include <signal.h>
-#include "nw_server_meta.hpp"
+#include "srv_net.hpp"
+#include "srv_net_meta.hpp"
 #include "srv_game.hpp"
-#include "nw_server.hpp"
 #include <time.hpp>
 #include <files.hpp>
 #include <allocators.hpp>
 
 #include <vkph_state.hpp>
 #include <vkph_events.hpp>
+
+namespace srv {
 
 static bool running;
 
@@ -33,7 +35,7 @@ static void s_end_time() {
     state->delta_time = dt;
 }
 
-static void s_run() {
+static void s_loop() {
     while (running) {
         s_begin_time();
 
@@ -43,8 +45,8 @@ static void s_run() {
 
         LN_CLEAR();
 
-        srv_game_tick(state);
-        nw_tick(state);
+        tick_game(state);
+        tick_net(state);
 
         state->timestep_end();
 
@@ -60,15 +62,14 @@ static void s_run() {
 }
 
 static void s_handle_interrupt(int signum) {
-    nw_deactivate_server();
+    deactivate_server();
 
     LOG_INFO("Stopped running server\n");
 
     exit(signum);
 }
 
-// Entry point for client program
-int32_t main(
+int32_t run(
     int32_t argc,
     char *argv[]) {
     signal(SIGINT, s_handle_interrupt);
@@ -80,12 +81,12 @@ int32_t main(
 
     state = flmalloc<vkph::state_t>();
 
-    nw_init(state);
-    srv_game_init(state);
+    init_net(state);
+    init_game(state);
 
-    s_run();
+    s_loop();
 
-    nw_deactivate_server();
+    deactivate_server();
 
     vkph::dispatch_events();
     vkph::dispatch_events();
@@ -93,6 +94,15 @@ int32_t main(
     return 0;
 }
 
-float srv_delta_time() {
+float delta_time() {
     return dt;
+}
+
+}
+
+// Entry point for client program
+int32_t main(
+    int32_t argc,
+    char *argv[]) {
+    return srv::run(argc, argv);
 }

@@ -1,3 +1,8 @@
 #pragma once
 
-float srv_delta_time();
+namespace srv {
+
+float delta_time();
+
+}
+
