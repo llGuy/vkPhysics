@@ -75,7 +75,7 @@ int32_t run(
     signal(SIGINT, s_handle_interrupt);
 
     global_linear_allocator_init((uint32_t)megabytes(30));
-    srand(time(NULL));
+    srand((uint32_t)time(NULL));
     running = 1;
     files_init();
 

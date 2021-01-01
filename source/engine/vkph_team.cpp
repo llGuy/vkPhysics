@@ -47,23 +47,27 @@ const char *team_color_to_string(team_color_t color) {
     switch (color) {
     case team_color_t::BLUE: {
         return "BLUE";
-    } break;
+    }
 
     case team_color_t::RED: {
         return "RED";
-    } break;
+    }
 
     case team_color_t::GREEN: {
         return "GREEN";
-    } break;
+    }
 
     case team_color_t::PURPLE: {
         return "PURPLE";
-    } break;
+    }
 
     case team_color_t::YELLOW: {
         return "YELLOW";
-    } break;
+    }
+
+    default: {
+        return "";
+    }
     }
 }
 
@@ -79,22 +83,26 @@ vector4_t team_color_to_v4(team_color_t color, float alpha) {
     switch (color) {
     case team_color_t::BLUE: {
         return vector4_t(50.0f / 256.0f, 50.0f / 256.0f, 204.0f / 256.0f, alpha);
-    } break;
+    }
 
     case team_color_t::RED: {
         return vector4_t(256.0f / 256.0f, 50.0f / 256.0f, 50.0f / 256.0f, alpha);
-    } break;
+    }
 
     case team_color_t::GREEN: {
         return vector4_t(50.0f / 256.0f, 153.0f / 256.0f, 50.0f / 256.0f, alpha);
-    } break;
+    }
 
     case team_color_t::PURPLE: {
         return vector4_t(153.0f / 256.0f, 50.0f / 256.0f, 153.0f / 256.0f, alpha);
-    } break;
+    }
 
     case team_color_t::YELLOW: {
         return vector4_t(256.0f / 256.0f, 256.0f / 256.0f, 50.0f / 256.0f, alpha);
+    }
+
+    default: {
+        return vector4_t(0.0f);
     } break;
     }
 }

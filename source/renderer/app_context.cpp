@@ -223,7 +223,7 @@ void poll_input_events() {
     static float current_time = 0.0f;
 
     if (!initialised_time) {
-        current_time = glfwGetTime();
+        current_time = (float)glfwGetTime();
         initialised_time = 1;
     }
     
@@ -263,7 +263,7 @@ void poll_input_events() {
 #endif
 
     // Start timing
-    current_time = glfwGetTime();
+    current_time = (float)glfwGetTime();
 
     if (glfwWindowShouldClose(ctx.window)) {
         vkph::submit_event(vkph::ET_CLOSED_WINDOW, NULL);

@@ -714,8 +714,10 @@ void state_t::generate_platform(platform_create_info_t *info) {
     case GT_DESTRUCTIVE: generation_proc = [] () -> uint8_t {return 0;}; break;
     }
 
-    for (int32_t z = info->position.z - info->depth / 2; z < info->position.z + info->depth / 2; ++z) {
-        for (int32_t x = info->position.x - info->width / 2; x < info->position.x + info->width / 2; ++x) {
+    ivector3_t centeriv3 = (ivector3_t)(info->position);
+
+    for (int32_t z = centeriv3.z - (int32_t)info->depth / 2; z < centeriv3.z + (int32_t)info->depth / 2; ++z) {
+        for (int32_t x = centeriv3.x - (int32_t)info->width / 2; x < centeriv3.x + (int32_t)info->width / 2; ++x) {
             ivector3_t voxel_coord = ivector3_t((float)x, -2.0f, (float)z);
             ivector3_t chunk_coord = space_voxel_to_chunk(voxel_coord);
             chunk_t *chunk = get_chunk(chunk_coord);
@@ -735,10 +737,13 @@ void state_t::generate_math_equation(math_equation_create_info_t *info) {
     case GT_DESTRUCTIVE: generation_proc = [] (float equation_result) {return (uint8_t)0;}; break;
     }
 
-    for (int32_t z = info->ws_center.z - info->ws_extent.z / 2; z < info->ws_center.z + info->ws_extent.z / 2; ++z) {
-        for (int32_t y = info->ws_center.y - info->ws_extent.y / 2; y < info->ws_center.y + info->ws_extent.y / 2; ++y) {
-            for (int32_t x = info->ws_center.x - info->ws_extent.x / 2; x < info->ws_center.x + info->ws_extent.x / 2; ++x) {
-                float c = info->equation(x - info->ws_center.x, y - info->ws_center.y, z - info->ws_center.z);
+    ivector3_t centeriv3 = (ivector3_t)(info->ws_center);
+    ivector3_t extentiv3 = (ivector3_t)(info->ws_extent);
+
+    for (int32_t z = centeriv3.z - extentiv3.z / 2; z < centeriv3.z + extentiv3.z / 2; ++z) {
+        for (int32_t y = centeriv3.y - extentiv3.y / 2; y < centeriv3.y + extentiv3.y / 2; ++y) {
+            for (int32_t x = centeriv3.x - extentiv3.x / 2; x < centeriv3.x + extentiv3.x / 2; ++x) {
+                float c = info->equation((float)(x - centeriv3.x), (float)(y - centeriv3.y), (float)(z - centeriv3.z));
 
                 if (c > 0.0f) {
                     ivector3_t voxel_coord = ivector3_t((float)x, (float)y, (float)z);
@@ -973,7 +978,7 @@ void state_t::load_map_names() {
         p = skip_to(p, '\"');
 
         char *end_of_name = skip_to(p, '\"');
-        map_names.maps[map_names.count].name = create_fl_string(p, (end_of_name - p) - 1);
+        map_names.maps[map_names.count].name = create_fl_string(p, (uint32_t)(end_of_name - p) - 1);
         map_name_to_index_.insert(simple_string_hash(map_names.maps[map_names.count].name), map_names.count);
 
         p = skip_while(end_of_name, ' ');
@@ -981,10 +986,10 @@ void state_t::load_map_names() {
         char *end_of_path = skip_to(p, '\n');
         if (!end_of_path) {
             end_of_path = skip_to(p, 0);
-            map_names.maps[map_names.count].path = create_fl_string(p, (end_of_path - p));
+            map_names.maps[map_names.count].path = create_fl_string(p, (uint32_t)(end_of_path - p));
         }
         else {
-            map_names.maps[map_names.count].path = create_fl_string(p, (end_of_path - p) - 1);
+            map_names.maps[map_names.count].path = create_fl_string(p, (uint32_t)(end_of_path - p) - 1);
         }
 
         p = end_of_path;

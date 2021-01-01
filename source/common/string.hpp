@@ -87,4 +87,6 @@ inline char *skip_while(char *pointer, char c) {
             ++pointer;
         }
     }
+
+    return NULL;
 }

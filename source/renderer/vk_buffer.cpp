@@ -75,7 +75,7 @@ void gpu_buffer_t::init(
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             0,
-            size,
+            (uint32_t)size,
             this);
 
         vkCmdPipelineBarrier(
@@ -95,7 +95,7 @@ void gpu_buffer_t::init(
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             0,
-            size,
+            (uint32_t)size,
             this);
 
         vkCmdPipelineBarrier(

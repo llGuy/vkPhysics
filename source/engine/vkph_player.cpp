@@ -377,7 +377,7 @@ void player_t::execute_standing_player_movement(player_action_t *actions, const 
     forces.friction = 5.0f;
     forces.movement_acceleration = 8.5f;
     forces.gravity = GRAVITY_ACCELERATION;
-    forces.maximum_walking_speed = default_speed * 0.8;
+    forces.maximum_walking_speed = default_speed * 0.8f;
 
     resolve_player_movement(
         this,

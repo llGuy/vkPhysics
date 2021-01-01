@@ -133,7 +133,7 @@ static inline void s_connect_to_address(socket_t s, const char *address_name, ui
     if (addresses) {
         for (addrinfo *addr = addresses; addr != NULL; addr = addr->ai_next) {
             if (addr->ai_family == AF_INET) {
-                err = connect(*sock, addr->ai_addr, addr->ai_addrlen);
+                err = connect(*sock, addr->ai_addr, (int32_t)addr->ai_addrlen);
     
                 if (err < 0) {
                     //fprintf(stderr, "%s\n", gai_strerror(err));

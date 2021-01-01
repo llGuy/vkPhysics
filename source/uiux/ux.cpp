@@ -163,7 +163,7 @@ void handle_input(vkph::state_t *state) {
 }
 
 void tick(vkph::state_t *state) {
-    for (uint32_t i = 0; i < stack_item_count; ++i) {
+    for (int32_t i = 0; i < stack_item_count; ++i) {
         switch (stack_items[i]) {
         case SI_MAIN_MENU: {
             submit_main_menu();

@@ -101,7 +101,7 @@ void map_creator_scene_t::parse_and_generate_sphere(
     info.max_value = 140;
     info.type = type;
     info.ws_center = spectator->ws_position;
-    info.ws_radius = sphere_radius;
+    info.ws_radius = (float)sphere_radius;
     state->generate_sphere(&info);
 }
 
@@ -121,7 +121,7 @@ void map_creator_scene_t::parse_and_generate_hollow_sphere(
     info.max_value = 250;
     info.type = type;
     info.ws_center = spectator->ws_position;
-    info.ws_radius = sphere_radius;
+    info.ws_radius = (float)sphere_radius;
     state->generate_hollow_sphere(&info);
 }
 

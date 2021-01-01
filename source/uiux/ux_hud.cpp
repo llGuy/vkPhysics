@@ -185,7 +185,7 @@ void submit_hud(const vkph::state_t *state) {
                 health_display.current_health = current_health;
 
                 sprintf(health_display.text.characters, "%d", health_display.current_health);
-                health_display.text.char_count = strlen(health_display.text.characters);
+                health_display.text.char_count = (uint32_t)strlen(health_display.text.characters);
                 health_display.text.null_terminate();
             }
 
@@ -209,7 +209,7 @@ void end_minibuffer() {
 
 void minibuffer_update_text(const char *text) {
     if (display_minibuffer) {
-        uint32_t str_length = strlen(text);
+        uint32_t str_length = (uint32_t)strlen(text);
         for (uint32_t i = 0; i < str_length; ++i) {
             minibuffer.input_text.text.colors[i] = minibuffer.input_text.text_color;
             minibuffer.input_text.text.characters[i] = text[i];

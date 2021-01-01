@@ -79,7 +79,7 @@ void prepare_popup_for_render(popup_t *popup) {
 
     // Initialise each section
     // Y difference between each section is 0.1f
-    float current_y = 0.1 * (float)popup->vertical_section_count;
+    float current_y = 0.1f * (float)popup->vertical_section_count;
     float start_x = 0.0f;
     for (uint32_t i = 0; i < popup->vertical_section_count; ++i) {
         popup_section_t *section = &popup->sections[i];

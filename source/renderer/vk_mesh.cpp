@@ -659,7 +659,7 @@ shader_t create_mesh_shader_shadow(shader_create_info_t *info, mesh_type_flags_t
 }
 
 void submit_mesh(VkCommandBuffer cmdbuf, mesh_t *mesh, shader_t *shader, const buffer_t &render_data) {
-    vkCmdPushConstants(cmdbuf, shader->layout, shader->flags, 0, render_data.size, render_data.p);
+    vkCmdPushConstants(cmdbuf, shader->layout, shader->flags, 0, (uint32_t)render_data.size, render_data.p);
     
     if (mesh->has_buffer(BT_INDICES)) {
         vkCmdBindVertexBuffers(cmdbuf, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -699,7 +699,7 @@ void submit_mesh_shadow(VkCommandBuffer cmdbuf, mesh_t *mesh, shader_t *shader, 
         0,
         NULL);
 
-    vkCmdPushConstants(cmdbuf, shader->layout, shader->flags, 0, render_data.size, render_data.p);
+    vkCmdPushConstants(cmdbuf, shader->layout, shader->flags, 0, (uint32_t)render_data.size, render_data.p);
 
     if (mesh->has_buffer(BT_INDICES)) {
         vkCmdBindVertexBuffers(cmdbuf, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -746,7 +746,7 @@ void submit_skeletal_mesh(
         0,
         NULL);
 
-    vkCmdPushConstants(cmdbuf, shader->layout, shader->flags, 0, render_data.size, render_data.p);
+    vkCmdPushConstants(cmdbuf, shader->layout, shader->flags, 0, (uint32_t)render_data.size, render_data.p);
     
     if (mesh->has_buffer(BT_INDICES)) {
         vkCmdBindVertexBuffers(cmdbuf, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);
@@ -793,7 +793,7 @@ void submit_skeletal_mesh_shadow(
         0,
         NULL);
 
-    vkCmdPushConstants(cmdbuf, shader->layout, shader->flags, 0, render_data.size, render_data.p);
+    vkCmdPushConstants(cmdbuf, shader->layout, shader->flags, 0, (uint32_t)render_data.size, render_data.p);
 
     if (mesh->has_buffer(BT_INDICES)) {
         vkCmdBindVertexBuffers(cmdbuf, 0, mesh->vertex_buffer_count, mesh->vertex_buffers_final, mesh->vertex_buffers_offsets);

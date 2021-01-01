@@ -208,7 +208,7 @@ void tokeniser_init(
     root = s_tree_node_create();
 
     for (uint32_t i = 0; i < keyword_count; ++i) {
-        s_register_string(root, keywords[i], strlen(keywords[i]), keyword_ids[i]);
+        s_register_string(root, keywords[i], (uint32_t)strlen(keywords[i]), keyword_ids[i]);
     }
 }
 
@@ -235,7 +235,7 @@ token_t *tokenise(
             // Add a new token
             token_t token = {};
             token.at = word_start;
-            token.length = c - word_start;
+            token.length = (uint32_t)(c - word_start);
 
             string_tree_node_data_t *keyword = s_traverse_tree(root, token.at, token.length);
             if (keyword) {
@@ -254,7 +254,7 @@ token_t *tokenise(
         if (number_start && type != TT_NUMBER) {
             token_t token = {};
             token.at = number_start;
-            token.length = c - number_start;
+            token.length = (uint32_t)(c - number_start);
             token.type = TT_NUMBER;
 
             tokens[*token_count] = token;

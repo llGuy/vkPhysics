@@ -12,6 +12,8 @@
 #include <serialiser.hpp>
 #include <condition_variable>
 
+#define CURL_CHECK(call) if ((call) != CURLE_OK) {LOG_ERRORV("Call to %s failed\n", #call);}
+
 namespace net {
 
 static constexpr uint32_t REQUEST_RESULT_MAX_SIZE = 4096;
@@ -41,7 +43,7 @@ static CURL *curl;
 static linear_allocator_t allocator;
 
 static size_t s_write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    uint32_t byte_count = nmemb * size;
+    uint32_t byte_count = (uint32_t)(nmemb * size);
 
     if (shared.request_result_size + byte_count < REQUEST_RESULT_MAX_SIZE) {
         memcpy(shared.request_result + shared.request_result_size, ptr, byte_count);
@@ -77,7 +79,7 @@ static serialiser_t s_fill_request(bool null_terminate = 0) {
 static void s_set_url(const char *path) {
     serialiser_t serialiser = s_fill_request();
     serialiser.serialise_string(path);
-    curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer);
+    CURL_CHECK(curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer));
 }
 
 static void s_meta_thread() {
@@ -101,7 +103,7 @@ static void s_meta_thread() {
             // Fill post fields
             char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
             sprintf(fields, "username=%s&password=%s", data->username, data->password);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+            CURL_CHECK(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields));
         } break;
 
         case R_AUTOMATIC_LOGIN: {
@@ -111,7 +113,7 @@ static void s_meta_thread() {
 
             char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
             sprintf(fields, "usertag=%d&userid=%d", data->usertag, data->userid);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+            CURL_CHECK(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields));
         } break;
 
         case R_LOGIN: {
@@ -121,7 +123,7 @@ static void s_meta_thread() {
 
             char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
             sprintf(fields, "username=%s&password=%s", data->username, data->password);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+            CURL_CHECK(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields));
         } break;
 
         case R_REGISTER_SERVER: {
@@ -131,7 +133,7 @@ static void s_meta_thread() {
 
             char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
             sprintf(fields, "servername=%s", data->server_name);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+            CURL_CHECK(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields));
         } break;
 
         case R_SERVER_ACTIVE: {
@@ -141,7 +143,7 @@ static void s_meta_thread() {
 
             char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
             sprintf(fields, "uid=%d", data->server_id);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+            CURL_CHECK(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields));
         } break;
 
         case R_SERVER_INACTIVE: {
@@ -151,7 +153,7 @@ static void s_meta_thread() {
 
             char *fields = (char *)allocator.allocate(REQUEST_MAX_SIZE);
             sprintf(fields, "uid=%d", data->server_id);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+            CURL_CHECK(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields));
 
             quit = 1;
         } break;
@@ -171,7 +173,7 @@ static void s_meta_thread() {
         } break;
         }
 
-        curl_easy_perform(curl);
+        CURL_CHECK(curl_easy_perform(curl));
 
         printf("META: Finished this job\n");;
 
@@ -188,7 +190,7 @@ static void s_meta_thread() {
 }
 
 void begin_meta_client_thread() {
-    curl_global_init(CURL_GLOBAL_ALL);
+    CURL_CHECK(curl_global_init(CURL_GLOBAL_ALL));
     curl = curl_easy_init();
 
     if (!curl) {
@@ -196,9 +198,9 @@ void begin_meta_client_thread() {
         exit(1);
     }
 
-    curl_easy_setopt(curl, CURLOPT_URL, meta_server_hostname);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s_write_callback);
-    curl_easy_setopt(curl, CURLOPT_POST, 1);
+    CURL_CHECK(curl_easy_setopt(curl, CURLOPT_URL, meta_server_hostname));
+    CURL_CHECK(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s_write_callback));
+    CURL_CHECK(curl_easy_setopt(curl, CURLOPT_POST, 1));
 
     shared.doing_job = 0;
     shared.request_result_size = 0;

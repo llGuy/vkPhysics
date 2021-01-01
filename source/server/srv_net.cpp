@@ -816,7 +816,7 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
             if (has_to_correct_state || has_to_correct_terrain) {
                 if (c->waiting_on_correction) {
                     // TODO: Make sure to relook at this, so that in case of packet loss, the server doesn't just stall at this forever
-                    LOG_INFOV("(%lu) Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n", state->current_tick);
+                    LOG_INFOV("(%llu) Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n", state->current_tick);
                     snapshot->client_needs_to_correct_state = 0;
                     snapshot->server_waiting_for_correction = 1;
                 }

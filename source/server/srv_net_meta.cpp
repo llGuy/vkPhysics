@@ -94,7 +94,7 @@ void check_registration() {
 
                 // Save the userid and usertag
                 serialiser_t serialiser = {};
-                serialiser.init(strlen(current_server_name) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
+                serialiser.init((uint32_t)strlen(current_server_name) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
                 serialiser.serialise_string(current_server_name);
                 serialiser.serialise_uint32(server_id);
 

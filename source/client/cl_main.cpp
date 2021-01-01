@@ -4,6 +4,7 @@
 #include "cl_render.hpp"
 #include "ux_scene.hpp"
 #include "cl_game.hpp"
+#include <time.hpp>
 #include "cl_frame.hpp"
 #include "cl_scene.hpp"
 #include "cl_net.hpp"
@@ -60,7 +61,7 @@ static void s_parse_command_line_args(
     enum option_t { O_USER_META_PATH };
 
     option_t current_option;
-    for (uint32_t i = 1; i < argc; ++i) {
+    for (int32_t i = 1; i < argc; ++i) {
         char *arg = argv[i];
         if (arg[0] == '-') {
             // This is an option
@@ -127,7 +128,7 @@ int32_t run(
     int32_t argc,
     char *argv[]) {
     global_linear_allocator_init((uint32_t)megabytes(30));
-    srand(time(NULL));
+    srand((uint32_t)time(NULL));
 
     running = 1;
     files_init();
@@ -189,6 +190,8 @@ float delta_time() {
 }
 
 }
+
+#include <thread>
 
 // Entry point for client program
 int32_t main(

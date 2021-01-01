@@ -105,7 +105,7 @@ void check_meta_request_status_and_handle() {
 
                 // Save the userid and usertag
                 serialiser_t serialiser = {};
-                serialiser.init(strlen(current_client.username) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
+                serialiser.init((uint32_t)strlen(current_client.username) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
                 serialiser.serialise_string(current_client.username);
                 serialiser.serialise_uint32(usertag);
                 serialiser.serialise_uint32(userid);
@@ -173,19 +173,19 @@ void check_meta_request_status_and_handle() {
                 else {
                     char *server_id_start = server_str;
                     server_str = skip_to(server_str, ';');
-                    uint32_t server_id_length = (server_str - server_id_start) - 1;
+                    uint32_t server_id_length = (uint32_t)(server_str - server_id_start) - 1;
 
                     char *server_name_start = server_str;
                     server_str = skip_to(server_str, ';');
-                    uint32_t server_name_length = (server_str - server_name_start) - 1;
+                    uint32_t server_name_length = (uint32_t)(server_str - server_name_start) - 1;
 
                     char *ip_start = server_str;
                     server_str = skip_to(server_str, ';');
-                    uint32_t ip_length = (server_str - ip_start) - 1;
+                    uint32_t ip_length = (uint32_t)(server_str - ip_start) - 1;
 
                     char *player_count_start = server_str;
                     server_str = skip_to(server_str, '\n');
-                    uint32_t player_count_length = (server_str - player_count_start) - 1;
+                    uint32_t player_count_length = (uint32_t)(server_str - player_count_start) - 1;
 
                     uint32_t server_id = atoi(server_id_start);
                     const char *server_name = create_fl_string(server_name_start, server_name_length);

@@ -113,7 +113,7 @@ void submit_team_select_page() {
 // TODO: Make sure there vkph::state_t *state is const
 void team_select_page_input(const app::raw_input_t *raw_input, vkph::state_t *state) {
     int32_t hovered_button = -1;
-    for (int32_t i = 0; i < button_count; ++i) {
+    for (int32_t i = 0; i < (int32_t)button_count; ++i) {
         bool hovered_over = is_hovering_over_box(
             &buttons[i].box,
             vector2_t(raw_input->cursor_pos_x, raw_input->cursor_pos_y));

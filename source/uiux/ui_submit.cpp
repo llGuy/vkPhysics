@@ -338,7 +338,7 @@ void push_text(text_t *text, bool secret) {
     }
 }
 
-static constexpr uint32_t BLINK_SPEED = 2.0f;
+static constexpr float BLINK_SPEED = 2.0f;
 
 void push_ui_input_text(
     bool render_cursor,
