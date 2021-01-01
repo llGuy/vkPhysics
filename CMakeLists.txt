@@ -34,9 +34,9 @@ add_compile_definitions("CURL_STATICLIB")
 find_package(Vulkan)
 find_package(CURL)
 
-# Threading library
 if (NOT WIN32)
   link_libraries("pthread")
+  add_compile_definitions("_CRT_SECURE_NO_WARNINGS")
 endif()
 
 # Create common
