@@ -100,7 +100,7 @@ float delta_time() {
 
 }
 
-// Entry point for client program
+// Entry point for server program
 int32_t main(
     int32_t argc,
     char *argv[]) {

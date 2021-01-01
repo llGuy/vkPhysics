@@ -4,7 +4,7 @@ project(vkPhysics)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTB_IMAGE_IMPLEMENTATION -D_MBCS -DCIMGUI_DEFINE_ENUMS_AND_STRUCTS")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTB_IMAGE_IMPLEMENTATION -D_MBCS -DCIMGUI_DEFINE_ENUMS_AND_STRUCTS" "-DCURL_STATICLIB")
 # This will be useful if on Windows
 set(CURL_LIBRARIES "")
 
@@ -12,9 +12,9 @@ set(CURL_LIBRARIES "")
 file(GLOB_RECURSE COMMON_SOURCES "source/common/*.cpp" "source/common/*.hpp" "dependencies/sha/sha1.cpp")
 file(GLOB_RECURSE CLIENT_SOURCES "source/client/*.cpp" "source/client/*.hpp")
 file(GLOB_RECURSE SERVER_SOURCES "source/server/*.cpp" "source/server/*.hpp")
-file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
-file(GLOB_RECURSE ENGINE_SOURCES "source/engine/*.cpp" "source/engine/*.hpp")
 file(GLOB_RECURSE NET_SOURCES "source/net/*.cpp" "source/net/*.hpp")
+file(GLOB_RECURSE ENGINE_SOURCES "source/engine/*.cpp" "source/engine/*.hpp")
+file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
 file(GLOB_RECURSE UIUX_SOURCES "source/uiux/*.cpp" "source/uiux/*.hpp")
 
 # Include directories for all targets
@@ -28,15 +28,13 @@ include_directories("${CMAKE_SOURCE_DIR}/source/engine")
 include_directories("${CMAKE_SOURCE_DIR}/source/uiux/")
 include_directories("${CMAKE_SOURCE_DIR}/source/renderer/include")
 
-add_definitions(-DCURL_STATICLIB)
-
 # Find packages
 find_package(Vulkan)
 find_package(CURL)
 
+# Threading library
 if (NOT WIN32)
   link_libraries("pthread")
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 # Create common
@@ -69,8 +67,6 @@ endif()
 if(BUILD_CLIENT)
   add_library(renderer STATIC "${RENDERER_SOURCES}")
   target_compile_definitions(renderer PUBLIC "LINK_AGAINST_RENDERER")
-
-  target_include_directories(renderer PUBLIC "engine")
   if(WIN32)
     link_directories("${CMAKE_SOURCE_DIR}/dependencies/glfw/lib")
     target_link_libraries(renderer PUBLIC "user32.lib" "gdi32.lib" "xinput.lib" "ws2_32.lib" "winmm.lib" "msvcrt.lib" "glfw3.lib" "msvcrtd.lib" "libcmtd.lib" "ucrtd.lib")
@@ -84,7 +80,6 @@ if(BUILD_CLIENT)
   else(WIN32)
     target_link_libraries(renderer PUBLIC "${Vulkan_LIBRARY}" "common" "glfw")
   endif()
-
 
   # Create uiux
   add_library(uiux STATIC "${UIUX_SOURCES}")
@@ -105,9 +100,7 @@ else(CURL_FOUND)
     include_directories("${CMAKE_SOURCE_DIR}/dependencies/curl/x64/include")
 
     # set(CURL_LIBRARIES "${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib" PARENT_SCOPE)
-    # target_link_libraries(common PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib")
-    # target_link_libraries(net PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib")
-    link_libraries(${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib)
+    target_link_libraries(common PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/curl/x64/lib/libcurl_a.lib")
   else (WIN32)
     message(FATAL_ERROR "Not on Windows, cannot use bundled curl binaries")
   endif()
@@ -115,26 +108,24 @@ endif()
 
 # Create net
 add_library(net STATIC "${NET_SOURCES}")
-target_compile_definitions(net PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(net PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}" -DCURL_STATICLIB)
 
 # Create client (recheck if statement for clarity - TODO: merge renderer with client)
 if(BUILD_CLIENT)
   add_executable(vkPhysics_client "${CLIENT_SOURCES}")
-  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "engine" "net" "uiux" "${CURL_LIBRARIES}")
+  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "net" "engine" "uiux" "${CURL_LIBRARIES}")
   target_compile_definitions(vkPhysics_client PUBLIC "LINK_AGAINST_RENDERER")
 endif()
 
 # Create server (server can get built on whatever platform with or without vulkan support)
 add_executable(vkPhysics_server "${SERVER_SOURCES}")
-target_link_libraries(vkPhysics_server PUBLIC "common" "engine" "net" "uiux" "${CURL_LIBRARIES}")
+target_link_libraries(vkPhysics_server PUBLIC "common" "net" "engine" "${CURL_LIBRARIES}")
 message("${$CURL_LIBRARIES}")
 
 if(WIN32)
   target_link_libraries(vkPhysics_server PUBLIC "winmm.lib" "wldap32.lib" "crypt32.lib" "normaliz.lib")
-  target_compile_definitions(vkPhysics_server PUBLIC CURL_STATICLIB)
 
   target_link_libraries(vkPhysics_client PUBLIC "wldap32.lib" "crypt32.lib" "normaliz.lib")
-  target_compile_definitions(vkPhysics_client PUBLIC CURL_STATICLIB)
 
   target_link_libraries(common PUBLIC "wldap32.lib" "crypt32.lib" "normaliz.lib")
   target_compile_definitions(common PUBLIC CURL_STATICLIB)
