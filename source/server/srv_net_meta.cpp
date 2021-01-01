@@ -92,6 +92,8 @@ void check_registration() {
                 char *server_id_str = &request_result[2];
                 uint32_t server_id = atoi(server_id_str);
 
+                current_server_id = server_id;
+
                 // Save the userid and usertag
                 serialiser_t serialiser = {};
                 serialiser.init((uint32_t)strlen(current_server_name) + 1 + sizeof(uint32_t) + sizeof(uint32_t));
@@ -105,6 +107,12 @@ void check_registration() {
                 free_file(file);
 
                 register_finished = 1;
+
+                net::request_server_active_t *data = FL_MALLOC(net::request_server_active_t, 1);
+                data->server_id = current_server_id;
+                send_request(net::R_SERVER_ACTIVE, data);
+
+                LOG_INFO("Notifying meta server that this server is active\n");
             }
             else {
                 LOG_INFO("Server name not availble, please enter another name for this server: ");

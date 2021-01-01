@@ -28,7 +28,7 @@ include_directories("${CMAKE_SOURCE_DIR}/source/engine")
 include_directories("${CMAKE_SOURCE_DIR}/source/uiux/")
 include_directories("${CMAKE_SOURCE_DIR}/source/renderer/include")
 
-add_compile_definitions("CURL_STATICLIB")
+add_definitions(-DCURL_STATICLIB)
 
 # Find packages
 find_package(Vulkan)
@@ -36,7 +36,7 @@ find_package(CURL)
 
 if (NOT WIN32)
   link_libraries("pthread")
-  add_compile_definitions("_CRT_SECURE_NO_WARNINGS")
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 # Create common

@@ -177,9 +177,9 @@ static void s_meta_thread() {
 
         printf("META: Finished this job\n");;
 
-#if 0
+#if 1
         if (quit) {
-            break;
+            return;
         }
 #endif
 

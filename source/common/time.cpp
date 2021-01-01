@@ -22,7 +22,6 @@ float time_difference(
 
 void sleep_seconds(
     float seconds) {
-    printf("Sleep %f seconds\n", seconds);
     std::this_thread::sleep_for(std::chrono::milliseconds((uint32_t)(seconds * 1000.0f)));
 }
 
