@@ -196,7 +196,7 @@ void check_meta_request_status_and_handle() {
 
                     net::game_server_t *dst = &net::get_available_servers()->servers[i];
                     dst->server_name = server_name;
-                    dst->ipv4_address = str_to_ipv4_int32(ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
+                    dst->ipv4_address.ipv4_address = str_to_ipv4_int32(ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
                     net::get_available_servers()->name_to_server.insert(simple_string_hash(server_name), i);
 
                     ++i;

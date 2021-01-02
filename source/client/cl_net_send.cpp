@@ -142,7 +142,7 @@ static void s_fill_with_accumulated_chunk_modifications(
 }
 
 // PT_CLIENT_COMMANDS
-void send_packet_client_commands(vkph::state_t *state, net::context_t *ctx, net::address_t server_addr, bool simulate_lag) {
+void send_packet_client_commands(vkph::state_t *state, net::context_t *ctx, net::game_server_t *server, bool simulate_lag) {
     int32_t local_id = state->get_local_id(get_local_client_index());
     int32_t p_index = get_local_player(state);
     
@@ -186,6 +186,7 @@ void send_packet_client_commands(vkph::state_t *state, net::context_t *ctx, net:
                 header.client_id = get_local_client_index();
                 header.flags.packet_type = net::PT_CLIENT_COMMANDS;
                 header.flags.total_packet_size = header.size() + packet.size();
+                header.tag = ctx->tag;
             }
 
             serialiser_t serialiser = {};
@@ -195,7 +196,7 @@ void send_packet_client_commands(vkph::state_t *state, net::context_t *ctx, net:
                 packet.serialise(&serialiser);
             }
 
-            ctx->main_udp_send_to(&serialiser, server_addr);
+            ctx->main_udp_send_to(&serialiser, server->ipv4_address);
     
             p->cached_player_action_count = 0;
             c->waiting_on_correction = 0;
@@ -216,9 +217,9 @@ bool send_packet_connection_request(
     uint32_t ip_address,
     local_client_info_t *info,
     net::context_t *ctx,
-    net::address_t *server_addr) {
-    server_addr->port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_SERVER);
-    server_addr->ipv4_address = ip_address;
+    net::game_server_t *server) {
+    server->ipv4_address.port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_SERVER);
+    server->ipv4_address.ipv4_address = ip_address;
 
     serialiser_t serialiser = {};
     serialiser.init(100);
@@ -230,11 +231,12 @@ bool send_packet_connection_request(
     header.flags.packet_type = net::PT_CONNECTION_REQUEST;
     header.flags.total_packet_size = header.size() + request.size();
     header.current_packet_count = ctx->current_packet;
+    header.tag = net::UNINITIALISED_TAG;
 
     header.serialise(&serialiser);
     request.serialise(&serialiser);
 
-    if (ctx->main_udp_send_to(&serialiser, *server_addr)) {
+    if (ctx->main_udp_send_to(&serialiser, server->ipv4_address)) {
         LOG_INFO("Success sent connection request\n");
         return true;
     }
@@ -249,7 +251,7 @@ void send_packet_team_select_request(
     vkph::team_color_t color,
     const vkph::state_t *state,
     net::context_t *ctx,
-    net::address_t server_addr) {
+    net::game_server_t *server) {
     serialiser_t serialiser = {};
     serialiser.init(100);
 
@@ -259,15 +261,16 @@ void send_packet_team_select_request(
     header.client_id = get_local_client_index();
     header.flags.packet_type = net::PT_TEAM_SELECT_REQUEST;
     header.flags.total_packet_size = header.size() + sizeof(uint32_t);
+    header.tag = ctx->tag;
 
     header.serialise(&serialiser);
     serialiser.serialise_uint32((uint32_t)color);
 
-    ctx->main_udp_send_to(&serialiser, server_addr);
+    ctx->main_udp_send_to(&serialiser, server->ipv4_address);
 }
 
 // PT_CLIENT_DISCONNECT
-void send_packet_client_disconnect(const vkph::state_t *state, net::context_t *ctx, net::address_t server_addr) {
+void send_packet_client_disconnect(const vkph::state_t *state, net::context_t *ctx, net::game_server_t *server) {
     serialiser_t serialiser = {};
     serialiser.init(100);
 
@@ -277,10 +280,11 @@ void send_packet_client_disconnect(const vkph::state_t *state, net::context_t *c
     header.client_id = get_local_client_index();
     header.flags.packet_type = net::PT_CLIENT_DISCONNECT;
     header.flags.total_packet_size = header.size();
+    header.tag = ctx->tag;
 
     header.serialise(&serialiser);
     
-    ctx->main_udp_send_to(&serialiser, server_addr);
+    ctx->main_udp_send_to(&serialiser, server->ipv4_address);
 }
 
 }

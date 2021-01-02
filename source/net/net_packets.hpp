@@ -57,7 +57,8 @@ struct packet_header_t {
 
     uint64_t current_tick;
     uint64_t current_packet_count;
-    uint32_t client_id;
+    uint32_t tag;
+    uint16_t client_id;
 
     uint32_t size();
     void serialise(serialiser_t *serialiser);
@@ -73,6 +74,8 @@ struct packet_connection_request_t {
 };
 
 struct packet_connection_handshake_t {
+    uint32_t client_tag;
+
     // Chunks will be sent in separate packets (too much data)
     // These are the number of chunks that are incoming
     uint32_t loaded_chunk_count;

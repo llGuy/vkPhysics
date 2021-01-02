@@ -50,6 +50,8 @@ struct client_t {
     const char *name;
     uint16_t client_id;
     address_t address;
+    // Used to make sure that the server should listen to a client.
+    uint32_t client_tag;
 
     client_prediction_t predicted;
 

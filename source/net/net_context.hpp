@@ -28,6 +28,8 @@ constexpr float NET_CLIENT_TIMEOUT = 5.0f;
 constexpr uint32_t GAME_OUTPUT_PORT_CLIENT = 6001;
 constexpr uint32_t GAME_OUTPUT_PORT_SERVER = 6000;
 
+constexpr uint32_t UNINITIALISED_TAG = 0xFFFFFFFF;
+
 /*
   A lot of the members here need to be public simply because the client
   and server code need a lot of control over this data.
@@ -38,6 +40,11 @@ struct context_t {
       Everytime something gets sent over the network, this value will get incrememted.
     */
     uint64_t current_packet;
+
+    /*
+      This could be either the client tag or the server tag.
+    */
+    uint32_t tag;
 
     /*
       Buffer allocated for creating messages.

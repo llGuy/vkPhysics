@@ -14,8 +14,10 @@ void prepare_receiving();
 
 void receive_packet_connection_handshake(
     serialiser_t *serialiser,
+    uint32_t server_tag,
     vkph::state_t *state,
-    net::context_t *ctx);
+    net::context_t *ctx,
+    net::game_server_t *server);
 
 void receive_packet_player_joined(
     serialiser_t *in_serialiser,
@@ -45,7 +47,7 @@ void receive_ping(
     serialiser_t *in_serialiser,
     vkph::state_t *state,
     net::context_t *ctx,
-    net::address_t server_addr);
+    net::game_server_t *server_addr);
 
 void check_if_finished_recv_chunks(vkph::state_t *state, net::context_t *ctx);
 

@@ -30,7 +30,11 @@ static bool client_check_incoming_packets = 0;
 
 static uint16_t current_client_id;
 static bool simulate_lag = 0; // For debugging purposes.
-static net::address_t bound_server_address = {};
+
+/*
+  The server that we are currently connected to.
+*/
+static net::game_server_t bound_server;
 
 
 // Start the client sockets and initialize containers
@@ -58,8 +62,11 @@ static void s_start_client(
     ctx->merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(
         net::chunk_modifications_t,
         net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
-}
 
+    ctx->tag = net::UNINITIALISED_TAG;
+
+    bound_server.tag = net::UNINITIALISED_TAG;
+}
 
 static void s_tick_client(vkph::state_t *state) {
     const app::raw_input_t *input = app::get_raw_input();
@@ -80,7 +87,7 @@ static void s_tick_client(vkph::state_t *state) {
         if (elapsed >= net::NET_CLIENT_COMMAND_OUTPUT_INTERVAL) {
             // Send commands to the server
             net::debug_log("----- Sending client commands to the server at tick %llu\n", ctx->log_file, 0, state->current_tick);
-            send_packet_client_commands(state, ctx, bound_server_address, simulate_lag);
+            send_packet_client_commands(state, ctx, &bound_server, simulate_lag);
 
             elapsed = 0.0f;
         }
@@ -103,40 +110,48 @@ static void s_tick_client(vkph::state_t *state) {
             net::packet_header_t header = {};
             header.deserialise(&in_serialiser);
 
-            switch(header.flags.packet_type) {
+            if (header.flags.packet_type == net::PT_CONNECTION_HANDSHAKE) {
+                if (bound_server.tag == net::UNINITIALISED_TAG) {
+                    receive_packet_connection_handshake(&in_serialiser, header.tag, state, ctx, &bound_server);
+                }
+            }
+            else {
+                // Check whether the server tag matches the tag of the packet.
+                if (header.tag == bound_server.tag) {
+                    switch (header.flags.packet_type) {
 
-            case net::PT_CONNECTION_HANDSHAKE: {
-                receive_packet_connection_handshake(&in_serialiser, state, ctx);
-            } return;
+                    case net::PT_PLAYER_JOINED: {
+                        receive_packet_player_joined(&in_serialiser, state, ctx);
+                    } break;
 
-            case net::PT_PLAYER_JOINED: {
-                receive_packet_player_joined(&in_serialiser, state, ctx);
-            } break;
+                    case net::PT_PLAYER_LEFT: {
+                        receive_packet_player_left(&in_serialiser, state, ctx);
+                    } break;
 
-            case net::PT_PLAYER_LEFT: {
-                receive_packet_player_left(&in_serialiser, state, ctx);
-            } break;
+                    case net::PT_GAME_STATE_SNAPSHOT: {
+                        receive_packet_game_state_snapshot(&in_serialiser, header.current_tick, state, ctx);
+                    } break;
 
-            case net::PT_GAME_STATE_SNAPSHOT: {
-                receive_packet_game_state_snapshot(&in_serialiser, header.current_tick, state, ctx);
-            } break;
+                    case net::PT_CHUNK_VOXELS: {
+                        receive_packet_chunk_voxels(&in_serialiser, state);
+                    } break;
 
-            case net::PT_CHUNK_VOXELS: {
-                receive_packet_chunk_voxels(&in_serialiser, state);
-            } break;
+                    case net::PT_PLAYER_TEAM_CHANGE: {
+                        receive_player_team_change(&in_serialiser, state);
+                    } break;
 
-            case net::PT_PLAYER_TEAM_CHANGE: {
-                receive_player_team_change(&in_serialiser, state);
-            } break;
+                    case net::PT_PING: {
+                        receive_ping(&in_serialiser, state, ctx, &bound_server);
+                    } break;
 
-            case net::PT_PING: {
-                receive_ping(&in_serialiser, state, ctx, bound_server_address);
-            } break;
-
-            default: {
-                LOG_INFO("Received unidentifiable packet\n");
-            } break;
-
+                    default: {
+                        LOG_INFO("Received unidentifiable packet\n");
+                    } break;
+                    }
+                }
+                else {
+                    LOG_INFO("Received packet from unidentified server\n");
+                }
             }
 
             if (i < MAX_RECEIVED_PER_TICK) {
@@ -185,9 +200,9 @@ static void s_net_event_listener(
 
             uint32_t *game_server_index = available_servers->name_to_server.get(simple_string_hash(data->server_name));
             if (game_server_index) {
-                uint32_t ip_address = available_servers->servers[*game_server_index].ipv4_address;
+                uint32_t ip_address = available_servers->servers[*game_server_index].ipv4_address.ipv4_address;
             
-                client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server_address);
+                client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
             }
             else {
                 LOG_ERRORV("Couldn't find server name: %s\n", data->server_name);
@@ -195,7 +210,7 @@ static void s_net_event_listener(
         }
         else if (data->ip_address) {
             uint32_t ip_address = str_to_ipv4_int32(data->ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
-            client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server_address);
+            client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
         }
         else {
             // Unable to connect to server
@@ -205,12 +220,14 @@ static void s_net_event_listener(
     } break;
 
     case vkph::ET_LEAVE_SERVER: {
-        if (bound_server_address.ipv4_address > 0) {
+        if (bound_server.tag != net::UNINITIALISED_TAG) {
             // Send to server message
-            send_packet_client_disconnect(state, ctx, bound_server_address);
+            send_packet_client_disconnect(state, ctx, &bound_server);
         
-            memset(&bound_server_address, 0, sizeof(bound_server_address));
+            memset(&bound_server, 0, sizeof(bound_server));
             memset(ctx->clients.data, 0, sizeof(net::client_t) * ctx->clients.max_size);
+            bound_server.tag = net::UNINITIALISED_TAG;
+            ctx->tag = net::UNINITIALISED_TAG;
 
             client_check_incoming_packets = 0;
         
@@ -230,7 +247,7 @@ static void s_net_event_listener(
 
     case vkph::ET_SEND_SERVER_TEAM_SELECT_REQUEST: {
         auto *data = (vkph::event_send_server_team_select_request_t *)event->data;
-        send_packet_team_select_request(data->color, state, ctx, bound_server_address);
+        send_packet_team_select_request(data->color, state, ctx, &bound_server);
     } break;
 
     case vkph::ET_CLOSED_WINDOW: {
@@ -277,7 +294,7 @@ void tick_net(vkph::state_t *state) {
 }
 
 bool is_connected_to_server() {
-    return bound_server_address.ipv4_address != 0;
+    return bound_server.tag != net::UNINITIALISED_TAG;
 }
 
 uint16_t &get_local_client_index() {

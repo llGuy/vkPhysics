@@ -67,8 +67,10 @@ static void s_fill_enter_server_data(
 // PT_CONNECTION_HANDSHAKE
 void receive_packet_connection_handshake(
     serialiser_t *serialiser,
+    uint32_t server_tag,
     vkph::state_t *state,
-    net::context_t *ctx) {
+    net::context_t *ctx,
+    net::game_server_t *server) {
     net::packet_connection_handshake_t handshake = {};
     handshake.deserialise(serialiser);
 
@@ -81,6 +83,9 @@ void receive_packet_connection_handshake(
     auto *data = FL_MALLOC(vkph::event_enter_server_t, 1);
     data->info_count = handshake.player_count;
     data->infos = FL_MALLOC(vkph::player_init_info_t, data->info_count);
+
+    ctx->tag = handshake.client_tag;
+    server->tag = server_tag;
 
     s_fill_enter_server_data(&handshake, data, ctx);
 
@@ -717,19 +722,20 @@ void receive_ping(
     serialiser_t *in_serialiser,
     vkph::state_t *state,
     net::context_t *ctx,
-    net::address_t server_addr) {
+    net::game_server_t *server_addr) {
     net::packet_header_t header = {};
     header.current_tick = state->current_tick;
     header.current_packet_count = ctx->current_packet;
     header.client_id = get_local_client_index();
     header.flags.packet_type = net::PT_PING;
     header.flags.total_packet_size = header.size();
+    header.tag = ctx->tag;
 
     serialiser_t serialiser = {};
     serialiser.init(header.flags.total_packet_size);
     header.serialise(&serialiser);
 
-    ctx->main_udp_send_to(&serialiser, server_addr);
+    ctx->main_udp_send_to(&serialiser, server_addr->ipv4_address);
 }
 
 void check_if_finished_recv_chunks(vkph::state_t *state, net::context_t *ctx) {

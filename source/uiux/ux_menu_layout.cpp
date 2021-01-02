@@ -21,8 +21,6 @@ void menu_layout_t::init(
         0x46464646);
 
     widget_count = iwidget_count;
-    current_button = widget_count;
-    current_open_menu = widget_count;
 
     float current_button_y = 0.0f;
     float button_size = 0.25f;
@@ -89,9 +87,15 @@ void menu_layout_t::init(
     menu_slider_x_max_size = current_menu.gls_current_size.to_fvec2().x;
     menu_slider_y_max_size = current_menu.gls_current_size.to_fvec2().y;
 
-    current_menu.gls_current_size.fx = 0.0f;
+    if (!initialised) {
+        current_menu.gls_current_size.fx = 0.0f;
+        current_button = widget_count;
+        current_open_menu = widget_count;
+    }
 
     menu_in_out_transition = 0;
+
+    initialised = 1;
 }
 
 void menu_layout_t::submit() {

@@ -29,9 +29,6 @@ static void s_handle_event_enter_server(vkph::event_t *event, vkph::state_t *sta
 
     set_i_am_in_server(1);
 
-    // Reinitialise chunks / players
-    clear_game(state);
-
     auto *data = (vkph::event_enter_server_t *)event->data;
 
     for (uint32_t i = 0; i < data->info_count; ++i) {

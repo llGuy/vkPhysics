@@ -8,6 +8,7 @@ uint32_t packet_header_t::size() {
         sizeof(flags) +
         sizeof(current_tick) +
         sizeof(current_packet_count) +
+        sizeof(tag) +
         sizeof(client_id);
 }
 
@@ -15,6 +16,7 @@ void packet_header_t::serialise(serialiser_t *serialiser) {
     serialiser->serialise_uint32(flags.bytes);
     serialiser->serialise_uint64(current_tick);
     serialiser->serialise_uint64(current_packet_count);
+    serialiser->serialise_uint32(tag);
     serialiser->serialise_uint16(client_id);
 }
 
@@ -22,6 +24,7 @@ void packet_header_t::deserialise(serialiser_t *serialiser) {
     flags.bytes = serialiser->deserialise_uint32();
     current_tick = serialiser->deserialise_uint64();
     current_packet_count = serialiser->deserialise_uint64();
+    tag = serialiser->deserialise_uint32();
     client_id = serialiser->deserialise_uint16();
 }
 
@@ -39,14 +42,19 @@ void packet_connection_request_t::deserialise(serialiser_t *serialiser) {
 
 uint32_t packet_connection_handshake_t::size() {
     uint32_t final_size = 0;
+    final_size += sizeof(client_tag);
+    final_size += sizeof(loaded_chunk_count);
     final_size += sizeof(player_count);
     final_size += player_count * sizeof(vkph::player_init_info_t);
+    final_size += sizeof(team_count);
+    final_size += team_count * sizeof(vkph::team_info_t);
 
     // Other information...
     return final_size;
 }
 
 void packet_connection_handshake_t::serialise(serialiser_t *serialiser) {
+    serialiser->serialise_uint32(client_tag);
     serialiser->serialise_uint32(loaded_chunk_count);
     serialiser->serialise_uint32(player_count);
     for (uint32_t i = 0; i < player_count; ++i) {
@@ -69,6 +77,7 @@ void packet_connection_handshake_t::serialise(serialiser_t *serialiser) {
 }
 
 void packet_connection_handshake_t::deserialise(serialiser_t *serialiser) {
+    client_tag = serialiser->deserialise_uint32();
     loaded_chunk_count = serialiser->deserialise_uint32();
     player_count = serialiser->deserialise_uint32();
     player_infos = LN_MALLOC(vkph::player_init_info_t, player_count);

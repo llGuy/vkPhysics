@@ -99,6 +99,8 @@ static void s_browse_server_menu_init() {
             item->text.draw_string(server->server_name, 0xFFFFFFFF);
             item->text.null_terminate();
         });
+
+    refresh_main_menu_server_page();
 }
 
 void refresh_build_menu_page(const vkph::state_t *state) {

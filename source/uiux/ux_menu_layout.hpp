@@ -45,6 +45,7 @@ struct menu_layout_t {
     uint32_t widget_count;
     menu_widget_t widgets[MAX_MENU_WIDGETS];
 
+    bool initialised = 0;
     int32_t current_button;
     int32_t current_open_menu;
 

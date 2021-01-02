@@ -27,6 +27,7 @@ namespace srv {
 static net::context_t *ctx;
 
 static flexible_stack_container_t<uint32_t> clients_to_send_chunks_to;
+static hash_table_t<uint16_t, 50, 5, 5> client_tag_to_id;
 
 // Local server information
 struct server_info_t {
@@ -35,6 +36,10 @@ struct server_info_t {
 
 static server_info_t local_server_info;
 static bool started_server = 0;
+
+static uint32_t s_generate_tag() {
+    return rand();
+}
 
 static void s_start_server(vkph::event_start_server_t *data, vkph::state_t *state) {
     clients_to_send_chunks_to.init(50);
@@ -56,6 +61,9 @@ static void s_start_server(vkph::event_start_server_t *data, vkph::state_t *stat
     ctx->chunk_modification_allocator.pool_init(
         sizeof_chunk_mod_pack,
         sizeof_chunk_mod_pack * net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4);
+
+    client_tag_to_id.init();
+    ctx->tag = s_generate_tag();
 }
 
 // PT_CONNECTION_HANDSHAKE
@@ -64,8 +72,11 @@ static bool s_send_packet_connection_handshake(
     vkph::event_new_player_t *player_info,
     uint32_t loaded_chunk_count,
     const vkph::state_t *state) {
+    uint32_t new_client_tag = s_generate_tag();
+
     net::packet_connection_handshake_t connection_handshake = {};
     connection_handshake.loaded_chunk_count = loaded_chunk_count;
+    connection_handshake.client_tag = new_client_tag;
 
     LOG_INFOV("Loaded chunk count: %d\n", connection_handshake.loaded_chunk_count);
 
@@ -124,6 +135,7 @@ static bool s_send_packet_connection_handshake(
     header.current_tick = state->current_tick;
     header.flags.total_packet_size = header.size() + connection_handshake.size();
     header.flags.packet_type = net::PT_CONNECTION_HANDSHAKE;
+    header.tag = ctx->tag;
 
     serialiser_t serialiser = {};
     serialiser.init(header.flags.total_packet_size);
@@ -132,9 +144,11 @@ static bool s_send_packet_connection_handshake(
     connection_handshake.serialise(&serialiser);
 
     net::client_t *c = ctx->clients.get(client_id);
+    c->client_tag = new_client_tag;
+    client_tag_to_id.insert(new_client_tag, client_id);
 
     if (ctx->main_udp_send_to(&serialiser, c->address)) {
-        LOG_INFOV("Sent handshake to client: %s\n", c->name);
+        LOG_INFOV("Sent handshake to client: %s (with tag %d)\n", c->name, new_client_tag);
         return 1;
     }
     else {
@@ -213,6 +227,7 @@ static uint32_t s_prepare_packet_chunk_voxels(
     header.flags.total_packet_size = s_maximum_chunks_per_packet() * (3 * sizeof(int16_t) + vkph::CHUNK_BYTE_SIZE);
     header.current_tick = state->current_tick;
     header.current_packet_count = ctx->current_packet;
+    header.tag = ctx->tag;
     
     serialiser_t serialiser = {};
     serialiser.init(header.flags.total_packet_size);
@@ -318,6 +333,7 @@ static void s_send_packet_player_joined(
     header.current_packet_count = ctx->current_packet;
     header.flags.total_packet_size = header.size() + packet.size();
     header.flags.packet_type = net::PT_PLAYER_JOINED;
+    header.tag = ctx->tag;
     
     serialiser_t serialiser = {};
     serialiser.init(header.flags.total_packet_size);
@@ -395,14 +411,15 @@ static void s_receive_packet_connection_request(
     s_send_packet_player_joined(event_data, state);
 }
 
-// PT_CLIENT_DISCONNECT
-static void s_receive_packet_client_disconnect(
-    serialiser_t *serialiser,
+static void s_handle_disconnect(
     uint16_t client_id,
     const vkph::state_t *state) {
-    (void)serialiser;
     LOG_INFO("Client disconnected\n");
 
+    client_tag_to_id.remove(ctx->clients[client_id].client_tag);
+
+    ctx->clients[client_id].predicted.chunk_modifications;
+    ctx->chunk_modification_allocator.free_arena(ctx->clients[client_id].predicted.chunk_modifications);
     ctx->clients[client_id].previous_locations.destroy();
     ctx->clients[client_id].initialised = 0;
     ctx->clients.remove(client_id);
@@ -418,6 +435,7 @@ static void s_receive_packet_client_disconnect(
     header.current_packet_count = ctx->current_packet;
     header.flags.packet_type = net::PT_PLAYER_LEFT;
     header.flags.total_packet_size = header.size() + sizeof(uint16_t);
+    header.tag = ctx->tag;
 
     header.serialise(&out_serialiser);
     out_serialiser.serialise_uint16(client_id);
@@ -428,6 +446,13 @@ static void s_receive_packet_client_disconnect(
             ctx->main_udp_send_to(&out_serialiser, c->address);
         }
     }
+}
+
+// PT_CLIENT_DISCONNECT
+static void s_receive_packet_client_disconnect(
+    uint16_t client_id,
+    const vkph::state_t *state) {
+    s_handle_disconnect(client_id, state);
 }
 
 static void s_handle_chunk_modifications(
@@ -597,6 +622,7 @@ static void s_receive_packet_team_select_request(
         header.current_packet_count = ctx->current_packet;
         header.flags.packet_type = net::PT_PLAYER_TEAM_CHANGE;
         header.flags.total_packet_size = header.size() + change.size();
+        header.tag = ctx->tag;
 
         header.serialise(&out_serialiser);
         change.serialise(&out_serialiser);
@@ -892,6 +918,7 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
     header.client_id = 0;
     header.flags.packet_type = net::PT_GAME_STATE_SNAPSHOT;
     header.flags.total_packet_size = header.size() + packet.size();
+    header.tag = ctx->tag;
 
     serialiser_t serialiser = {};
     serialiser.init(header.flags.total_packet_size);
@@ -976,34 +1003,38 @@ static void s_ping_clients(const vkph::state_t *state) {
     serialiser.init(30);
 
     for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
-        net::client_t *c = &ctx->clients[i];
+        net::client_t* c = &ctx->clients[i];
 
-        if (c->time_since_ping > net::NET_CLIENT_TIMEOUT) {
-            // TODO: Kick the client out of the server
-            // LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
+        if (c->initialised) {
+            c->time_since_ping += delta_time();
+            c->ping_in_progress += delta_time();
+
+            if (c->time_since_ping > net::NET_CLIENT_TIMEOUT) {
+                LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
+
+                s_handle_disconnect(c->client_id, state);
+            }
+            else if (c->time_since_ping > net::NET_PING_INTERVAL && c->received_ping) {
+                serialiser.data_buffer_head = 0;
+
+                net::packet_header_t header = {};
+                header.current_packet_count = ctx->current_packet;
+                header.current_tick = state->current_tick;
+                header.client_id = c->client_id;
+                header.flags.packet_type = net::PT_PING;
+                header.flags.total_packet_size = header.size();
+                header.tag = ctx->tag;
+
+                header.serialise(&serialiser);
+                ctx->main_udp_send_to(&serialiser, c->address);
+
+                c->time_since_ping = 0.0f;
+                c->ping_in_progress = 0.0f;
+
+                c->received_ping = 0;
+                serialiser.data_buffer_head = 0;
+            }
         }
-        else if (c->time_since_ping > net::NET_PING_INTERVAL && c->received_ping) {
-            serialiser.data_buffer_head = 0;
-            
-            net::packet_header_t header = {};
-            header.current_packet_count = ctx->current_packet;
-            header.current_tick = state->current_tick;
-            header.client_id = c->client_id;
-            header.flags.packet_type = net::PT_PING;
-            header.flags.total_packet_size = header.size();
-
-            header.serialise(&serialiser);
-            ctx->main_udp_send_to(&serialiser, c->address);
-
-            c->time_since_ping = 0.0f;
-            c->ping_in_progress = 0.0f;
-
-            c->received_ping = 0;
-            serialiser.data_buffer_head = 0;
-        }
-
-        c->time_since_ping += delta_time();
-        c->ping_in_progress += delta_time();
     }
 }
 
@@ -1056,46 +1087,41 @@ static void s_tick_server(vkph::state_t *state) {
             net::packet_header_t header = {};
             header.deserialise(&in_serialiser);
 
-            switch(header.flags.packet_type) {
+            if (header.flags.packet_type == net::PT_CONNECTION_REQUEST) {
+                if (header.tag == net::UNINITIALISED_TAG) {
+                    s_receive_packet_connection_request(&in_serialiser, received_address, state);
+                }
+            }
+            else {
+                // Make sure that the client was connected to the server to begin with.
+                if (client_tag_to_id.get(header.tag)) {
+                    switch (header.flags.packet_type) {
 
-            case net::PT_CONNECTION_REQUEST: {
-                s_receive_packet_connection_request(
-                    &in_serialiser,
-                    received_address,
-                    state);
-            } break;
+                    case net::PT_CONNECTION_REQUEST: {
+                        s_receive_packet_connection_request(&in_serialiser, received_address, state);
+                    } break;
 
-            case net::PT_CLIENT_DISCONNECT: {
-                s_receive_packet_client_disconnect(
-                    &in_serialiser,
-                    header.client_id,
-                    state);
-            } break;
+                    case net::PT_CLIENT_DISCONNECT: {
+                        s_receive_packet_client_disconnect(header.client_id, state);
+                    } break;
 
-            case net::PT_CLIENT_COMMANDS: {
-                s_receive_packet_client_commands(
-                    &in_serialiser,
-                    header.client_id,
-                    header.current_tick,
-                    state);
-            } break;
+                    case net::PT_CLIENT_COMMANDS: {
+                        s_receive_packet_client_commands(&in_serialiser, header.client_id, header.current_tick, state);
+                    } break;
 
-            case net::PT_TEAM_SELECT_REQUEST: {
-                s_receive_packet_team_select_request(
-                    &in_serialiser,
-                    header.client_id,
-                    header.current_tick,
-                    state);
-            } break;
+                    case net::PT_TEAM_SELECT_REQUEST: {
+                        s_receive_packet_team_select_request(&in_serialiser, header.client_id, header.current_tick, state);
+                    } break;
 
-                // Response to a ping
-            case net::PT_PING: {
-                s_receive_packet_ping(
-                    &in_serialiser,
-                    header.client_id,
-                    header.current_tick);
-            } break;
+                    case net::PT_PING: {
+                        s_receive_packet_ping(&in_serialiser, header.client_id, header.current_tick);
+                    } break;
 
+                    }
+                }
+                else {
+                    LOG_INFO("Received packet from unidentified client\n");
+                }
             }
         }
     }

@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <containers.hpp>
 
+#include "net_socket.hpp"
+
 namespace net {
 
 /*
@@ -10,7 +12,8 @@ namespace net {
 */
 struct game_server_t {
     const char *server_name;
-    uint32_t ipv4_address;
+    address_t ipv4_address;
+    uint32_t tag;
 };
 
 struct available_servers_t {

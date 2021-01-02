@@ -40,12 +40,15 @@ static void s_verify_layer_support(
 
 #ifndef NDEBUG
 static VKAPI_ATTR VkBool32 VKAPI_PTR s_debug_messenger_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT,
-    VkDebugUtilsMessageTypeFlagsEXT,
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+    VkDebugUtilsMessageTypeFlagsEXT message_type,
     const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
     void *) {
 #if 1
-    LOG_ERRORV("Validation layer: %s\n\n", callback_data->pMessage);
+    if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT ||
+        message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+        LOG_ERRORV("Validation layer (%d;%d): %s\n", message_type, severity, callback_data->pMessage);
+    }
 #endif
     return 0;
 }
