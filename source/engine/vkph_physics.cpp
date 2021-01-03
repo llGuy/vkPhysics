@@ -68,6 +68,13 @@ void compute_velocity_vector(
     
     player->ws_velocity += acceleration * actions->dt * force_values->movement_acceleration;
 
+    // Simple friction. TODO: May need to improve this one...
+    if (player->flags.is_on_ground) {
+        player->ws_velocity += -player->ws_velocity * actions->dt * force_values->friction;
+    }
+    else {
+    }
+
     // Do some check between standing and ball mode
     if (flags & MRF_GRAVITY_CHECK_INCLINATION) {
         if (glm::dot(player->ws_up_vector, player->ws_surface_normal) < 0.7f || !player->flags.is_on_ground) {
@@ -78,12 +85,6 @@ void compute_velocity_vector(
     }
     else {
         player->ws_velocity += -player->ws_up_vector * force_values->gravity * actions->dt;
-    }
-
-    if (player->flags.is_on_ground) {
-        player->ws_velocity += -player->ws_velocity * actions->dt * force_values->friction;
-    }
-    else {
     }
 }
 

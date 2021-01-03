@@ -59,11 +59,17 @@ void play_scene_t::handle_input(vkph::state_t *state) {
     } break;
 
     case S_IN_GAME: {
-        game_input(delta_time(), state);
+        game_input(app::g_delta_time, state);
     } break;
 
     case S_PAUSE: {
         ux::handle_input(state);
+
+        /* 
+          We also need to make sure to push the actions of the player (otherwise
+          the player doesn't update at all).
+        */
+        game_input(app::g_delta_time, state, true);
     } break;
 
     default: {
@@ -108,8 +114,8 @@ void play_scene_t::calculate_pos_and_dir(vkph::player_t *player, vector3_t *posi
         // Add view bobbing
         static float angle = 0.0f;
         static float right = 0.0f;
-        angle += delta_time() * 10.0f;
-        right += delta_time() * 5.0f;
+        angle += app::g_delta_time;
+        right += app::g_delta_time * 5.0f;
         angle = fmod(angle, glm::radians(360.0f));
         right = fmod(right, glm::radians(360.0f));
 
@@ -122,7 +128,7 @@ void play_scene_t::calculate_pos_and_dir(vkph::player_t *player, vector3_t *posi
 }
 
 void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
-    state->timestep_begin(delta_time());
+    state->timestep_begin(app::g_delta_time);
 
     handle_input(state);
 
@@ -160,7 +166,7 @@ void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     eye_info->fov = player->camera_fov.current;
     eye_info->near = 0.01f;
     eye_info->far = 10000.0f;
-    eye_info->dt = delta_time();
+    eye_info->dt = app::g_delta_time;
 
     // Render what's in the 3D scene
     draw_game(cmdbufs, state);

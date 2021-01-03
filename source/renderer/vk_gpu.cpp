@@ -143,7 +143,7 @@ void init_device() {
     VkPhysicalDevice *devices = ALLOCA(VkPhysicalDevice, device_count);
     vkEnumeratePhysicalDevices(g_ctx->instance, &device_count, devices);
 
-    LOG_INFOV("Found %d devices\n", device_count);
+    LOG_INFOV("Found %d devices\n", (int)device_count);
     
     for (uint32_t i = 0; i < device_count; ++i) {
         g_ctx->hardware = devices[i];

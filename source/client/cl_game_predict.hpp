@@ -8,6 +8,7 @@ namespace cl {
 void set_local_player(int32_t id, vkph::state_t *state);
 int32_t get_local_player(vkph::state_t *state);
 void handle_local_player_input(float dt, vkph::state_t *state);
+void push_empty_actions_to_local_player(float dt, vkph::state_t *state);
 void execute_player_actions(vkph::player_t *player, vkph::state_t *state);
 // Predict the game state given the actions of the local player
 void predict_state(vkph::state_t *state);

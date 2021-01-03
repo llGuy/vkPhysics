@@ -10,7 +10,7 @@ namespace cl {
  */
 void init_game(vkph::state_t *state);
 void destroy_game();
-void game_input(float dt, vkph::state_t *state);
+void game_input(float dt, vkph::state_t *state, bool is_empty = false);
 void tick_game(vkph::state_t *state);
 void set_i_am_in_server(bool b);
 bool am_i_in_server();

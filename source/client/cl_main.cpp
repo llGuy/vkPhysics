@@ -30,8 +30,6 @@ static vkph::listener_t core_listener;
 */
 static vkph::state_t *state;
 
-static float dt;
-
 static void s_loop() {
     while (running) {
         app::poll_input_events();
@@ -50,8 +48,6 @@ static void s_loop() {
         tick_scene_transition();
 
         finish_frame();
-
-        dt = app::g_delta_time;
     }
 }
 
@@ -183,10 +179,6 @@ void terminate() {
     running = 0;
     vkph::submit_event(vkph::ET_EXIT_SCENE, NULL);
     vkph::submit_event(vkph::ET_LEAVE_SERVER, NULL);
-}
-
-float delta_time() {
-    return dt;
 }
 
 }

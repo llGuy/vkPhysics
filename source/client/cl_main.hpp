@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tools.hpp>
+#include <app.hpp>
 
 namespace cl {
 
@@ -37,7 +38,5 @@ struct game_flags_t {
 };
 
 void terminate();
-
-float delta_time();
 
 }

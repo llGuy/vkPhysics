@@ -1012,7 +1012,9 @@ static void s_ping_clients(const vkph::state_t *state) {
             if (c->time_since_ping > net::NET_CLIENT_TIMEOUT) {
                 LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
 
+#if !defined(DEBUGGING)
                 s_handle_disconnect(c->client_id, state);
+#endif
             }
             else if (c->time_since_ping > net::NET_PING_INTERVAL && c->received_ping) {
                 serialiser.data_buffer_head = 0;

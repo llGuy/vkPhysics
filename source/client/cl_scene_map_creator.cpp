@@ -242,7 +242,7 @@ void map_creator_scene_t::handle_input(vkph::state_t *state) {
             }
 
             if (!display_color_table) {
-                game_input(delta_time(), state);
+                game_input(app::g_delta_time, state);
             }
             else {
                 ux::handle_input(state);
@@ -276,7 +276,7 @@ void map_creator_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *
     eye_info->fov = player->camera_fov.current;
     eye_info->near = 0.01f;
     eye_info->far = 10000.0f;
-    eye_info->dt = delta_time();
+    eye_info->dt = app::g_delta_time;
     eye_info->direction = player->ws_view_direction;
     eye_info->position = player->ws_position;
 

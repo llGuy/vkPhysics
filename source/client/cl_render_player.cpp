@@ -1,3 +1,4 @@
+#include <app.hpp>
 #include "cl_main.hpp"
 #include "cl_game_predict.hpp"
 #include "cl_render.hpp"
@@ -155,7 +156,7 @@ static void s_render_person(
         p->render->animations.switch_to_cycle(p->animated_state, 0);
 
     p->render->animations.interpolate_joints(
-        delta_time(),
+        app::g_delta_time,
         is_animation_repeating((vkph::player_animated_state_t)p->animated_state));
 
     p->render->animations.sync_gpu_with_transforms(transfer);
@@ -187,14 +188,22 @@ static void s_render_ball(
     if (p->render->rotation_angle > 360.0f)
         p->render->rotation_angle -= 360.0f;
 
-    if (glm::dot(p->ws_velocity, p->ws_velocity) > 0.0001f) {
+    // if (glm::dot(p->ws_velocity, p->ws_velocity) > 0.0001f) {
+    if (p->frame_displacement > 0.0f) {
         vector3_t cross = glm::cross(glm::normalize(p->ws_velocity), p->ws_up_vector);
         vector3_t right = glm::normalize(cross);
         matrix4_t rolling_rotation = glm::rotate(glm::radians(p->render->rotation_angle), -right);
         p->render->rolling_matrix = rolling_rotation;
     }
 
+
+    if (app::get_raw_input()->buttons[app::BT_P].state == app::button_state_t::BS_DOWN) {
+        // printf("%s\n", glm::to_string().c_str());
+        printf("Still rolling? -> %s (while frame displacement is %f)\n", glm::to_string(p->render->rolling_matrix).c_str(), p->frame_displacement);
+    }
+
     p->render->render_data.model = glm::translate(p->ws_position) * p->render->rolling_matrix * glm::scale(vector3_t(vkph::PLAYER_SCALE));
+
     buffer_t rdata = {&p->render->render_data, vk::DEF_MESH_RENDER_DATA_SIZE};
 
     vk::begin_mesh_submission(render, &ball_shaders.albedo);
@@ -225,7 +234,7 @@ static void s_render_transition(
         p->render->animations.switch_to_cycle(p->animated_state, 0);
     }
 
-    p->render->animations.interpolate_joints(delta_time(), is_animation_repeating((vkph::player_animated_state_t)p->animated_state));
+    p->render->animations.interpolate_joints(app::g_delta_time, is_animation_repeating((vkph::player_animated_state_t)p->animated_state));
     p->render->animations.sync_gpu_with_transforms(transfer_command_buffer);
 
     // This has to be a bit different

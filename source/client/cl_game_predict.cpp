@@ -92,6 +92,27 @@ void handle_local_player_input(float dt, vkph::state_t *state) {
     }
 }
 
+void push_empty_actions_to_local_player(float dt, vkph::state_t* state) {
+    vkph::player_action_t actions;
+    memset(&actions, 0, sizeof(actions));
+    actions.dt = dt;
+    actions.tick = state->current_tick;
+    
+    vkph::player_t *local_player_ptr = s_get_local_player(state);
+
+    if (local_player_ptr) {
+        if (local_player_ptr->flags.is_alive) {
+            local_player_ptr->push_actions(&actions, 0);
+        }
+        else {
+            get_spectator()->push_actions(&actions, 0);
+        }
+    }
+    else {
+        get_spectator()->push_actions(&actions, 0);
+    }
+}
+
 void execute_player_actions(vkph::player_t *player, vkph::state_t *state) {
     for (uint32_t i = 0; i < player->player_action_count; ++i) {
         vkph::player_action_t *action = &player->player_actions[i];

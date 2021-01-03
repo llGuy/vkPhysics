@@ -119,7 +119,7 @@ void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     eye_info->fov = player->camera_fov.current;
     eye_info->near = 0.01f;
     eye_info->far = 10000.0f;
-    eye_info->dt = delta_time();
+    eye_info->dt = app::g_delta_time;
 
     vk::lighting_info_t *light_info = &scene_info->lighting;
     memset(light_info, 0, sizeof(vk::lighting_info_t));

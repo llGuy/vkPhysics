@@ -34,7 +34,7 @@ void tick_scene_transition() {
     float duration = current_screen_brightness.max_time;
 
     if (current_screen_brightness.in_animation) {
-        current_screen_brightness.animate(delta_time());
+        current_screen_brightness.animate(app::g_delta_time);
 
         if (!current_screen_brightness.in_animation) {
             vkph::submit_event(vkph::ET_FADE_FINISHED, NULL);

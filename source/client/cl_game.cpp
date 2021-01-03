@@ -33,13 +33,18 @@ void init_game(vkph::state_t *state) {
     flags.in_meta_menu = 1;
 }
 
-void game_input(float dt, vkph::state_t *state) {
-    handle_local_player_input(dt, state);
+void game_input(float dt, vkph::state_t *state, bool is_empty) {
+    if (is_empty) {
+        push_empty_actions_to_local_player(dt, state);
+    }
+    else {
+        handle_local_player_input(dt, state);
+    }
 }
 
 void tick_game(vkph::state_t *state) {
     // Interpolate between the chunk snapshots that were sent by the server
-    chunks_interp_step(delta_time(), state);
+    chunks_interp_step(app::g_delta_time, state);
 
     // Interpolate between the player snapshots that were sent by the server
     for (uint32_t i = 0; i < state->players.data_count; ++i) {
@@ -47,7 +52,7 @@ void tick_game(vkph::state_t *state) {
         
         if (player) {
             if (player->flags.is_remote) {
-                player_interp_step(delta_time(), player, state);
+                player_interp_step(app::g_delta_time, player, state);
             }
         }
     }

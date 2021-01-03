@@ -1,4 +1,5 @@
 #include "app_context.hpp"
+#include <constant.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -251,6 +252,13 @@ void poll_input_events() {
     g_delta_time = (float)glfwGetTime() - current_time;
 
     static constexpr float FRAME_TIME = 1.0f / 100.0f;
+
+    // When debugging, we don't want dt to be ginormous.
+#if defined(DEBUGGING)
+    if (g_delta_time > 1.0f) {
+        g_delta_time = 1.0f / 100.0f;
+    }
+#endif
 
 #if 0
     if (g_delta_time < FRAME_TIME) {

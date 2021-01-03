@@ -83,7 +83,7 @@ static void s_tick_client(vkph::state_t *state) {
     // Check packets from game server that we are connected to
     if (client_check_incoming_packets) {
         static float elapsed = 0.0f;
-        elapsed += delta_time();
+        elapsed += app::g_delta_time;
         if (elapsed >= net::NET_CLIENT_COMMAND_OUTPUT_INTERVAL) {
             // Send commands to the server
             net::debug_log("----- Sending client commands to the server at tick %llu\n", ctx->log_file, 0, state->current_tick);

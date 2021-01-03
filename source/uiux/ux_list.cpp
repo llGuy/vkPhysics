@@ -120,7 +120,7 @@ void list_t::end() {
 
         item->box.init(
             ui::RT_LEFT_UP,
-            20.8f,
+            21.3f,
             ui::vector2_t(0.0f, -server_button_height * (float)i),
             ui::vector2_t(1.0f, server_button_height),
             &list_box,
