@@ -319,6 +319,10 @@ void players_gpu_sync_and_render(
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     vkph::state_t *state) {
+    vk::insert_debug(render_command_buffer, "Render Players Region", vector4_t(0.8f, 0.4f, 0.1f, 1.0f));
+    vk::insert_debug(render_shadow_command_buffer, "Render Shadow Players Region", vector4_t(0.8f, 0.4f, 0.1f, 1.0f));
+    vk::insert_debug(transfer_command_buffer, "Transfer Players Region", vector4_t(0.8f, 0.4f, 0.1f, 1.0f));
+
     for (uint32_t i = 0; i < state->players.data_count; ++i) {
         vkph::player_t *p = state->get_player(i);
         if (p) {

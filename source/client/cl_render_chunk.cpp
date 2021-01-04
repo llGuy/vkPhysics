@@ -495,6 +495,10 @@ void chunks_gpu_sync_and_render(
     VkCommandBuffer render_shadow_command_buffer,
     VkCommandBuffer transfer_command_buffer,
     vkph::state_t *state) {
+    vk::insert_debug(render_command_buffer, "Render Chunks Region", vector4_t(0.4f, 0.8f, 0.1f, 1.0f));
+    vk::insert_debug(render_shadow_command_buffer, "Render Shadow Chunks Region", vector4_t(0.4f, 0.8f, 0.1f, 1.0f));
+    vk::insert_debug(transfer_command_buffer, "Transfer Chunks Region", vector4_t(0.4f, 0.8f, 0.1f, 1.0f));
+
     const uint32_t max_chunks_loaded_per_frame = 10;
     uint32_t chunks_loaded = 0;
 

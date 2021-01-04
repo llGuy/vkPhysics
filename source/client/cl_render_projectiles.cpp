@@ -40,6 +40,10 @@ void projectiles_gpu_sync_and_render(
     VkCommandBuffer shadow,
     VkCommandBuffer transfer,
     vkph::state_t *state) {
+    vk::insert_debug(render, "Render Projectiles Region", vector4_t(0.4f, 0.1f, 0.8f, 1.0f));
+    vk::insert_debug(shadow, "Render Shadow Projectiles Region", vector4_t(0.4f, 0.1f, 0.8f, 1.0f));
+    vk::insert_debug(transfer, "Transfer Projectiles Region", vector4_t(0.4f, 0.1f, 0.8f, 1.0f));
+
     for (uint32_t i = 0; i < state->rocks.list.data_count; ++i) {
         vk::mesh_render_data_t data = {};
         data.color = vector4_t(0.0f);

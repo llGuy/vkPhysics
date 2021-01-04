@@ -1,37 +1,35 @@
 #pragma once
 
 #include <stdio.h>
+#include <utility>
 
 extern FILE *g_logfile;
 
 void init_log_file();
 
-#define LOG_ERRORV(str, ...)                    \
-    fprintf(g_logfile, "ERROR:%s:  ", __FUNCTION__);  \
-    fprintf(g_logfile, str, __VA_ARGS__); \
-    fflush(g_logfile)
+#define LOG_TO_CONSOLE
 
-#define LOG_WARNINGV(str, ...)                          \
-    fprintf(g_logfile, "WARNING:%s:  ", __FUNCTION__);        \
-    fprintf(g_logfile, str, __VA_ARGS__);\
-    fflush(g_logfile)
+template <typename ...T>
+inline void log_impl(
+    const char *prompt,
+    const char *function,
+    const char *format,
+    T &&...ts) {
+    // TODO: Add colors
+#if defined (LOG_TO_CONSOLE)
+    printf("%s:%s:  ", prompt, function);
+    printf(format, ts...);
+#else
+    fprintf(g_logfile, "%s:%s:  ", prompt, function);
+    fprintf(g_logfile, format, ts...);
+    // In case of a crash
+    fflush(g_logfile);
+#endif
+}
 
-#define LOG_INFOV(str, ...)                     \
-    fprintf(g_logfile, "INFO:%s:  ", __FUNCTION__);   \
-    fprintf(g_logfile, str, __VA_ARGS__);\
-    fflush(g_logfile)
-
-#define LOG_ERROR(str)                          \
-    fprintf(g_logfile, "ERROR:%s:  ", __FUNCTION__);  \
-    fprintf(g_logfile, str);\
-    fflush(g_logfile)
-
-#define LOG_WARNING(str)                                \
-    fprintf(g_logfile, "WARNING:%s:  ", __FUNCTION__);        \
-    fprintf(g_logfile, str);\
-    fflush(g_logfile)
-
-#define LOG_INFO(str)                           \
-    fprintf(g_logfile, "INFO:%s:  ", __FUNCTION__);   \
-    fprintf(g_logfile, str);\
-    fflush(g_logfile)
+#define LOG_ERRORV(str, ...) log_impl("ERROR", __FUNCTION__, str, __VA_ARGS__)
+#define LOG_WARNINGV(str, ...) log_impl("WARNING", __FUNCTION__, str, __VA_ARGS__)
+#define LOG_INFOV(str, ...) log_impl("INFO", __FUNCTION__, str, __VA_ARGS__)
+#define LOG_ERROR(str) log_impl("ERROR", __FUNCTION__, str)
+#define LOG_WARNING(str) log_impl("WARNING", __FUNCTION__, str)
+#define LOG_INFO(str) log_impl("INFO", __FUNCTION__, str)

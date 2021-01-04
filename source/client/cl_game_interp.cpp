@@ -127,7 +127,7 @@ void player_interp_step(float dt, vkph::player_t *p, vkph::state_t *state) {
         bool switch_shapes = (p->flags.interaction_mode != middle_snapshot->interaction_mode);
 
         if (switch_shapes) {
-            LOG_INFOV("Switching shapes: %d to %d\n", p->flags.interaction_mode, middle_snapshot->interaction_mode);
+            LOG_INFOV("Switching shapes: %d to %d\n", (uint32_t)p->flags.interaction_mode, (uint32_t)middle_snapshot->interaction_mode);
         }
 
         p->handle_shape_switch(switch_shapes, dt);

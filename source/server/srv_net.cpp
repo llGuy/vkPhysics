@@ -705,8 +705,8 @@ static bool s_check_if_client_has_to_correct_state(vkph::player_t *p, net::clien
     if (p->flags.interaction_mode != c->predicted.player_flags.interaction_mode) {
         LOG_INFOV(
             "Need to correct interaction mode: %d to %d\n",
-            c->predicted.player_flags.interaction_mode,
-            p->flags.interaction_mode);
+            (uint32_t)c->predicted.player_flags.interaction_mode,
+            (uint32_t)p->flags.interaction_mode);
 
         incorrect_interaction_mode = 1;
     }

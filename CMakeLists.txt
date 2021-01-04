@@ -35,6 +35,7 @@ find_package(CURL)
 # Threading library
 if (NOT WIN32)
   link_libraries("pthread")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat-security")
 endif()
 
 # Create common

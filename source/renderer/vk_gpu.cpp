@@ -85,7 +85,7 @@ static int32_t s_verify_hardware_meets_requirements(const device_extensions_t &e
             used->names[used_counter++] = extensions.names[i];
         }
         else if (is_needed) {
-            LOG_ERRORV("Could not find a critical extension\n");
+            LOG_ERROR("Could not find a critical extension\n");
             can_run = 0;
         }
         else {
@@ -104,7 +104,7 @@ static int32_t s_verify_hardware_meets_requirements(const device_extensions_t &e
     bool is_swapchain_usable = 0;
     if (is_swapchain_supported) {
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_ctx->hardware, g_ctx->surface, &g_ctx->swapchain_support.capabilities);
-
+        
         vkGetPhysicalDeviceSurfaceFormatsKHR(
             g_ctx->hardware,
             g_ctx->surface,
@@ -219,13 +219,6 @@ void init_device() {
         memset(&used_ext, 0, sizeof(used_ext));
     }
 
-#if 1
-    if (used_ext.available & 1 << DEBUG_MARKER_EXT_INDEX) {
-        LOG_INFO("Initialising debug procs\n");
-        init_debug_ext_procs();
-    }
-#endif
-
     assert(g_ctx->hardware != VK_NULL_HANDLE);
 
     vkGetPhysicalDeviceMemoryProperties(g_ctx->hardware, &g_ctx->hardware_memory_properties);
@@ -292,6 +285,13 @@ void init_device() {
     vkGetDeviceQueue(g_ctx->device, g_ctx->queue_families.graphics_family, 0, &g_ctx->graphics_queue);
     vkGetDeviceQueue(g_ctx->device, g_ctx->queue_families.present_family, 0, &g_ctx->present_queue);
     
+
+#if 1
+    if (used_ext.available & 1 << DEBUG_MARKER_EXT_INDEX) {
+        LOG_INFO("Initialising debug procs\n");
+        init_debug_ext_procs();
+    }
+#endif
 }
 
 void destroy_device() {
