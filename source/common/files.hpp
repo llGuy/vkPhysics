@@ -24,9 +24,13 @@ enum file_load_flags_t {
 
 void files_init();
 
+// Creates the real path of the file.
+// Path to pass in must have root as project root.
 file_handle_t create_file(
     const char *file,
     uint32_t type);
+    
+const char *create_real_path(const char *path);
 
 void delete_file(
     const char *file);

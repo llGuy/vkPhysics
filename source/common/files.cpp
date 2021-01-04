@@ -16,7 +16,7 @@ void files_init() {
     files.init(150);
 }
 
-static const char *s_create_path(const char *path) {
+const char *create_real_path(const char *path) {
     uint32_t strlen_path = (uint32_t)strlen(path);
     uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
     
@@ -35,7 +35,7 @@ file_handle_t create_file(
     file_handle_t handle = files.add();
     file_object_t *object = files.get(handle);
 
-    object->path = s_create_path(file);
+    object->path = create_real_path(file);
     object->type = type;
 
     if (type & FLF_IMAGE) {

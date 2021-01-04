@@ -5,6 +5,8 @@
 
 namespace vk {
 
+extern const vector4_t STAGE_COLORS[ST_INVALID];
+
 // Structure contains data for a render pipeline stage attachment (for FBO)
 struct attachment_t {
     VkImage image;

@@ -1,3 +1,4 @@
+#include "vk_debug.hpp"
 #include "vk_scene3d.hpp"
 #include "vk_context.hpp"
 #include "vk_descriptor.hpp"
@@ -164,9 +165,11 @@ void post_stage_t::execute(VkCommandBuffer cmdbuf, VkCommandBuffer ui_cmdbuf) {
     begin_info.pClearValues = &clear_values;
     begin_info.renderArea = render_area;
 
+    begin_debug_region(cmdbuf, "Post Processing Stage", STAGE_COLORS[ST_POST_PROCESS]);
     vkCmdBeginRenderPass(cmdbuf, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     vkCmdExecuteCommands(cmdbuf, 1, &post_process_cmdbufs[current_cmdbuf]);
     vkCmdEndRenderPass(cmdbuf);
+    end_debug_region(cmdbuf);
 
     current_cmdbuf = (current_cmdbuf + 1) % post_process_cmdbuf_count;
 

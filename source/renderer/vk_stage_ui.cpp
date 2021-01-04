@@ -1,3 +1,4 @@
+#include "vk_debug.hpp"
 #include "vk_context.hpp"
 #include "vk_stage_ui.hpp"
 #include "vk_descriptor.hpp"
@@ -158,12 +159,14 @@ void ui_stage_t::execute(VkCommandBuffer cmdbuf, VkCommandBuffer ui_cmdbuf) {
     begin_info.pClearValues = &clear_values;
     begin_info.renderArea = render_area;
 
+    begin_debug_region(cmdbuf, "UI Stage", STAGE_COLORS[ST_UI]);
     vkCmdBeginRenderPass(cmdbuf, &begin_info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
     vkCmdExecuteCommands(cmdbuf, 1, &current_buffer);
     vkCmdExecuteCommands(cmdbuf, 1, &ui_cmdbuf);
 
     vkCmdEndRenderPass(cmdbuf);
+    end_debug_region(cmdbuf);
 
     update_pipeline_previous_output(stage.descriptor_set);
 

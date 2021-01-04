@@ -13,6 +13,15 @@
 
 namespace vk {
 
+const vector4_t STAGE_COLORS[ST_INVALID] = {
+    vector4_t(0.0f, 0.0f, 0.0f, 1.0f),
+    vector4_t(1.0f, 0.0f, 0.0f, 1.0f),
+    vector4_t(0.9f, 0.9f, 1.0f, 1.0f),
+    vector4_t(0.0f, 1.0f, 0.0f, 1.0f),
+    vector4_t(0.0f, 0.0f, 1.0f, 1.0f),
+    vector4_t(0.0f, 1.0f, 1.0f, 1.0f)
+};
+
 void fill_main_inheritance_info(
     VkCommandBufferInheritanceInfo *info,
     stage_type_t type) {

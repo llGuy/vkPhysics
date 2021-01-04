@@ -107,7 +107,7 @@ struct lighting_info_t {
   Enumerates the different render pipeline stages
  */
 enum stage_type_t {
-    ST_SHADOW, ST_DEFERRED, ST_POST_PROCESS, ST_UI
+    ST_SHADOW, ST_DEFERRED, ST_LIGHTING, ST_POST_PROCESS, ST_UI, ST_FINAL, ST_INVALID
 };
 
 /*

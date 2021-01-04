@@ -1,0 +1,3 @@
+INFO:vk::init_device:  Found 2 devices
+INFO:vk::init_device:  Device name: GeForce GTX 1050
+INFO:vk::init_device:  Initialising debug procs

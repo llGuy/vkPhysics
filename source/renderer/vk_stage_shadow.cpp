@@ -1,3 +1,4 @@
+#include "vk_debug.hpp"
 #include "vk_context.hpp"
 #include "vk_stage_shadow.hpp"
 
@@ -85,6 +86,8 @@ void shadow_stage_t::init() {
 }
 
 void begin_shadow_rendering(VkCommandBuffer cmdbuf) {
+    begin_debug_region(cmdbuf, "Shadow Map Stage", STAGE_COLORS[ST_SHADOW]);
+
     shadow_stage_t *shadow = g_ctx->pipeline.shadow;
 
     VkClearValue clear_values[2] = {};
@@ -110,15 +113,18 @@ void end_shadow_rendering(VkCommandBuffer cmdbuf) {
     shadow_stage_t *shadow = g_ctx->pipeline.shadow;
 
     vkCmdEndRenderPass(cmdbuf);
+    end_debug_region(cmdbuf);
 
     float blur_output_width = (float)(shadow->map_extent.width / 2);
     float blur_output_height = (float)(shadow->map_extent.height / 2);
     vector2_t scale = 1.0f / vector2_t(blur_output_width, blur_output_height);
 
+    begin_debug_region(cmdbuf, "Shadow Blur Stage", STAGE_COLORS[ST_SHADOW]);
     shadow->blur.execute(
         shadow->stage.descriptor_set,
         scale,
         cmdbuf);
+    end_debug_region(cmdbuf);
 }
 
 }

@@ -2,26 +2,36 @@
 
 #include <stdio.h>
 
+extern FILE *g_logfile;
+
+void init_log_file();
+
 #define LOG_ERRORV(str, ...)                    \
-    printf("ERROR:%s:  ", __FUNCTION__);  \
-    printf(str, __VA_ARGS__)
+    fprintf(g_logfile, "ERROR:%s:  ", __FUNCTION__);  \
+    fprintf(g_logfile, str, __VA_ARGS__); \
+    fflush(g_logfile)
 
 #define LOG_WARNINGV(str, ...)                          \
-    printf("WARNING:%s:  ", __FUNCTION__);        \
-    printf(str, __VA_ARGS__)
+    fprintf(g_logfile, "WARNING:%s:  ", __FUNCTION__);        \
+    fprintf(g_logfile, str, __VA_ARGS__);\
+    fflush(g_logfile)
 
 #define LOG_INFOV(str, ...)                     \
-    printf("INFO:%s:  ", __FUNCTION__);   \
-    printf(str, __VA_ARGS__)
+    fprintf(g_logfile, "INFO:%s:  ", __FUNCTION__);   \
+    fprintf(g_logfile, str, __VA_ARGS__);\
+    fflush(g_logfile)
 
 #define LOG_ERROR(str)                          \
-    printf("ERROR:%s:  ", __FUNCTION__);  \
-    printf(str)
+    fprintf(g_logfile, "ERROR:%s:  ", __FUNCTION__);  \
+    fprintf(g_logfile, str);\
+    fflush(g_logfile)
 
 #define LOG_WARNING(str)                                \
-    printf("WARNING:%s:  ", __FUNCTION__);        \
-    printf(str)
+    fprintf(g_logfile, "WARNING:%s:  ", __FUNCTION__);        \
+    fprintf(g_logfile, str);\
+    fflush(g_logfile)
 
 #define LOG_INFO(str)                           \
-    printf("INFO:%s:  ", __FUNCTION__);   \
-    printf(str)
+    fprintf(g_logfile, "INFO:%s:  ", __FUNCTION__);   \
+    fprintf(g_logfile, str);\
+    fflush(g_logfile)

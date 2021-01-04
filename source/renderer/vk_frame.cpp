@@ -1,3 +1,4 @@
+#include "vk_debug.hpp"
 #include "vk_imgui.hpp"
 #include "vk_buffer.hpp"
 #include "vk_context.hpp"
@@ -48,6 +49,8 @@ void end_frame(const frame_info_t *info) {
         render_pass_begin_info.renderArea = render_area;
         render_pass_begin_info.clearValueCount = 1;
         render_pass_begin_info.pClearValues = &clear_value;
+
+        begin_debug_region(g_ctx->primary_command_buffers[g_ctx->image_index], "Final Stage", STAGE_COLORS[ST_FINAL]);
     
         vkCmdBeginRenderPass(
             g_ctx->primary_command_buffers[g_ctx->image_index],
@@ -63,6 +66,8 @@ void end_frame(const frame_info_t *info) {
 #endif
 
         vkCmdEndRenderPass(g_ctx->primary_command_buffers[g_ctx->image_index]);
+
+        end_debug_region(g_ctx->primary_command_buffers[g_ctx->image_index]);
 
         end_command_buffer(g_ctx->primary_command_buffers[g_ctx->image_index]);
     }

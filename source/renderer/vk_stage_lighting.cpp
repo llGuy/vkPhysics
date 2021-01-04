@@ -1,3 +1,4 @@
+#include "vk_debug.hpp"
 #include "vk_scene3d.hpp"
 #include "vk_context.hpp"
 #include "vk_stage_shadow.hpp"
@@ -102,6 +103,8 @@ void lighting_stage_t::init() {
 }
 
 void lighting_stage_t::execute(VkCommandBuffer cmdbuf) {
+    begin_debug_region(cmdbuf, "Lighting Stage", STAGE_COLORS[ST_LIGHTING]);
+
     VkClearValue clear_values = {};
     
     VkRect2D render_area = {};
@@ -157,6 +160,8 @@ void lighting_stage_t::execute(VkCommandBuffer cmdbuf) {
     vkCmdDraw(cmdbuf, 4, 1, 0, 0);
 
     vkCmdEndRenderPass(cmdbuf);
+
+    end_debug_region(cmdbuf);
 
     update_pipeline_previous_output(stage.descriptor_set);
 }

@@ -1,3 +1,4 @@
+#include "vk_debug.hpp"
 #include "vk_context.hpp"
 #include "vk_stage_deferred.hpp"
 
@@ -88,6 +89,8 @@ void deferred_stage_t::init() {
 }
 
 void begin_scene_rendering(VkCommandBuffer command_buffer) {
+    begin_debug_region(command_buffer, "Deferred Rendering Stage", STAGE_COLORS[ST_DEFERRED]);
+
     VkClearValue clear_values[5] = {};
     
     memset(clear_values, 0, sizeof(VkClearValue) * 4);
@@ -110,6 +113,7 @@ void begin_scene_rendering(VkCommandBuffer command_buffer) {
 
 void end_scene_rendering(VkCommandBuffer cmdbuf) {
     vkCmdEndRenderPass(cmdbuf);
+    end_debug_region(cmdbuf);
 }
 
 }
