@@ -292,7 +292,8 @@ static void s_create_voxels_that_need_to_be_interpolated(
                         dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].index = recv_vm_ptr->index;
                         // Initial value is current value of voxel
                         dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].initial_value = c_ptr->voxels[recv_vm_ptr->index].value;
-                        dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count++].final_value = recv_vm_ptr->final_value;
+                        dst_cm_ptr->modifications[dst_cm_ptr->modified_voxels_count].final_value = recv_vm_ptr->final_value;
+                        dst_cm_ptr->colors[dst_cm_ptr->modified_voxels_count++] = recv_vm_ptr->color;
                         ++count;
                     }
                 }
@@ -325,10 +326,13 @@ static void s_create_voxels_that_need_to_be_interpolated(
                 // Need to change initial value to current voxel values
                 for (uint32_t vm_index = 0; vm_index < dst_cm_ptr->modified_voxels_count; ++vm_index) {
                     net::voxel_modification_t *dst_vm_ptr = &dst_cm_ptr->modifications[vm_index];
+                    vkph::voxel_color_t *dst_color = &dst_cm_ptr->colors[vm_index];
                     net::voxel_modification_t *recv_vm_ptr = &recv_cm_ptr->modifications[vm_index];
                     dst_vm_ptr->index = recv_vm_ptr->index;
+                    // The initial value is juste the current local value of the chunk
                     dst_vm_ptr->initial_value = c_ptr->voxels[recv_vm_ptr->index].value;
                     dst_vm_ptr->final_value = recv_vm_ptr->final_value;
+                    *dst_color = recv_vm_ptr->color;
                 }
             }
         }

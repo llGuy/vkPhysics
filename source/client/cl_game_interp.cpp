@@ -50,7 +50,10 @@ void chunks_interp_step(float dt, vkph::state_t *state) {
         c_ptr->flags.has_to_update_vertices = 1;
         for (uint32_t vm_index = 0; vm_index < cm_ptr->modified_voxels_count; ++vm_index) {
             net::voxel_modification_t *vm_ptr = &cm_ptr->modifications[vm_index];
+
             vkph::voxel_t *current_value = &c_ptr->voxels[vm_ptr->index];
+
+            current_value->color = cm_ptr->colors[vm_index];
             float fcurrent_value = (float)(current_value->value);
             float initial_value = (float)(vm_ptr->initial_value);
             float final_value = (float)(vm_ptr->final_value);
