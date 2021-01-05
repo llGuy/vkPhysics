@@ -20,6 +20,9 @@ void socket_api_init();
 
 enum socket_protocol_t { SP_TCP, SP_UDP };
 
+/*
+  Extremely thin sockets wrapper.
+ */
 void init_socket_api();
 socket_t network_socket_init(socket_protocol_t protocol);
 void destroy_socket(socket_t s);

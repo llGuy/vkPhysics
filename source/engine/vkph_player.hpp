@@ -19,7 +19,7 @@ struct player_render_t;
 namespace vkph {
 
 /* 
-  Basically dictates how input affects player;
+  Basically dictates how input affects player:
   - In PIM_METEORITE, the player just moves the mouse, and accelerates in a direction
   - In PIM_STANDING, the player is a walking humanoid who can use weapons and terraform 
     (gravity doesn't change)

@@ -25,16 +25,10 @@ struct arena_allocator_t {
 
     free_arena_header_t *head;
 
-    void pool_init(
-        uint32_t arena_size,
-        uint32_t pool_size);
-    
+    void pool_init(uint32_t arena_size, uint32_t pool_size);
     void *allocate_arena();
-    
     // Returns NULL
-    void *free_arena(
-        void *pointer);
-
+    void *free_arena(void *pointer);
     void free_pool();
 };
 
@@ -52,12 +46,8 @@ struct linear_allocator_t {
     void clear();
 };
 
-void global_linear_allocator_init(
-    uint32_t size);
-
-void *linear_malloc(
-    uint32_t size);
-
+void global_linear_allocator_init(uint32_t size);
+void *linear_malloc(uint32_t size);
 void linear_clear();
 
 // Free list allocator

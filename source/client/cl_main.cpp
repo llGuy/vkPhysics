@@ -184,8 +184,6 @@ void terminate() {
 
 }
 
-#include <thread>
-
 // Entry point for client program
 int32_t main(
     int32_t argc,

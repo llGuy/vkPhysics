@@ -31,11 +31,20 @@ include_directories("${CMAKE_SOURCE_DIR}/source/renderer/include")
 # Find packages
 find_package(Vulkan)
 find_package(CURL)
+find_package(OpenAL)
 
 # Threading library
 if (NOT WIN32)
   link_libraries("pthread")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat-security")
+endif()
+
+if (OpenAL_FOUND)
+  message(STATUS "Found OpenAL")
+  message(STATUS "${OPENAL_INCLUDE_DIR}")
+  message(STATUS "${OPENAL_LIBRARY}")
+else (OpenAL_FOUND)
+  message(WARNING "Did not find OpenAL")
 endif()
 
 # Create common
