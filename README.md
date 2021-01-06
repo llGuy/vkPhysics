@@ -17,6 +17,10 @@ For now, an engine which will hopefully become a real-time multiplayer game!
 - [Game](https://github.com/llGuy/vkPhysics/blob/master/docs/game.md)
 - [Renderer](https://github.com/llGuy/vkPhysics/blob/master/docs/renderer.md)
 
+### Gameplay
+
+- [Quick tutorial](https://github.com/llGuy/vkPhysics/blob/master/docs/tutorial.md)
+
 ## Screenshots
 
 ![photo](/assets/screenshots/opening_screen.png)

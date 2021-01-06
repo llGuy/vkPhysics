@@ -1,3 +1,4 @@
+- Use TCP for important packets like chunks (when joining)
 - Fix mess with calling UI code from scene code (e.g. whenever a spawn event triggers, don't clear game menu, etc...)
 - Replace GLFW with SDL
 - Refactor renderer (actually refactor EVERYTHING)
