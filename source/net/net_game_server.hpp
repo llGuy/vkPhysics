@@ -12,6 +12,7 @@ namespace net {
 */
 struct game_server_t {
     const char *server_name;
+    const char *ip_addr_str;
     address_t ipv4_address;
     uint32_t tag;
 };

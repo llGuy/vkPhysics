@@ -14,6 +14,7 @@ struct address_t {
 struct accepted_connection_t {
     socket_t s;
     address_t address;
+    bool success;
 };
 
 void socket_api_init();
@@ -28,7 +29,7 @@ void bind_network_socket_to_port(socket_t s, address_t address);
 void set_socket_to_listening(socket_t s, uint32_t max_clients);
 void set_socket_to_non_blocking_mode(socket_t s);
 accepted_connection_t accept_connection(socket_t s);
-void connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol);
+bool connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol);
 int32_t receive_from(socket_t s, char *buffer, uint32_t buffer_size, address_t *address_dst);
 bool send_to(socket_t s, address_t address, char *buffer, uint32_t buffer_size);
 int32_t receive_from_bound_address(socket_t s, char *buffer, uint32_t buffer_size);

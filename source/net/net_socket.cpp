@@ -98,7 +98,7 @@ static inline accepted_connection_t s_accept_connection(socket_t s) {
     return connection;
 }
 
-static inline void s_connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol) {
+static inline bool s_connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol) {
     SOCKET *sock = get_network_socket(s);
 
     addrinfo hints = {}, *addresses;
@@ -138,11 +138,21 @@ static inline void s_connect_to_address(socket_t s, const char *address_name, ui
                 if (err < 0) {
                     //fprintf(stderr, "%s\n", gai_strerror(err));
                     LOG_ERROR("Failed to connect to address with connect()\n");
+
+                    return false;
+                }
+                else {
+                    return true;
                 }
             }
         }
 
-        LOG_INFOV("Couldn't find address %s\n", address_name);
+        LOG_ERRORV("Couldn't find address %s\n", address_name);
+
+        return false;
+    }
+    else {
+        return false;
     }
     
     // SOCKADDR_IN saddr = {};
@@ -425,7 +435,7 @@ static inline bool s_send_to_bound_address(socket_t s, char *buffer, uint32_t bu
     }
 }
 
-static inline void s_connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol) {
+static inline bool s_connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol) {
     addrinfo hints = {}, *addresses;
 
     hints.ai_family = AF_INET;
@@ -462,17 +472,25 @@ static inline void s_connect_to_address(socket_t s, const char *address_name, ui
 
                 freeaddrinfo(addresses);
                 if (err < 0) {
-                    fprintf(stderr, "%s\n", gai_strerror(err));
-                    LOG_ERROR("Failed to connect to address with connect()\n");
+                    // fprintf(stderr, "%s\n", gai_strerror(err));
+                    LOG_ERRORV("Failed to connect to address with connect() with %d (%s)\n", errno, strerror(errno));
+
+                    return false;
                 }
                 else {
-                    return;
+                    LOG_INFO("Connection success\n");
+
+                    return true;
                 }
             }
         }
 
-        LOG_INFOV("Couldn't find address %s\n", address_name);
+        LOG_ERRORV("Couldn't find address %s\n", address_name);
+
+        return false;
     }
+
+    return false;
 }
 
 static inline uint32_t s_str_to_ipv4_int32(const char *name, uint32_t port, int32_t protocol) {
@@ -590,8 +608,8 @@ accepted_connection_t accept_connection(socket_t s) {
     return s_accept_connection(s);
 }
 
-void connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol) {
-    s_connect_to_address(s, address_name, port, protocol);
+bool connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol) {
+    return s_connect_to_address(s, address_name, port, protocol);
 }
 
 int32_t receive_from_bound_address(socket_t s, char *buffer, uint32_t buffer_size) {

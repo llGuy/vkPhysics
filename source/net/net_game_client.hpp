@@ -83,6 +83,12 @@ struct client_t {
     float ping;
     float ping_in_progress;
     float time_since_ping;
+
+    /*
+      On the server side, each client will also have a TCP socket - used for
+      important information and packets.
+     */
+    socket_t tcp_socket;
 };
 
 }

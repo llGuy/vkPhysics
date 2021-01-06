@@ -35,6 +35,7 @@ static bool simulate_lag = 0; // For debugging purposes.
   The server that we are currently connected to.
 */
 static net::game_server_t bound_server;
+static net::socket_t tcp_socket;
 
 
 // Start the client sockets and initialize containers
@@ -145,12 +146,12 @@ static void s_tick_client(vkph::state_t *state) {
                     } break;
 
                     default: {
-                        LOG_INFO("Received unidentifiable packet\n");
+                        LOG_INFOV("Received unidentifiable packet of type %d\n", (uint32_t)header.flags.packet_type);
                     } break;
                     }
                 }
                 else {
-                    LOG_INFO("Received packet from unidentified server\n");
+                    LOG_INFOV("Received packet from unidentified server of type %d\n", (uint32_t)header.flags.packet_type);
                 }
             }
 
@@ -201,19 +202,46 @@ static void s_net_event_listener(
             uint32_t *game_server_index = available_servers->name_to_server.get(simple_string_hash(data->server_name));
             if (game_server_index) {
                 uint32_t ip_address = available_servers->servers[*game_server_index].ipv4_address.ipv4_address;
-            
-                client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
+                const char *ip_address_str = available_servers->servers[*game_server_index].ip_addr_str;
+
+                { // Create TCP socket
+                    ctx->main_tcp_socket = net::network_socket_init(net::SP_TCP);
+                    // net::set_socket_to_non_blocking_mode(ctx->main_tcp_socket);
+                    net::set_socket_recv_buffer_size(ctx->main_tcp_socket, 1024 * 1024);
+                    if (net::connect_to_address(
+                            ctx->main_tcp_socket,
+                            ip_address_str,
+                            net::GAME_SERVER_LISTENING_PORT,
+                            net::SP_TCP)) {
+                        LOG_INFO("Call to connect was successful!!!\n");
+
+                        client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
+                    }
+                }
             }
             else {
                 LOG_ERRORV("Couldn't find server name: %s\n", data->server_name);
             }
         }
         else if (data->ip_address) {
-            uint32_t ip_address = str_to_ipv4_int32(data->ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
-            client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
-        }
-        else {
-            // Unable to connect to server
+            { // Create TCP socket
+                uint32_t ip_address = str_to_ipv4_int32(data->ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
+
+                ctx->main_tcp_socket = net::network_socket_init(net::SP_TCP);
+                // net::set_socket_to_non_blocking_mode(ctx->main_tcp_socket);
+                net::set_socket_recv_buffer_size(ctx->main_tcp_socket, 1024 * 1024);
+                if (net::connect_to_address(
+                        ctx->main_tcp_socket, data->ip_address,
+                        net::GAME_SERVER_LISTENING_PORT, net::SP_TCP)) {
+                  LOG_INFO("Call to connect was successful!!!\n");
+
+                  client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
+                }
+            }
+
+            // client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
+        } else {
+          // Unable to connect to server
         }
 
         FL_FREE(data);
@@ -221,6 +249,8 @@ static void s_net_event_listener(
 
     case vkph::ET_LEAVE_SERVER: {
         if (bound_server.tag != net::UNINITIALISED_TAG) {
+            net::destroy_socket(ctx->main_tcp_socket);
+
             // Send to server message
             send_packet_client_disconnect(state, ctx, &bound_server);
         

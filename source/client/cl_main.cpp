@@ -125,8 +125,6 @@ int32_t run(
     char *argv[]) {
     global_linear_allocator_init((uint32_t)megabytes(30));
     srand((uint32_t)time(NULL));
-    init_log_file();
-
     running = 1;
     files_init();
 

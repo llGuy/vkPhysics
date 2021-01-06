@@ -64,6 +64,16 @@ static void s_start_server(vkph::event_start_server_t *data, vkph::state_t *stat
 
     client_tag_to_id.init();
     ctx->tag = s_generate_tag();
+
+    { // Create main TCP socket
+        ctx->main_tcp_socket = net::network_socket_init(net::SP_TCP);
+
+        net::address_t addr = {};
+        addr.port = net::host_to_network_byte_order(net::GAME_SERVER_LISTENING_PORT);
+        net::bind_network_socket_to_port(ctx->main_tcp_socket, addr);
+        net::set_socket_to_non_blocking_mode(ctx->main_tcp_socket);
+        net::set_socket_to_listening(ctx->main_tcp_socket, 50);
+    }
 }
 
 // PT_CONNECTION_HANDSHAKE
@@ -842,7 +852,7 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
             if (has_to_correct_state || has_to_correct_terrain) {
                 if (c->waiting_on_correction) {
                     // TODO: Make sure to relook at this, so that in case of packet loss, the server doesn't just stall at this forever
-                    LOG_INFOV("(%llu) Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n", state->current_tick);
+                    LOG_INFOV("(%llu) Client needs to do correction, but did not receive correction acknowledgement, not sending correction\n", (long long unsigned int)state->current_tick);
                     snapshot->client_needs_to_correct_state = 0;
                     snapshot->server_waiting_for_correction = 1;
                 }
@@ -1051,7 +1061,20 @@ static void s_receive_packet_ping(
     c->ping_in_progress = 0.0f;
 }
 
+static void s_check_pending_connections() {
+    net::accepted_connection_t conn = net::accept_connection(ctx->main_tcp_socket);
+
+    if (conn.s >= 0) {
+        // Accept was successful
+        LOG_INFO("New connection!\n");
+    }
+    else {
+        // Accept wasn't sucessful
+    }
+}
+
 static void s_tick_server(vkph::state_t *state) {
+    s_check_pending_connections();
     s_ping_clients(state);
 
     static float snapshot_elapsed = 0.0f;

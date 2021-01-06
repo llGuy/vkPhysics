@@ -1,3 +1,5 @@
+#if 0
+
 #pragma once
 
 #include <stdio.h>
@@ -33,3 +35,33 @@ inline void log_impl(
 #define LOG_ERROR(str) log_impl("ERROR", __FUNCTION__, str)
 #define LOG_WARNING(str) log_impl("WARNING", __FUNCTION__, str)
 #define LOG_INFO(str) log_impl("INFO", __FUNCTION__, str)
+
+
+#endif
+#pragma once
+
+#include <stdio.h>
+
+#define LOG_ERRORV(str, ...)                    \
+    printf("ERROR:%s:  ", __FUNCTION__);  \
+    printf(str, __VA_ARGS__)
+
+#define LOG_WARNINGV(str, ...)                          \
+    printf("WARNING:%s:  ", __FUNCTION__);        \
+    printf(str, __VA_ARGS__)
+
+#define LOG_INFOV(str, ...)                     \
+    printf("INFO:%s:  ", __FUNCTION__);   \
+    printf(str, __VA_ARGS__)
+
+#define LOG_ERROR(str)                          \
+    printf("ERROR:%s:  ", __FUNCTION__);  \
+    printf(str)
+
+#define LOG_WARNING(str)                                \
+    printf("WARNING:%s:  ", __FUNCTION__);        \
+    printf(str)
+
+#define LOG_INFO(str)                           \
+    printf("INFO:%s:  ", __FUNCTION__);   \
+    printf(str)

@@ -25,8 +25,9 @@ constexpr float NET_SERVER_CHUNK_WORLD_OUTPUT_INTERVAL = (1.0f / 40.0f);
 constexpr float NET_PING_INTERVAL = 2.0f;
 constexpr float NET_CLIENT_TIMEOUT = 5.0f;
 
-constexpr uint32_t GAME_OUTPUT_PORT_CLIENT = 6001;
+constexpr uint32_t GAME_SERVER_LISTENING_PORT = 5999;
 constexpr uint32_t GAME_OUTPUT_PORT_SERVER = 6000;
+constexpr uint32_t GAME_OUTPUT_PORT_CLIENT = 6001;
 
 constexpr uint32_t UNINITIALISED_TAG = 0xFFFFFFFF;
 
@@ -73,6 +74,13 @@ struct context_t {
     accumulated_predicted_modification_t merged_recent_modifications;
 
     FILE *log_file;
+
+    /*
+      Main TCP socket's use depends on whether we are in the client or server:
+      - for the client, it simply sends / receives
+      - for the server, it accepts connection
+     */
+    socket_t main_tcp_socket;
 
     /*
       Methods:

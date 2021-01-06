@@ -6,6 +6,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <log.hpp>
+#include <files.hpp>
 #include <time.hpp>
 #include <vkph_events.hpp>
 #include <vkph_event_data.hpp>
@@ -202,6 +203,19 @@ context_info_t init_context(const char *name) {
     glfwSetMouseButtonCallback(ctx.window, s_window_mouse_button_callback);
     glfwSetCharCallback(ctx.window, s_window_character_callback);
     glfwSetCursorPosCallback(ctx.window, s_window_cursor_position_callback);
+
+    { // Set icon
+        file_handle_t img = create_file("assets/screenshots/logo32.png", FLF_IMAGE);
+        file_contents_t contents = read_file(img);
+
+        GLFWimage image = {};
+        image.pixels = (unsigned char *)contents.pixels;
+
+        glfwSetWindowIcon(ctx.window, 1, &image);
+
+        free_image(contents);
+        free_file(img);
+    }
 
     glfwGetFramebufferSize(ctx.window, &width, &height);
 

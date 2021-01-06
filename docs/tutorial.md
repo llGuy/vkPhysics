@@ -38,7 +38,7 @@ This will strategically make rolling mode the preferred mode for moving around a
 
 ![photo](/assets/screenshots/meteorite.png)
 
-When you spawn, you will by default be in rolling mode, however, you will spawn very far away from any structures (terrain). You kind of start of as a flying ball, and you can adjust the direction you're flying towards by moving your mouse accordingly. You will of course slowly accelerate.
+When you spawn, you will by default be in rolling mode, however, you will spawn very far away from any structures (terrain). You kind of start off as a flying ball, and you can adjust the direction you're flying towards by moving your mouse accordingly. You will of course slowly accelerate.
 
 You will note however that it does take a little time to get to any form of terrain. This is done on purpose to avoid instantly respawning (maybe in the future, there will be designated spawning points which won't be terraformable).
 
