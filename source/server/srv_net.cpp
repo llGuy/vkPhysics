@@ -196,8 +196,12 @@ static bool s_serialise_chunk(
     serialiser->serialise_int16(current_values->y);
     serialiser->serialise_int16(current_values->z);
 
+    printf("(%d %d %d): \n", current_values->x, current_values->y, current_values->z);
+
     // Do a compression of the chunk values
     for (uint32_t v_index = 0; v_index < vkph::CHUNK_VOXEL_COUNT; ++v_index) {
+        uint32_t debug = v_index;
+
         vkph::voxel_t current_voxel = current_values->voxel_values[v_index];
         if (current_voxel.value == 0) {
             uint32_t before_head = serialiser->data_buffer_head;
@@ -213,7 +217,7 @@ static bool s_serialise_chunk(
             if (zero_count == MAX_ZERO_COUNT_BEFORE_COMPRESSION) {
                 for (; current_values->voxel_values[v_index].value == 0; ++v_index, ++zero_count) {}
 
-                if (zero_count == vkph::CHUNK_VOXEL_COUNT) {
+                if (zero_count >= vkph::CHUNK_VOXEL_COUNT) {
                     serialiser->data_buffer_head = before_chunk_ptr;
                     
                     return 0;
@@ -223,6 +227,8 @@ static bool s_serialise_chunk(
                 serialiser->serialise_uint8(vkph::CHUNK_SPECIAL_VALUE);
                 serialiser->serialise_uint8(vkph::CHUNK_SPECIAL_VALUE);
                 serialiser->serialise_uint32(zero_count);
+
+                printf("\thas region of %d zeros starting from voxel %d\n", zero_count, debug);
             }
 
             v_index -= 1;

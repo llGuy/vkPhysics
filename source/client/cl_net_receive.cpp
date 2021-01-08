@@ -634,10 +634,14 @@ void receive_packet_chunk_voxels(
         int16_t y = serialiser->deserialise_int16();
         int16_t z = serialiser->deserialise_int16();
 
+        printf("(%d %d %d): \n", x, y, z);
+
         vkph::chunk_t *chunk = state->get_chunk(ivector3_t(x, y, z));
         chunk->flags.has_to_update_vertices = 1;
         
         for (uint32_t v = 0; v < vkph::CHUNK_EDGE_LENGTH * vkph::CHUNK_EDGE_LENGTH * vkph::CHUNK_EDGE_LENGTH;) {
+            uint32_t debug = v;
+
             uint8_t current_value = serialiser->deserialise_uint8();
             uint8_t current_color = serialiser->deserialise_uint8();
 
@@ -652,6 +656,8 @@ void receive_packet_chunk_voxels(
                 chunk->voxels[v + 1].color = 0;
                 chunk->voxels[v + 2].value = 0;
                 chunk->voxels[v + 2].color = 0;
+
+                printf("\thas region of %d zeros starting from voxel %d\n", zero_count, debug);
 
                 v += 2;
 
