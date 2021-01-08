@@ -1,9 +1,11 @@
 #include "cl_game_interp.hpp"
 #include "cl_main.hpp"
+#include "cl_game.hpp"
 #include "cl_game_spectate.hpp"
 #include "cl_game_predict.hpp"
 #include "cl_game_events.hpp"
 #include "cl_render.hpp"
+#include "vkph_player.hpp"
 #include <vkph_weapon.hpp>
 #include <vkph_state.hpp>
 #include <vkph_chunk.hpp>
@@ -31,6 +33,40 @@ void init_game(vkph::state_t *state) {
     init_game_interpolation();
 
     flags.in_meta_menu = 1;
+}
+
+void initialise_client_game_session(uint32_t player_info_count, vkph::player_init_info_t *infos, vkph::state_t *state) {
+    LOG_INFO("Entering server world\n");
+
+    set_i_am_in_server(1);
+
+    for (uint32_t i = 0; i < player_info_count; ++i) {
+        vkph::player_t *player = state->add_player();
+        player->init(&infos[i], state->client_to_local_id_map);
+
+        if (player->flags.is_local) {
+            set_local_player(player->local_id, state);
+
+            player->cached_player_action_count = 0;
+            player->cached_player_actions = FL_MALLOC(vkph::player_action_t, vkph::PLAYER_MAX_ACTIONS_COUNT * 2);
+
+            player->flags.is_remote = 0;
+            player->flags.is_local = 1;
+        }
+        else {
+            player->flags.is_remote = 1;
+            player->flags.is_local = 0;
+
+            // Initialise remote snapshots
+            player->remote_snapshots.init();
+            player->elapsed = 0.0f;
+        }
+
+        state->add_player_to_team(player, (vkph::team_color_t)player->flags.team_color);
+
+        player->render = init_player_render();
+        init_player_animated_instance(&player->render->animations);
+    }
 }
 
 void game_input(float dt, vkph::state_t *state, bool is_empty) {

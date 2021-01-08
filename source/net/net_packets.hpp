@@ -9,6 +9,7 @@
 #include "net_socket.hpp"
 #include "net_chunk_tracker.hpp"
 #include "net_client_prediction.hpp"
+#include "vkph_map.hpp"
 
 namespace net {
 
@@ -82,6 +83,7 @@ struct packet_connection_handshake_t {
     // Chunks will be sent in separate packets (too much data)
     // These are the number of chunks that are incoming
     uint32_t loaded_chunk_count;
+    vkph::map_view_info_t mvi;
 
     uint32_t player_count;
     vkph::player_init_info_t *player_infos;

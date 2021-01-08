@@ -1,4 +1,5 @@
 #include "cl_frame.hpp"
+#include <vkph_event_data.hpp>
 #include "cl_scene.hpp"
 #include <ux.hpp>
 #include "cl_game_spectate.hpp"
@@ -6,8 +7,11 @@
 #include "cl_main.hpp"
 #include "ux_scene.hpp"
 #include "cl_net.hpp"
+#include "cl_game.hpp"
+#include "vkph_event.hpp"
 #include <vkph_events.hpp>
 #include <ux_menu_main.hpp>
+#include "cl_game_predict.hpp"
 #include <vkph_player.hpp>
 #include <cstddef>
 #include <app.hpp>
@@ -26,6 +30,8 @@ void main_scene_t::subscribe_to_events(vkph::listener_t listener) {
     vkph::subscribe_to_event(vkph::ET_REQUEST_TO_JOIN_SERVER, listener);
     vkph::subscribe_to_event(vkph::ET_REQUEST_USER_INFORMATION, listener);
     vkph::subscribe_to_event(vkph::ET_ENTER_MAP_CREATOR_SCENE, listener);
+    vkph::subscribe_to_event(vkph::ET_ENTER_SERVER, listener);
+    vkph::subscribe_to_event(vkph::ET_ENTER_GAME_PLAY_SCENE, listener);
 }
 
 void main_scene_t::prepare_for_binding(vkph::state_t *state) {
@@ -135,10 +141,30 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
         ux::push_panel(ux::SI_MAIN_MENU);
     } break;
 
-    case vkph::ET_REQUEST_TO_JOIN_SERVER: {
-        vkph::submit_event(vkph::ET_ENTER_GAME_PLAY_SCENE, NULL);
+    case vkph::ET_ENTER_SERVER: {
+        auto *data = (vkph::event_enter_server_t *)event->data;
+
+        initialise_client_game_session(data->info_count, data->infos, state);
+
+        FL_FREE(data->infos);
+        FL_FREE(event->data);
+    } break;
+
+    case vkph::ET_ENTER_GAME_PLAY_SCENE: {
+        auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+        effect_data->dest_value = 1.0f;
+        effect_data->duration = 1.0f;
+        effect_data->fade_back = 0;
+        effect_data->trigger_count = 0;
+        vkph::submit_event(vkph::ET_BEGIN_FADE, effect_data);
+
         ux::bind_scene(ST_PLAY, state);
     } break;
+
+    // case vkph::ET_REQUEST_TO_JOIN_SERVER: {
+    //     vkph::submit_event(vkph::ET_ENTER_GAME_PLAY_SCENE, NULL);
+    //     ux::bind_scene(ST_PLAY, state);
+    // } break;
 
     case vkph::ET_REQUEST_USER_INFORMATION: {
         ux::clear_panels();

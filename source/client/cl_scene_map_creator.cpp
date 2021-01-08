@@ -50,6 +50,12 @@ void map_creator_scene_t::prepare_for_binding(vkph::state_t *state) {
 }
 
 void map_creator_scene_t::prepare_for_unbinding(vkph::state_t *state) {
+    vkph::player_t *spectator = get_spectator();
+
+    state->current_map_data.view_info.pos = spectator->ws_position;
+    state->current_map_data.view_info.dir = spectator->ws_view_direction;
+    state->current_map_data.view_info.up = spectator->ws_up_vector;
+
     state->save_map();
 
     clear_game(state);
@@ -304,6 +310,11 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
 
         map_ = state->load_map(event_data->map_path);
         map_->name = event_data->map_name;
+        
+        vkph::player_t *player = get_spectator();
+        player->ws_position = map_->view_info.pos;
+        player->ws_view_direction = map_->view_info.dir;
+        player->ws_up_vector = map_->view_info.up;
         
         if (map_->is_new) {
             // Create popup

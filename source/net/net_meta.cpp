@@ -52,8 +52,8 @@ static size_t s_write_callback(char *ptr, size_t size, size_t nmemb, void *userd
         shared.request_result[shared.request_result_size + byte_count] = 0;
     }
 
-    LOG_INFOV("META: Byte count: %d\n", byte_count);
-    LOG_INFOV("META: Message: \n%s\n", shared.request_result);
+    LOG_INFOV("META: Received %d bytes\n", byte_count);
+    // LOG_INFOV("META: Message: \n%s\n", shared.request_result);
 
     return byte_count;
 }

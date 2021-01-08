@@ -103,6 +103,7 @@ enum event_type_t {
     ET_CREATE_NEW_MAP = 0x48,
     ET_DONT_CREATE_NEW_MAP = 0x49,
     ET_MAP_EDITOR_CHOSE_COLOR = 0x4A,
+    ET_PREPARE_GAMEPLAY_SCENE = 0x4B,
 
     /*
       AI = 0x5..

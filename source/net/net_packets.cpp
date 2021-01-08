@@ -63,6 +63,7 @@ uint32_t packet_connection_handshake_t::size() {
     uint32_t final_size = 0;
     final_size += sizeof(client_tag);
     final_size += sizeof(loaded_chunk_count);
+    final_size += sizeof(mvi);
     final_size += sizeof(player_count);
     final_size += player_count * sizeof(vkph::player_init_info_t);
     final_size += sizeof(team_count);
@@ -75,6 +76,9 @@ uint32_t packet_connection_handshake_t::size() {
 void packet_connection_handshake_t::serialise(serialiser_t *serialiser) {
     serialiser->serialise_uint32(client_tag);
     serialiser->serialise_uint32(loaded_chunk_count);
+    serialiser->serialise_vector3(mvi.pos);
+    serialiser->serialise_vector3(mvi.dir);
+    serialiser->serialise_vector3(mvi.up);
     serialiser->serialise_uint32(player_count);
     for (uint32_t i = 0; i < player_count; ++i) {
         serialiser->serialise_string(player_infos[i].client_name);
@@ -98,6 +102,9 @@ void packet_connection_handshake_t::serialise(serialiser_t *serialiser) {
 void packet_connection_handshake_t::deserialise(serialiser_t *serialiser) {
     client_tag = serialiser->deserialise_uint32();
     loaded_chunk_count = serialiser->deserialise_uint32();
+    mvi.pos = serialiser->deserialise_vector3();
+    mvi.dir = serialiser->deserialise_vector3();
+    mvi.up = serialiser->deserialise_vector3();
     player_count = serialiser->deserialise_uint32();
     player_infos = LN_MALLOC(vkph::player_init_info_t, player_count);
 

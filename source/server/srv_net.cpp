@@ -102,6 +102,9 @@ static bool s_send_packet_connection_handshake(
 
     net::packet_connection_handshake_t connection_handshake = {};
     connection_handshake.loaded_chunk_count = loaded_chunk_count;
+    connection_handshake.mvi.pos = state->current_map_data.view_info.pos;
+    connection_handshake.mvi.dir = state->current_map_data.view_info.dir;
+    connection_handshake.mvi.up = state->current_map_data.view_info.up;
     connection_handshake.client_tag = new_client_tag;
 
     LOG_INFOV("Loaded chunk count: %d\n", connection_handshake.loaded_chunk_count);
@@ -1002,7 +1005,6 @@ static void s_send_pending_chunks() {
         uint32_t client_id = clients_to_send_chunks_to[i];
         net::client_t *c_ptr = &ctx->clients[client_id];
 
-        LOG_INFOV("Need to send %d packets\n", c_ptr->chunk_packet_count);
         if (c_ptr->current_chunk_sending < c_ptr->chunk_packet_count) {
             net::packet_chunk_voxels_t *packet = &c_ptr->chunk_packets[c_ptr->current_chunk_sending];
             serialiser_t serialiser = {};
@@ -1011,7 +1013,7 @@ static void s_send_pending_chunks() {
             serialiser.data_buffer_size = packet->size;
 
             if (net::send_to_bound_address(c_ptr->tcp_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head)) {
-                LOG_INFO("Sent chunk packet to client\n");
+                LOG_INFO("Sent chunk packet to client containing\n");
             }
 
             // Free

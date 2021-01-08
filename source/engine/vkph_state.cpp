@@ -1,4 +1,5 @@
 #include "vkph_state.hpp"
+#include "vkph_constant.hpp"
 #include "vkph_map.hpp"
 #include "vkph_team.hpp"
 #include "vkph_terraform.hpp"
@@ -85,14 +86,13 @@ void state_t::configure_team(
 
 void state_t::start_session() {
     if (current_map_path)
-        current_map_data = load_map(current_map_path);
+        current_map_data = *load_map(current_map_path);
 
     current_tick = 0;
 }
 
 void state_t::stop_session() {
     // Deinitialise everything in the game, unload map, etc...
-    current_map_data = NULL;
     game_mode = game_mode_t::INVALID;
     team_count = 0;
     FL_FREE(teams);
@@ -341,9 +341,7 @@ void state_t::unflag_modified_chunks(net::chunk_modifications_t *modifications, 
 }
 
 map_t *state_t::load_map(const char *path) {
-    map_t *current_loaded_map = FL_MALLOC(map_t, 1);
-
-    current_loaded_map->path = path;
+    current_map_data.path = path;
 
     char full_path[50] = {};
     sprintf(full_path, "assets/maps/%s", path);
@@ -358,34 +356,21 @@ map_t *state_t::load_map(const char *path) {
         serialiser.data_buffer_head = 0;
         serialiser.data_buffer_size = contents.size;
 
-        current_loaded_map->name = serialiser.deserialise_fl_string();
-        current_loaded_map->chunk_count = serialiser.deserialise_uint32();
+        current_map_data.name = serialiser.deserialise_fl_string();
 
-        for (uint32_t i = 0; i < current_loaded_map->chunk_count; ++i) {
+        current_map_data.view_info.pos = serialiser.deserialise_vector3();
+        current_map_data.view_info.dir = serialiser.deserialise_vector3();
+        current_map_data.view_info.up = serialiser.deserialise_vector3();
+
+        current_map_data.chunk_count = serialiser.deserialise_uint32();
+
+        for (uint32_t i = 0; i < current_map_data.chunk_count; ++i) {
             int16_t x = serialiser.deserialise_int16();
             int16_t y = serialiser.deserialise_int16();
             int16_t z = serialiser.deserialise_int16();
 
             chunk_t *chunk = get_chunk(ivector3_t(x, y, z));
             chunk->flags.has_to_update_vertices = 1;
-
-            // Also force update surrounding chunks
-            get_chunk(ivector3_t(x + 1, y, z))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x - 1, y, z))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x, y + 1, z))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x, y - 1, z))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x, y, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x, y, z - 1))->flags.has_to_update_vertices = 1;
-        
-            get_chunk(ivector3_t(x + 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x + 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x + 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x + 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
-
-            get_chunk(ivector3_t(x - 1, y + 1, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x - 1, y + 1, z - 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x - 1, y - 1, z + 1))->flags.has_to_update_vertices = 1;
-            get_chunk(ivector3_t(x - 1, y - 1, z - 1))->flags.has_to_update_vertices = 1;
 
             for (uint32_t v = 0; v < CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH * CHUNK_EDGE_LENGTH;) {
                 uint8_t current_value = serialiser.deserialise_uint8();
@@ -419,23 +404,22 @@ map_t *state_t::load_map(const char *path) {
             }
         }
 
-        current_loaded_map->is_new = 0;
+        current_map_data.is_new = 0;
     }
     else {
-        current_loaded_map->is_new = 1;
+        current_map_data.is_new = 1;
     }
 
     free_file(map_file);
 
     current_map_path = path;
-    current_map_data = current_loaded_map;
 
-    return current_loaded_map;
+    return &current_map_data;
 }
 
 void state_t::save_map(map_t *map) {
     if (!map) {
-        map = current_map_data;
+        map = &current_map_data;
     }
 
     // Serialise stuff
@@ -452,6 +436,10 @@ void state_t::save_map(map_t *map) {
     chunk_t **chunks = get_active_chunks(&chunk_count);
 
     serialiser.serialise_string(map->name);
+    serialiser.serialise_vector3(map->view_info.pos);
+    serialiser.serialise_vector3(map->view_info.dir);
+    serialiser.serialise_vector3(map->view_info.up);
+
     uint32_t pointer_to_chunk_count = serialiser.data_buffer_head;
     serialiser.serialise_uint32(0);
 
@@ -481,7 +469,7 @@ void state_t::save_map(map_t *map) {
                 if (zero_count == MAX_ZERO_COUNT_BEFORE_COMPRESSION) {
                     for (; chunks[i]->voxels[v_index].value == 0; ++v_index, ++zero_count) {}
 
-                    if (zero_count == CHUNK_VOXEL_COUNT) {
+                    if (zero_count >= CHUNK_VOXEL_COUNT) {
                         serialiser.data_buffer_head = before_chunk_ptr;
                         --saved_chunk_count;
                         break;

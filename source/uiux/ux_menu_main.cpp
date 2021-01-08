@@ -2,6 +2,7 @@
 #include <net_meta.hpp>
 #include "ux_list.hpp"
 #include "ux_menu_layout.hpp"
+#include "vkph_event.hpp"
 #include <vkph_event_data.hpp>
 #include <vkph_state.hpp>
 #include <vkph_events.hpp>
@@ -57,12 +58,14 @@ static void s_browse_server_menu_init() {
                 // Need to close the main menu, and start a fade effect
                 auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
                 effect_data->dest_value = 0.0f;
-                effect_data->duration = 2.5f;
-                effect_data->fade_back = 1;
+                effect_data->duration = 2.0f;
+                // In case we need to fade back because of a connection fail
+                effect_data->fade_back = 0;
                 effect_data->trigger_count = 1;
-                effect_data->triggers[0].trigger_type = vkph::ET_REQUEST_TO_JOIN_SERVER;
-                effect_data->triggers[0].next_event_data = event_data;
+                effect_data->triggers[0].trigger_type = vkph::ET_ENTER_GAME_PLAY_SCENE;
+                effect_data->triggers[0].next_event_data = NULL;
                 vkph::submit_event(vkph::ET_BEGIN_FADE, effect_data);
+                vkph::submit_event(vkph::ET_REQUEST_TO_JOIN_SERVER, event_data);
             }
             else if (list->typing_box.is_typing) {
                 auto *data = FL_MALLOC(vkph::event_data_request_to_join_server_t, 1);
@@ -73,12 +76,13 @@ static void s_browse_server_menu_init() {
 
                 auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
                 effect_data->dest_value = 0.0f;
-                effect_data->duration = 2.5f;
-                effect_data->fade_back = 1;
+                effect_data->duration = 2.0f;
+                effect_data->fade_back = 0;
                 effect_data->trigger_count = 1;
-                effect_data->triggers[0].trigger_type = vkph::ET_REQUEST_TO_JOIN_SERVER;
-                effect_data->triggers[0].next_event_data = data;
+                effect_data->triggers[0].trigger_type = vkph::ET_ENTER_GAME_PLAY_SCENE;
+                effect_data->triggers[0].next_event_data = NULL;
                 vkph::submit_event(vkph::ET_BEGIN_FADE, effect_data);
+                vkph::submit_event(vkph::ET_REQUEST_TO_JOIN_SERVER, data);
             }
 
             list->typing_box.is_typing = 0;

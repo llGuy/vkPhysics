@@ -36,14 +36,20 @@ void play_scene_t::subscribe_to_events(vkph::listener_t listener) {
 
 void play_scene_t::prepare_for_binding(vkph::state_t *state) {
     vkph::player_t *spect = get_spectator();
-    spect->ws_position = vector3_t(-2500.0f, -1000.0f, 5000.0f);
-    spect->ws_view_direction = glm::normalize(-spect->ws_position);
-    spect->ws_up_vector = vector3_t(0.0f, 1.0f, 0.0f);
+    spect->ws_position = state->current_map_data.view_info.pos;
+    spect->ws_view_direction = state->current_map_data.view_info.dir;
+    spect->ws_up_vector = state->current_map_data.view_info.up;
 
     get_frame_info()->blurred = 0;
     get_frame_info()->ssao = 1;
 
     state->flags.track_history = 1;
+    
+    // Enter game menu
+    ux::push_panel(ux::SI_GAME_MENU);
+    submode_ = S_MENU;
+
+    change_view_type(GVT_MENU);
 }
 
 void play_scene_t::prepare_for_unbinding(vkph::state_t *state) {
@@ -155,6 +161,10 @@ void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
 
     case S_MENU: {
         player = get_spectator();
+
+        eye_info->position = player->ws_position;
+        eye_info->up = player->ws_up_vector;
+        eye_info->direction = player->ws_view_direction;
     } break;
 
     default: {
@@ -186,13 +196,6 @@ void play_scene_t::handle_event(void *object, vkph::event_t *event) {
     auto *state = (vkph::state_t *)object;
 
     switch (event->type) {
-    case vkph::ET_ENTER_GAME_PLAY_SCENE: {
-        // Enter game menu
-        ux::push_panel(ux::SI_GAME_MENU);
-        submode_ = S_MENU;
-
-        change_view_type(GVT_MENU);
-    } break;
 
     case vkph::ET_EXIT_SCENE: {
         vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);

@@ -76,6 +76,7 @@ void receive_packet_connection_handshake(
 
     // Initialise the teams on the client side
     state->set_teams(handshake.team_count, handshake.team_infos);
+    state->current_map_data.view_info = handshake.mvi;
 
     LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
 
@@ -670,7 +671,6 @@ void receive_packet_chunk_voxels(
 
     uint32_t loaded;
     vkph::chunk_t **chunks = state->get_active_chunks(&loaded);
-    LOG_INFOV("Currently there are %d loaded chunks\n", loaded);
 
     chunks_to_receive -= loaded_chunk_count;
 
