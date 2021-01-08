@@ -197,6 +197,8 @@ static void s_check_tcp_packets(vkph::state_t *state) {
 
                 // Chunk voxels need to be sent via TCP for more security
             case net::PT_CHUNK_VOXELS: {
+                printf("Chunk voxel packet bytes received: %d\n", packet.bytes_received);
+
                 receive_packet_chunk_voxels(&packet.serialiser, state);
             } break;
 

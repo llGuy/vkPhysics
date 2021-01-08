@@ -196,7 +196,7 @@ static bool s_serialise_chunk(
     serialiser->serialise_int16(current_values->y);
     serialiser->serialise_int16(current_values->z);
 
-    printf("(%d %d %d): \n", current_values->x, current_values->y, current_values->z);
+    printf("%d -> (%d %d %d): \n", i, current_values->x, current_values->y, current_values->z);
 
     // Do a compression of the chunk values
     for (uint32_t v_index = 0; v_index < vkph::CHUNK_VOXEL_COUNT; ++v_index) {
@@ -1131,6 +1131,8 @@ static void s_check_pending_connections(vkph::state_t *state) {
                         addr.port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_CLIENT);;
 
                         net::client_t *new_client = s_receive_packet_connection_request(&in_serialiser, addr, state, pconn->s);
+
+                        net::set_socket_send_buffer_size(new_client->tcp_socket, net::NET_MAX_MESSAGE_SIZE * 2);
 
                         pconn->pending = 0;
                         pending_conns.remove(i);

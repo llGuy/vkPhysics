@@ -46,6 +46,12 @@ static inline void s_set_socket_recv_buffer_size(socket_t s, uint32_t size) {
     }
 }
 
+static inline void s_set_socket_send_buffer_size(socket_t s, uint32_t size) {
+    if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (const char *)&size, sizeof(size)) == -1) {
+        LOG_ERROR("Failed to set socket buffer size\n");
+    }
+}
+
 static inline void s_bind_network_socket_to_port(socket_t s, address_t address) {
     SOCKET *api_s = get_network_socket(s);
 
@@ -320,6 +326,12 @@ static inline void s_destroy_socket(socket_t s) {
 
 static inline void s_set_socket_recv_buffer_size(socket_t s, uint32_t size) {
     if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)) == -1) {
+        LOG_ERROR("Failed to set socket buffer size\n");
+    }
+}
+
+static inline void s_set_socket_send_buffer_size(socket_t s, uint32_t size) {
+    if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)) == -1) {
         LOG_ERROR("Failed to set socket buffer size\n");
     }
 }
@@ -615,6 +627,10 @@ uint16_t host_to_network_byte_order(uint16_t bytes) {
 
 void set_socket_recv_buffer_size(socket_t s, uint32_t size) {
     s_set_socket_recv_buffer_size(s, size);
+}
+
+void set_socket_send_buffer_size(socket_t s, uint32_t size) {
+    s_set_socket_send_buffer_size(s, size);
 }
 
 accepted_connection_t accept_connection(socket_t s) {

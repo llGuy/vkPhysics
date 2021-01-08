@@ -634,7 +634,7 @@ void receive_packet_chunk_voxels(
         int16_t y = serialiser->deserialise_int16();
         int16_t z = serialiser->deserialise_int16();
 
-        printf("(%d %d %d): \n", x, y, z);
+        printf("%d -> (%d %d %d): \n", c, x, y, z);
 
         vkph::chunk_t *chunk = state->get_chunk(ivector3_t(x, y, z));
         chunk->flags.has_to_update_vertices = 1;
