@@ -15,6 +15,10 @@ struct game_server_t {
     const char *ip_addr_str;
     address_t ipv4_address;
     uint32_t tag;
+
+    struct {
+        uint8_t waiting_for_handshake: 1;
+    } flags;
 };
 
 struct available_servers_t {

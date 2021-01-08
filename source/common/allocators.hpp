@@ -87,3 +87,5 @@ template <typename T>
 void lnclear(T *ptr) {
     linear_clear();
 }
+
+extern linear_allocator_t g_linear_allocator;

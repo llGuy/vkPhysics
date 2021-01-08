@@ -84,6 +84,8 @@ int32_t run(
     init_net(state);
     init_game(state);
 
+    LN_CLEAR();
+
     s_loop();
 
     deactivate_server();

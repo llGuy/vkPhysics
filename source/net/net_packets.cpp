@@ -1,7 +1,26 @@
 #include "net_packets.hpp"
+#include "net_socket.hpp"
 #include "vkph_player.hpp"
+#include "net_context.hpp"
 
 namespace net {
+
+const char *packet_type_to_str(packet_type_t type) {
+    switch (type) {
+    case PT_CONNECTION_REQUEST: return "CONNECTION_REQUEST";
+    case PT_PING: return "PING";
+    case PT_CONNECTION_HANDSHAKE: return "CONNECTION_HANDSHAKE";
+    case PT_PLAYER_JOINED: return "PLAYER_JOINED";
+    case PT_TEAM_SELECT_REQUEST: return "TEAM_SELECT_REQUEST";
+    case PT_PLAYER_TEAM_CHANGE: return "PLAYER_TEAM_CHANGE";
+    case PT_CLIENT_DISCONNECT: return "CLIENT_DISCONNECT";
+    case PT_PLAYER_LEFT: return "PLAYER_LEFT";
+    case PT_CLIENT_COMMANDS: return "CLIENT_COMMANDS";
+    case PT_GAME_STATE_SNAPSHOT: return "GAME_STATE_SNAPSHOT";
+    case PT_CHUNK_VOXELS: return "CHUNK_VOXELS";
+    default: return "INVALID";
+    }
+}
 
 uint32_t packet_header_t::size() {
     return
@@ -367,6 +386,39 @@ void packet_player_team_change_t::serialise(serialiser_t *serialiser) {
 void packet_player_team_change_t::deserialise(serialiser_t *serialiser) {
     client_id = serialiser->deserialise_uint16();
     color = serialiser->deserialise_uint16();
+}
+
+packet_t get_next_packet_udp(context_t *ctx) {
+    packet_t packet = {};
+
+    packet.from = {};
+    packet.bytes_received = ctx->main_udp_recv_from(
+        ctx->message_buffer, sizeof(char) * net::NET_MAX_MESSAGE_SIZE,
+        &packet.from);
+
+    packet.serialiser.data_buffer = (uint8_t *)ctx->message_buffer;
+    packet.serialiser.data_buffer_size = packet.bytes_received;
+
+    packet.header.deserialise(&packet.serialiser);
+
+    return packet;
+}
+
+packet_t get_next_packet_tcp(socket_t sock, context_t *ctx) {
+    packet_t packet = {};
+
+    packet.from = {};
+    packet.bytes_received = receive_from_bound_address(
+        sock,
+        ctx->message_buffer,
+        sizeof(char) * net::NET_MAX_MESSAGE_SIZE);
+
+    packet.serialiser.data_buffer = (uint8_t *)ctx->message_buffer;
+    packet.serialiser.data_buffer_size = packet.bytes_received;
+
+    packet.header.deserialise(&packet.serialiser);
+
+    return packet;
 }
 
 }

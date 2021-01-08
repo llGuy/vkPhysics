@@ -1,5 +1,9 @@
+#include "allocators.hpp"
 #include "cl_main.hpp"
+#include "containers.hpp"
 #include "net_meta.hpp"
+#include <bits/stdint-uintn.h>
+#include <cstring>
 #include <vkph_chunk.hpp>
 #include <vkph_player.hpp>
 #include "cl_net.hpp"
@@ -14,6 +18,8 @@
 #include <cstddef>
 #include <ux_menu_game.hpp>
 #include "cl_net_meta.hpp"
+#include "net_packets.hpp"
+#include "net_socket.hpp"
 
 #include <net_debug.hpp>
 #include <net_context.hpp>
@@ -36,6 +42,14 @@ static bool simulate_lag = 0; // For debugging purposes.
 */
 static net::game_server_t bound_server;
 static net::socket_t tcp_socket;
+
+/*
+  When we send the connection request to the server, we need to wait for the handshake
+  to arrive before we can start parsing the packets the server is sending us. For instance
+  If one of the server's game state snapshot packets arrive before the handshake packet,
+  we need to make sure to copy that packet on the heap and push it to this list.
+ */
+static stack_container_t<net::packet_t> packets_to_unpack;
 
 
 // Start the client sockets and initialize containers
@@ -67,6 +81,141 @@ static void s_start_client(
     ctx->tag = net::UNINITIALISED_TAG;
 
     bound_server.tag = net::UNINITIALISED_TAG;
+    bound_server.flags.waiting_for_handshake = 0;
+
+    packets_to_unpack.init(20);
+}
+
+static void s_handle_packet(vkph::state_t *state, net::packet_t *packet) {
+    // LOG_INFOV(
+    //     "Received packet of type \"%s\"\n",
+    //     net::packet_type_to_str((net::packet_type_t)packet->header.flags.packet_type));
+
+    switch (packet->header.flags.packet_type) {
+
+    case net::PT_PLAYER_JOINED: {
+        receive_packet_player_joined(&packet->serialiser, state, ctx);
+    } break;
+
+    case net::PT_PLAYER_LEFT: {
+        receive_packet_player_left(&packet->serialiser, state, ctx);
+    } break;
+                    
+    case net::PT_GAME_STATE_SNAPSHOT: {
+        receive_packet_game_state_snapshot(&packet->serialiser, packet->header.current_tick, state, ctx);
+    } break;
+                    
+    case net::PT_PLAYER_TEAM_CHANGE: {
+        receive_player_team_change(&packet->serialiser, state);
+    } break;
+                    
+    case net::PT_PING: {
+        receive_ping(&packet->serialiser, state, ctx, &bound_server);
+    } break;
+                    
+    default: {
+        LOG_INFOV(
+            "Received unidentifiable packet of type %d\n",
+            (uint32_t)packet->header.flags.packet_type);
+    } break;
+    }
+}
+
+static void s_check_udp_packets(vkph::state_t *state) {
+    static const uint32_t MAX_RECEIVED_PER_TICK = 4;
+    uint32_t i = 0;
+
+    net::packet_t packet = net::get_next_packet_udp(ctx);
+    while (packet.bytes_received) {
+        // Check whether the server tag matches the tag of the packet.
+        if (packet.header.tag == bound_server.tag) {
+            s_handle_packet(state, &packet);
+        }
+        else if (bound_server.flags.waiting_for_handshake) {
+            if (packets_to_unpack.data_count < packets_to_unpack.max_size) {
+                LOG_INFO("Pushing a UDP packet to the list of packets to parse after handshake\n");
+
+                // Create a free list memory block so that we can parse the packet when
+                // we received the connection handshake
+                uint32_t idx = packets_to_unpack.add();
+                net::packet_t *p = &packets_to_unpack[idx];
+
+                uint8_t *membuf = flmalloc<uint8_t>(packet.bytes_received);
+                memcpy(membuf, packet.serialiser.data_buffer, p->bytes_received);
+
+                p->bytes_received = packet.bytes_received;
+                p->from = packet.from;
+                p->header = packet.header;
+                p->serialiser.data_buffer = membuf;
+                p->serialiser.data_buffer_head = p->serialiser.data_buffer_head;
+                p->serialiser.data_buffer_size = p->bytes_received;
+            }
+        }
+        else {
+            LOG_INFOV(
+                "Received packet from unidentified server of type %d\n",
+                (uint32_t)packet.header.flags.packet_type);
+        }
+
+        if (i < MAX_RECEIVED_PER_TICK) {
+            packet = net::get_next_packet_udp(ctx);
+        } else {
+            packet.bytes_received = false;
+        }
+
+        ++i;
+    }
+}
+
+static void s_check_tcp_packets(vkph::state_t *state) {
+    static const uint32_t MAX_RECEIVED_PER_TICK = 4;
+    uint32_t i = 0;
+
+    net::packet_t packet = net::get_next_packet_tcp(ctx->main_tcp_socket, ctx);
+    while (packet.bytes_received) {
+        if (packet.header.flags.packet_type == net::PT_CONNECTION_HANDSHAKE) {
+            receive_packet_connection_handshake(
+                &packet.serialiser,
+                packet.header.tag,
+                state,
+                ctx,
+                &bound_server);
+
+            bound_server.flags.waiting_for_handshake = 0;
+
+            // Now need to parse the packets we received in between request and handshake
+            for (uint32_t i = 0; i < packets_to_unpack.data_count; ++i) {
+                auto *packet = &packets_to_unpack[i];
+                s_handle_packet(state, packet);
+                flfree(packet->serialiser.data_buffer);
+            }
+
+            packets_to_unpack.data_count = 0;
+        }
+        else if (packet.header.tag == bound_server.tag) {
+            switch (packet.header.flags.packet_type) {
+
+                // Chunk voxels need to be sent via TCP for more security
+            case net::PT_CHUNK_VOXELS: {
+                receive_packet_chunk_voxels(&packet.serialiser, state);
+            } break;
+
+            }
+        }
+        else {
+            LOG_INFOV(
+                "Received packet from unidentified server of type %d\n",
+                (uint32_t)packet.header.flags.packet_type);
+        }
+
+        if (i < MAX_RECEIVED_PER_TICK) {
+            packet = net::get_next_packet_tcp(ctx->main_tcp_socket, ctx);
+        } else {
+            packet.bytes_received = false;
+        }
+
+        ++i;
+    }
 }
 
 static void s_tick_client(vkph::state_t *state) {
@@ -93,82 +242,38 @@ static void s_tick_client(vkph::state_t *state) {
             elapsed = 0.0f;
         }
 
-        net::address_t received_address = {};
-        int32_t received = ctx->main_udp_recv_from(
-            ctx->message_buffer,
-            sizeof(char) * net::NET_MAX_MESSAGE_SIZE,
-            &received_address);
+        s_check_tcp_packets(state);
 
-        // In future, separate thread will be capturing all these packets
-        static const uint32_t MAX_RECEIVED_PER_TICK = 4;
-        uint32_t i = 0;
-
-        while (received) {
-            serialiser_t in_serialiser = {};
-            in_serialiser.data_buffer = (uint8_t *)ctx->message_buffer;
-            in_serialiser.data_buffer_size = received;
-
-            net::packet_header_t header = {};
-            header.deserialise(&in_serialiser);
-
-            if (header.flags.packet_type == net::PT_CONNECTION_HANDSHAKE) {
-                if (bound_server.tag == net::UNINITIALISED_TAG) {
-                    receive_packet_connection_handshake(&in_serialiser, header.tag, state, ctx, &bound_server);
-                }
-            }
-            else {
-                // Check whether the server tag matches the tag of the packet.
-                if (header.tag == bound_server.tag) {
-                    switch (header.flags.packet_type) {
-
-                    case net::PT_PLAYER_JOINED: {
-                        receive_packet_player_joined(&in_serialiser, state, ctx);
-                    } break;
-
-                    case net::PT_PLAYER_LEFT: {
-                        receive_packet_player_left(&in_serialiser, state, ctx);
-                    } break;
-
-                    case net::PT_GAME_STATE_SNAPSHOT: {
-                        receive_packet_game_state_snapshot(&in_serialiser, header.current_tick, state, ctx);
-                    } break;
-
-                    case net::PT_CHUNK_VOXELS: {
-                        receive_packet_chunk_voxels(&in_serialiser, state);
-                    } break;
-
-                    case net::PT_PLAYER_TEAM_CHANGE: {
-                        receive_player_team_change(&in_serialiser, state);
-                    } break;
-
-                    case net::PT_PING: {
-                        receive_ping(&in_serialiser, state, ctx, &bound_server);
-                    } break;
-
-                    default: {
-                        LOG_INFOV("Received unidentifiable packet of type %d\n", (uint32_t)header.flags.packet_type);
-                    } break;
-                    }
-                }
-                else {
-                    LOG_INFOV("Received packet from unidentified server of type %d\n", (uint32_t)header.flags.packet_type);
-                }
-            }
-
-            if (i < MAX_RECEIVED_PER_TICK) {
-                received = ctx->main_udp_recv_from(
-                    ctx->message_buffer,
-                    sizeof(char) * net::NET_MAX_MESSAGE_SIZE,
-                    &received_address);
-            }
-            else {
-                received = false;
-            } 
-
-            ++i;
+        if (client_check_incoming_packets) {
+            s_check_udp_packets(state);
         }
 
         check_if_finished_recv_chunks(state, ctx);
+    }
+}
+
+static void s_request_connection_to_server(const char *ip, uint32_t ipv4, local_client_info_t *client_info) {
+    ctx->main_tcp_socket = net::network_socket_init(net::SP_TCP);
+    net::set_socket_recv_buffer_size(ctx->main_tcp_socket, 1024 * 1024);
+
+    if (net::connect_to_address(
+            ctx->main_tcp_socket, ip,
+            net::GAME_SERVER_LISTENING_PORT, net::SP_TCP)) {
+
+        LOG_INFO("Call to connect was successful!!!\n");
+
+        net::set_socket_blocking_state(ctx->main_tcp_socket, 0);
+        client_check_incoming_packets = send_packet_connection_request(ipv4, client_info, ctx, &bound_server);
+
+        bound_server.flags.waiting_for_handshake = 1;
+
+        if (client_check_incoming_packets) {
+            bound_server.ipv4_address.port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_SERVER);
+            LOG_INFO("Successfully sent connection request to server\n");
+        }
+        else {
+            LOG_INFO("Failed to send connection request to server\n");
+        } 
     }
 }
 
@@ -204,20 +309,7 @@ static void s_net_event_listener(
                 uint32_t ip_address = available_servers->servers[*game_server_index].ipv4_address.ipv4_address;
                 const char *ip_address_str = available_servers->servers[*game_server_index].ip_addr_str;
 
-                { // Create TCP socket
-                    ctx->main_tcp_socket = net::network_socket_init(net::SP_TCP);
-                    // net::set_socket_to_non_blocking_mode(ctx->main_tcp_socket);
-                    net::set_socket_recv_buffer_size(ctx->main_tcp_socket, 1024 * 1024);
-                    if (net::connect_to_address(
-                            ctx->main_tcp_socket,
-                            ip_address_str,
-                            net::GAME_SERVER_LISTENING_PORT,
-                            net::SP_TCP)) {
-                        LOG_INFO("Call to connect was successful!!!\n");
-
-                        client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
-                    }
-                }
+                s_request_connection_to_server(ip_address_str, ip_address, &client_info);
             }
             else {
                 LOG_ERRORV("Couldn't find server name: %s\n", data->server_name);
@@ -226,21 +318,10 @@ static void s_net_event_listener(
         else if (data->ip_address) {
             { // Create TCP socket
                 uint32_t ip_address = str_to_ipv4_int32(data->ip_address, net::GAME_OUTPUT_PORT_SERVER, net::SP_UDP);
-
-                ctx->main_tcp_socket = net::network_socket_init(net::SP_TCP);
-                // net::set_socket_to_non_blocking_mode(ctx->main_tcp_socket);
-                net::set_socket_recv_buffer_size(ctx->main_tcp_socket, 1024 * 1024);
-                if (net::connect_to_address(
-                        ctx->main_tcp_socket, data->ip_address,
-                        net::GAME_SERVER_LISTENING_PORT, net::SP_TCP)) {
-                  LOG_INFO("Call to connect was successful!!!\n");
-
-                  client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
-                }
+                s_request_connection_to_server(data->ip_address, ip_address, &client_info);
             }
-
-            // client_check_incoming_packets = send_packet_connection_request(ip_address, &client_info, ctx, &bound_server);
-        } else {
+        }
+        else {
           // Unable to connect to server
         }
 

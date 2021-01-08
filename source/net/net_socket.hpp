@@ -27,7 +27,9 @@ void destroy_socket(socket_t s);
 void set_socket_recv_buffer_size(socket_t s, uint32_t size);
 void bind_network_socket_to_port(socket_t s, address_t address);
 void set_socket_to_listening(socket_t s, uint32_t max_clients);
-void set_socket_to_non_blocking_mode(socket_t s);
+// If enabled = 1, socket will be blocking
+// If enabled = 0, socket will be non blocking
+void set_socket_blocking_state(socket_t s, bool enabled);
 accepted_connection_t accept_connection(socket_t s);
 bool connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol);
 int32_t receive_from(socket_t s, char *buffer, uint32_t buffer_size, address_t *address_dst);

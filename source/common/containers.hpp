@@ -227,7 +227,7 @@ template <
         max_size = Count;
 
         memset(data, 0, max_size * sizeof(T));
-        memset(removed, 0, max_size * sizeof(T));
+        memset(removed, 0, max_size * sizeof(uint32_t));
 
         removed_count = 0;
         data_count = 0;

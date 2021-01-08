@@ -236,14 +236,7 @@ bool send_packet_connection_request(
     header.serialise(&serialiser);
     request.serialise(&serialiser);
 
-    if (ctx->main_udp_send_to(&serialiser, server->ipv4_address)) {
-        LOG_INFO("Success sent connection request\n");
-        return true;
-    }
-    else {
-        LOG_ERROR("Failed to send connection request\n");
-        return false;
-    }
+    return net::send_to_bound_address(ctx->main_tcp_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
 }
 
 // PT_TEAM_SELECT_REQUEST

@@ -6,6 +6,7 @@
 #include <vkph_projectile.hpp>
 #include <serialiser.hpp>
 
+#include "net_socket.hpp"
 #include "net_chunk_tracker.hpp"
 #include "net_client_prediction.hpp"
 
@@ -36,6 +37,8 @@ enum packet_type_t {
     // Server sends this to the clients when they join at the beginning
     PT_CHUNK_VOXELS,
 };
+
+const char *packet_type_to_str(packet_type_t type);
 
 /*
   Header of all game packets sent over the network.
@@ -165,5 +168,15 @@ struct packet_player_team_change_t {
     void serialise(serialiser_t *serialiser);
     void deserialise(serialiser_t *serialiser);
 };
+
+struct packet_t {
+    packet_header_t header;
+    int32_t bytes_received;
+    address_t from;
+    serialiser_t serialiser;
+};
+
+packet_t get_next_packet_udp(struct context_t *ctx);
+packet_t get_next_packet_tcp(socket_t sock, struct context_t *ctx);
 
 }

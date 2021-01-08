@@ -73,9 +73,9 @@ static inline void s_set_socket_to_listening(socket_t s, uint32_t max_clients) {
     }
 }
 
-static inline void s_set_socket_to_non_blocking_mode(socket_t s) {
+static inline void s_set_socket_blocking_state(socket_t s, bool enabled) {
     SOCKET *sock = get_network_socket(s);
-    u_long enabled = 1;
+    u_long enabled = !enabled;
     ioctlsocket(*sock, FIONBIO, &enabled);
 }
 
@@ -306,7 +306,12 @@ static inline void s_init_api() {
 }
 
 static inline socket_t s_network_socket_init(int32_t family, int32_t type, int32_t protocol) {
-    return socket(family, type, protocol);
+    socket_t s = socket(family, type, protocol);
+
+    int32_t flag = 1;
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+
+    return s;
 }
 
 static inline void s_destroy_socket(socket_t s) {
@@ -356,14 +361,22 @@ static inline void s_set_socket_to_listening(socket_t s, uint32_t max_clients) {
     }
 }
 
-static inline void s_set_socket_to_non_blocking_mode(socket_t s) {
+static inline void s_set_socket_blocking_state(socket_t s, bool enabled) {
     int32_t flags = fcntl(s, F_GETFL, 0);
     
     if (flags == -1) {
         // Error
     }
 
-    flags = flags | O_NONBLOCK;
+    if (enabled) {
+        // Enable blocking
+        flags &= ~O_NONBLOCK;
+    }
+    else {
+        // Enable non-blocking
+        flags |= O_NONBLOCK;
+    }
+
     fcntl(s, F_SETFL, flags);
 }
 
@@ -579,8 +592,8 @@ void set_socket_to_listening(socket_t s, uint32_t max_clients) {
     s_set_socket_to_listening(s, max_clients);
 }
 
-void set_socket_to_non_blocking_mode(socket_t s) {
-    s_set_socket_to_non_blocking_mode(s);
+void set_socket_blocking_state(socket_t s, bool enabled) {
+    s_set_socket_blocking_state(s, enabled);
 }
 
 int32_t receive_from(socket_t s, char *buffer, uint32_t buffer_size, address_t *address_dst) {

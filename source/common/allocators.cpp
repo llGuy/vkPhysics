@@ -80,18 +80,18 @@ void linear_allocator_t::clear() {
     current = start;
 }
 
-static linear_allocator_t linear_allocator;
+linear_allocator_t g_linear_allocator;
 
 void global_linear_allocator_init(
     uint32_t size) {
-    linear_allocator.init(size);
+    g_linear_allocator.init(size);
 }
 
 void *linear_malloc(
     uint32_t size) {
-    return linear_allocator.allocate(size);
+    return g_linear_allocator.allocate(size);
 }
 
 void linear_clear() {
-    linear_allocator.clear();
+    g_linear_allocator.clear();
 }

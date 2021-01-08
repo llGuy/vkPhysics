@@ -11,7 +11,7 @@ void context_t::init_main_udp_socket(uint16_t output_port) {
     address_t address = {};
     address.port = host_to_network_byte_order(output_port);
     bind_network_socket_to_port(main_udp_socket_, address);
-    set_socket_to_non_blocking_mode(main_udp_socket_);
+    set_socket_blocking_state(main_udp_socket_, 0);
     set_socket_recv_buffer_size(main_udp_socket_, 1024 * 1024);
 
     // For debugging purposes

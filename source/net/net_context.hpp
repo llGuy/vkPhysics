@@ -21,7 +21,7 @@ constexpr uint32_t NET_MAX_AVAILABLE_SERVER_COUNT = 1000;
 */
 constexpr float NET_CLIENT_COMMAND_OUTPUT_INTERVAL = (1.0f / 25.0f);
 constexpr float NET_SERVER_SNAPSHOT_OUTPUT_INTERVAL = (1.0f / 20.0f);
-constexpr float NET_SERVER_CHUNK_WORLD_OUTPUT_INTERVAL = (1.0f / 40.0f);
+constexpr float NET_SERVER_CHUNK_WORLD_OUTPUT_INTERVAL = (1.0f / 30.0f);
 constexpr float NET_PING_INTERVAL = 2.0f;
 constexpr float NET_CLIENT_TIMEOUT = 5.0f;
 

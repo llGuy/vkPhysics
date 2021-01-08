@@ -1,5 +1,6 @@
 #include "srv_net.hpp"
 #include "allocators.hpp"
+#include "net_socket.hpp"
 #include "srv_net_meta.hpp"
 #include "constant.hpp"
 #include <vkph_player.hpp>
@@ -37,6 +38,19 @@ struct server_info_t {
 static server_info_t local_server_info;
 static bool started_server = 0;
 
+/*
+  When we've accepted a new connection, we need to temporarily store it
+  until we have received the connection request, and actually created the client.
+ */
+struct pending_connection_t {
+    bool pending;
+    net::socket_t s;
+    float elapsed_time;
+    net::address_t addr;
+};
+
+static static_stack_container_t<pending_connection_t, 50> pending_conns;
+
 static uint32_t s_generate_tag() {
     return rand();
 }
@@ -71,9 +85,11 @@ static void s_start_server(vkph::event_start_server_t *data, vkph::state_t *stat
         net::address_t addr = {};
         addr.port = net::host_to_network_byte_order(net::GAME_SERVER_LISTENING_PORT);
         net::bind_network_socket_to_port(ctx->main_tcp_socket, addr);
-        net::set_socket_to_non_blocking_mode(ctx->main_tcp_socket);
+        net::set_socket_blocking_state(ctx->main_tcp_socket, 0);
         net::set_socket_to_listening(ctx->main_tcp_socket, 50);
     }
+
+    pending_conns.init();
 }
 
 // PT_CONNECTION_HANDSHAKE
@@ -157,14 +173,7 @@ static bool s_send_packet_connection_handshake(
     c->client_tag = new_client_tag;
     client_tag_to_id.insert(new_client_tag, client_id);
 
-    if (ctx->main_udp_send_to(&serialiser, c->address)) {
-        LOG_INFOV("Sent handshake to client: %s (with tag %d)\n", c->name, new_client_tag);
-        return 1;
-    }
-    else {
-        LOG_INFOV("Failed to send handshake to client: %s\n", c->name);
-        return 0;
-    }
+    return net::send_to_bound_address(c->tcp_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head);
 }
 
 static constexpr uint32_t s_maximum_chunks_per_packet() {
@@ -318,11 +327,18 @@ static void s_send_game_state_to_new_client(
     // Cannot send all of these at the same bloody time
     uint32_t chunks_to_send = s_prepare_packet_chunk_voxels(client, voxel_chunks, loaded_chunk_count, state);
 
-    s_send_packet_connection_handshake(
+    if (s_send_packet_connection_handshake(
         client_id,
         player_info,
         chunks_to_send,
-        state);
+        state)) {
+        net::client_t *c = &ctx->clients[client_id];
+        LOG_INFOV("Sent handshake to client: %s (with tag %d)\n", c->name, c->client_tag);
+    }
+    else {
+        net::client_t *c = &ctx->clients[client_id];
+        LOG_INFOV("Failed to send handshake to client: %s\n", c->name);
+    }
 }
 
 // PT_PLAYER_JOINED
@@ -362,10 +378,11 @@ static void s_send_packet_player_joined(
 }
 
 // PT_CONNECTION_REQUEST
-static void s_receive_packet_connection_request(
+static net::client_t *s_receive_packet_connection_request(
     serialiser_t *serialiser,
     net::address_t address,
-    const vkph::state_t *state) {
+    const vkph::state_t *state,
+    net::socket_t tcp_s) {
     net::packet_connection_request_t request = {};
     request.deserialise(serialiser);
 
@@ -383,6 +400,7 @@ static void s_receive_packet_connection_request(
     client->predicted.chunk_mod_count = 0;
     client->predicted.chunk_modifications = (net::chunk_modifications_t *)ctx->chunk_modification_allocator.allocate_arena();
     client->previous_locations.init();
+    client->tcp_socket = tcp_s;
 
     // Force a ping in the next loop
     client->ping = 0.0f;
@@ -417,8 +435,11 @@ static void s_receive_packet_connection_request(
 
     // Send game state to new player
     s_send_game_state_to_new_client(client_id, event_data, state);
+
     // Dispatch to all players newly joined player information
     s_send_packet_player_joined(event_data, state);
+
+    return client;
 }
 
 static void s_handle_disconnect(
@@ -988,7 +1009,8 @@ static void s_send_pending_chunks() {
             serialiser.data_buffer_head = packet->size;
             serialiser.data_buffer = (uint8_t *)packet->chunk_data;
             serialiser.data_buffer_size = packet->size;
-            if (ctx->main_udp_send_to(&serialiser, c_ptr->address)) {
+
+            if (net::send_to_bound_address(c_ptr->tcp_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head)) {
                 LOG_INFO("Sent chunk packet to client\n");
             }
 
@@ -1020,7 +1042,7 @@ static void s_ping_clients(const vkph::state_t *state) {
             c->ping_in_progress += delta_time();
 
             if (c->time_since_ping > net::NET_CLIENT_TIMEOUT) {
-                LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
+                // LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
 
 #if !defined(DEBUGGING)
                 s_handle_disconnect(c->client_id, state);
@@ -1061,20 +1083,77 @@ static void s_receive_packet_ping(
     c->ping_in_progress = 0.0f;
 }
 
-static void s_check_pending_connections() {
+static void s_check_pending_connections(vkph::state_t *state) {
     net::accepted_connection_t conn = net::accept_connection(ctx->main_tcp_socket);
 
     if (conn.s >= 0) {
         // Accept was successful
-        LOG_INFO("New connection!\n");
+        LOG_INFO("New connection! Waiting for connection request packet...\n");
+
+        uint32_t idx = pending_conns.add();
+        auto *pconn = &pending_conns[idx];
+        pconn->elapsed_time = 0.0f;
+        pconn->pending = 1;
+        pconn->s = conn.s;
+        pconn->addr = conn.address;
+
+        net::set_socket_blocking_state(pconn->s, 0);
     }
     else {
-        // Accept wasn't sucessful
+        // Accept wasn't sucessful (non-blocking).
+    }
+
+    for (uint32_t i = 0; i < pending_conns.data_count; ++i) {
+        auto *pconn = &pending_conns[i];
+
+        if (pconn->pending) {
+            int32_t byte_count = net::receive_from_bound_address(pconn->s, ctx->message_buffer, sizeof(char) * net::NET_MAX_MESSAGE_SIZE);
+
+            if (byte_count > 0) {
+                serialiser_t in_serialiser = {};
+                in_serialiser.data_buffer = (uint8_t *)ctx->message_buffer;
+                in_serialiser.data_buffer_size = byte_count;
+
+                net::packet_header_t header = {};
+                header.deserialise(&in_serialiser);
+
+                if (header.flags.packet_type == net::PT_CONNECTION_REQUEST) {
+                    if (header.tag == net::UNINITIALISED_TAG) {
+                        net::address_t addr = pconn->addr;
+                        addr.port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_CLIENT);;
+
+                        net::client_t *new_client = s_receive_packet_connection_request(&in_serialiser, addr, state, pconn->s);
+
+                        pconn->pending = 0;
+                        pending_conns.remove(i);
+
+                        LOG_INFOV("Removed pending connection (%d - initialised or not - are left in the array)\n", pending_conns.data_count);
+                    }
+                }
+            }
+            else {
+#if 0
+
+                pconn->elapsed_time += state->delta_time;
+
+                if (pconn->elapsed_time > 5.0f) {
+                    LOG_INFO("Pending connection timed out\n");
+                    
+                    pconn->pending = 0;
+                    net::destroy_socket(pconn->s);
+                    
+                    pending_conns.remove(i);
+                    
+                    LOG_INFOV("Removed pending connection (%d)\n", pending_conns.data_count);
+                }
+#endif
+            }
+        }
     }
 }
 
 static void s_tick_server(vkph::state_t *state) {
-    s_check_pending_connections();
+    s_check_pending_connections(state);
     s_ping_clients(state);
 
     static float snapshot_elapsed = 0.0f;
@@ -1112,41 +1191,33 @@ static void s_tick_server(vkph::state_t *state) {
             net::packet_header_t header = {};
             header.deserialise(&in_serialiser);
 
-            if (header.flags.packet_type == net::PT_CONNECTION_REQUEST) {
-                if (header.tag == net::UNINITIALISED_TAG) {
-                    s_receive_packet_connection_request(&in_serialiser, received_address, state);
+            // LOG_INFOV(
+            //     "Received packet of type \"%s\"\n",
+            //     net::packet_type_to_str((net::packet_type_t)header.flags.packet_type));
+
+            if (client_tag_to_id.get(header.tag)) {
+                switch (header.flags.packet_type) {
+                    
+                case net::PT_CLIENT_DISCONNECT: {
+                    s_receive_packet_client_disconnect(header.client_id, state);
+                } break;
+
+                case net::PT_CLIENT_COMMANDS: {
+                    s_receive_packet_client_commands(&in_serialiser, header.client_id, header.current_tick, state);
+                } break;
+
+                case net::PT_TEAM_SELECT_REQUEST: {
+                    s_receive_packet_team_select_request(&in_serialiser, header.client_id, header.current_tick, state);
+                } break;
+
+                case net::PT_PING: {
+                    s_receive_packet_ping(&in_serialiser, header.client_id, header.current_tick);
+                } break;
+
                 }
             }
             else {
-                // Make sure that the client was connected to the server to begin with.
-                if (client_tag_to_id.get(header.tag)) {
-                    switch (header.flags.packet_type) {
-
-                    case net::PT_CONNECTION_REQUEST: {
-                        s_receive_packet_connection_request(&in_serialiser, received_address, state);
-                    } break;
-
-                    case net::PT_CLIENT_DISCONNECT: {
-                        s_receive_packet_client_disconnect(header.client_id, state);
-                    } break;
-
-                    case net::PT_CLIENT_COMMANDS: {
-                        s_receive_packet_client_commands(&in_serialiser, header.client_id, header.current_tick, state);
-                    } break;
-
-                    case net::PT_TEAM_SELECT_REQUEST: {
-                        s_receive_packet_team_select_request(&in_serialiser, header.client_id, header.current_tick, state);
-                    } break;
-
-                    case net::PT_PING: {
-                        s_receive_packet_ping(&in_serialiser, header.client_id, header.current_tick);
-                    } break;
-
-                    }
-                }
-                else {
-                    LOG_INFO("Received packet from unidentified client\n");
-                }
+                LOG_INFO("Received packet from unidentified client\n");
             }
         }
     }
