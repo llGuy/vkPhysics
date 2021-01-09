@@ -129,8 +129,6 @@ static void s_check_udp_packets(vkph::state_t *state) {
     while (packet.bytes_received) {
         // Check whether the server tag matches the tag of the packet.
         if (packet.header.tag == bound_server.tag) {
-            packet.print_info();
-
             s_handle_packet(state, &packet);
         }
         else if (bound_server.flags.waiting_for_handshake) {
