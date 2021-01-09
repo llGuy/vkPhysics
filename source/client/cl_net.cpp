@@ -167,6 +167,21 @@ static void s_check_udp_packets(vkph::state_t *state) {
     }
 }
 
+static void s_complete_streamed_packet(net::packet_t *packet) {
+    if (packet->bytes_received < packet->header.flags.total_packet_size) {
+        while (packet->bytes_received < packet->header.flags.total_packet_size) {
+            int32_t recv_bytes = net::receive_from_bound_address(
+                ctx->main_tcp_socket,
+                ctx->message_buffer + packet->bytes_received,
+                sizeof(char) * packet->header.flags.total_packet_size - packet->bytes_received);
+
+            if (recv_bytes) {
+                packet->bytes_received += recv_bytes;
+            }
+        }
+    }
+}
+
 static void s_check_tcp_packets(vkph::state_t *state) {
     static const uint32_t MAX_RECEIVED_PER_TICK = 4;
     uint32_t i = 0;
@@ -174,6 +189,9 @@ static void s_check_tcp_packets(vkph::state_t *state) {
     net::packet_t packet = net::get_next_packet_tcp(ctx->main_tcp_socket, ctx);
     while (packet.bytes_received) {
         if (packet.header.flags.packet_type == net::PT_CONNECTION_HANDSHAKE) {
+            // s_complete_streamed_packet(&packet);
+            // packet.print_info();
+
             receive_packet_connection_handshake(
                 &packet.serialiser,
                 packet.header.tag,
@@ -197,21 +215,10 @@ static void s_check_tcp_packets(vkph::state_t *state) {
 
                 // Chunk voxels need to be sent via TCP for more security
             case net::PT_CHUNK_VOXELS: {
-                // TODO: Add this to all streamed socket communications: TESTING FOR NOW
-                if (packet.bytes_received < packet.header.flags.total_packet_size) {
-                    while (packet.bytes_received < packet.header.flags.total_packet_size) {
-                        int32_t recv_bytes = net::receive_from_bound_address(
-                            ctx->main_tcp_socket,
-                            ctx->message_buffer + packet.bytes_received,
-                            sizeof(char) * packet.header.flags.total_packet_size - packet.bytes_received);
+                packet.print_info();
 
-                        if (recv_bytes) {
-                            packet.bytes_received += recv_bytes;
-                        }
-                    }
-                }
-
-                printf("Chunk voxel packet bytes received: packet size is supposed to be %d\n", packet.header.flags.total_packet_size);
+                s_complete_streamed_packet(&packet);
+            
                 receive_packet_chunk_voxels(&packet.serialiser, state);
             } break;
 

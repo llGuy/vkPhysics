@@ -428,4 +428,12 @@ packet_t get_next_packet_tcp(socket_t sock, context_t *ctx) {
     return packet;
 }
 
+void packet_t::print_info() {
+    LOG_INFOV(
+        "Packet of type \"%s\" of reported size %d, and received size %d\n",
+        packet_type_to_str((packet_type_t)header.flags.packet_type),
+        header.flags.total_packet_size,
+        bytes_received);
+}
+
 }

@@ -179,6 +179,8 @@ struct packet_t {
     int32_t bytes_received;
     address_t from;
     serialiser_t serialiser;
+
+    void print_info();
 };
 
 packet_t get_next_packet_udp(struct context_t *ctx);
