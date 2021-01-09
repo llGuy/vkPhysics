@@ -20,7 +20,8 @@ static VkCommandBuffer render_shadow_cmdbufs[MAX_SECONDARY_CMDBUFS];
 static VkCommandBuffer transfer_cmdbufs[MAX_SECONDARY_CMDBUFS];
 static VkCommandBuffer ui_cmdbufs[MAX_SECONDARY_CMDBUFS];
 
-static frame_command_buffers_t current_frame;
+static frame_command_buffers_t current_cmdbufs;
+static vk::frame_t current_frame;
 
 /* 
   This struct gets passed to rendering so that the renderer can choose the post processing
@@ -31,7 +32,7 @@ static vk::frame_info_t frame_info;
 void init_frame_command_buffers() {
     vk::swapchain_information_t swapchain_info = vk::get_swapchain_info();
 
-    secondary_cmdbuf_count = swapchain_info.image_count;
+    secondary_cmdbuf_count = MAX_SECONDARY_CMDBUFS;
     vk::create_command_buffers(VK_COMMAND_BUFFER_LEVEL_SECONDARY, render_cmdbufs, secondary_cmdbuf_count);
     vk::create_command_buffers(VK_COMMAND_BUFFER_LEVEL_SECONDARY, render_shadow_cmdbufs, secondary_cmdbuf_count);
     vk::create_command_buffers(VK_COMMAND_BUFFER_LEVEL_SECONDARY, transfer_cmdbufs, secondary_cmdbuf_count);
@@ -41,58 +42,58 @@ void init_frame_command_buffers() {
 }
 
 frame_command_buffers_t prepare_frame() {
-    current_frame.render_cmdbuf = render_cmdbufs[cmdbuf_index];
+    current_frame = vk::begin_frame();
+
+    current_cmdbufs.render_cmdbuf = render_cmdbufs[cmdbuf_index];
     VkCommandBufferInheritanceInfo inheritance_info = {};
     vk::fill_main_inheritance_info(&inheritance_info, vk::ST_DEFERRED);
-    vk::begin_command_buffer(current_frame.render_cmdbuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance_info);
+    vk::begin_command_buffer(current_cmdbufs.render_cmdbuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance_info);
 
-    current_frame.render_shadow_cmdbuf = render_shadow_cmdbufs[cmdbuf_index];
+    current_cmdbufs.render_shadow_cmdbuf = render_shadow_cmdbufs[cmdbuf_index];
     vk::fill_main_inheritance_info(&inheritance_info, vk::ST_SHADOW);
-    vk::begin_command_buffer(current_frame.render_shadow_cmdbuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance_info);
+    vk::begin_command_buffer(current_cmdbufs.render_shadow_cmdbuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance_info);
 
-    current_frame.transfer_cmdbuf = transfer_cmdbufs[cmdbuf_index];
+    current_cmdbufs.transfer_cmdbuf = transfer_cmdbufs[cmdbuf_index];
     vk::fill_main_inheritance_info(&inheritance_info, vk::ST_DEFERRED);
-    vk::begin_command_buffer(current_frame.transfer_cmdbuf, 0, &inheritance_info);
+    vk::begin_command_buffer(current_cmdbufs.transfer_cmdbuf, 0, &inheritance_info);
 
-    current_frame.ui_cmdbuf = ui_cmdbufs[cmdbuf_index];
+    current_cmdbufs.ui_cmdbuf = ui_cmdbufs[cmdbuf_index];
     vk::fill_main_inheritance_info(&inheritance_info, vk::ST_UI);
-    vk::begin_command_buffer(current_frame.ui_cmdbuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance_info);
+    vk::begin_command_buffer(current_cmdbufs.ui_cmdbuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance_info);
 
-    return current_frame;
+    return current_cmdbufs;
 }
 
 static void s_render() {
-    vk::frame_t frame = vk::begin_frame();
-
     ux::scene_info_t *scene_info = ux::get_scene_info();
     vk::eye_3d_info_t *eye_info = &scene_info->eye;
     vk::lighting_info_t *lighting_info = &scene_info->lighting;
 
-    vk::gpu_sync_scene3d_data(frame.cmdbuf, eye_info, lighting_info);
+    vk::gpu_sync_scene3d_data(current_frame.cmdbuf, eye_info, lighting_info);
     // All data transfers
-    vk::submit_secondary_command_buffer(frame.cmdbuf, current_frame.transfer_cmdbuf);
+    vk::submit_secondary_command_buffer(current_frame.cmdbuf, current_cmdbufs.transfer_cmdbuf);
 
-    vk::begin_shadow_rendering(frame.cmdbuf);
-    vk::submit_secondary_command_buffer(frame.cmdbuf, current_frame.render_shadow_cmdbuf);
-    vk::end_shadow_rendering(frame.cmdbuf);
+    vk::begin_shadow_rendering(current_frame.cmdbuf);
+    vk::submit_secondary_command_buffer(current_frame.cmdbuf, current_cmdbufs.render_shadow_cmdbuf);
+    vk::end_shadow_rendering(current_frame.cmdbuf);
 
     // All rendering
-    vk::begin_scene_rendering(frame.cmdbuf);
-    vk::submit_secondary_command_buffer(frame.cmdbuf, current_frame.render_cmdbuf);
-    vk::end_scene_rendering(frame.cmdbuf);
+    vk::begin_scene_rendering(current_frame.cmdbuf);
+    vk::submit_secondary_command_buffer(current_frame.cmdbuf, current_cmdbufs.render_cmdbuf);
+    vk::end_scene_rendering(current_frame.cmdbuf);
 
-    vk::post_process_scene(&frame_info, current_frame.ui_cmdbuf);
-    // Render UI
-    vk::end_frame(&frame_info);
+    vk::post_process_scene(&frame_info, current_cmdbufs.ui_cmdbuf);
 }
 
 void finish_frame() {
-    vk::end_command_buffer(current_frame.render_cmdbuf);
-    vk::end_command_buffer(current_frame.transfer_cmdbuf);
-    vk::end_command_buffer(current_frame.render_shadow_cmdbuf);
-    vk::end_command_buffer(current_frame.ui_cmdbuf);
+    vk::end_command_buffer(current_cmdbufs.render_cmdbuf);
+    vk::end_command_buffer(current_cmdbufs.transfer_cmdbuf);
+    vk::end_command_buffer(current_cmdbufs.render_shadow_cmdbuf);
+    vk::end_command_buffer(current_cmdbufs.ui_cmdbuf);
 
     s_render();
+
+    vk::end_frame(&frame_info);
 
     cmdbuf_index = (cmdbuf_index + 1) % secondary_cmdbuf_count;
 }

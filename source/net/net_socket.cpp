@@ -1,6 +1,5 @@
 #include "net_socket.hpp"
 #include <containers.hpp>
-#include <netinet/in.h>
 
 namespace net {
 
@@ -84,8 +83,8 @@ static inline void s_set_socket_to_listening(socket_t s, uint32_t max_clients) {
 
 static inline void s_set_socket_blocking_state(socket_t s, bool enabled) {
     SOCKET *sock = get_network_socket(s);
-    u_long enabled = !enabled;
-    ioctlsocket(*sock, FIONBIO, &enabled);
+    u_long e = !enabled;
+    ioctlsocket(*sock, FIONBIO, &e);
 }
 
 static inline accepted_connection_t s_accept_connection(socket_t s) {
@@ -95,16 +94,23 @@ static inline accepted_connection_t s_accept_connection(socket_t s) {
 
     SOCKET new_socket = accept(*sock, (SOCKADDR *)&from_address, &from_size);
 
-    socket_t new_s = sockets.add();
+    if (new_socket != INVALID_SOCKET) {
+        socket_t new_s = sockets.add();
 
-    SOCKET *api_s = get_network_socket(new_s);
-    *api_s = new_socket;
+        SOCKET *api_s = get_network_socket(new_s);
+        *api_s = new_socket;
 
-    accepted_connection_t connection = {};
-    connection.s = new_s;
-    connection.address = { from_address.sin_port, from_address.sin_addr.S_un.S_addr };
+        accepted_connection_t connection = {};
+        connection.s = new_s;
+        connection.address = { from_address.sin_port, from_address.sin_addr.S_un.S_addr };
 
-    return connection;
+        return connection;
+    }
+    else {
+        accepted_connection_t connection = {};
+        connection.s = -1;
+        return connection;
+    }
 }
 
 static inline bool s_connect_to_address(socket_t s, const char *address_name, uint16_t port, int32_t protocol) {

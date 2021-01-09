@@ -2,7 +2,6 @@
 #include "cl_main.hpp"
 #include "containers.hpp"
 #include "net_meta.hpp"
-#include <bits/stdint-uintn.h>
 #include <cstring>
 #include <vkph_chunk.hpp>
 #include <vkph_player.hpp>
