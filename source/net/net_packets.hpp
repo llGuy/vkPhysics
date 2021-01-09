@@ -74,6 +74,7 @@ struct packet_header_t {
 
 struct packet_connection_request_t {
     const char *name;
+    uint16_t used_port;
 
     uint32_t size();
     void serialise(serialiser_t *serialiser);

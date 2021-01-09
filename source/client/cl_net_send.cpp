@@ -226,6 +226,7 @@ bool send_packet_connection_request(
 
     net::packet_connection_request_t request = {};
     request.name = info->name;
+    request.used_port = ctx->used_udp_port;
     
     net::packet_header_t header = {};
     header.flags.packet_type = net::PT_CONNECTION_REQUEST;

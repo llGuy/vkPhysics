@@ -83,6 +83,12 @@ struct context_t {
     socket_t main_tcp_socket;
 
     /*
+      If socket API fails to bind to a port, we keep trying different ones until it works (client of course).
+      This stores the actual bound port.
+     */
+    uint16_t used_udp_port;
+
+    /*
       Methods:
     */
     void init_main_udp_socket(uint16_t output_post);

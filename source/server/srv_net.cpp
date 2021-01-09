@@ -409,6 +409,10 @@ static net::client_t *s_receive_packet_connection_request(
     client->client_id = client_id;
     client->name = create_fl_string(request.name);
     client->address = address;
+    client->address.port = net::host_to_network_byte_order(request.used_port);
+
+    LOG_INFOV("Now in communication with client at port %d\n", request.used_port);
+
     client->received_first_commands_packet = 0;
     client->predicted.chunk_mod_count = 0;
     client->predicted.chunk_modifications = (net::chunk_modifications_t *)ctx->chunk_modification_allocator.allocate_arena();
@@ -1132,7 +1136,7 @@ static void s_check_pending_connections(vkph::state_t *state) {
                 if (header.flags.packet_type == net::PT_CONNECTION_REQUEST) {
                     if (header.tag == net::UNINITIALISED_TAG) {
                         net::address_t addr = pconn->addr;
-                        addr.port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_CLIENT);;
+                        // addr.port = net::host_to_network_byte_order(net::GAME_OUTPUT_PORT_CLIENT);;
 
                         net::client_t *new_client = s_receive_packet_connection_request(&in_serialiser, addr, state, pconn->s);
 

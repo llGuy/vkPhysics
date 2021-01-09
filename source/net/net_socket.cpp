@@ -1,5 +1,6 @@
 #include "net_socket.hpp"
 #include <containers.hpp>
+#include <netinet/in.h>
 
 namespace net {
 
@@ -52,7 +53,7 @@ static inline void s_set_socket_send_buffer_size(socket_t s, uint32_t size) {
     }
 }
 
-static inline void s_bind_network_socket_to_port(socket_t s, address_t address) {
+static inline uint16_t s_bind_network_socket_to_port(socket_t s, address_t address) {
     SOCKET *api_s = get_network_socket(s);
 
     sockaddr_in address_struct = {};
@@ -64,10 +65,12 @@ static inline void s_bind_network_socket_to_port(socket_t s, address_t address) 
         LOG_WARNING("Failed to bind socket to port, trying another\n");
 
         ++address.port;
-        s_bind_network_socket_to_port(s, address);
+        return s_bind_network_socket_to_port(s, address);
     }
     else {
         LOG_INFO("Sucess bind socket to port\n");
+
+        return ntohs(address.port);
     }
 }
 
@@ -314,9 +317,6 @@ static inline void s_init_api() {
 static inline socket_t s_network_socket_init(int32_t family, int32_t type, int32_t protocol) {
     socket_t s = socket(family, type, protocol);
 
-    int32_t flag = 1;
-    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
-
     return s;
 }
 
@@ -336,7 +336,7 @@ static inline void s_set_socket_send_buffer_size(socket_t s, uint32_t size) {
     }
 }
 
-static inline void s_bind_network_socket_to_port(socket_t s, address_t address) {
+static inline uint16_t s_bind_network_socket_to_port(socket_t s, address_t address) {
     sockaddr_in address_struct = {};
     address_struct.sin_family = AF_INET;
     address_struct.sin_port = address.port;
@@ -346,10 +346,12 @@ static inline void s_bind_network_socket_to_port(socket_t s, address_t address) 
         LOG_WARNING("Failed to bind socket to port, trying another\n");
 
         ++address.port;
-        s_bind_network_socket_to_port(s, address);
+        return s_bind_network_socket_to_port(s, address);
     }
     else {
         LOG_INFO("Success bind socket to port\n");
+
+        return ntohs(address.port);
     }
 }
 
@@ -596,8 +598,8 @@ socket_t network_socket_init(socket_protocol_t protocol) {
     return s_network_socket_init(family, type, proto);
 }
 
-void bind_network_socket_to_port(socket_t s, address_t address) {
-    s_bind_network_socket_to_port(s, address);
+uint16_t bind_network_socket_to_port(socket_t s, address_t address) {
+    return s_bind_network_socket_to_port(s, address);
 }
 
 void set_socket_to_listening(socket_t s, uint32_t max_clients) {

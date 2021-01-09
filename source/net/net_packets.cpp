@@ -48,15 +48,17 @@ void packet_header_t::deserialise(serialiser_t *serialiser) {
 }
 
 uint32_t packet_connection_request_t::size() {
-    return sizeof(uint8_t) * (uint32_t)strlen(name);
+    return sizeof(uint8_t) * (uint32_t)strlen(name) + sizeof(used_port);
 }
 
 void packet_connection_request_t::serialise(serialiser_t *serialiser) {
     serialiser->serialise_string(name);
+    serialiser->serialise_uint16(used_port);
 }
 
 void packet_connection_request_t::deserialise(serialiser_t *serialiser) {
     name = serialiser->deserialise_string();
+    used_port = serialiser->deserialise_uint16();
 }
 
 uint32_t packet_connection_handshake_t::size() {
