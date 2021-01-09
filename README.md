@@ -11,11 +11,11 @@ For now, an engine which will hopefully become a real-time multiplayer game!
 ### Setting up
 - [Windows](https://github.com/llGuy/vkPhysics/blob/master/docs/setup_windows.md)
 - [Linux](https://github.com/llGuy/vkPhysics/blob/master/docs/setup_linux.md)
+- [Game server](https://github.com/llGuy/vkPhysics/blob/master/docs/servers.md)
+- [Running multiple clients on the same machine](https://github.com/llGuy/vkPhysics/blob/master/docs/multiple_clients.md)
 
 ### Project
 - [Structure](https://github.com/llGuy/vkPhysics/blob/master/docs/project_structure.md)
-- [Game](https://github.com/llGuy/vkPhysics/blob/master/docs/game.md)
-- [Renderer](https://github.com/llGuy/vkPhysics/blob/master/docs/renderer.md)
 
 ### Gameplay
 
