@@ -203,7 +203,7 @@ static void s_check_tcp_packets(vkph::state_t *state) {
                         int32_t recv_bytes = net::receive_from_bound_address(
                             ctx->main_tcp_socket,
                             ctx->message_buffer + packet.bytes_received,
-                            sizeof(char) * net::NET_MAX_MESSAGE_SIZE - packet.bytes_received);
+                            sizeof(char) * packet.header.flags.total_packet_size - packet.bytes_received);
 
                         if (recv_bytes) {
                             packet.bytes_received += recv_bytes;
