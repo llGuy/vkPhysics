@@ -196,8 +196,6 @@ static bool s_serialise_chunk(
     serialiser->serialise_int16(current_values->y);
     serialiser->serialise_int16(current_values->z);
 
-    printf("%d -> (%d %d %d): \n", i, current_values->x, current_values->y, current_values->z);
-
     // Do a compression of the chunk values
     for (uint32_t v_index = 0; v_index < vkph::CHUNK_VOXEL_COUNT; ++v_index) {
         uint32_t debug = v_index;
@@ -227,8 +225,6 @@ static bool s_serialise_chunk(
                 serialiser->serialise_uint8(vkph::CHUNK_SPECIAL_VALUE);
                 serialiser->serialise_uint8(vkph::CHUNK_SPECIAL_VALUE);
                 serialiser->serialise_uint32(zero_count);
-
-                printf("\thas region of %d zeros starting from voxel %d\n", zero_count, debug);
             }
 
             v_index -= 1;
@@ -285,6 +281,14 @@ static uint32_t s_prepare_packet_chunk_voxels(
             i + 1 == count) {
             // Need to send in new packet
             serialiser.serialise_uint32(chunks_in_packet, chunk_count_byte);
+
+            // Serialise the header with the actual packet size
+            uint32_t actual_packet_size = serialiser.data_buffer_head;
+            header.flags.total_packet_size = actual_packet_size;
+            serialiser.data_buffer_head = 0;
+            header.serialise(&serialiser);
+            serialiser.data_buffer_head = actual_packet_size;
+
             net::packet_chunk_voxels_t *packet_to_save = &client->chunk_packets[client->chunk_packet_count++];
             packet_to_save->chunk_data = FL_MALLOC(vkph::voxel_t, serialiser.data_buffer_head);
             memcpy(packet_to_save->chunk_data, serialiser.data_buffer, serialiser.data_buffer_head);
@@ -1019,7 +1023,7 @@ static void s_send_pending_chunks() {
             serialiser.data_buffer_size = packet->size;
 
             if (net::send_to_bound_address(c_ptr->tcp_socket, (char *)serialiser.data_buffer, serialiser.data_buffer_head)) {
-                LOG_INFO("Sent chunk packet to client containing\n");
+                LOG_INFOV("Sent chunk packet of size %d\n", serialiser.data_buffer_head);
             }
 
             // Free

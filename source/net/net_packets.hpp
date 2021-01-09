@@ -48,16 +48,19 @@ const char *packet_type_to_str(packet_type_t type);
   serialise and deserialise is not necessary - no polymorphism
   is being used with these structures.
  */
-struct packet_header_t {
-    union {
-        struct {
-            uint32_t packet_type: 10;
-            // Includes header
-            uint32_t total_packet_size: 22;
-        };
 
-        uint32_t bytes;
-    } flags;
+union header_bitfield_t {
+    struct {
+        uint32_t packet_type: 10;
+        // Includes header
+        uint32_t total_packet_size: 22;
+    };
+
+    uint32_t bytes;
+};
+
+struct packet_header_t {
+    header_bitfield_t flags;
 
     uint64_t current_tick;
     uint64_t current_packet_count;

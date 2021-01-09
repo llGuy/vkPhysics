@@ -197,8 +197,21 @@ static void s_check_tcp_packets(vkph::state_t *state) {
 
                 // Chunk voxels need to be sent via TCP for more security
             case net::PT_CHUNK_VOXELS: {
-                printf("Chunk voxel packet bytes received: %d\n", packet.bytes_received);
+                // TODO: Add this to all streamed socket communications: TESTING FOR NOW
+                if (packet.bytes_received < packet.header.flags.total_packet_size) {
+                    while (packet.bytes_received < packet.header.flags.total_packet_size) {
+                        int32_t recv_bytes = net::receive_from_bound_address(
+                            ctx->main_tcp_socket,
+                            ctx->message_buffer + packet.bytes_received,
+                            sizeof(char) * net::NET_MAX_MESSAGE_SIZE - packet.bytes_received);
 
+                        if (recv_bytes) {
+                            packet.bytes_received += recv_bytes;
+                        }
+                    }
+                }
+
+                printf("Chunk voxel packet bytes received: packet size is supposed to be %d\n", packet.header.flags.total_packet_size);
                 receive_packet_chunk_voxels(&packet.serialiser, state);
             } break;
 
