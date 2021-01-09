@@ -1062,9 +1062,38 @@ static void s_ping_clients(const vkph::state_t *state) {
             if (c->time_since_ping > net::NET_CLIENT_TIMEOUT) {
                 // LOG_INFOV("Client %d (%s) timeout\n", c->client_id, c->name);
 
+                if (c->missed_pings == 4) {
+                    LOG_INFOV("Client %d (%s) missed too many pings, timeout and disconnecting\n", c->client_id, c->name);
+
 #if !defined(DEBUGGING)
-                s_handle_disconnect(c->client_id, state);
+                    s_handle_disconnect(c->client_id, state);
 #endif
+                    c->missed_pings = 0;
+                }
+                else {
+                    LOG_INFOV("Client %d (%s) missed another ping\n", (uint32_t)c->client_id, c->name);
+
+                    serialiser.data_buffer_head = 0;
+
+                    net::packet_header_t header = {};
+                    header.current_packet_count = ctx->current_packet;
+                    header.current_tick = state->current_tick;
+                    header.client_id = c->client_id;
+                    header.flags.packet_type = net::PT_PING;
+                    header.flags.total_packet_size = header.size();
+                    header.tag = ctx->tag;
+
+                    header.serialise(&serialiser);
+                    ctx->main_udp_send_to(&serialiser, c->address);
+
+                    c->time_since_ping = 0.0f;
+                    c->ping_in_progress = 0.0f;
+
+                    c->received_ping = 0;
+                    serialiser.data_buffer_head = 0;
+
+                    c->missed_pings++;
+                }
             }
             else if (c->time_since_ping > net::NET_PING_INTERVAL && c->received_ping) {
                 serialiser.data_buffer_head = 0;
@@ -1099,6 +1128,10 @@ static void s_receive_packet_ping(
     c->received_ping = 1;
     c->ping = c->ping_in_progress;
     c->ping_in_progress = 0.0f;
+
+    c->missed_pings = 0;
+
+    LOG_INFOV("Received pong from client %d (%s)\n", (uint32_t)c->client_id, c->name);
 }
 
 static void s_check_pending_connections(vkph::state_t *state) {
