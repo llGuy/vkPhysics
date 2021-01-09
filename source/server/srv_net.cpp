@@ -1211,11 +1211,12 @@ static void s_tick_server(vkph::state_t *state) {
             net::packet_header_t header = {};
             header.deserialise(&in_serialiser);
 
-            // LOG_INFOV(
-            //     "Received packet of type \"%s\"\n",
-            //     net::packet_type_to_str((net::packet_type_t)header.flags.packet_type));
+            uint16_t *id_p = client_tag_to_id.get(header.tag);
 
-            if (client_tag_to_id.get(header.tag)) {
+            if (id_p) {
+                auto *client = &ctx->clients[*id_p];
+                client->address = received_address;
+
                 switch (header.flags.packet_type) {
                     
                 case net::PT_CLIENT_DISCONNECT: {

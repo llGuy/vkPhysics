@@ -750,6 +750,8 @@ void receive_ping(
     header.serialise(&serialiser);
 
     ctx->main_udp_send_to(&serialiser, server_addr->ipv4_address);
+
+    LOG_INFO("PONG\n");
 }
 
 void check_if_finished_recv_chunks(vkph::state_t *state, net::context_t *ctx) {
