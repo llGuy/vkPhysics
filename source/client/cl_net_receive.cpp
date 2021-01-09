@@ -3,6 +3,7 @@
 #include "cl_game_interp.hpp"
 #include "net_socket.hpp"
 #include "cl_net_receive.hpp"
+#include "vkph_event.hpp"
 
 #include <net_meta.hpp>
 #include <net_packets.hpp>
@@ -65,7 +66,7 @@ static void s_fill_enter_server_data(
 }
 
 // PT_CONNECTION_HANDSHAKE
-void receive_packet_connection_handshake(
+bool receive_packet_connection_handshake(
     serialiser_t *serialiser,
     uint32_t server_tag,
     vkph::state_t *state,
@@ -74,27 +75,34 @@ void receive_packet_connection_handshake(
     net::packet_connection_handshake_t handshake = {};
     handshake.deserialise(serialiser);
 
-    // Initialise the teams on the client side
-    state->set_teams(handshake.team_count, handshake.team_infos);
-    state->current_map_data.view_info = handshake.mvi;
+    if (handshake.success) {
+        // Initialise the teams on the client side
+        state->set_teams(handshake.team_count, handshake.team_infos);
+        state->current_map_data.view_info = handshake.mvi;
 
-    LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
+        LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
 
-    // Dispatch event to initialise all the players
-    auto *data = FL_MALLOC(vkph::event_enter_server_t, 1);
-    data->info_count = handshake.player_count;
-    data->infos = FL_MALLOC(vkph::player_init_info_t, data->info_count);
+        // Dispatch event to initialise all the players
+        auto *data = FL_MALLOC(vkph::event_enter_server_t, 1);
+        data->info_count = handshake.player_count;
+        data->infos = FL_MALLOC(vkph::player_init_info_t, data->info_count);
 
-    ctx->tag = handshake.client_tag;
-    server->tag = server_tag;
+        ctx->tag = handshake.client_tag;
+        server->tag = server_tag;
 
-    s_fill_enter_server_data(&handshake, data, ctx);
+        s_fill_enter_server_data(&handshake, data, ctx);
 
-    vkph::submit_event(vkph::ET_ENTER_SERVER, data);
+        vkph::submit_event(vkph::ET_ENTER_SERVER, data);
 
-    if (handshake.loaded_chunk_count) {
-        still_receiving_chunk_packets = 1;
-        chunks_to_receive = handshake.loaded_chunk_count;
+        if (handshake.loaded_chunk_count) {
+            still_receiving_chunk_packets = 1;
+            chunks_to_receive = handshake.loaded_chunk_count;
+        }
+
+        return true;
+    }
+    else {
+        return false;
     }
 }
 

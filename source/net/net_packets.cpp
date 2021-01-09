@@ -63,6 +63,7 @@ void packet_connection_request_t::deserialise(serialiser_t *serialiser) {
 
 uint32_t packet_connection_handshake_t::size() {
     uint32_t final_size = 0;
+    final_size += sizeof(bits);
     final_size += sizeof(client_tag);
     final_size += sizeof(loaded_chunk_count);
     final_size += sizeof(mvi);
@@ -76,6 +77,7 @@ uint32_t packet_connection_handshake_t::size() {
 }
 
 void packet_connection_handshake_t::serialise(serialiser_t *serialiser) {
+    serialiser->serialise_uint8(bits);
     serialiser->serialise_uint32(client_tag);
     serialiser->serialise_uint32(loaded_chunk_count);
     serialiser->serialise_vector3(mvi.pos);
@@ -102,6 +104,7 @@ void packet_connection_handshake_t::serialise(serialiser_t *serialiser) {
 }
 
 void packet_connection_handshake_t::deserialise(serialiser_t *serialiser) {
+    bits = serialiser->deserialise_uint8();
     client_tag = serialiser->deserialise_uint32();
     loaded_chunk_count = serialiser->deserialise_uint32();
     mvi.pos = serialiser->deserialise_vector3();

@@ -12,7 +12,7 @@ void prepare_receiving();
   These functions also handle the information that the packets hold.
  */
 
-void receive_packet_connection_handshake(
+bool receive_packet_connection_handshake(
     serialiser_t *serialiser,
     uint32_t server_tag,
     vkph::state_t *state,

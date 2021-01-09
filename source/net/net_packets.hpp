@@ -82,6 +82,13 @@ struct packet_connection_request_t {
 };
 
 struct packet_connection_handshake_t {
+    union {
+        struct {
+            uint8_t success: 1;
+        };
+        uint8_t bits;
+    };
+
     uint32_t client_tag;
 
     // Chunks will be sent in separate packets (too much data)

@@ -5,6 +5,7 @@
 #include "cl_game_spectate.hpp"
 #include "cl_render.hpp"
 #include "cl_main.hpp"
+#include "ux_menu_game.hpp"
 #include "ux_scene.hpp"
 #include "cl_net.hpp"
 #include "cl_game.hpp"
@@ -31,6 +32,7 @@ void main_scene_t::subscribe_to_events(vkph::listener_t listener) {
     vkph::subscribe_to_event(vkph::ET_REQUEST_USER_INFORMATION, listener);
     vkph::subscribe_to_event(vkph::ET_ENTER_MAP_CREATOR_SCENE, listener);
     vkph::subscribe_to_event(vkph::ET_ENTER_SERVER, listener);
+    vkph::subscribe_to_event(vkph::ET_CONNECTION_REQUEST_FAILED, listener);
     vkph::subscribe_to_event(vkph::ET_ENTER_GAME_PLAY_SCENE, listener);
 }
 
@@ -146,11 +148,15 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
 
         initialise_client_game_session(data->info_count, data->infos, state);
 
+        ux::init_game_menu_for_server(state);
+
         FL_FREE(data->infos);
         FL_FREE(event->data);
     } break;
 
     case vkph::ET_ENTER_GAME_PLAY_SCENE: {
+        // Check if we have actually received green flag from server
+
         auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
         effect_data->dest_value = 1.0f;
         effect_data->duration = 1.0f;
@@ -174,6 +180,17 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
     case vkph::ET_ENTER_MAP_CREATOR_SCENE: {
         vkph::submit_event(vkph::ET_BEGIN_MAP_EDITING, event->data);
         ux::bind_scene(ST_MAP_CREATOR, state);
+    } break;
+
+    case vkph::ET_CONNECTION_REQUEST_FAILED: {
+        LOG_INFO("Connection request failed\n");
+
+        auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+        effect_data->dest_value = 1.0f;
+        effect_data->duration = 1.0f;
+        effect_data->fade_back = 0;
+        effect_data->trigger_count = 0;
+        vkph::submit_event(vkph::ET_BEGIN_FADE, effect_data);
     } break;
 
     default: {

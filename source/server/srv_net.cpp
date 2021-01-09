@@ -101,6 +101,8 @@ static bool s_send_packet_connection_handshake(
     uint32_t new_client_tag = s_generate_tag();
 
     net::packet_connection_handshake_t connection_handshake = {};
+    // TODO: Make sure to set this to 0 if the server is full
+    connection_handshake.success = 1;
     connection_handshake.loaded_chunk_count = loaded_chunk_count;
     connection_handshake.mvi.pos = state->current_map_data.view_info.pos;
     connection_handshake.mvi.dir = state->current_map_data.view_info.dir;

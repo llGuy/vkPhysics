@@ -74,6 +74,8 @@ enum event_type_t {
     ET_ATTEMPT_LOGIN = 0x2C,
     ET_LOGIN_SUCCESS = 0x2D,
     ET_META_REQUEST_ERROR = 0x2E,
+    // Conenction to a game server that is
+    ET_CONNECTION_REQUEST_FAILED = 0x2F,
 
     /*
       Game = 0x3..

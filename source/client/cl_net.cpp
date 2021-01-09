@@ -192,23 +192,33 @@ static void s_check_tcp_packets(vkph::state_t *state) {
             // s_complete_streamed_packet(&packet);
             // packet.print_info();
 
-            receive_packet_connection_handshake(
+            bound_server.flags.waiting_for_handshake = 0;
+
+            if (receive_packet_connection_handshake(
                 &packet.serialiser,
                 packet.header.tag,
                 state,
                 ctx,
-                &bound_server);
+                &bound_server)) {
+                // Now need to parse the packets we received in between request and handshake
+                for (uint32_t i = 0; i < packets_to_unpack.data_count; ++i) {
+                    auto *packet = &packets_to_unpack[i];
+                    s_handle_packet(state, packet);
+                    flfree(packet->serialiser.data_buffer);
+                }
 
-            bound_server.flags.waiting_for_handshake = 0;
-
-            // Now need to parse the packets we received in between request and handshake
-            for (uint32_t i = 0; i < packets_to_unpack.data_count; ++i) {
-                auto *packet = &packets_to_unpack[i];
-                s_handle_packet(state, packet);
-                flfree(packet->serialiser.data_buffer);
+                packets_to_unpack.data_count = 0;
             }
+            else {
+                vkph::submit_event(vkph::ET_CONNECTION_REQUEST_FAILED, NULL);
 
-            packets_to_unpack.data_count = 0;
+                for (uint32_t i = 0; i < packets_to_unpack.data_count; ++i) {
+                    auto *packet = &packets_to_unpack[i];
+                    flfree(packet->serialiser.data_buffer);
+                }
+
+                packets_to_unpack.data_count = 0;
+            }
         }
         else if (packet.header.tag == bound_server.tag) {
             switch (packet.header.flags.packet_type) {
@@ -253,25 +263,22 @@ static void s_tick_client(vkph::state_t *state) {
 #endif
 
     // Check packets from game server that we are connected to
-    if (client_check_incoming_packets) {
-        static float elapsed = 0.0f;
-        elapsed += app::g_delta_time;
-        if (elapsed >= net::NET_CLIENT_COMMAND_OUTPUT_INTERVAL) {
-            // Send commands to the server
-            net::debug_log("----- Sending client commands to the server at tick %llu\n", ctx->log_file, 0, state->current_tick);
-            send_packet_client_commands(state, ctx, &bound_server, simulate_lag);
+    static float elapsed = 0.0f;
+    elapsed += app::g_delta_time;
+    if (elapsed >= net::NET_CLIENT_COMMAND_OUTPUT_INTERVAL && bound_server.tag != net::UNINITIALISED_TAG) {
+        // Send commands to the server
+        net::debug_log("----- Sending client commands to the server at tick %llu\n", ctx->log_file, 0, state->current_tick);
+        send_packet_client_commands(state, ctx, &bound_server, simulate_lag);
 
-            elapsed = 0.0f;
-        }
-
-        s_check_tcp_packets(state);
-
-        if (client_check_incoming_packets) {
-            s_check_udp_packets(state);
-        }
-
-        check_if_finished_recv_chunks(state, ctx);
+        elapsed = 0.0f;
     }
+
+    if (client_check_incoming_packets) {
+        s_check_tcp_packets(state);
+        s_check_udp_packets(state);
+    }
+
+    check_if_finished_recv_chunks(state, ctx);
 }
 
 static void s_request_connection_to_server(const char *ip, uint32_t ipv4, local_client_info_t *client_info) {
@@ -295,7 +302,12 @@ static void s_request_connection_to_server(const char *ip, uint32_t ipv4, local_
         }
         else {
             LOG_INFO("Failed to send connection request to server\n");
+
+            vkph::submit_event(vkph::ET_CONNECTION_REQUEST_FAILED, NULL);
         } 
+    }
+    else {
+        vkph::submit_event(vkph::ET_CONNECTION_REQUEST_FAILED, NULL);
     }
 }
 
