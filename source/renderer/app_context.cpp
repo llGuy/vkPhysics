@@ -205,11 +205,13 @@ context_info_t init_context(const char *name) {
     glfwSetCursorPosCallback(ctx.window, s_window_cursor_position_callback);
 
     { // Set icon
-        file_handle_t img = create_file("assets/screenshots/logo32.png", FLF_IMAGE);
+        file_handle_t img = create_file("assets/screenshots/epic_logo.png", FLF_IMAGE);
         file_contents_t contents = read_file(img);
 
         GLFWimage image = {};
         image.pixels = (unsigned char *)contents.pixels;
+        image.width = contents.width;
+        image.height = contents.height;
 
         glfwSetWindowIcon(ctx.window, 1, &image);
 
