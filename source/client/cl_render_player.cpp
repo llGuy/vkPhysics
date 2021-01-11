@@ -2,6 +2,7 @@
 #include "cl_main.hpp"
 #include "cl_game_predict.hpp"
 #include "cl_render.hpp"
+#include "vk.hpp"
 #include <vkph_physics.hpp>
 
 namespace cl {
@@ -36,10 +37,23 @@ void init_player_render_resources() {
     vk::shader_binding_info_t player_sbi, ball_sbi, merged_sbi;
 
     {// Create meshes also for transition effect between both models
-        vk::create_player_merged_mesh(
-            &player_mesh, &player_sbi,
-            &ball_mesh, &ball_sbi,
-            &merged_mesh, &merged_sbi);
+        vk::mesh_loader_t skeletal_mesh_ld = {};
+        skeletal_mesh_ld.load_external("assets/models/player.mesh");
+
+        vk::mesh_loader_t ball_mesh_ld = {};
+        ball_mesh_ld.load_sphere();
+
+        vk::merged_mesh_info_t info = {};
+        info.dst_sk = &player_mesh;
+        info.sk_loader = &skeletal_mesh_ld;
+        info.dst_sk_sbi = &player_sbi;
+        info.dst_st = &ball_mesh;
+        info.st_loader = &ball_mesh_ld;
+        info.dst_st_sbi = &ball_sbi;
+        info.dst_merged = &merged_mesh;
+        info.dst_merged_sbi = &merged_sbi;
+
+        vk::create_merged_mesh(&info);
     }
 
     vk::shader_create_info_t sc_info;

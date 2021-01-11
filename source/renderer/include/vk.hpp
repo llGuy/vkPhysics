@@ -268,6 +268,38 @@ struct mesh_buffer_t {
 
 constexpr uint32_t MAX_MESH_BUFFERS = BT_MAX_VALUE;
 
+struct mesh_attrib_t {
+    void *data;
+    uint32_t size;
+    buffer_type_t type;
+};
+
+struct mesh_loader_t {
+    mesh_attrib_t attribs[MAX_MESH_BUFFERS];
+    uint32_t attrib_count;
+    buffer_type_t buffer_type_stack[BT_MAX_VALUE];
+
+    uint32_t vertex_offset;
+    uint32_t vertex_count;
+    uint32_t first_index;
+    uint32_t index_count;
+    uint32_t index_offset;
+    VkIndexType index_type;
+
+    void free();
+
+    // Load vertices, indices, etc...
+    void load_sphere();
+    void load_cube();
+    void load_external(const char *path);
+
+    void push_attrib(buffer_type_t buffer_type, void *p, uint32_t size);
+    bool has_attrib(buffer_type_t buffer_type) const;
+    mesh_attrib_t *get_attrib(buffer_type_t buffer_type);
+    const mesh_attrib_t *get_attrib(buffer_type_t buffer_type) const;
+};
+
+// This is the thing we actually need
 struct mesh_t {
     mesh_buffer_t buffers[MAX_MESH_BUFFERS];
     uint32_t buffer_count;
@@ -290,13 +322,10 @@ struct mesh_t {
     void push_buffer(buffer_type_t buffer_type);
     bool has_buffer(buffer_type_t buffer_type);
     mesh_buffer_t *get_mesh_buffer(buffer_type_t buffer_type);
-    shader_binding_info_t create_shader_binding_info();
     void init_mesh_vbo_final_list();
+    shader_binding_info_t create_shader_binding_info();
 
-    // Load vertices, indices, etc...
-    void load_sphere(shader_binding_info_t *shader_info);
-    void load_cube(shader_binding_info_t *shader_info);
-    void load_external(shader_binding_info_t *shader_info, const char *path);
+    void load(mesh_loader_t *loader, shader_binding_info_t *dst_bindings);
 };
 
 /*
@@ -307,10 +336,29 @@ struct mesh_t {
   It would have been to complicated and unnecessary to create
   wrapers which could allow that sort of control.
  */
+#if 0
 void create_player_merged_mesh(
     mesh_t *dst_a, shader_binding_info_t *sbi_a,
     mesh_t *dst_b, shader_binding_info_t *sbi_b,
     mesh_t *dst_merged, shader_binding_info_t *sbi_merged);
+#endif
+
+struct merged_mesh_info_t {
+    // Skeletal mesh
+    mesh_t *dst_sk;
+    const mesh_loader_t *sk_loader;
+    shader_binding_info_t *dst_sk_sbi;
+
+    // Static mesh
+    mesh_t *dst_st;
+    const mesh_loader_t *st_loader;
+    shader_binding_info_t *dst_st_sbi;
+
+    mesh_t *dst_merged;
+    shader_binding_info_t *dst_merged_sbi;
+};
+
+void create_merged_mesh(merged_mesh_info_t *info);
 
 /* 
   By default, a uniform buffer is added for camera transforms

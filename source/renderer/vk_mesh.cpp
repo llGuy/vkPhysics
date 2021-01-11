@@ -1,3 +1,5 @@
+#include "t_types.hpp"
+#include "tools.hpp"
 #include "vk.hpp"
 #include "vk_buffer.hpp"
 #include "vk_scene3d.hpp"
@@ -7,12 +9,16 @@
 #include "vk_stage_shadow.hpp"
 #include "vk_render_pipeline.hpp"
 
+#include <bits/stdint-uintn.h>
+#include <cassert>
+#include <cstring>
 #include <log.hpp>
 #include <vulkan/vulkan.h>
 #include <math.hpp>
 #include <files.hpp>
 #include <serialiser.hpp>
 #include <allocators.hpp>
+#include <vulkan/vulkan_core.h>
 
 namespace vk {
 
@@ -28,6 +34,35 @@ bool mesh_t::has_buffer(buffer_type_t buffer_type) {
 mesh_buffer_t *mesh_t::get_mesh_buffer(buffer_type_t buffer_type) {
     if (has_buffer(buffer_type)) {
         return &buffers[buffer_type];
+    }
+    else {
+        return NULL;
+    }
+}
+
+void mesh_loader_t::push_attrib(buffer_type_t buffer_type, void *p, uint32_t size) {
+    buffer_type_stack[attrib_count++] = buffer_type;
+    attribs[buffer_type].type = buffer_type;
+    attribs[buffer_type].data = p;
+    attribs[buffer_type].size = size;
+}
+
+bool mesh_loader_t::has_attrib(buffer_type_t buffer_type) const {
+    return attribs[buffer_type].type == buffer_type;
+}
+
+mesh_attrib_t *mesh_loader_t::get_attrib(buffer_type_t buffer_type) {
+    if (has_attrib(buffer_type)) {
+        return &attribs[buffer_type];
+    }
+    else {
+        return NULL;
+    }
+}
+
+const mesh_attrib_t *mesh_loader_t::get_attrib(buffer_type_t buffer_type) const {
+    if (has_attrib(buffer_type)) {
+        return &attribs[buffer_type];
     }
     else {
         return NULL;
@@ -117,15 +152,26 @@ void mesh_t::init_mesh_vbo_final_list() {
     }
 }
 
-void mesh_t::load_sphere(shader_binding_info_t *binding_info) {
+void mesh_loader_t::free() {
+    for (uint32_t i = 0; i < attrib_count; ++i) {
+        buffer_type_t bt = buffer_type_stack[i];
+        if (has_attrib(bt)) {
+            auto *data = get_attrib(bt);
+            flfree(data->data);
+            data->size = 0;
+            data->type = (buffer_type_t)0;
+        }
+    }
+}
+
+void mesh_loader_t::load_sphere() {
     int32_t sector_count = 16;
     int32_t stack_count = 16;
     
-    uint32_t vertex_count = (sector_count + 1) * (stack_count + 1);
-    uint32_t index_count = sector_count * stack_count * 6;
+    vertex_count = (sector_count + 1) * (stack_count + 1);
+    index_count = sector_count * stack_count * 6;
     
     vector3_t *positions = FL_MALLOC(vector3_t, vertex_count);
-
     uint32_t *indices = FL_MALLOC(uint32_t, index_count);
     
     float sector_step = 2.0f * PI / sector_count;
@@ -173,106 +219,53 @@ void mesh_t::load_sphere(shader_binding_info_t *binding_info) {
 
     index_count = counter;
 
-    push_buffer(BT_INDICES);
-    mesh_buffer_t *indices_gpu_buffer = get_mesh_buffer(BT_INDICES);
-    indices_gpu_buffer->gpu_buffer.init(
-        sizeof(uint32_t) * index_count,
-        indices,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    push_buffer(BT_VERTEX);
-    mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX);
-    vertex_gpu_buffer->gpu_buffer.init(
-        sizeof(vector3_t) * vertex_count,
-        positions,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    if (binding_info) {
-        *binding_info = create_shader_binding_info();
-    }
+    push_attrib(BT_INDICES, indices, sizeof(uint32_t) * index_count);
+    push_attrib(BT_VERTEX, positions, sizeof(vector3_t) * vertex_count);
 
     vertex_offset = 0;
-    vertex_count = vertex_count;
     first_index = 0;
     index_offset = 0;
-    index_count = index_count;
     index_type = VK_INDEX_TYPE_UINT32;
-
-    init_mesh_vbo_final_list();
-
-    FL_FREE(positions);
-    
-    FL_FREE(indices);
 }
 
-void mesh_t::load_cube(shader_binding_info_t *binding_info) {
-    vector3_t vertices[8] = {
-        vector3_t(-1.0f, -1.0f, 1.0f),
-        vector3_t(1.0f, -1.0f, 1.0f),
-        vector3_t(1.0f, 1.0f, 1.0f),
-        vector3_t(-1.0f, 1.0f, 1.0f),
-        vector3_t(-1.0f, -1.0f, -1.0f),
-        vector3_t(1.0f, -1.0f, -1.0f),
-        vector3_t(1.0f, 1.0f, -1.0f),
-        vector3_t(-1.0f, 1.0f, -1.0f)
+void mesh_loader_t::load_cube() {
+    vector3_t *vertices = flmalloc<vector3_t>(8);
+
+    vertices[0] = vector3_t(-1.0f, -1.0f, 1.0f);
+    vertices[1] = vector3_t(1.0f, -1.0f, 1.0f);
+    vertices[2] = vector3_t(1.0f, 1.0f, 1.0f);
+    vertices[3] = vector3_t(-1.0f, 1.0f, 1.0f);
+    vertices[4] = vector3_t(-1.0f, -1.0f, -1.0f);
+    vertices[5] = vector3_t(1.0f, -1.0f, -1.0f);
+    vertices[6] = vector3_t(1.0f, 1.0f, -1.0f);
+    vertices[7] = vector3_t(-1.0f, 1.0f, -1.0f);
+
+    uint32_t *indices = flmalloc<uint32_t>(36);
+
+    uint32_t indices_st[36] = {
+        0, 1, 2, 2, 3, 0,
+        1, 5, 6, 6, 2, 1,
+        7, 6, 5, 5, 4, 7,
+        3, 7, 4, 4, 0, 3,
+        4, 5, 1, 1, 0, 4,
+        3, 2, 6, 6, 7, 3
     };
 
-    uint32_t indices[36] = {
-        0, 1, 2,
-        2, 3, 0,
+    memcpy(indices, indices_st, sizeof(uint32_t) * 36);
 
-        1, 5, 6,
-        6, 2, 1,
+    index_count = sizeof(indices) / sizeof(indices[0]);
+    vertex_count = sizeof(vertices) / sizeof(vertices[0]);
 
-        7, 6, 5,
-        5, 4, 7,
-	    
-        3, 7, 4,
-        4, 0, 3,
-	    
-        4, 5, 1,
-        1, 0, 4,
-	    
-        3, 2, 6,
-        6, 7, 3
-    };
-
-    uint32_t index_count = sizeof(indices) / sizeof(indices[0]);
-    uint32_t vertex_count = sizeof(vertices) / sizeof(vertices[0]);
-
-    push_buffer(BT_INDICES);
-    mesh_buffer_t *indices_gpu_buffer = get_mesh_buffer(BT_INDICES);
-    indices_gpu_buffer->gpu_buffer.init(
-        sizeof(uint32_t) * index_count,
-        indices,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    push_buffer(BT_VERTEX);
-    mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX);
-    vertex_gpu_buffer->gpu_buffer.init(
-        sizeof(vector3_t) * vertex_count,
-        vertices,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    if (binding_info) {
-        *binding_info = create_shader_binding_info();
-    }
+    push_attrib(BT_INDICES, indices, sizeof(uint32_t) * index_count);
+    push_attrib(BT_VERTEX, vertices, sizeof(vector3_t) * vertex_count);
 
     vertex_offset = 0;
-    vertex_count = vertex_count;
     first_index = 0;
     index_offset = 0;
-    index_count = index_count;
     index_type = VK_INDEX_TYPE_UINT32;
-
-    init_mesh_vbo_final_list();
 }
 
-void mesh_t::load_external(shader_binding_info_t *binding_info, const char *path) {
+void mesh_loader_t::load_external(const char *path) {
     file_handle_t file_handle = create_file(path, FLF_BINARY);
     file_contents_t contents = read_file(file_handle);
     free_file(file_handle);
@@ -296,48 +289,13 @@ void mesh_t::load_external(shader_binding_info_t *binding_info, const char *path
     ivector4_t *joint_ids = get_joint_ids(file_header.joint_ids_count, &serialiser);
     uint32_t *indices = get_indices(file_header.indices_count, &serialiser);
 
-    push_buffer(BT_INDICES);
-    mesh_buffer_t *indices_gpu_buffer = get_mesh_buffer(BT_INDICES);
-    indices_gpu_buffer->gpu_buffer.init(
-        sizeof(uint32_t) * file_header.indices_count,
-        indices,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-
-    push_buffer(BT_VERTEX);
-    mesh_buffer_t *vertex_gpu_buffer = get_mesh_buffer(BT_VERTEX);
-    vertex_gpu_buffer->gpu_buffer.init(
-        sizeof(vector3_t) * file_header.vertices_count,
-        vertices,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-
-    push_buffer(BT_NORMAL);
-    mesh_buffer_t *normal_gpu_buffer = get_mesh_buffer(BT_NORMAL);
-    normal_gpu_buffer->gpu_buffer.init(
-        sizeof(vector3_t) * file_header.normals_count,
-        normals,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-
-    if (file_header.joint_weights_count) {
-        push_buffer(BT_JOINT_WEIGHT);
-        mesh_buffer_t *weights_gpu_buffer = get_mesh_buffer(BT_JOINT_WEIGHT);
-        weights_gpu_buffer->gpu_buffer.init(
-            sizeof(vector4_t) * file_header.joint_weights_count,
-            joint_weights,
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    }
-    
-    if (file_header.joint_ids_count) {
-        push_buffer(BT_JOINT_INDICES);
-        mesh_buffer_t *joints_gpu_buffer = get_mesh_buffer(BT_JOINT_INDICES);
-        joints_gpu_buffer->gpu_buffer.init(
-            sizeof(ivector4_t) * file_header.joint_ids_count,
-            joint_ids,
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    }
-
-    if (binding_info) {
-        *binding_info = create_shader_binding_info();
-    }
+    push_attrib(BT_INDICES, indices, sizeof(uint32_t) * file_header.indices_count);
+    push_attrib(BT_VERTEX, vertices, sizeof(vector3_t) * file_header.vertices_count);
+    push_attrib(BT_NORMAL, normals, sizeof(vector3_t) * file_header.normals_count);
+    if (file_header.joint_weights_count)
+        push_attrib(BT_JOINT_WEIGHT, joint_weights, sizeof(vector4_t) * file_header.joint_weights_count);
+    if (file_header.joint_ids_count)
+        push_attrib(BT_JOINT_INDICES, joint_ids, sizeof(ivector4_t) * file_header.joint_ids_count);
 
     vertex_offset = 0;
     vertex_count = file_header.vertices_count;
@@ -345,242 +303,270 @@ void mesh_t::load_external(shader_binding_info_t *binding_info, const char *path
     index_offset = 0;
     index_count = file_header.indices_count;
     index_type = VK_INDEX_TYPE_UINT32;
+}
+
+void mesh_t::load(mesh_loader_t *loader, shader_binding_info_t *dst_bindings) {
+    this->vertex_offset = loader->vertex_offset;
+    this->vertex_count = loader->vertex_count;
+    this->first_index = loader->first_index;
+    this->index_count = loader->index_count;
+    this->index_offset = loader->index_offset;
+    this->index_type = loader->index_type;
+
+    for (uint32_t i = 0; i < loader->attrib_count; ++i) {
+        buffer_type_t bt = loader->buffer_type_stack[i];
+        mesh_attrib_t *attrib = loader->get_attrib(bt);
+
+        this->push_buffer(bt);
+        mesh_buffer_t *mesh_buffer = this->get_mesh_buffer(bt);
+
+        switch (bt) {
+        case BT_INDICES: {
+            mesh_buffer->gpu_buffer.init(
+                attrib->size,
+                attrib->data,
+                VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        } break;
+
+        default: {
+            mesh_buffer->gpu_buffer.init(
+                attrib->size,
+                attrib->data,
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        } break;
+        }
+    }
+
+    if (dst_bindings) {
+        *dst_bindings = create_shader_binding_info();
+    }
 
     init_mesh_vbo_final_list();
 }
 
-void create_player_merged_mesh(
-    mesh_t *dst_a, shader_binding_info_t *sbi_a,
-    mesh_t *dst_b, shader_binding_info_t *sbi_b,
-    mesh_t *dst_merged, shader_binding_info_t *sbi_merged) {
-    const char *dude_mesh_path = "assets/models/player.mesh";
+static uint32_t s_allocate_memory_for_merged_mesh_attrib(buffer_type_t type, buffer_t *b, uint32_t count) {
+    switch (type) {
+    case BT_JOINT_INDICES: {
+        b->p = lnmalloc<ivector4_t>(count);
+        b->size = sizeof(ivector4_t) * count;
 
-    file_handle_t file_handle = create_file(dude_mesh_path, FLF_BINARY);
-    file_contents_t contents = read_file(file_handle);
-    free_file(file_handle);
-    
-    serialiser_t serialiser = {};
-    serialiser.data_buffer = (uint8_t *)contents.data;
-    serialiser.data_buffer_size = contents.size;
+        return sizeof(ivector4_t);
+    } break;
+                              
+    case BT_JOINT_WEIGHT: {
+        b->p = lnmalloc<vector4_t>(count);
+        b->size = sizeof(vector4_t) * count;
 
-    header_t file_header = {};
-    file_header.vertices_count = serialiser.deserialise_uint32();
-    file_header.normals_count = serialiser.deserialise_uint32();
-    file_header.tcoords_count = serialiser.deserialise_uint32();
-    file_header.joint_weights_count = serialiser.deserialise_uint32();
-    file_header.joint_ids_count = serialiser.deserialise_uint32();
-    file_header.indices_count = serialiser.deserialise_uint32();
+        return sizeof(vector4_t);
+    } break;
 
-    int32_t sector_count = 8;
-    int32_t stack_count = 8;
-    
-    uint32_t sphere_vertex_count = (sector_count + 1) * (stack_count + 1);
-    uint32_t sphere_index_count = sector_count * stack_count * 6;
+    case BT_UVS: {
+        b->p = lnmalloc<vector2_t>(count);
+        b->size = sizeof(vector2_t) * count;
 
-    vector3_t *vertices = LN_MALLOC(vector3_t, file_header.vertices_count + sphere_vertex_count);
-    vector3_t *normals = LN_MALLOC(vector3_t, file_header.normals_count + sphere_vertex_count);
+        return sizeof(vector2_t);
+    } break;
 
-    // Won't be used
-    vector2_t *tcoords = LN_MALLOC(vector2_t, file_header.tcoords_count + sphere_vertex_count);
+    case BT_COLOR: {
+        b->p = lnmalloc<vector4_t>(count);
+        b->size = sizeof(vector4_t) * count;
 
-    vector4_t *joint_weights = LN_MALLOC(vector4_t, file_header.joint_weights_count + sphere_vertex_count);
-    ivector4_t *joint_ids = LN_MALLOC(ivector4_t, file_header.joint_ids_count + sphere_vertex_count);
+        return sizeof(vector4_t);
+    } break;
 
-    uint32_t total_indices_count = MAX(file_header.indices_count, sphere_index_count) * 2;
+    default: {
+        b->p = lnmalloc<vector3_t>(count);
+        b->size = sizeof(vector3_t) * count;
 
-    uint32_t *indices = LN_MALLOC(uint32_t, total_indices_count);
+        return sizeof(vector3_t);
+    } break;
+    }
+}
 
-    uint32_t *dude_indices = NULL;
-    uint32_t *sphere_indices = LN_MALLOC(uint32_t, sphere_index_count * 2);
+static VkBufferUsageFlagBits s_get_buffer_usage(buffer_type_t type) {
+    switch (type) {
+    case BT_INDICES: {
+        return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    } break;
 
-    get_vertices(file_header.vertices_count, &serialiser, vertices);
-    get_normals(file_header.normals_count, &serialiser, normals);
-    get_tcoords(file_header.tcoords_count, &serialiser, tcoords);
-    get_joint_weights(file_header.joint_weights_count, &serialiser, joint_weights);
-    get_joint_ids(file_header.joint_ids_count, &serialiser, joint_ids);
-    dude_indices = get_indices(file_header.indices_count, &serialiser);
+    default: {
+        return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    } break;
+    }
+}
 
-    float sector_step = 2.0f * PI / sector_count;
-    float stack_step = PI / stack_count;
-    float sector_angle = 0;
-    float stack_angle = 0;
+void create_merged_mesh(merged_mesh_info_t *info) {
+    const mesh_loader_t *largest = info->sk_loader;
+    const mesh_loader_t *smallest = info->st_loader;
 
-    uint32_t counter = file_header.vertices_count;
-    
-    for (int32_t i = 0; i <= stack_count; ++i) {
-        stack_angle = PI / 2.0f - i * stack_step;
-        float xy = cos(stack_angle);
-        float z = sin(stack_angle);
-
-        for (int32_t j = 0; j <= sector_count; ++j) {
-            sector_angle = j * sector_step;
-
-            float x = xy * cos(sector_angle);
-            float y = xy * sin(sector_angle);
-
-            vertices[counter++] = vector3_t(x, z, y);
-        }
+    if (largest->attrib_count < smallest->attrib_count) {
+        const mesh_loader_t *actual_largest = smallest;
+        smallest = largest;
+        largest = actual_largest;
     }
 
-    counter = 0;
+    buffer_t buffers[MAX_MESH_BUFFERS] = {};
+    buffer_type_t total_bt[BT_MAX_VALUE] = {};
+    uint32_t total_buffer_count = 0;
 
-    memset(normals + file_header.normals_count, 0, sizeof(vector3_t) * sphere_vertex_count);
-    memset(joint_weights + file_header.joint_weights_count, 0, sizeof(vector4_t) * sphere_vertex_count);
-    memset(joint_ids + file_header.joint_ids_count, 0, sizeof(ivector4_t) * sphere_vertex_count);
+    uint32_t largest_vtx_count = largest->vertex_count;
+    uint32_t smallest_vtx_count = smallest->vertex_count;
 
-    for (int32_t i = 0; i < stack_count; ++i) {
-        int k1 = i * (sector_count + 1);
-        int k2 = k1 + sector_count + 1;
+    for (uint32_t i = 1; i < BT_MAX_VALUE; ++i) {
+        bool largest_has = largest->has_attrib((buffer_type_t)i);
+        bool smallest_has = smallest->has_attrib((buffer_type_t)i);
 
-        for (int32_t j = 0; j < sector_count; ++j, ++k1, ++k2) {
-            if (i != 0) {
-                sphere_indices[counter++] = k1;
-                sphere_indices[counter++] = k2;
-                sphere_indices[counter++] = k1 + 1;
+        if (largest_has || smallest_has) {
+            total_bt[total_buffer_count++] = (buffer_type_t)i;
+
+            if ((buffer_type_t)i == BT_INDICES) {
+                /*
+                  Create indices such that every triangle alternates between largest and smallest mesh.
+                */
+                const mesh_attrib_t *l_attrib = largest->get_attrib((buffer_type_t)i);
+                const mesh_attrib_t *s_attrib = smallest->get_attrib((buffer_type_t)i);
+
+                uint32_t *l_indices = (uint32_t *)l_attrib->data;
+                uint32_t *s_indices = (uint32_t *)s_attrib->data;
+
+                uint32_t indices_count = MAX(smallest->index_count, largest->index_count) * 2;
+                uint32_t *indices = lnmalloc<uint32_t>(indices_count);
+
+                for (uint32_t i = 0; i < indices_count; i += 6) {
+                    uint32_t largest_src_idx_start = i / 2;
+                    uint32_t smallest_src_idx_start = i / 2;
+
+                    if (smallest_src_idx_start >= smallest->index_count) {
+                        indices[i + 3] = l_indices[0];
+                        indices[i + 4] = l_indices[1];
+                        indices[i + 5] = l_indices[2];
+                    }
+                    else {
+                        indices[i + 3] = s_indices[smallest_src_idx_start] + largest_vtx_count;
+                        indices[i + 4] = s_indices[smallest_src_idx_start + 1] + largest_vtx_count;
+                        indices[i + 5] = s_indices[smallest_src_idx_start + 2] + largest_vtx_count;
+                    }
+
+                    if (largest_src_idx_start >= largest->index_count) {
+                        indices[i] = s_indices[0];
+                        indices[i + 1] = s_indices[1];
+                        indices[i + 2] = s_indices[2];
+                    }
+                    else {
+                        indices[i] = l_indices[largest_src_idx_start];
+                        indices[i + 1] = l_indices[largest_src_idx_start + 1];
+                        indices[i + 2] = l_indices[largest_src_idx_start + 2];
+                    }
+                }
+
+                buffer_t *b = &buffers[i];
+                b->p = indices;
+                b->size = indices_count * sizeof(uint32_t);
+
+                info->dst_merged->index_count = indices_count;
+            }
+            else {
+                /*
+                  For all other attributes, just create a buffer and memcpy the attribute data
+                  of the largest mesh, then the attribute data of the smallest mesh.
+                */
+                buffer_t *b = &buffers[i];
+                uint32_t sizeof_element = s_allocate_memory_for_merged_mesh_attrib(
+                    (buffer_type_t)i,
+                    b,
+                    largest_vtx_count + smallest_vtx_count);
+
+                // First put the largest data if it exists, then the smallest data if it exists
+                if (largest_has) {
+                    const mesh_attrib_t *attrib = largest->get_attrib((buffer_type_t)i);
+
+                    assert(attrib->size == largest_vtx_count * sizeof_element);
+                    memcpy(b->p, attrib->data, attrib->size);
+                }
+                else {
+                    memset(b->p, 0, largest_vtx_count * sizeof_element);
+                }
+
+                if (smallest_has) {
+                    const mesh_attrib_t *attrib = smallest->get_attrib((buffer_type_t)i);
+
+                    assert(attrib->size == smallest_vtx_count * sizeof_element);
+                    memcpy((uint8_t *)b->p + sizeof_element * largest_vtx_count, attrib->data, attrib->size);
+                }
+                else {
+                    memset((uint8_t *)b->p + sizeof_element * largest_vtx_count, 0, smallest_vtx_count * sizeof_element);
+                }
             }
 
-            if (i != (stack_count - 1)) {
-                sphere_indices[counter++] = k1 + 1;
-                sphere_indices[counter++] = k2;
-                sphere_indices[counter++] = k2 + 1;
-            }
+            // Push the buffer to the merged mesh
+            buffer_t *b = &buffers[i];
+            info->dst_merged->push_buffer((buffer_type_t)i);
+            mesh_buffer_t *mesh_buf = info->dst_merged->get_mesh_buffer((buffer_type_t)i);
+            mesh_buf->gpu_buffer.init(b->size, b->p, s_get_buffer_usage((buffer_type_t)i));
         }
     }
 
-    sphere_index_count = counter;
+    info->dst_merged->vertex_offset = 0;
+    info->dst_merged->vertex_count = largest_vtx_count + smallest_vtx_count;
+    info->dst_merged->first_index = 0;
+    info->dst_merged->index_offset = 0;
+    // Is already set
+    // info->dst_merged->index_count = indices_count;
+    info->dst_merged->index_type = VK_INDEX_TYPE_UINT32;
+    *(info->dst_merged_sbi) = info->dst_merged->create_shader_binding_info();
+    info->dst_merged->init_mesh_vbo_final_list();
 
-    // Now, alternate every 3 indices for the final buffer
-    for (uint32_t i = 0; i < total_indices_count; i += 6) {
-        uint32_t dude_src_index_start = i / 2;
-        uint32_t sphere_src_index_start = i / 2;
+    // Create mesh for skeletal mesh
+    for (uint32_t i = 0; i < info->sk_loader->attrib_count; ++i) {
+        buffer_type_t t = info->sk_loader->buffer_type_stack[i];
+        const mesh_attrib_t *attrib = &info->sk_loader->attribs[(uint32_t)t];
 
-        if (sphere_src_index_start >= sphere_index_count) {
-            indices[i + 3] = dude_indices[0];
-            indices[i + 4] = dude_indices[1];
-            indices[i + 5] = dude_indices[2];
-            // indices[i + 3] = sphere_indices[0] + file_header.vertices_count;
-            // indices[i + 4] = sphere_indices[0 + 1] + file_header.vertices_count;
-            // indices[i + 5] = sphere_indices[0 + 2] + file_header.vertices_count;
+        info->dst_sk->push_buffer(t);
+        mesh_buffer_t *mesh_buf = info->dst_sk->get_mesh_buffer(t);
+
+        if (t == BT_INDICES) {
+            mesh_buf->gpu_buffer.init(attrib->size, attrib->data, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
         }
         else {
-            indices[i + 3] = sphere_indices[sphere_src_index_start] + file_header.vertices_count;
-            indices[i + 4] = sphere_indices[sphere_src_index_start + 1] + file_header.vertices_count;
-            indices[i + 5] = sphere_indices[sphere_src_index_start + 2] + file_header.vertices_count;
-        }
-
-        if (dude_src_index_start >= file_header.indices_count) {
-            indices[i] = sphere_indices[0];
-            indices[i + 1] = sphere_indices[1];
-            indices[i + 2] = sphere_indices[2];
-        }
-        else {
-            indices[i] = dude_indices[dude_src_index_start];
-            indices[i + 1] = dude_indices[dude_src_index_start + 1];
-            indices[i + 2] = dude_indices[dude_src_index_start + 2];
+            mesh_buffer_t *merged_mesh_buf = info->dst_merged->get_mesh_buffer(t);
+            mesh_buf->gpu_buffer = merged_mesh_buf->gpu_buffer;
         }
     }
 
-    // Create 3 meshes
-    dst_merged->push_buffer(BT_INDICES);
-    mesh_buffer_t *merged_indices_buffer = dst_merged->get_mesh_buffer(BT_INDICES);
-    merged_indices_buffer->gpu_buffer.init(
-        sizeof(uint32_t) * total_indices_count,
-        indices,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    info->dst_sk->vertex_offset = 0;
+    info->dst_sk->vertex_count = info->sk_loader->vertex_count;
+    info->dst_sk->first_index = 0;
+    info->dst_sk->index_offset = 0;
+    info->dst_sk->index_count = info->sk_loader->index_count;
+    info->dst_sk->index_type = VK_INDEX_TYPE_UINT32;
+    *(info->dst_sk_sbi) = info->dst_sk->create_shader_binding_info();
+    info->dst_sk->init_mesh_vbo_final_list();
 
-    dst_merged->push_buffer(BT_VERTEX);
-    mesh_buffer_t *merged_vertex_buffer = dst_merged->get_mesh_buffer(BT_VERTEX);
-    merged_vertex_buffer->gpu_buffer.init(
-        sizeof(vector3_t) * (file_header.vertices_count + sphere_vertex_count),
-        vertices,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    // Create mesh for static mesh
+    for (uint32_t i = 0; i < info->st_loader->attrib_count; ++i) {
+        buffer_type_t t = info->st_loader->buffer_type_stack[i];
+        const mesh_attrib_t *attrib = &info->st_loader->attribs[(uint32_t)t];
 
-    dst_merged->push_buffer(BT_NORMAL);
-    mesh_buffer_t *merged_normal_buffer = dst_merged->get_mesh_buffer(BT_NORMAL);
-    merged_normal_buffer->gpu_buffer.init(
-        sizeof(vector3_t) * (file_header.normals_count + sphere_vertex_count),
-        normals,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        info->dst_st->push_buffer(t);
+        mesh_buffer_t *mesh_buf = info->dst_st->get_mesh_buffer(t);
 
-    dst_merged->push_buffer(BT_JOINT_WEIGHT);
-    mesh_buffer_t *weights_gpu_buffer = dst_merged->get_mesh_buffer(BT_JOINT_WEIGHT);
-    weights_gpu_buffer->gpu_buffer.init(
-        sizeof(vector4_t) * file_header.joint_weights_count + sphere_vertex_count,
-        joint_weights,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    
-    dst_merged->push_buffer(BT_JOINT_INDICES);
-    mesh_buffer_t *joints_gpu_buffer = dst_merged->get_mesh_buffer(BT_JOINT_INDICES);
-    joints_gpu_buffer->gpu_buffer.init(
-        sizeof(ivector4_t) * file_header.joint_ids_count + sphere_vertex_count,
-        joint_ids,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        if (t == BT_INDICES) {
+            mesh_buf->gpu_buffer.init(attrib->size, attrib->data, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        }
+        else {
+            mesh_buffer_t *merged_mesh_buf = info->dst_merged->get_mesh_buffer(t);
+            mesh_buf->gpu_buffer = merged_mesh_buf->gpu_buffer;
+        }
+    }
 
-    dst_merged->vertex_offset = 0;
-    dst_merged->vertex_count = file_header.vertices_count + sphere_vertex_count;
-    dst_merged->first_index = 0;
-    dst_merged->index_offset = 0;
-    dst_merged->index_count = total_indices_count;
-    dst_merged->index_type = VK_INDEX_TYPE_UINT32;
-
-    *sbi_merged = dst_merged->create_shader_binding_info();
-    dst_merged->init_mesh_vbo_final_list();
-
-    // Create player mesh
-    dst_a->push_buffer(BT_INDICES);
-    mesh_buffer_t *a_indices_buffer = dst_a->get_mesh_buffer(BT_INDICES);
-    a_indices_buffer->gpu_buffer.init(
-        sizeof(uint32_t) * file_header.indices_count,
-        dude_indices,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-
-    dst_a->push_buffer(BT_VERTEX);
-    mesh_buffer_t *a_vertex_buffer = dst_a->get_mesh_buffer(BT_VERTEX);
-    a_vertex_buffer->gpu_buffer = merged_vertex_buffer->gpu_buffer;
-
-    dst_a->push_buffer(BT_NORMAL);
-    mesh_buffer_t *a_normal_buffer = dst_a->get_mesh_buffer(BT_NORMAL);
-    a_normal_buffer->gpu_buffer = merged_normal_buffer->gpu_buffer;
-
-    dst_a->push_buffer(BT_JOINT_WEIGHT);
-    mesh_buffer_t *a_joint_weight_buffer = dst_a->get_mesh_buffer(BT_JOINT_WEIGHT);
-    a_joint_weight_buffer->gpu_buffer = weights_gpu_buffer->gpu_buffer;
-
-    dst_a->push_buffer(BT_JOINT_INDICES);
-    mesh_buffer_t *a_joint_indices_buffer = dst_a->get_mesh_buffer(BT_JOINT_INDICES);
-    a_joint_indices_buffer->gpu_buffer = joints_gpu_buffer->gpu_buffer;
-
-    dst_a->vertex_offset = 0;
-    dst_a->vertex_count = file_header.vertices_count;
-    dst_a->first_index = 0;
-    dst_a->index_offset = 0;
-    dst_a->index_count = file_header.indices_count;
-    dst_a->index_type = VK_INDEX_TYPE_UINT32;
-
-    *sbi_a = dst_a->create_shader_binding_info();
-    dst_a->init_mesh_vbo_final_list();
-
-    // Create ball mesh
-    dst_b->push_buffer(BT_INDICES);
-    mesh_buffer_t *b_indices_buffer = dst_b->get_mesh_buffer(BT_INDICES);
-    b_indices_buffer->gpu_buffer.init(
-        sizeof(uint32_t) * sphere_index_count,
-        sphere_indices,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-
-    dst_b->push_buffer(BT_VERTEX);
-    mesh_buffer_t *b_vertex_buffer = dst_b->get_mesh_buffer(BT_VERTEX);
-    b_vertex_buffer->gpu_buffer = merged_vertex_buffer->gpu_buffer;
-
-    dst_b->vertex_offset = sizeof(vector3_t) * file_header.vertices_count;
-    dst_b->vertex_count = sphere_vertex_count;
-    dst_b->first_index = 0;
-    dst_b->index_offset = 0;
-    dst_b->index_count = sphere_index_count;
-    dst_b->index_type = VK_INDEX_TYPE_UINT32;
-
-    *sbi_b = dst_b->create_shader_binding_info();
-    dst_b->init_mesh_vbo_final_list();
+    info->dst_st->vertex_offset = sizeof(vector3_t) * info->sk_loader->vertex_count;
+    info->dst_st->vertex_count = info->st_loader->vertex_count;
+    info->dst_st->first_index = 0;
+    info->dst_st->index_offset = 0;
+    info->dst_st->index_count = info->st_loader->index_count;
+    info->dst_st->index_type = VK_INDEX_TYPE_UINT32;
+    *(info->dst_st_sbi) = info->dst_st->create_shader_binding_info();
+    info->dst_st->init_mesh_vbo_final_list();
 }
 
 shader_t create_mesh_shader_color(shader_create_info_t *info, mesh_type_flags_t mesh_type) {
