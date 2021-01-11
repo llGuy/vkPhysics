@@ -286,8 +286,6 @@ struct mesh_loader_t {
     uint32_t index_offset;
     VkIndexType index_type;
 
-    void free();
-
     // Load vertices, indices, etc...
     void load_sphere();
     void load_cube();
