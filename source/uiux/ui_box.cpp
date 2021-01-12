@@ -116,6 +116,8 @@ void box_t::init(
     box_t *in_parent,
     uint32_t in_color,
     VkExtent2D backbuffer_resolution) {
+    rotation_angle = 0.0f;
+
     parent = NULL;
 
     VkExtent2D dst_resolution;

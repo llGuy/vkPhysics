@@ -34,4 +34,11 @@ void begin_color_table();
 void end_color_table();
 void submit_color_table();
 
+// Bullet dir = direction (leaving from the client) to the source of the bullet
+void add_damage_indicator(
+    const vector3_t &view_dir,
+    const vector3_t &up,
+    const vector3_t &right,
+    const vector3_t &bullet_src_dir);
+
 }

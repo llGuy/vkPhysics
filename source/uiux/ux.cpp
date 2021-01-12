@@ -70,6 +70,12 @@ static void s_ui_event_listener(
         unlock_spawn_button();
     } break;
 
+    case vkph::ET_CLIENT_TOOK_DAMAGE: {
+        auto *data = (vkph::event_client_took_damage_t *)event->data;
+        add_damage_indicator(data->view_dir, data->up, data->right, data->bullet_src_dir);
+        flfree(data);
+    } break;
+
     default: {
     } break;
 
@@ -98,6 +104,7 @@ static void s_ui_textures_init() {
     textures[UT_CROSSHAIRS].init("assets/textures/gui/crosshair.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     textures[UT_COLOR_TABLE].init("assets/textures/gui/color_table.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     textures[UT_TEAM_SELECT].init("assets/textures/gui/team.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+    textures[UT_DAMAGE_INDICATOR].init("assets/textures/gui/damage.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
 }
 
 void init(vkph::state_t *state) {
@@ -113,6 +120,7 @@ void init(vkph::state_t *state) {
     vkph::subscribe_to_event(vkph::ET_SPAWN, listener);
     vkph::subscribe_to_event(vkph::ET_RECEIVED_AVAILABLE_SERVERS, listener);
     vkph::subscribe_to_event(vkph::ET_LOCAL_PLAYER_DIED, listener);
+    vkph::subscribe_to_event(vkph::ET_CLIENT_TOOK_DAMAGE, listener);
 
     global_font = flmalloc<ui::font_t>();
     global_font->load(

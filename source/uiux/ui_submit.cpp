@@ -1,4 +1,5 @@
 #include "ui_submit.hpp"
+#include "t_types.hpp"
 #include <allocators.hpp>
 #include <log.hpp>
 
@@ -165,16 +166,66 @@ void push_textured_box(const box_t *box, ::vector2_t *uvs) {
     push_textured_vertex({normalized_base_position + normalized_size, uvs[5], box->color});
 }
 
-void push_textured_box(const box_t *box) {
+void push_textured_box(const box_t *box, uint32_t color) {
+    if (color == 0) {
+        color = box->color;
+    }
+
     ::vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
     ::vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
+
+    ::vector2_t positions[6] = {
+        normalized_base_position,
+        normalized_base_position + ::vector2_t(0.0f, normalized_size.y),
+        normalized_base_position + ::vector2_t(normalized_size.x, 0.0f),
+        normalized_base_position + ::vector2_t(0.0f, normalized_size.y),
+        normalized_base_position + ::vector2_t(normalized_size.x, 0.0f),
+        normalized_base_position + normalized_size
+    };
+
+    ::vector2_t uvs[6] = {
+        ::vector2_t(0.0f, 1.0f),                         
+        ::vector2_t(0.0f),
+        ::vector2_t(1.0f),
+        ::vector2_t(0.0f),
+        ::vector2_t(1.0f),
+        ::vector2_t(1.0f, 0.0f),
+    };
+
+    matrix2_t rotation = matrix2_t(1.0f);
+    if (box->rotation_angle != 0.0f) {
+        vk::swapchain_information_t swapchain_info = vk::get_swapchain_info();
+        VkExtent2D resolution = {swapchain_info.width, swapchain_info.height};
+        float aspect = (float)resolution.width / (float)resolution.height;
+
+        float rad_angle = box->rotation_angle;
+
+        rotation = matrix2_t(
+            glm::cos(rad_angle),
+            glm::sin(rad_angle),
+            -glm::sin(rad_angle),
+            glm::cos(rad_angle));
+
+        for (uint32_t i = 0; i < 6; ++i) {
+            positions[i].x *= aspect;
+            positions[i] = rotation * positions[i];
+            positions[i].x /= aspect;
+        }
+    }
+
+    for (uint32_t i = 0; i < 6; ++i) {
+        push_textured_vertex({positions[i], uvs[i], color});
+    }
+
+    // ::vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
+    // ::vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
     
-    push_textured_vertex({normalized_base_position, ::vector2_t(0.0f, 1.0f), box->color});
-    push_textured_vertex({normalized_base_position + ::vector2_t(0.0f, normalized_size.y), ::vector2_t(0.0f), box->color});
-    push_textured_vertex({normalized_base_position + ::vector2_t(normalized_size.x, 0.0f), ::vector2_t(1.0f), box->color});
-    push_textured_vertex({normalized_base_position + ::vector2_t(0.0f, normalized_size.y), ::vector2_t(0.0f), box->color});
-    push_textured_vertex({normalized_base_position + ::vector2_t(normalized_size.x, 0.0f), ::vector2_t(1.0f), box->color});
-    push_textured_vertex({normalized_base_position + normalized_size, ::vector2_t(1.0f, 0.0f), box->color});
+    // push_textured_vertex({normalized_base_position,                                        ::vector2_t(0.0f, 1.0f), box->color});
+    // push_textured_vertex({normalized_base_position + ::vector2_t(0.0f, normalized_size.y), ::vector2_t(0.0f),       box->color});
+    // push_textured_vertex({normalized_base_position + ::vector2_t(normalized_size.x, 0.0f), ::vector2_t(1.0f),       box->color});
+    // push_textured_vertex({normalized_base_position + ::vector2_t(0.0f, normalized_size.y), ::vector2_t(0.0f),       box->color});
+    // push_textured_vertex({normalized_base_position + ::vector2_t(normalized_size.x, 0.0f), ::vector2_t(1.0f),       box->color});
+    // push_textured_vertex({normalized_base_position + normalized_size,                      ::vector2_t(1.0f, 0.0f), box->color});
 }
 
 void clear_texture_list_containers() {
@@ -205,12 +256,39 @@ void push_color_box(const box_t *box) {
     ::vector2_t normalized_base_position = convert_glsl_to_normalized(box->gls_position.to_fvec2());
     ::vector2_t normalized_size = box->gls_current_size.to_fvec2() * 2.0f;
 
-    push_color_vertex({normalized_base_position, box->color});
-    push_color_vertex({normalized_base_position + ::vector2_t(0.0f, normalized_size.y), box->color});
-    push_color_vertex({normalized_base_position + ::vector2_t(normalized_size.x, 0.0f), box->color});
-    push_color_vertex({normalized_base_position + ::vector2_t(0.0f, normalized_size.y), box->color});
-    push_color_vertex({normalized_base_position + ::vector2_t(normalized_size.x, 0.0f), box->color});
-    push_color_vertex({normalized_base_position + normalized_size, box->color});
+    ::vector2_t positions[6] = {
+        normalized_base_position,
+        normalized_base_position + ::vector2_t(0.0f, normalized_size.y),
+        normalized_base_position + ::vector2_t(normalized_size.x, 0.0f),
+        normalized_base_position + ::vector2_t(0.0f, normalized_size.y),
+        normalized_base_position + ::vector2_t(normalized_size.x, 0.0f),
+        normalized_base_position + normalized_size
+    };
+
+    matrix2_t rotation = matrix2_t(1.0f);
+    if (box->rotation_angle != 0.0f) {
+        vk::swapchain_information_t swapchain_info = vk::get_swapchain_info();
+        VkExtent2D resolution = {swapchain_info.width, swapchain_info.height};
+        float aspect = (float)resolution.width / (float)resolution.height;
+
+        float rad_angle = glm::radians(box->rotation_angle);
+
+        rotation = matrix2_t(
+            glm::cos(rad_angle),
+            glm::sin(rad_angle),
+            -glm::sin(rad_angle),
+            glm::cos(rad_angle));
+
+        for (uint32_t i = 0; i < 6; ++i) {
+            positions[i].x *= aspect;
+            positions[i] = rotation * positions[i];
+            positions[i].x /= aspect;
+        }
+    }
+
+    for (uint32_t i = 0; i < 6; ++i) {
+        push_color_vertex({positions[i], box->color});
+    }
 }
 
 void push_reversed_color_box(const box_t *box, const ::vector2_t &size) {

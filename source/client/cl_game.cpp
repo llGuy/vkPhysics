@@ -1,3 +1,4 @@
+#include "allocators.hpp"
 #include "cl_game_interp.hpp"
 #include "cl_main.hpp"
 #include "cl_game.hpp"
@@ -5,6 +6,8 @@
 #include "cl_game_predict.hpp"
 #include "cl_game_events.hpp"
 #include "cl_render.hpp"
+#include "vkph_event.hpp"
+#include "vkph_event_data.hpp"
 #include "vkph_player.hpp"
 #include <vkph_weapon.hpp>
 #include <vkph_state.hpp>
@@ -121,6 +124,19 @@ void tick_game(vkph::state_t *state) {
 
                         local_player->weapons[weapon_idx].active_projs[ref_idx].initialised = 0;
                         local_player->weapons[weapon_idx].active_projs.remove(ref_idx);
+                    }
+                    else if (player_local_id == state->local_player_id) {
+                        auto *damage_event_data = flmalloc<vkph::event_client_took_damage_t>();
+                        vkph::movement_axes_t axes = vkph::compute_movement_axes(
+                            dst_player->ws_view_direction,
+                            dst_player->ws_up_vector);
+
+                        damage_event_data->bullet_src_dir = glm::normalize(-rock->direction);
+                        damage_event_data->view_dir = axes.forward;
+                        damage_event_data->up = axes.up;
+                        damage_event_data->right = axes.right;
+
+                        vkph::submit_event(vkph::ET_CLIENT_TOOK_DAMAGE, damage_event_data);
                     }
 
                     rock->flags.active = 0;

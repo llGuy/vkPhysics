@@ -113,4 +113,11 @@ struct event_send_server_team_select_request_t {
     team_color_t color;
 };
 
+struct event_client_took_damage_t {
+    vector3_t view_dir;
+    vector3_t up;
+    vector3_t right;
+    vector3_t bullet_src_dir;
+};
+
 }

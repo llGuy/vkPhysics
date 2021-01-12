@@ -22,6 +22,7 @@ struct box_t {
     vector2_t gls_relative_size;
     float aspect_ratio;
     uint32_t color;
+    float rotation_angle;
 
     void init(
         relative_to_t in_relative_to,

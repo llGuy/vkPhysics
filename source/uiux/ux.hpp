@@ -32,6 +32,7 @@ enum ui_texture_t {
     UT_CROSSHAIRS,
     UT_COLOR_TABLE,
     UT_TEAM_SELECT,
+    UT_DAMAGE_INDICATOR,
     UT_INVALID_TEXTURE
 };
 

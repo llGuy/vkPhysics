@@ -1,5 +1,8 @@
 #include "ux_hud.hpp"
 
+#include "containers.hpp"
+#include "glm/common.hpp"
+#include "ui_math.hpp"
 #include "ux.hpp"
 #include "ux_hover.hpp"
 #include <vkph_state.hpp>
@@ -63,6 +66,18 @@ static ui::box_t signup_box;
 static ui::text_t signup_text;
 static widget_color_t signup_color;
 
+static ui::box_t damage_indicator;
+
+static constexpr uint32_t MAX_DAMAGES = 30;
+
+struct damage_t {
+    float rotation_angle;
+    float time_left;
+    bool visible;
+};
+
+static static_stack_container_t<damage_t, MAX_DAMAGES> damages;
+
 static ui::box_t login_box;
 static ui::text_t login_text;
 static widget_color_t login_color;
@@ -124,6 +139,17 @@ void init_hud() {
         }
 
         gameplay_display = 0;
+    }
+
+    { // Damage indicator
+        damage_indicator.init(
+            ui::RT_CENTER, 1.0f,
+            ui::vector2_t(0.0f, 0.0f),
+            ui::vector2_t(0.7f, 0.7f),
+            NULL,
+            0xFF0000FF);
+
+        damages.init();
     }
 
     { // Minibuffer
@@ -192,6 +218,30 @@ void submit_hud(const vkph::state_t *state) {
             ui::push_color_box(&health_display.box);
             ui::mark_ui_textured_section(get_game_font()->font_img.descriptor);
             ui::push_text(&health_display.text);
+        }
+    }
+
+    for (uint32_t i = 0; i < damages.data_count; ++i) {
+        uint32_t base_color = 0xFF060600;
+
+        damage_t *d = &damages[i];
+
+        if (d->time_left < 0.0f) {
+            d->visible = 0;
+            damages.remove(i);
+
+            printf("%d\n", damages.data_count);
+        }
+
+        if (d->visible) {
+            base_color += (uint32_t)(255.0f * d->time_left);
+            
+            damage_indicator.rotation_angle = d->rotation_angle;
+
+            ui::mark_ui_textured_section(get_texture(UT_DAMAGE_INDICATOR));
+            ui::push_textured_box(&damage_indicator, base_color);
+
+            d->time_left -= app::g_delta_time;
         }
     }
 
@@ -303,6 +353,36 @@ void hud_input(const app::raw_input_t *input) {
             }
         }
     }
+}
+
+void add_damage_indicator(
+    const vector3_t &view_dir,
+    const vector3_t &up,
+    const vector3_t &right,
+    const vector3_t &bullet_dir) {
+    damage_t res = {};
+    res.time_left = 1.0f;
+
+    matrix3_t inv_basis;
+    inv_basis[0] = vector3_t(right.x, up.x, -view_dir.x);
+    inv_basis[1] = vector3_t(right.y, up.y, -view_dir.y);
+    inv_basis[2] = vector3_t(right.z, up.z, -view_dir.z);
+
+    vector3_t bd = inv_basis * bullet_dir;
+    bd.y = 0.0f;
+
+    float d = glm::dot(bd, vector3_t(0.0f, 0.0f, -1.0f));
+    d = glm::clamp(d, -1.0f, 1.0f);
+    res.rotation_angle = glm::acos(d);
+
+    if (bd.x > 0.0f) {
+        res.rotation_angle *= -1.0f;
+    }
+
+    uint32_t idx = damages.add();
+    auto *dst = &damages[idx];
+    *dst = res;
+    dst->visible = 1;
 }
 
 }

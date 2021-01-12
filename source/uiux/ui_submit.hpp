@@ -45,7 +45,7 @@ void sync_gpu_with_color_vertex_list(VkCommandBuffer cmdbuf);
  */
 void mark_ui_textured_section(VkDescriptorSet set);
 void push_textured_box(const struct box_t *box, ::vector2_t *uvs);
-void push_textured_box(const struct box_t *box);
+void push_textured_box(const struct box_t *box, uint32_t color = 0x0);
 void push_color_box(const box_t *box);
 void push_reversed_color_box(const box_t *box, const ::vector2_t &size);
 // If secret == 1, this is a password (only '*' will show up)

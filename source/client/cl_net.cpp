@@ -50,7 +50,6 @@ static net::socket_t tcp_socket;
  */
 static stack_container_t<net::packet_t> packets_to_unpack;
 
-
 // Start the client sockets and initialize containers
 static void s_start_client(
     vkph::event_start_client_t *data,
@@ -86,10 +85,6 @@ static void s_start_client(
 }
 
 static void s_handle_packet(vkph::state_t *state, net::packet_t *packet) {
-    // LOG_INFOV(
-    //     "Received packet of type \"%s\"\n",
-    //     net::packet_type_to_str((net::packet_type_t)packet->header.flags.packet_type));
-
     switch (packet->header.flags.packet_type) {
 
     case net::PT_PLAYER_JOINED: {
