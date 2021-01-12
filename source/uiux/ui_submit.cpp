@@ -35,13 +35,13 @@ static vk::shader_t color_quads_shader;
 static void s_color_shader_init() {
     vk::shader_binding_info_t binding_info = {};
     binding_info.binding_count = 1;
-    binding_info.binding_descriptions = LN_MALLOC(VkVertexInputBindingDescription, 1);
+    binding_info.binding_descriptions = lnmalloc<VkVertexInputBindingDescription>(1);
     binding_info.binding_descriptions[0].binding = 0;
     binding_info.binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     binding_info.binding_descriptions[0].stride = sizeof(color_vertex_t);
 
     binding_info.attribute_count = 2;
-    binding_info.attribute_descriptions = LN_MALLOC(VkVertexInputAttributeDescription, 2);
+    binding_info.attribute_descriptions = lnmalloc<VkVertexInputAttributeDescription>(2);
     binding_info.attribute_descriptions[0].location = 0;
     binding_info.attribute_descriptions[0].binding = 0;
     binding_info.attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
@@ -70,13 +70,13 @@ static void s_color_shader_init() {
 static void s_textured_shader_init() {
     vk::shader_binding_info_t binding_info = {};
     binding_info.binding_count = 1;
-    binding_info.binding_descriptions = LN_MALLOC(VkVertexInputBindingDescription, 1);
+    binding_info.binding_descriptions = lnmalloc<VkVertexInputBindingDescription>(1);
     binding_info.binding_descriptions[0].binding = 0;
     binding_info.binding_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     binding_info.binding_descriptions[0].stride = sizeof(textured_vertex_t);
 
     binding_info.attribute_count = 3;
-    binding_info.attribute_descriptions = LN_MALLOC(VkVertexInputAttributeDescription, 3);
+    binding_info.attribute_descriptions = lnmalloc<VkVertexInputAttributeDescription>(3);
     binding_info.attribute_descriptions[0].location = 0;
     binding_info.attribute_descriptions[0].binding = 0;
     binding_info.attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
@@ -349,7 +349,7 @@ void push_text(text_t *text, bool secret) {
     char *characters = text->characters;
 
     if (secret) {
-        characters = LN_MALLOC(char, text->char_count);
+        characters = lnmalloc<char>(text->char_count);
         for (uint32_t i = 0; i < text->char_count; ++i) {
             characters[i] = '*';
         }

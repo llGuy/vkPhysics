@@ -307,7 +307,7 @@ static void s_init_environment_cubemap() {
     extent3d.depth = 1;
 
     environment.base_cubemap_init.color_attachment_count = 1;
-    environment.base_cubemap_init.color_attachments = FL_MALLOC(attachment_t, environment.base_cubemap_init.color_attachment_count);
+    environment.base_cubemap_init.color_attachments = flmalloc<attachment_t>(environment.base_cubemap_init.color_attachment_count);
 
     environment.base_cubemap_init.color_attachments[0].init_as_cubemap(
         extent3d,

@@ -19,7 +19,7 @@ void integral_lut_t::init() {
 
 void integral_lut_t::init_render_pass() {
     init_.color_attachment_count = 1;
-    init_.color_attachments = FL_MALLOC(attachment_t, init_.color_attachment_count);
+    init_.color_attachments = flmalloc<attachment_t>(init_.color_attachment_count);
 
     VkExtent3D extent3d = {};
     extent3d.width = 512;
@@ -176,7 +176,7 @@ void pbr_environment_t::prepare_diff_ibl() {
     extent.height = 512;
     
     diff_ibl_init.color_attachment_count = 1;
-    diff_ibl_init.color_attachments = FL_MALLOC(attachment_t, diff_ibl_init.color_attachment_count);
+    diff_ibl_init.color_attachments = flmalloc<attachment_t>(diff_ibl_init.color_attachment_count);
 
     VkExtent3D extent3d = {};
     extent3d.width = extent.width;
@@ -332,7 +332,7 @@ void pbr_environment_t::prepare_spec_ibl() {
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     
     spec_ibl_init.color_attachment_count = 1;
-    spec_ibl_init.color_attachments = FL_MALLOC(attachment_t, spec_ibl_init.color_attachment_count);
+    spec_ibl_init.color_attachments = flmalloc<attachment_t>(spec_ibl_init.color_attachment_count);
 
     VkExtent2D extent2d = {};
     extent2d.width = 512;

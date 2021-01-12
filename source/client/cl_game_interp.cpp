@@ -11,7 +11,7 @@ static chunks_to_interpolate_t chunks_to_interpolate;
 void init_game_interpolation() {
     chunks_to_interpolate.max_modified = 40;
     chunks_to_interpolate.modification_count = 0;
-    chunks_to_interpolate.modifications = FL_MALLOC(net::chunk_modifications_t, chunks_to_interpolate.max_modified);
+    chunks_to_interpolate.modifications = flmalloc<net::chunk_modifications_t>(chunks_to_interpolate.max_modified);
     memset(chunks_to_interpolate.modifications, 0, sizeof(net::chunk_modifications_t) * chunks_to_interpolate.max_modified);
 }
 

@@ -83,9 +83,9 @@ bool receive_packet_connection_handshake(
         LOG_INFOV("Received handshake, there are %i players\n", handshake.player_count);
 
         // Dispatch event to initialise all the players
-        auto *data = FL_MALLOC(vkph::event_enter_server_t, 1);
+        auto *data = flmalloc<vkph::event_enter_server_t>(1);
         data->info_count = handshake.player_count;
-        data->infos = FL_MALLOC(vkph::player_init_info_t, data->info_count);
+        data->infos = flmalloc<vkph::player_init_info_t>(data->info_count);
 
         ctx->tag = handshake.client_tag;
         server->tag = server_tag;
@@ -116,7 +116,7 @@ void receive_packet_player_joined(
 
     LOG_INFOV("%s joined the game\n", packet.player_info.client_name);
 
-    auto *new_player = FL_MALLOC(vkph::event_new_player_t, 1);
+    auto *new_player = flmalloc<vkph::event_new_player_t>(1);
     net::client_t *c = &ctx->clients.data[packet.player_info.client_id];
     c->name = packet.player_info.client_name;
     c->client_id = packet.player_info.client_id;
@@ -140,7 +140,7 @@ void receive_packet_player_left(
 
     ctx->clients.data[disconnected_client].initialised = 0;
 
-    auto *data = FL_MALLOC(vkph::event_player_disconnected_t, 1);
+    auto *data = flmalloc<vkph::event_player_disconnected_t>(1);
     data->client_id = disconnected_client;
     vkph::submit_event(vkph::ET_PLAYER_DISCONNECTED, data);
 

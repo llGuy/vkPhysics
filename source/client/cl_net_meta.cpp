@@ -65,13 +65,13 @@ void check_registration() {
 
         // Automatically log into the server
         LOG_INFOV("User information found: \"%s\" with tag %d and user ID %d - attempting to login in...\n", username, usertag, uid);
-        net::request_automatic_login_t *login_data = FL_MALLOC(net::request_automatic_login_t, 1);
+        net::request_automatic_login_t *login_data = flmalloc<net::request_automatic_login_t>(1);
         login_data->userid = uid;
         login_data->usertag = usertag;
 
         send_request(net::R_AUTOMATIC_LOGIN, login_data);
 
-        auto *start_client_data = FL_MALLOC(vkph::event_start_client_t, 1);
+        auto *start_client_data = flmalloc<vkph::event_start_client_t>(1);
         start_client_data->client_name = current_client.username;
         vkph::submit_event(vkph::ET_START_CLIENT, start_client_data);
     }
@@ -119,13 +119,13 @@ void check_meta_request_status_and_handle() {
                 // Request available servers list
                 request_available_servers();
 
-                auto *start_client_data = FL_MALLOC(vkph::event_start_client_t, 1);
+                auto *start_client_data = flmalloc<vkph::event_start_client_t>(1);
                 start_client_data->client_name = current_client.username;
                 vkph::submit_event(vkph::ET_START_CLIENT, start_client_data);
             }
             else {
                 // Failed to sign up or login
-                auto *data = FL_MALLOC(vkph::event_meta_request_error_t, 1);
+                auto *data = flmalloc<vkph::event_meta_request_error_t>(1);
 
                 if (request_type == net::R_SIGN_UP) {
                     data->error_type = net::RE_USERNAME_EXISTS;
@@ -143,7 +143,7 @@ void check_meta_request_status_and_handle() {
                 LOG_INFO("Succeeded to login - game may begin\n");
 
                 // Request meta server - which servers are online at the moment
-                net::request_available_server_t *data = FL_MALLOC(net::request_available_server_t, 1);
+                net::request_available_server_t *data = flmalloc<net::request_available_server_t>(1);
                 send_request(net::R_AVAILABLE_SERVERS, data);
             }
             else {
@@ -215,7 +215,7 @@ void check_meta_request_status_and_handle() {
 void request_sign_up(
     const char *username,
     const char *password) {
-    net::request_sign_up_data_t *sign_up_data = FL_MALLOC(net::request_sign_up_data_t, 1);
+    net::request_sign_up_data_t *sign_up_data = flmalloc<net::request_sign_up_data_t>(1);
     current_client.username = username;
 
     sign_up_data->username = username;
@@ -228,7 +228,7 @@ void request_sign_up(
 void request_login(
     const char *username,
     const char *password) {
-    net::request_login_data_t *login_data = FL_MALLOC(net::request_login_data_t, 1);
+    net::request_login_data_t *login_data = flmalloc<net::request_login_data_t>(1);
     current_client.username = username;
 
     login_data->username = username;
@@ -242,7 +242,7 @@ void request_available_servers() {
     LOG_INFO("Requesting available servers from meta server\n");
 
     // Request meta server - which servers are online at the moment
-    net::request_available_server_t *data = FL_MALLOC(net::request_available_server_t, 1);
+    net::request_available_server_t *data = flmalloc<net::request_available_server_t>(1);
     send_request(net::R_AVAILABLE_SERVERS, data);
 }
 

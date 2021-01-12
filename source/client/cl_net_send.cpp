@@ -37,7 +37,7 @@ static void s_fill_commands_with_actions(
     net::packet_client_commands_t *packet,
     net::context_t *ctx) {
     packet->command_count = (uint8_t)p->cached_player_action_count;
-    packet->actions = LN_MALLOC(vkph::player_action_t, packet->command_count);
+    packet->actions = lnmalloc<vkph::player_action_t>(packet->command_count);
 
     if (packet->command_count) {
         net::debug_log("\tClient has made %d actions\n", ctx->log_file, 0, packet->command_count);
@@ -89,7 +89,7 @@ static void s_fill_predicted_data(
       the bullet wouldn't have been spawned on server-side
     */
     packet->predicted_hit_count = state->predicted_hits.data_count;
-    packet->hits = LN_MALLOC(vkph::predicted_projectile_hit_t, packet->predicted_hit_count);
+    packet->hits = lnmalloc<vkph::predicted_projectile_hit_t>(packet->predicted_hit_count);
 
     uint32_t actual_predicted_count = 0;
 

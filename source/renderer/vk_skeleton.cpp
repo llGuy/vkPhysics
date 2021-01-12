@@ -17,7 +17,7 @@ void skeleton_t::load(const char *path) {
     serialiser.data_buffer_size = contents.size;
 
     joint_count = serialiser.deserialise_uint32();
-    joints = FL_MALLOC(joint_t, joint_count);
+    joints = flmalloc<joint_t>(joint_count);
     for (uint32_t i = 0; i < joint_count; ++i) {
         joint_t *joint = &joints[i];
         joint->joint_id = serialiser.deserialise_uint32();

@@ -58,7 +58,7 @@ void lighting_stage_t::init_render_pass() {
 }
 
 void lighting_stage_t::init() {
-    stage.color_attachments = FL_MALLOC(attachment_t, stage.color_attachment_count);
+    stage.color_attachments = flmalloc<attachment_t>(stage.color_attachment_count);
 
     VkExtent3D extent3d = {};
     extent3d.width = g_ctx->swapchain.extent.width;

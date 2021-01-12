@@ -205,7 +205,7 @@ void begin_meta_client_thread() {
     shared.doing_job = 0;
     shared.request_result_size = 0;
 
-    shared.request_result = FL_MALLOC(char, REQUEST_RESULT_MAX_SIZE);
+    shared.request_result = flmalloc<char>(REQUEST_RESULT_MAX_SIZE);
     allocator.init(4096);
 
     meta_thread = std::thread(s_meta_thread);
@@ -226,7 +226,7 @@ char *check_request_finished(uint32_t *size, request_t *type) {
 
             requested_work = 0;
 
-            FL_FREE(shared.current_request_data);
+            flfree(shared.current_request_data);
 
             return shared.request_result;
         }

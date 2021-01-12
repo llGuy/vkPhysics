@@ -93,7 +93,7 @@ void init_chunk_render_resources() {
 }
 
 chunk_render_t *init_chunk_render(const vkph::chunk_t *chunk, const vector3_t &ws_position) {
-    chunk_render_t *chunk_render = FL_MALLOC(chunk_render_t, 1);
+    chunk_render_t *chunk_render = flmalloc<chunk_render_t>(1);
 
     memset(chunk_render, 0, sizeof(chunk_render_t));
 
@@ -130,7 +130,7 @@ void destroy_chunk_render(chunk_render_t *render) {
         if (mesh_buffer) {
             vk::destroy_sensitive_buffer(&render->mesh.get_mesh_buffer(vk::BT_VERTEX)->gpu_buffer);
         }
-        FL_FREE(render);
+        flfree(render);
         render = NULL;
     }
 }

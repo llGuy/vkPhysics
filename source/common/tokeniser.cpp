@@ -204,7 +204,7 @@ void tokeniser_init(
     uint32_t *keyword_ids,
     const char **keywords,
     uint32_t keyword_count) {
-    tokens_buffer = LN_MALLOC(token_t, 1000);
+    tokens_buffer = lnmalloc<token_t>(1000);
     root = s_tree_node_create();
 
     for (uint32_t i = 0; i < keyword_count; ++i) {
@@ -324,6 +324,6 @@ token_t *tokenise(
 }
 
 void clear_tokeniser() {
-    FL_FREE(tokens_buffer);
+    flfree(tokens_buffer);
     // Fix memory leak
 }

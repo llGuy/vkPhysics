@@ -111,7 +111,7 @@ static bool s_send_packet_connection_handshake(
 
     LOG_INFOV("Loaded chunk count: %d\n", connection_handshake.loaded_chunk_count);
 
-    connection_handshake.player_infos = LN_MALLOC(vkph::player_init_info_t, ctx->clients.data_count);
+    connection_handshake.player_infos = lnmalloc<vkph::player_init_info_t>(ctx->clients.data_count);
 
     { // Fill in the data on the players
         for (uint32_t i = 0; i < ctx->clients.data_count; ++i) {
@@ -156,7 +156,7 @@ static bool s_send_packet_connection_handshake(
         const vkph::team_t *teams = state->teams;
 
         connection_handshake.team_count = team_count;
-        connection_handshake.team_infos = LN_MALLOC(vkph::team_info_t, team_count);
+        connection_handshake.team_infos = lnmalloc<vkph::team_info_t>(team_count);
         for (uint32_t i = 0; i < team_count; ++i) {
             connection_handshake.team_infos[i] = teams[i].make_team_info();
         }
@@ -292,7 +292,7 @@ static uint32_t s_prepare_packet_chunk_voxels(
             serialiser.data_buffer_head = actual_packet_size;
 
             net::packet_chunk_voxels_t *packet_to_save = &client->chunk_packets[client->chunk_packet_count++];
-            packet_to_save->chunk_data = FL_MALLOC(vkph::voxel_t, serialiser.data_buffer_head);
+            packet_to_save->chunk_data = flmalloc<vkph::voxel_t>(serialiser.data_buffer_head);
             memcpy(packet_to_save->chunk_data, serialiser.data_buffer, serialiser.data_buffer_head);
             //packet_to_save->chunk_data = serialiser.data_buffer;
             packet_to_save->size = serialiser.data_buffer_head;
@@ -323,7 +323,7 @@ static void s_send_game_state_to_new_client(
     uint32_t max_chunks_per_packet = s_maximum_chunks_per_packet();
     LOG_INFOV("Maximum chunks per packet: %i\n", max_chunks_per_packet);
 
-    net::voxel_chunk_values_t *voxel_chunks = LN_MALLOC(net::voxel_chunk_values_t, loaded_chunk_count);
+    net::voxel_chunk_values_t *voxel_chunks = lnmalloc<net::voxel_chunk_values_t>(loaded_chunk_count);
 
     uint32_t count = 0;
     for (uint32_t i = 0; i < loaded_chunk_count; ++i) {
@@ -429,7 +429,7 @@ static net::client_t *s_receive_packet_connection_request(
 
     memset(client->predicted.chunk_modifications, 0, sizeof(net::chunk_modifications_t) * net::MAX_PREDICTED_CHUNK_MODIFICATIONS);
     
-    vkph::event_new_player_t *event_data = FL_MALLOC(vkph::event_new_player_t, 1);
+    vkph::event_new_player_t *event_data = flmalloc<vkph::event_new_player_t>(1);
     event_data->info.client_name = client->name;
     event_data->info.client_id = client->client_id;
     // Need to calculate a random position
@@ -474,7 +474,7 @@ static void s_handle_disconnect(
     ctx->clients[client_id].initialised = 0;
     ctx->clients.remove(client_id);
 
-    vkph::event_player_disconnected_t *data = FL_MALLOC(vkph::event_player_disconnected_t, 1);
+    vkph::event_player_disconnected_t *data = flmalloc<vkph::event_player_disconnected_t>(1);
     data->client_id = client_id;
     vkph::submit_event(vkph::ET_PLAYER_DISCONNECTED, data);
 
@@ -828,7 +828,7 @@ static void s_add_chunk_modifications_to_game_state_snapshot(
     net::packet_game_state_snapshot_t *snapshot,
     vkph::state_t *state) {
     // Up to 300 chunks can be modified between game dispatches
-    net::chunk_modifications_t *modifications = LN_MALLOC(net::chunk_modifications_t, net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
+    net::chunk_modifications_t *modifications = lnmalloc<net::chunk_modifications_t>(net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 
     // Don't need the initial values - the client will use its values for voxels as the "initial" values
     uint32_t modification_count = fill_chunk_modification_array_with_colors(modifications, state);
@@ -841,7 +841,7 @@ static void s_add_projectiles_to_game_state_snapshot(
     net::packet_game_state_snapshot_t *snapshot,
     vkph::state_t *state) {
     snapshot->rock_count = state->rocks.recent_count;
-    snapshot->rock_snapshots = LN_MALLOC(vkph::rock_snapshot_t, snapshot->rock_count);
+    snapshot->rock_snapshots = lnmalloc<vkph::rock_snapshot_t>(snapshot->rock_count);
 
     for (uint32_t i = 0; i < snapshot->rock_count; ++i) {
         uint32_t new_rock_idx = state->rocks.recent[i];
@@ -862,7 +862,7 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
     
     net::packet_game_state_snapshot_t packet = {};
     packet.player_data_count = 0;
-    packet.player_snapshots = LN_MALLOC(vkph::player_snapshot_t, ctx->clients.data_count);
+    packet.player_snapshots = lnmalloc<vkph::player_snapshot_t>(ctx->clients.data_count);
 
     s_add_chunk_modifications_to_game_state_snapshot(&packet, state);
 
@@ -1016,7 +1016,7 @@ static void s_send_packet_game_state_snapshot(vkph::state_t *state) {
 // PT_CHUNK_VOXELS
 static void s_send_pending_chunks() {
     uint32_t to_remove_count = 0;
-    uint32_t *to_remove = LN_MALLOC(uint32_t, clients_to_send_chunks_to.data_count);
+    uint32_t *to_remove = lnmalloc<uint32_t>(clients_to_send_chunks_to.data_count);
     for (uint32_t i = 0; i < clients_to_send_chunks_to.data_count; ++i) {
         uint32_t client_id = clients_to_send_chunks_to[i];
         net::client_t *c_ptr = &ctx->clients[client_id];
@@ -1033,7 +1033,7 @@ static void s_send_pending_chunks() {
             }
 
             // Free
-            FL_FREE(packet->chunk_data);
+            flfree(packet->chunk_data);
 
             c_ptr->current_chunk_sending++;
         }
@@ -1130,8 +1130,6 @@ static void s_receive_packet_ping(
     c->ping_in_progress = 0.0f;
 
     c->missed_pings = 0;
-
-    LOG_INFOV("Received pong from client %d (%s)\n", (uint32_t)c->client_id, c->name);
 }
 
 static void s_check_pending_connections(vkph::state_t *state) {
@@ -1288,7 +1286,7 @@ static void s_net_event_listener(void *object, vkph::event_t *event) {
         vkph::event_start_server_t *data = (vkph::event_start_server_t *)event->data;
         s_start_server(data, state);
 
-        FL_FREE(data);
+        flfree(data);
     } break;
 
     default: {
@@ -1305,7 +1303,7 @@ void init_net(vkph::state_t *state) {
 
     net::init_socket_api();
 
-    ctx->message_buffer = FL_MALLOC(char, net::NET_MAX_MESSAGE_SIZE);
+    ctx->message_buffer = flmalloc<char>(net::NET_MAX_MESSAGE_SIZE);
 
     // meta_socket_init();
     init_meta_connection();

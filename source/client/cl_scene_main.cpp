@@ -150,14 +150,14 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
 
         ux::init_game_menu_for_server(state);
 
-        FL_FREE(data->infos);
-        FL_FREE(event->data);
+        flfree(data->infos);
+        flfree(event->data);
     } break;
 
     case vkph::ET_ENTER_GAME_PLAY_SCENE: {
         // Check if we have actually received green flag from server
 
-        auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+        auto *effect_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
         effect_data->dest_value = 1.0f;
         effect_data->duration = 1.0f;
         effect_data->fade_back = 0;
@@ -185,7 +185,7 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
     case vkph::ET_CONNECTION_REQUEST_FAILED: {
         LOG_INFO("Connection request failed\n");
 
-        auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+        auto *effect_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
         effect_data->dest_value = 1.0f;
         effect_data->duration = 1.0f;
         effect_data->fade_back = 0;

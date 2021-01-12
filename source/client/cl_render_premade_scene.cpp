@@ -55,7 +55,7 @@ void fixed_premade_scene_t::load(const char *path) {
 
     uint32_t vertex_count = serialiser.deserialise_uint32();
 
-    vector3_t *vertices = LN_MALLOC(vector3_t, vertex_count);
+    vector3_t *vertices = lnmalloc<vector3_t>(vertex_count);
 
     for (uint32_t i = 0; i < vertex_count; ++i) {
         vertices[i] = serialiser.deserialise_vector3();

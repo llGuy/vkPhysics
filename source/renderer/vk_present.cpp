@@ -183,7 +183,7 @@ void init_swapchain(uint32_t width, uint32_t height) {
     vkGetSwapchainImagesKHR(g_ctx->device, g_ctx->swapchain.swapchain, &image_count, NULL);
 
     g_ctx->swapchain.image_count = image_count;
-    g_ctx->swapchain.images = FL_MALLOC(VkImage, g_ctx->swapchain.image_count);
+    g_ctx->swapchain.images = flmalloc<VkImage>(g_ctx->swapchain.image_count);
 
     vkGetSwapchainImagesKHR(g_ctx->device, g_ctx->swapchain.swapchain, &image_count, g_ctx->swapchain.images);
 
@@ -191,7 +191,7 @@ void init_swapchain(uint32_t width, uint32_t height) {
     g_ctx->swapchain.format = surface_format.format;
     g_ctx->swapchain.present_mode = present_mode;
 
-    g_ctx->swapchain.image_views = FL_MALLOC(VkImageView, g_ctx->swapchain.image_count);
+    g_ctx->swapchain.image_views = flmalloc<VkImageView>(g_ctx->swapchain.image_count);
 
     for (uint32_t i = 0; i < image_count; ++i) {
         VkImageViewCreateInfo image_view_info = {};

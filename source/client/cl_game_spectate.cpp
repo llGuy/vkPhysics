@@ -5,7 +5,7 @@ namespace cl {
 static vkph::player_t *spectator;
 
 void create_spectator() {
-    spectator = FL_MALLOC(vkph::player_t, 1);
+    spectator = flmalloc<vkph::player_t>(1);
     memset(spectator, 0, sizeof(vkph::player_t));
     spectator->default_speed = 40.0f;
     spectator->ws_position = vector3_t(3.7f, -136.0f, -184.0f);

@@ -9,7 +9,7 @@ void final_stage_t::init() {
     main_screen_brightness = 0.0f;
 
     stage.color_attachment_count = 1;
-    stage.color_attachments = FL_MALLOC(attachment_t, 1);
+    stage.color_attachments = flmalloc<attachment_t>(1);
     stage.color_attachments[0].format = g_ctx->swapchain.format;
     stage.depth_attachment = NULL;
     stage.render_pass = g_ctx->swapchain.final_pass;

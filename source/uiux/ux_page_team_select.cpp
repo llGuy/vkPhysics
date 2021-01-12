@@ -53,9 +53,9 @@ void update_team_roster_layout(
     button_count = team_count;
 
     if (buttons)
-        FL_FREE(buttons);
+        flfree(buttons);
 
-    buttons = FL_MALLOC(team_button_t, button_count);
+    buttons = flmalloc<team_button_t>(button_count);
 
     main_box.init(
         ui::RT_CENTER,
@@ -150,7 +150,7 @@ void team_select_page_input(const app::raw_input_t *raw_input, vkph::state_t *st
                     LOG_INFO("Error! Player is still alive\n");
                 }
                 else {
-                    auto *d = FL_MALLOC(vkph::event_send_server_team_select_request_t, 1);
+                    auto *d = flmalloc<vkph::event_send_server_team_select_request_t>(1);
                     d->color = color;
                     vkph::submit_event(vkph::ET_SEND_SERVER_TEAM_SELECT_REQUEST, d);
 

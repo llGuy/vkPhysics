@@ -49,14 +49,14 @@ static void s_browse_server_menu_init() {
     void (* handle_input_procs[2])(list_t *) = {
         [] (list_t *list) {
             if (list->selected_item != 0xFFFF) {
-                auto *event_data = FL_MALLOC(vkph::event_data_request_to_join_server_t, 1);
+                auto *event_data = flmalloc<vkph::event_data_request_to_join_server_t>(1);
                 const void *item_data = list->items[list->selected_item].data;
                 const auto *server = (const net::game_server_t *)item_data;
 
                 event_data->server_name = server->server_name;
 
                 // Need to close the main menu, and start a fade effect
-                auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+                auto *effect_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
                 effect_data->dest_value = 0.0f;
                 effect_data->duration = 2.0f;
                 // In case we need to fade back because of a connection fail
@@ -68,13 +68,13 @@ static void s_browse_server_menu_init() {
                 vkph::submit_event(vkph::ET_REQUEST_TO_JOIN_SERVER, event_data);
             }
             else if (list->typing_box.is_typing) {
-                auto *data = FL_MALLOC(vkph::event_data_request_to_join_server_t, 1);
+                auto *data = flmalloc<vkph::event_data_request_to_join_server_t>(1);
 
                 memset(data, 0, sizeof(vkph::event_data_request_to_join_server_t));
                 data->ip_address = list->typing_box.input_text.get_string();
                 // Need to close the main menu, and start a fade effect
 
-                auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+                auto *effect_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
                 effect_data->dest_value = 0.0f;
                 effect_data->duration = 2.0f;
                 effect_data->fade_back = 0;
@@ -126,7 +126,7 @@ static void s_build_map_menu_init(const vkph::state_t *state) {
     void (* handle_input_procs[1])(list_t *) = {
         [] (list_t *list) {
             if (list->selected_item != 0xFFFF) {
-                auto *event_data = FL_MALLOC(vkph::event_enter_map_creator_t, 1);
+                auto *event_data = flmalloc<vkph::event_enter_map_creator_t>(1);
                 // Data contains the path to the map
                 const void *item_data = list->items[list->selected_item].data;
                 const auto *pair = (const vkph::map_names_t::pair_t *)item_data;
@@ -135,7 +135,7 @@ static void s_build_map_menu_init(const vkph::state_t *state) {
                 event_data->map_path = pair->path;
 
                 // Need to close the main menu, and start a fade effect
-                auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+                auto *effect_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
                 effect_data->dest_value = 0.0f;
                 effect_data->duration = 2.5f;
                 effect_data->fade_back = 1;
@@ -148,12 +148,12 @@ static void s_build_map_menu_init(const vkph::state_t *state) {
                 // Code for the "Edit" button
                 const char *path = list->typing_box.input_text.get_string();
 
-                auto *data = FL_MALLOC(vkph::event_enter_map_creator_t, 1);
+                auto *data = flmalloc<vkph::event_enter_map_creator_t>(1);
                 memset(data, 0, sizeof(vkph::event_enter_map_creator_t));
                 data->map_name = NULL;
                 data->map_path = list->typing_box.input_text.get_string();
 
-                auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+                auto *effect_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
                 effect_data->dest_value = 0.0f;
                 effect_data->duration = 2.5f;
                 effect_data->fade_back = 1;

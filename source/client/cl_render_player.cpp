@@ -145,7 +145,7 @@ bool &is_first_person() {
 }
 
 player_render_t *init_player_render() {
-    player_render_t *player_render = FL_MALLOC(player_render_t, 1);
+    player_render_t *player_render = flmalloc<player_render_t>(1);
     memset(player_render, 0, sizeof(player_render_t));
     player_render->rolling_matrix = matrix4_t(1.0f);
     return player_render;

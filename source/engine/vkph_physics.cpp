@@ -335,7 +335,7 @@ static collision_triangle_t *s_get_collision_triangles(
     uint32_t collision_vertex_count = 0;
     // Estimation
     uint32_t max_vertices = 5 * (uint32_t)glm::dot(vector3_t(bounding_cube_range), vector3_t(bounding_cube_range)) / 2;
-    collision_triangle_t *triangles = LN_MALLOC(collision_triangle_t, max_vertices);
+    collision_triangle_t *triangles = lnmalloc<collision_triangle_t>(max_vertices);
 
     for (int32_t z = bounding_cube_min.z; z < bounding_cube_max.z; ++z) {
         for (int32_t y = bounding_cube_min.y; y < bounding_cube_max.y; ++y) {

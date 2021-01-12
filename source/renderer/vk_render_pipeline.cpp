@@ -292,7 +292,7 @@ void render_pipeline_stage_t::destroy() {
         vkDestroySampler(g_ctx->device, depth_attachment->sampler, NULL);
         vkFreeMemory(g_ctx->device, depth_attachment->image_memory, NULL);
         vkDestroyImage(g_ctx->device, depth_attachment->image, NULL);
-        FL_FREE(depth_attachment);
+        flfree(depth_attachment);
         depth_attachment = NULL;
     }
 
@@ -301,7 +301,7 @@ void render_pipeline_stage_t::destroy() {
     }
 
     if (color_attachments) {
-        FL_FREE(color_attachments);
+        flfree(color_attachments);
         color_attachments = NULL;
     }
 }

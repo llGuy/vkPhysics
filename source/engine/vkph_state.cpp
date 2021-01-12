@@ -45,7 +45,7 @@ void state_t::prepare() {
 
         max_modified_chunks = CHUNK_MAX_LOADED_COUNT / 2;
         modified_chunk_count = 0;
-        modified_chunks = FL_MALLOC(chunk_t *, max_modified_chunks);
+        modified_chunks = flmalloc<chunk_t *>(max_modified_chunks);
 
         flags.track_history = 1;
     }
@@ -70,7 +70,7 @@ void state_t::configure_map(const char *map_path) {
 
 void state_t::configure_team_count(uint32_t count) {
     team_count = count;
-    teams = FL_MALLOC(team_t, team_count);
+    teams = flmalloc<team_t>(team_count);
     memset(teams, 0, sizeof(team_t) * team_count);
     memset(team_color_to_index, 0, sizeof(uint32_t) * (uint32_t)team_color_t::COUNT);
 }
@@ -95,7 +95,7 @@ void state_t::stop_session() {
     // Deinitialise everything in the game, unload map, etc...
     game_mode = game_mode_t::INVALID;
     team_count = 0;
-    FL_FREE(teams);
+    flfree(teams);
 }
 
 void state_t::set_teams(
@@ -104,9 +104,9 @@ void state_t::set_teams(
     team_count = count;
 
     if (teams)
-        FL_FREE(teams);
+        flfree(teams);
 
-    teams = FL_MALLOC(team_t, team_count);
+    teams = flmalloc<team_t>(team_count);
 
     for (uint32_t i = 0; i < team_count; ++i) {
         teams[i].init(
@@ -176,7 +176,7 @@ void state_t::timestep_end() {
 
 player_t *state_t::add_player() {
     uint32_t player_index = players.add();
-    players[player_index] = FL_MALLOC(player_t, 1);
+    players[player_index] = flmalloc<player_t>(1);
     player_t *player_ptr = players[player_index];
     memset(player_ptr, 0, sizeof(player_t));
     player_ptr->local_id = player_index;
@@ -188,14 +188,14 @@ void state_t::remove_player(uint32_t local_id) {
     player_t *p = players[local_id];
     if (p) {
         if (p->render) {
-            FL_FREE(p->render);
+            flfree(p->render);
         }
 
         state_t::players[local_id] = NULL;
         // TODO: Free const char *name?
         players.remove(local_id);
 
-        FL_FREE(p);
+        flfree(p);
     }
 }
 
@@ -252,7 +252,7 @@ chunk_t *state_t::get_chunk(
     else {
         uint32_t i = chunks.add();
         chunk_t *&chunk = chunks[i];
-        chunk = FL_MALLOC(chunk_t, 1);
+        chunk = flmalloc<chunk_t>(1);
         chunk->init(i, coord);
 
         chunk_indices.insert(hash, i);
@@ -428,7 +428,7 @@ void state_t::save_map(map_t *map) {
     file_handle_t map_file = create_file(full_path, FLF_BINARY | FLF_WRITEABLE | FLF_OVERWRITE);
 
     serialiser_t serialiser = {};
-    serialiser.data_buffer = LN_MALLOC(uint8_t, 1024 * 128);
+    serialiser.data_buffer = lnmalloc<uint8_t>(1024 * 128);
     serialiser.data_buffer_head = 0;
     serialiser.data_buffer_size = 1024 * 128;
 

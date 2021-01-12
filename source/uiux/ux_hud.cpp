@@ -344,7 +344,7 @@ void hud_input(const app::raw_input_t *input) {
                 // Blue
                 float b = floor(color.x * 2.0f) + floor(color.y * 2.0f) * 2.0f;
 
-                auto *data = FL_MALLOC(vkph::event_map_editor_chose_color_t, 1);
+                auto *data = flmalloc<vkph::event_map_editor_chose_color_t>(1);
                 data->r = (uint8_t)r_x;
                 data->g = (uint8_t)g_y;
                 data->b = (uint8_t)b;

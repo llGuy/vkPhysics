@@ -49,11 +49,11 @@ void check_registration() {
         // Just send to the meta server that this server is active
         LOG_INFOV("Server information found: \"%s\" with ID %d - telling meta server that game server just started\n", server_name, id);
 
-        net::request_server_active_t *data = FL_MALLOC(net::request_server_active_t, 1);
+        net::request_server_active_t *data = flmalloc<net::request_server_active_t>(1);
         data->server_id = id;
         send_request(net::R_SERVER_ACTIVE, data);
 
-        vkph::event_start_server_t *event_data = FL_MALLOC(vkph::event_start_server_t, 1);
+        vkph::event_start_server_t *event_data = flmalloc<vkph::event_start_server_t>(1);
         event_data->server_name = server_name;
         vkph::submit_event(vkph::ET_START_SERVER, event_data);
     }
@@ -70,7 +70,7 @@ void check_registration() {
                 if (*c == '\n') *c = 0;
             }
 
-            net::request_register_server_t *data = FL_MALLOC(net::request_register_server_t, 1);
+            net::request_register_server_t *data = flmalloc<net::request_register_server_t>(1);
             data->server_name = create_fl_string(name);
             current_server_name = data->server_name;
 
@@ -108,7 +108,7 @@ void check_registration() {
 
                 register_finished = 1;
 
-                net::request_server_active_t *data = FL_MALLOC(net::request_server_active_t, 1);
+                net::request_server_active_t *data = flmalloc<net::request_server_active_t>(1);
                 data->server_id = current_server_id;
                 send_request(net::R_SERVER_ACTIVE, data);
 
@@ -119,14 +119,14 @@ void check_registration() {
             }
         }
 
-        auto *event_data = FL_MALLOC(vkph::event_start_server_t, 1);
+        auto *event_data = flmalloc<vkph::event_start_server_t>(1);
         event_data->server_name = current_server_name;
         vkph::submit_event(vkph::ET_START_SERVER, event_data);
     }
 }
 
 void deactivate_server() {
-    net::request_server_inactive_t *data = FL_MALLOC(net::request_server_inactive_t, 1);
+    net::request_server_inactive_t *data = flmalloc<net::request_server_inactive_t>(1);
     data->server_id = current_server_id;
     send_request(net::R_SERVER_INACTIVE, data);
 

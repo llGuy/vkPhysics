@@ -43,7 +43,7 @@ static void s_loop() {
 
         vkph::dispatch_events();
 
-        LN_CLEAR();
+        lnclear();
 
         tick_game(state);
         tick_net(state);
@@ -84,7 +84,7 @@ int32_t run(
     init_net(state);
     init_game(state);
 
-    LN_CLEAR();
+    lnclear();
 
     s_loop();
 

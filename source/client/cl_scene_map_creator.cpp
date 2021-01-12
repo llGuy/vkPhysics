@@ -341,7 +341,7 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
             ux::push_panel(ux::SI_HUD);
         }
 
-        FL_FREE(event->data);
+        flfree(event->data);
     } break;
 
     case vkph::ET_CREATE_NEW_MAP: {
@@ -364,7 +364,7 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
 
     case vkph::ET_DONT_CREATE_NEW_MAP: {
         // Exit map creator
-        auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+        auto *effect_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
         effect_data->dest_value = 0.0f;
         effect_data->duration = 2.5f;
         effect_data->fade_back = 1;
@@ -397,7 +397,7 @@ void map_creator_scene_t::handle_event(void *object, vkph::event_t *event) {
 
         get_spectator()->terraform_package.color = current_color_;
 
-        FL_FREE(data);
+        flfree(data);
     } break;
 
     default: {

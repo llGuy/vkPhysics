@@ -52,17 +52,13 @@ struct linear_allocator_t {
     void clear();
 };
 
-void global_linear_allocator_init(
-    uint32_t size);
-
-void *linear_malloc(
-    uint32_t size);
-
+void global_linear_allocator_init(uint32_t size);
+void *linear_malloc(uint32_t size);
 void linear_clear();
 
-// Free list allocator
-#define FL_MALLOC(type, n) (type *)malloc_debug(sizeof(type) * (n))
-#define FL_FREE(ptr) free_debug(ptr)
+// // Free list allocator
+// #define flmalloc<type>(n) (type *)malloc_debug(sizeof(type) * (n))
+// #define flfree(ptr) free_debug(ptr)
 
 template <typename T>
 T *flmalloc(uint32_t count = 1) {
@@ -74,17 +70,16 @@ void flfree(T *ptr) {
     free_debug(ptr);
 }
 
-// Linear allocator
-#define LN_MALLOC(type, n) (type *)linear_malloc(sizeof(type) * (n))
-#define LN_CLEAR() linear_clear()
+// // Linear allocator
+// #define LN_MALLOC(type, n) (type *)linear_malloc(sizeof(type) * (n))
+// #define LN_CLEAR() linear_clear()
 
 template <typename T>
 T *lnmalloc(uint32_t count = 1) {
     return (T *)linear_malloc(sizeof(T) * count);
 }
 
-template <typename T>
-void lnclear(T *ptr) {
+inline void lnclear() {
     linear_clear();
 }
 

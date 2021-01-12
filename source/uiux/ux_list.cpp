@@ -58,7 +58,7 @@ void list_t::init(
 
     { // Initialise the buttons on the right of the list
         float dx = 0.23f;
-        right_buttons = FL_MALLOC(list_button_t, right_buttons_count);
+        right_buttons = flmalloc<list_button_t>(right_buttons_count);
         button_count = right_buttons_count;
 
         for (uint32_t i = 0; i < right_buttons_count; ++i) {
@@ -98,13 +98,13 @@ void list_t::init(
 void list_t::clear() {
     if (items) {
         item_count = 0;
-        FL_FREE(items);
+        flfree(items);
     }
 }
 
 void list_t::begin(uint32_t count) {
     item_count = 0;
-    items = FL_MALLOC(list_item_t, count);
+    items = flmalloc<list_item_t>(count);
 }
 
 void list_t::add(const void *data) {

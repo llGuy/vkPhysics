@@ -66,7 +66,7 @@ VkPipelineShaderStageCreateInfo *fill_shader_stage_create_infos(const char **pat
 VkPipelineColorBlendStateCreateInfo fill_blend_state_info(
     render_pipeline_stage_t *stage,
     alpha_blending_t alpha_blending) {
-    VkPipelineColorBlendAttachmentState *attachment_states = FL_MALLOC(VkPipelineColorBlendAttachmentState, stage->color_attachment_count);
+    VkPipelineColorBlendAttachmentState *attachment_states = flmalloc<VkPipelineColorBlendAttachmentState>(stage->color_attachment_count);
     memset(attachment_states, 0, sizeof(VkPipelineColorBlendAttachmentState) * stage->color_attachment_count);
     for (uint32_t attachment = 0; attachment < stage->color_attachment_count; ++attachment) {
         switch (stage->color_attachments[attachment].format) {

@@ -206,7 +206,7 @@ void animation_cycles_t::load(
 
     cycle_count = serialiser.deserialise_uint32();
     cycle_count = MAX(linked_animations.animation_count, cycle_count);
-    cycles = FL_MALLOC(animation_cycle_t, cycle_count);
+    cycles = flmalloc<animation_cycle_t>(cycle_count);
 
     for (uint32_t i = 0; i < cycle_count; ++i) {
         const char *animation_name = create_fl_string(serialiser.deserialise_string());
@@ -220,7 +220,7 @@ void animation_cycles_t::load(
             cycle->duration = serialiser.deserialise_float32();
             cycle->joint_animation_count = serialiser.deserialise_uint32();
         
-            cycle->joint_animations = FL_MALLOC(joint_key_frames_t, cycle->joint_animation_count);
+            cycle->joint_animations = flmalloc<joint_key_frames_t>(cycle->joint_animation_count);
 
             for (uint32_t j = 0; j < cycle->joint_animation_count; ++j) {
                 joint_key_frames_t *key_frames = &cycle->joint_animations[j];
@@ -228,9 +228,9 @@ void animation_cycles_t::load(
                 key_frames->rotation_count = serialiser.deserialise_uint32();
                 key_frames->scale_count = serialiser.deserialise_uint32();
 
-                key_frames->positions = FL_MALLOC(joint_position_key_frame_t, key_frames->position_count);
-                key_frames->rotations = FL_MALLOC(joint_rotation_key_frame_t, key_frames->rotation_count);
-                key_frames->scales = FL_MALLOC(joint_scale_key_frame_t, key_frames->scale_count);
+                key_frames->positions = flmalloc<joint_position_key_frame_t>(key_frames->position_count);
+                key_frames->rotations = flmalloc<joint_rotation_key_frame_t>(key_frames->rotation_count);
+                key_frames->scales = flmalloc<joint_scale_key_frame_t>(key_frames->scale_count);
 
                 for (uint32_t position = 0; position < key_frames->position_count; ++position) {
                     key_frames->positions[position].time_stamp = serialiser.deserialise_float32();
@@ -307,13 +307,13 @@ void animated_instance_t::init(
     is_interpolating_between_cycles = 0;
     this->skeleton = skeleton;
     next_bound_cycle = 0;
-    interpolated_transforms = FL_MALLOC(matrix4_t, skeleton->joint_count);
-    current_positions = FL_MALLOC(vector3_t, skeleton->joint_count);
-    current_rotations = FL_MALLOC(quaternion_t, skeleton->joint_count);
-    current_scales = FL_MALLOC(vector3_t, skeleton->joint_count);
-    current_position_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
-    current_rotation_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
-    current_scale_indices = FL_MALLOC(uint32_t, skeleton->joint_count);
+    interpolated_transforms = flmalloc<matrix4_t>(skeleton->joint_count);
+    current_positions = flmalloc<vector3_t>(skeleton->joint_count);
+    current_rotations = flmalloc<quaternion_t>(skeleton->joint_count);
+    current_scales = flmalloc<vector3_t>(skeleton->joint_count);
+    current_position_indices = flmalloc<uint32_t>(skeleton->joint_count);
+    current_rotation_indices = flmalloc<uint32_t>(skeleton->joint_count);
+    current_scale_indices = flmalloc<uint32_t>(skeleton->joint_count);
     this->cycles = acycles;
     in_between_interpolation_time = 0.2f;
 

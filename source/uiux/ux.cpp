@@ -50,7 +50,7 @@ static void s_ui_event_listener(
 
         handle_sign_up_failed((net::request_error_t)data->error_type);
 
-        FL_FREE(data);
+        flfree(data);
     } break;
 
     case vkph::ET_SIGN_UP_SUCCESS: case vkph::ET_LOGIN_SUCCESS: {

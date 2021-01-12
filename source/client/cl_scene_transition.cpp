@@ -45,7 +45,7 @@ void tick_scene_transition() {
 
             if (data.fade_back) {
                 // Fade back in
-                auto *fade_back_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+                auto *fade_back_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
                 fade_back_data->dest_value = 1.0f;
                 fade_back_data->duration = duration;
                 fade_back_data->trigger_count = 0;

@@ -19,7 +19,7 @@ vector3_t *get_vertices(
         vertices = p;
     }
     else {
-        vertices = LN_MALLOC(vector3_t, vertices_count);
+        vertices = lnmalloc<vector3_t>(vertices_count);
     }
 
     for (uint32_t i = 0; i < vertices_count; ++i) {
@@ -39,7 +39,7 @@ vector3_t *get_normals(
         normals = p;
     }
     else {
-        normals = LN_MALLOC(vector3_t, normals_count);
+        normals = lnmalloc<vector3_t>(normals_count);
     }
 
     for (uint32_t i = 0; i < normals_count; ++i) {
@@ -59,7 +59,7 @@ vector2_t *get_tcoords(
         tcoords = p;
     }
     else {
-        tcoords = LN_MALLOC(vector2_t, tcoords_count);
+        tcoords = lnmalloc<vector2_t>(tcoords_count);
     }
 
     for (uint32_t i = 0; i < tcoords_count; ++i) {
@@ -80,7 +80,7 @@ vector4_t *get_joint_weights(
         joint_weights = p;
     }
     else {
-        joint_weights = LN_MALLOC(vector4_t, joint_weights_count);
+        joint_weights = lnmalloc<vector4_t>(joint_weights_count);
     }
 
     for (uint32_t i = 0; i < joint_weights_count; ++i) {
@@ -106,7 +106,7 @@ ivector4_t *get_joint_ids(
         joint_ids = p;
     }
     else {
-        joint_ids = LN_MALLOC(ivector4_t, joint_ids_count);
+        joint_ids = lnmalloc<ivector4_t>(joint_ids_count);
     }
 
     for (uint32_t i = 0; i < joint_ids_count; ++i) {
@@ -122,7 +122,7 @@ ivector4_t *get_joint_ids(
 uint32_t *get_indices(
     uint32_t indices_count,
     serialiser_t *serialiser) {
-    uint32_t *indices = LN_MALLOC(uint32_t, indices_count);
+    uint32_t *indices = lnmalloc<uint32_t>(indices_count);
 
     for (uint32_t i = 0; i < indices_count; ++i) {
         indices[i] = serialiser->deserialise_uint32();
@@ -167,8 +167,8 @@ void mesh_loader_t::load_sphere() {
     vertex_count = (sector_count + 1) * (stack_count + 1);
     index_count = sector_count * stack_count * 6;
     
-    vector3_t *positions = LN_MALLOC(vector3_t, vertex_count);
-    uint32_t *indices = LN_MALLOC(uint32_t, index_count);
+    vector3_t *positions = lnmalloc<vector3_t>(vertex_count);
+    uint32_t *indices = lnmalloc<uint32_t>(index_count);
     
     float sector_step = 2.0f * PI / sector_count;
     float stack_step = PI / stack_count;

@@ -69,11 +69,9 @@ static void s_start_client(
         sizeof_chunk_mod_pack,
         sizeof_chunk_mod_pack * (net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK + 4));
 
-    //s_acc_predicted_modification_init(&merged_recent_modifications, 0);
     ctx->merged_recent_modifications.tick = 0;
     ctx->merged_recent_modifications.acc_predicted_chunk_mod_count = 0;
-    ctx->merged_recent_modifications.acc_predicted_modifications = FL_MALLOC(
-        net::chunk_modifications_t,
+    ctx->merged_recent_modifications.acc_predicted_modifications = flmalloc< net::chunk_modifications_t>(
         net::NET_MAX_ACCUMULATED_PREDICTED_CHUNK_MODIFICATIONS_PER_PACK);
 
     ctx->tag = net::UNINITIALISED_TAG;
@@ -315,7 +313,7 @@ static void s_net_event_listener(
     case vkph::ET_START_CLIENT: {
         auto *data = (vkph::event_start_client_t *)event->data;
         s_start_client(data, state);
-        FL_FREE(data);
+        flfree(data);
     } break;
 
     case vkph::ET_REQUEST_REFRESH_SERVER_PAGE: {
@@ -353,7 +351,7 @@ static void s_net_event_listener(
           // Unable to connect to server
         }
 
-        FL_FREE(data);
+        flfree(data);
     } break;
 
     case vkph::ET_LEAVE_SERVER: {
@@ -412,14 +410,14 @@ void init_net(vkph::state_t *state) {
 
     net::init_socket_api();
 
-    ctx->message_buffer = FL_MALLOC(char, net::NET_MAX_MESSAGE_SIZE);
+    ctx->message_buffer = flmalloc<char>(net::NET_MAX_MESSAGE_SIZE);
 
     init_meta_connection();
 
     auto *available_servers = net::get_available_servers();
 
     available_servers->server_count = 0;
-    available_servers->servers = FL_MALLOC(net::game_server_t, net::NET_MAX_AVAILABLE_SERVER_COUNT);
+    available_servers->servers = flmalloc<net::game_server_t>(net::NET_MAX_AVAILABLE_SERVER_COUNT);
     memset(available_servers->servers, 0, sizeof(net::game_server_t) * net::NET_MAX_AVAILABLE_SERVER_COUNT);
     available_servers->name_to_server.init();
 }

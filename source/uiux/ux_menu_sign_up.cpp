@@ -234,7 +234,7 @@ void sign_up_menu_input(const app::raw_input_t *input) {
             // Immediately SHA1 the password
 
             char *username = create_fl_string(type_username_text.text.characters);
-            uint8_t *password_bin = LN_MALLOC(uint8_t, 20);
+            uint8_t *password_bin = lnmalloc<uint8_t>(20);
             memset(password_bin, 0, sizeof(uint8_t) * 20);
 
             SHA1_CTX ctx;
@@ -243,7 +243,7 @@ void sign_up_menu_input(const app::raw_input_t *input) {
             SHA1Update(&ctx, (uint8_t *)type_password_text.text.characters, type_password_text.text.char_count);
             SHA1Final(password_bin, &ctx);
 
-            char *password = FL_MALLOC(char, 41);
+            char *password = flmalloc<char>(41);
             memset(password, 0, sizeof(char) * 41);
 
             for (uint32_t i = 0; i < 20; ++i) {
@@ -251,14 +251,14 @@ void sign_up_menu_input(const app::raw_input_t *input) {
             }
 
             if (hovering_over == B_SIGNUP) {
-                auto *event_data = FL_MALLOC(vkph::event_attempt_sign_up_t, 1);
+                auto *event_data = flmalloc<vkph::event_attempt_sign_up_t>(1);
                 event_data->username = username;
                 event_data->password = password;
 
                 vkph::submit_event(vkph::ET_ATTEMPT_SIGN_UP, event_data);
             }
             else {
-                auto *event_data = FL_MALLOC(vkph::event_attempt_login_t, 1);
+                auto *event_data = flmalloc<vkph::event_attempt_login_t>(1);
                 event_data->username = username;
                 event_data->password = password;
 

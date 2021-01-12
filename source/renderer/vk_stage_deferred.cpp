@@ -9,14 +9,14 @@ namespace vk {
 void deferred_stage_t::init_render_pass() {
     stage.color_attachment_count = 4;
 
-    VkAttachmentDescription *attachment_descriptions = FL_MALLOC(VkAttachmentDescription, stage.color_attachment_count + 1);
+    VkAttachmentDescription *attachment_descriptions = flmalloc<VkAttachmentDescription>(stage.color_attachment_count + 1);
     for (uint32_t i = 0; i < stage.color_attachment_count; ++i) {
         attachment_descriptions[i] = fill_color_attachment_description(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_FORMAT_R16G16B16A16_SFLOAT);
     }
 
     attachment_descriptions[stage.color_attachment_count] = fill_depth_attachment_description(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    VkAttachmentReference *attachment_references = FL_MALLOC(VkAttachmentReference, stage.color_attachment_count + 1);
+    VkAttachmentReference *attachment_references = flmalloc<VkAttachmentReference>(stage.color_attachment_count + 1);
     for (uint32_t i = 0; i < stage.color_attachment_count; ++i) {
         attachment_references[i].attachment = i;
         attachment_references[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -56,13 +56,13 @@ void deferred_stage_t::init_render_pass() {
 
     VK_CHECK(vkCreateRenderPass(g_ctx->device, &render_pass_info, NULL, &stage.render_pass));
 
-    FL_FREE(attachment_descriptions);
-    FL_FREE(attachment_references);
+    flfree(attachment_descriptions);
+    flfree(attachment_references);
 }
 
 void deferred_stage_t::init() {
-    stage.color_attachments = FL_MALLOC(attachment_t, stage.color_attachment_count);
-    stage.depth_attachment = FL_MALLOC(attachment_t, 1);
+    stage.color_attachments = flmalloc<attachment_t>(stage.color_attachment_count);
+    stage.depth_attachment = flmalloc<attachment_t>(1);
 
     VkExtent2D swapchain_extent = g_ctx->swapchain.extent;
 

@@ -36,7 +36,7 @@ static void s_loop() {
         app::translate_input();
         vkph::dispatch_events();
 
-        LN_CLEAR();
+        lnclear();
 
         frame_command_buffers_t frame = prepare_frame();
 
@@ -81,7 +81,7 @@ static void s_parse_command_line_args(
 // Starts a fade in effect into the main menu screen
 static void s_open() {
     // Launch fade effect immediately
-    vkph::event_begin_fade_effect_t *fade_info = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+    vkph::event_begin_fade_effect_t *fade_info = flmalloc<vkph::event_begin_fade_effect_t>(1);
     fade_info->dest_value = 1.0f;
     fade_info->duration = 6.0f;
     fade_info->trigger_count = 0;
@@ -103,7 +103,7 @@ static void s_game_event_listener(
 
         vk::resize_render_pipeline(data->width, data->height);
 
-        FL_FREE(data);
+        flfree(data);
     } break;
 
     case vkph::ET_BEGIN_FADE: {
@@ -111,7 +111,7 @@ static void s_game_event_listener(
         
         begin_scene_transition(data);
 
-        FL_FREE(data);
+        flfree(data);
     } break;
 
     default: {

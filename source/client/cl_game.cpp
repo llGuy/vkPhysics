@@ -51,7 +51,7 @@ void initialise_client_game_session(uint32_t player_info_count, vkph::player_ini
             set_local_player(player->local_id, state);
 
             player->cached_player_action_count = 0;
-            player->cached_player_actions = FL_MALLOC(vkph::player_action_t, vkph::PLAYER_MAX_ACTIONS_COUNT * 2);
+            player->cached_player_actions = flmalloc<vkph::player_action_t>(vkph::PLAYER_MAX_ACTIONS_COUNT * 2);
 
             player->flags.is_remote = 0;
             player->flags.is_local = 1;

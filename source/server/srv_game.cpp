@@ -41,7 +41,7 @@ static void s_handle_event_new_player(vkph::event_t *event, vkph::state_t *state
     vkph::player_t *player = state->add_player();
     player->init(&data->info, state->client_to_local_id_map);
 
-    FL_FREE(event->data);
+    flfree(event->data);
 }
 
 static void s_handle_event_player_disconnected(vkph::event_t *event, vkph::state_t *state) {
@@ -57,7 +57,7 @@ static void s_handle_event_player_disconnected(vkph::event_t *event, vkph::state
         state->remove_player(p->local_id);
     }
 
-    FL_FREE(event->data);
+    flfree(event->data);
 }
 
 static void s_game_listener(void *object, vkph::event_t *event) {

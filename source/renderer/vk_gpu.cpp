@@ -112,8 +112,7 @@ static int32_t s_verify_hardware_meets_requirements(const device_extensions_t &e
             NULL);
 
         if (g_ctx->swapchain_support.available_formats_count != 0) {
-            g_ctx->swapchain_support.available_formats = FL_MALLOC(
-                VkSurfaceFormatKHR,
+            g_ctx->swapchain_support.available_formats = flmalloc<VkSurfaceFormatKHR>(
                 g_ctx->swapchain_support.available_formats_count);
 
             vkGetPhysicalDeviceSurfaceFormatsKHR(
@@ -130,8 +129,7 @@ static int32_t s_verify_hardware_meets_requirements(const device_extensions_t &e
             NULL);
 
         if (g_ctx->swapchain_support.available_present_modes_count != 0) {
-            g_ctx->swapchain_support.available_present_modes = FL_MALLOC(
-                VkPresentModeKHR,
+            g_ctx->swapchain_support.available_present_modes = flmalloc<VkPresentModeKHR>(
                 g_ctx->swapchain_support.available_present_modes_count);
 
             vkGetPhysicalDeviceSurfacePresentModesKHR(

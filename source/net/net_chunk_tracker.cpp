@@ -134,7 +134,7 @@ chunk_modifications_t *deserialise_chunk_modifications(
     serialiser_t *serialiser,
     color_serialisation_type_t color) {
     *modification_count = serialiser->deserialise_uint32();
-    chunk_modifications_t *chunk_modifications = LN_MALLOC(chunk_modifications_t, *modification_count);
+    chunk_modifications_t *chunk_modifications = lnmalloc<chunk_modifications_t>(*modification_count);
 
     if (color == CST_SERIALISE_SEPARATE_COLOR) {
         for (uint32_t i = 0; i < *modification_count; ++i) {

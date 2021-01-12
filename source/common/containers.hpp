@@ -150,8 +150,8 @@ template <
     void init(
         uint32_t max) {
         max_size = max;
-        data = FL_MALLOC(T, max_size);
-        removed = FL_MALLOC(uint32_t, max_size);
+        data = flmalloc<T>(max_size);
+        removed = flmalloc<uint32_t>(max_size);
 
         removed_count = 0;
         data_count = 0;
@@ -163,8 +163,8 @@ template <
     }
     
     void destroy() {
-        FL_FREE(data);
-        FL_FREE(removed);
+        flfree(data);
+        flfree(removed);
 
         data = NULL;
         data_count = 0;
@@ -206,7 +206,7 @@ struct lnarray_t {
     T *data;
 
     lnarray_t(uint32_t c) : count(c) {
-        data = LN_MALLOC(T, count);
+        data = lnmalloc<T>(count);
     }
 
     T &operator[] (uint32_t i) {
@@ -281,11 +281,11 @@ template <
     void init(
         uint32_t max) {
         max_size = max;
-        data = FL_MALLOC(T, max_size);
+        data = flmalloc<T>(max_size);
     }
 
     void destroy() {
-        FL_FREE(data);
+        flfree(data);
         data = 0;
         data_count = 0;
     }
@@ -334,7 +334,7 @@ template <
         uint32_t count) {
         buffer_size = count;
         uint32_t byte_count = buffer_size * sizeof(T);
-        buffer = (T *)FL_MALLOC(uint8_t, byte_count);
+        buffer = (T *)flmalloc<uint8_t>(byte_count);
     }
 
     void push_item(
@@ -378,7 +378,7 @@ template <
 
     void deinitialize() {
         if (buffer) {
-            FL_FREE(buffer);
+            flfree(buffer);
         }
         buffer = nullptr;
         buffer_size = 0;

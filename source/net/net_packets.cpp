@@ -111,7 +111,7 @@ void packet_connection_handshake_t::deserialise(serialiser_t *serialiser) {
     mvi.dir = serialiser->deserialise_vector3();
     mvi.up = serialiser->deserialise_vector3();
     player_count = serialiser->deserialise_uint32();
-    player_infos = LN_MALLOC(vkph::player_init_info_t, player_count);
+    player_infos = lnmalloc<vkph::player_init_info_t>(player_count);
 
     for (uint32_t i = 0; i < player_count; ++i) {
         player_infos[i].client_name = serialiser->deserialise_string();
@@ -125,7 +125,7 @@ void packet_connection_handshake_t::deserialise(serialiser_t *serialiser) {
     }
 
     team_count = serialiser->deserialise_uint32();
-    team_infos = LN_MALLOC(vkph::team_info_t, team_count);
+    team_infos = lnmalloc<vkph::team_info_t>(team_count);
     for (uint32_t i = 0; i < team_count; ++i) {
         team_infos[i].color = (vkph::team_color_t)serialiser->deserialise_uint32();
         team_infos[i].player_count = serialiser->deserialise_uint32();
@@ -259,7 +259,7 @@ void packet_client_commands_t::deserialise(serialiser_t *serialiser) {
     flags = serialiser->deserialise_uint8();
     command_count = serialiser->deserialise_uint8();
 
-    actions = LN_MALLOC(vkph::player_action_t, command_count);
+    actions = lnmalloc<vkph::player_action_t>(command_count);
     for (uint32_t i = 0; i < command_count; ++i) {
         actions[i].bytes = serialiser->deserialise_uint16();
         actions[i].dmouse_x = serialiser->deserialise_float32();
@@ -279,7 +279,7 @@ void packet_client_commands_t::deserialise(serialiser_t *serialiser) {
     prediction.ws_velocity = serialiser->deserialise_vector3();
 
     prediction.chunk_mod_count = serialiser->deserialise_uint32();
-    prediction.chunk_modifications = LN_MALLOC(chunk_modifications_t, prediction.chunk_mod_count);
+    prediction.chunk_modifications = lnmalloc<chunk_modifications_t>(prediction.chunk_mod_count);
 
     for (uint32_t i = 0; i < prediction.chunk_mod_count; ++i) {
         chunk_modifications_t *c = &prediction.chunk_modifications[i];
@@ -289,7 +289,7 @@ void packet_client_commands_t::deserialise(serialiser_t *serialiser) {
     }
 
     predicted_hit_count = serialiser->deserialise_uint32();
-    hits = LN_MALLOC(vkph::predicted_projectile_hit_t, predicted_hit_count);
+    hits = lnmalloc<vkph::predicted_projectile_hit_t>(predicted_hit_count);
 
     for (uint32_t i = 0; i < predicted_hit_count; ++i) {
         hits[i].client_id = serialiser->deserialise_uint16();
@@ -358,7 +358,7 @@ void packet_game_state_snapshot_t::serialise(serialiser_t *serialiser) {
 
 void packet_game_state_snapshot_t::deserialise(serialiser_t *serialiser) {
     player_data_count = serialiser->deserialise_uint32();
-    player_snapshots = LN_MALLOC(vkph::player_snapshot_t, player_data_count);
+    player_snapshots = lnmalloc<vkph::player_snapshot_t>(player_data_count);
 
     for (uint32_t i = 0; i < player_data_count; ++i) {
         player_snapshots[i].flags = serialiser->deserialise_uint16();
@@ -376,7 +376,7 @@ void packet_game_state_snapshot_t::deserialise(serialiser_t *serialiser) {
     }
 
     rock_count = serialiser->deserialise_uint32();
-    rock_snapshots = LN_MALLOC(vkph::rock_snapshot_t, rock_count);
+    rock_snapshots = lnmalloc<vkph::rock_snapshot_t>(rock_count);
 
     for (uint32_t i = 0; i < rock_count; ++i) {
         rock_snapshots[i].position = serialiser->deserialise_vector3();

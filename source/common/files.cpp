@@ -20,7 +20,7 @@ const char *create_real_path(const char *path) {
     uint32_t strlen_path = (uint32_t)strlen(path);
     uint32_t strlen_root = (uint32_t)strlen(PROJECT_ROOT);
     
-    char *final_path = LN_MALLOC(char, strlen_path + strlen_root + 2);
+    char *final_path = lnmalloc<char>(strlen_path + strlen_root + 2);
     memcpy(final_path, PROJECT_ROOT, strlen_root);
     // May need to vary for Windows
     final_path[strlen_root] = '/';
@@ -81,7 +81,7 @@ file_contents_t read_file(
     else {
         fseek(object->file, 0L, SEEK_END);
         uint32_t file_size = ftell(object->file);
-        uint8_t *data = LN_MALLOC(uint8_t, file_size);
+        uint8_t *data = lnmalloc<uint8_t>(file_size);
         rewind(object->file);
         fread(data, sizeof(uint8_t), file_size, object->file);
 

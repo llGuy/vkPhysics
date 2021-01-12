@@ -49,11 +49,11 @@ shader_binding_info_t mesh_t::create_shader_binding_info() {
     uint32_t binding_count = buffer_count - start_index;
 
     info.binding_count = binding_count;
-    info.binding_descriptions = FL_MALLOC(VkVertexInputBindingDescription, info.binding_count);
+    info.binding_descriptions = flmalloc<VkVertexInputBindingDescription>(info.binding_count);
 
     // Each binding will store one attribute
     info.attribute_count = binding_count;
-    info.attribute_descriptions = FL_MALLOC(VkVertexInputAttributeDescription, info.binding_count);
+    info.attribute_descriptions = flmalloc<VkVertexInputAttributeDescription>(info.binding_count);
 
     for (uint32_t i = 0; start_index < buffer_count; ++start_index, ++i) {
         VkVertexInputBindingDescription *current_binding = &info.binding_descriptions[i];

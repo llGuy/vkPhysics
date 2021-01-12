@@ -337,7 +337,7 @@ void poll_input_events() {
 
     if (ctx.raw_input.resized) {
         // TODO: Change this to linear allocator when allocators are added in the future
-        vkph::event_surface_resize_t *resize_data = FL_MALLOC(vkph::event_surface_resize_t, 1);
+        vkph::event_surface_resize_t *resize_data = flmalloc<vkph::event_surface_resize_t>(1);
         resize_data->width = ctx.raw_input.window_width;
         resize_data->height = ctx.raw_input.window_height;
         

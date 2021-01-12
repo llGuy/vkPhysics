@@ -4,7 +4,7 @@
 
 void serialiser_t::init(
     uint32_t max_size) {
-    data_buffer = (uint8_t *)LN_MALLOC(uint8_t, max_size * sizeof(uint8_t));
+    data_buffer = (uint8_t *)lnmalloc<uint8_t>(max_size * sizeof(uint8_t));
     data_buffer_size = max_size;
 }
 
@@ -217,7 +217,7 @@ const char *serialiser_t::deserialise_string() {
     uint32_t string_length = (uint32_t)strlen((char *)pointer);
     grow_data_buffer(string_length + 1);
 
-    char *ret = (char *)LN_MALLOC(char, string_length + 1);
+    char *ret = (char *)lnmalloc<char>(string_length + 1);
     memcpy(ret, pointer, string_length + 1);
     return(ret);
 }
@@ -227,7 +227,7 @@ const char *serialiser_t::deserialise_fl_string() {
     uint32_t string_length = (uint32_t)strlen((char *)pointer);
     grow_data_buffer(string_length + 1);
 
-    char *ret = (char *)FL_MALLOC(char, string_length + 1);
+    char *ret = (char *)flmalloc<char>(string_length + 1);
     memcpy(ret, pointer, string_length + 1);
     return(ret);
 }

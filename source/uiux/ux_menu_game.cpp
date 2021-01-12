@@ -22,7 +22,7 @@ static menu_layout_t game_menu_layout;
 static play_button_function_t function;
 
 static void s_menu_layout_disconnect_proc() {
-    auto *effect_data = FL_MALLOC(vkph::event_begin_fade_effect_t, 1);
+    auto *effect_data = flmalloc<vkph::event_begin_fade_effect_t>(1);
     effect_data->dest_value = 0.0f;
     effect_data->duration = 2.5f;
     effect_data->fade_back = 1;
@@ -33,7 +33,7 @@ static void s_menu_layout_disconnect_proc() {
 }
 
 static void s_menu_layout_spawn_proc() {
-    auto *spawn = FL_MALLOC(vkph::event_spawn_t, 1);
+    auto *spawn = flmalloc<vkph::event_spawn_t>(1);
     spawn->client_id = -1;
     vkph::submit_event(vkph::ET_SPAWN, spawn);
 }
