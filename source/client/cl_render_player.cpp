@@ -41,7 +41,8 @@ void init_player_render_resources() {
         skeletal_mesh_ld.load_external("assets/models/player.mesh");
 
         vk::mesh_loader_t ball_mesh_ld = {};
-        ball_mesh_ld.load_sphere();
+        ball_mesh_ld.load_external("assets/models/ball.mesh");
+        //ball_mesh_ld.load_sphere();
 
         vk::merged_mesh_info_t info = {};
         info.dst_sk = &player_mesh;

@@ -25,16 +25,10 @@ struct arena_allocator_t {
 
     free_arena_header_t *head;
 
-    void pool_init(
-        uint32_t arena_size,
-        uint32_t pool_size);
-    
+    void pool_init(uint32_t arena_size, uint32_t pool_size);
     void *allocate_arena();
-    
     // Returns NULL
-    void *free_arena(
-        void *pointer);
-
+    void *free_arena(void *pointer);
     void free_pool();
 };
 
@@ -43,12 +37,8 @@ struct linear_allocator_t {
     void *current;
     uint32_t max_size;
 
-    void init(
-        uint32_t max_size);
-    
-    void *allocate(
-        uint32_t size);
-
+    void init(uint32_t max_size);
+    void *allocate(uint32_t size);
     void clear();
 };
 
@@ -61,12 +51,12 @@ void linear_clear();
 // #define flfree(ptr) free_debug(ptr)
 
 template <typename T>
-T *flmalloc(uint32_t count = 1) {
+inline T *flmalloc(uint32_t count = 1) {
     return (T *)malloc_debug(sizeof(T) * count);
 }
 
 template <typename T>
-void flfree(T *ptr) {
+inline void flfree(T *ptr) {
     free_debug(ptr);
 }
 
@@ -75,7 +65,7 @@ void flfree(T *ptr) {
 // #define LN_CLEAR() linear_clear()
 
 template <typename T>
-T *lnmalloc(uint32_t count = 1) {
+inline T *lnmalloc(uint32_t count = 1) {
     return (T *)linear_malloc(sizeof(T) * count);
 }
 

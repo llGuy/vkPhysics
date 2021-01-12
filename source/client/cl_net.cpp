@@ -79,6 +79,7 @@ static void s_start_client(
     bound_server.tag = net::UNINITIALISED_TAG;
     bound_server.flags.waiting_for_handshake = 0;
 
+    // Some comment
     packets_to_unpack.init(20);
 }
 

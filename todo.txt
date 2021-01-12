@@ -1,11 +1,7 @@
 - Use TCP for important packets like chunks (when joining)
-- Fix mess with calling UI code from scene code (e.g. whenever a spawn event triggers, don't clear game menu, etc...)
-- Replace GLFW with SDL
-- Refactor renderer (actually refactor EVERYTHING)
+- Add particles
 - Add audio
-- Fix terrain pointer
 - Fix frustum culling weirdness
 - Fix shadows
 - ADD THE WEAPONS
 - Add trees, etc...
-- Make sure that if client has tried connecting to server before the server started, that the server doesn't accept ANY packets from that client
