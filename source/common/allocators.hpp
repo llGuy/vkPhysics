@@ -46,23 +46,23 @@ void global_linear_allocator_init(uint32_t size);
 void *linear_malloc(uint32_t size);
 void linear_clear();
 
-// // Free list allocator
-// #define flmalloc<type>(n) (type *)malloc_debug(sizeof(type) * (n))
-// #define flfree(ptr) free_debug(ptr)
-
+// Implement custom free list allocator
 template <typename T>
 inline T *flmalloc(uint32_t count = 1) {
     return (T *)malloc_debug(sizeof(T) * count);
+}
+
+template <typename T, typename ...Constr>
+inline T *flmalloc_and_init(Constr &&...args) {
+    T *p = (T *)malloc_debug(sizeof(T));
+    new(p) T(std::forward<Constr>(args)...);
+    return p;
 }
 
 template <typename T>
 inline void flfree(T *ptr) {
     free_debug(ptr);
 }
-
-// // Linear allocator
-// #define LN_MALLOC(type, n) (type *)linear_malloc(sizeof(type) * (n))
-// #define LN_CLEAR() linear_clear()
 
 template <typename T>
 inline T *lnmalloc(uint32_t count = 1) {

@@ -9,6 +9,9 @@ void player_t::init_default_values(player_init_info_t *info) {
     ws_position = info->ws_position;
     ws_view_direction = info->ws_view_direction;
     ws_up_vector = info->ws_up_vector;
+    current_camera_up = ws_up_vector;
+    camera_fov.current = 60.0f;
+    camera_distance.current = 1.0f;
     player_action_count = 0;
     default_speed = info->default_speed;
     next_random_spawn_position = info->next_random_spawn_position;

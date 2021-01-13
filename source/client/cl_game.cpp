@@ -68,7 +68,6 @@ void initialise_client_game_session(uint32_t player_info_count, vkph::player_ini
         state->add_player_to_team(player, (vkph::team_color_t)player->flags.team_color);
 
         player->render = init_player_render();
-        init_player_animated_instance(&player->render->animations);
     }
 }
 

@@ -141,19 +141,12 @@ void init_player_render_resources() {
     }
 }
 
-bool &is_first_person() {
-    return is_in_first_person;
-}
-
 player_render_t *init_player_render() {
     player_render_t *player_render = flmalloc<player_render_t>(1);
     memset(player_render, 0, sizeof(player_render_t));
     player_render->rolling_matrix = matrix4_t(1.0f);
+    player_render->animations.init(&animations.player_sk, &animations.player_cyc);
     return player_render;
-}
-
-void init_player_animated_instance(vk::animated_instance_t *instance) {
-    instance->init(&animations.player_sk, &animations.player_cyc);
 }
 
 bool is_animation_repeating(vkph::player_animated_state_t state) {
@@ -351,7 +344,7 @@ void players_gpu_sync_and_render(
                 p->render->render_data.pbr_info.y = 0.1f;
 
                 if ((int32_t)i == (int32_t)get_local_player(state)) {
-                    if (!is_first_person()) {
+                    if (p->flags.is_third_person) {
                         if (p->switching_shapes) {
                             // Render transition
                             s_render_transition(render_command_buffer, render_shadow_command_buffer, transfer_command_buffer, p);

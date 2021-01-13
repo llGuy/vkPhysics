@@ -86,7 +86,6 @@ static void s_open() {
     fade_info->duration = 6.0f;
     fade_info->trigger_count = 0;
     vkph::submit_event(vkph::ET_BEGIN_FADE, fade_info);
-    vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
 }
 
 static void s_game_event_listener(

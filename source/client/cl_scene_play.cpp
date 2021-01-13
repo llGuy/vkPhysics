@@ -110,7 +110,7 @@ void play_scene_t::calculate_pos_and_dir(vkph::player_t *player, vector3_t *posi
         }
     }
 
-    is_first_person() = !render_player;
+    player->flags.is_third_person = render_player;
 
     *position = player->ws_position - player->ws_view_direction * camera_distance * vkph::PLAYER_SCALE;
     *position += player->current_camera_up * vkph::PLAYER_SCALE * 2.0f;
@@ -198,7 +198,6 @@ void play_scene_t::handle_event(void *object, vkph::event_t *event) {
     switch (event->type) {
 
     case vkph::ET_EXIT_SCENE: {
-        vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
         vkph::submit_event(vkph::ET_LEAVE_SERVER, NULL);
 
         ux::bind_scene(ST_MAIN, state);

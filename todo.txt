@@ -1,4 +1,5 @@
 - Use TCP for important packets like chunks (when joining)
+- FIX LIGHTING -> PLAY_SCENE_T::TICK sets the light direction no matter what
 - Add particles
 - Add audio
 - Fix frustum culling weirdness

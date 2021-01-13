@@ -61,7 +61,6 @@ void map_creator_scene_t::prepare_for_unbinding(vkph::state_t *state) {
     clear_game(state);
 
     ux::clear_panels();
-    vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
 
     ux::end_minibuffer();
     ux::end_color_table();
