@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <ctime>
 #include <ux.hpp>
+#include <al_context.hpp>
 #include "cl_render.hpp"
 #include "ux_scene.hpp"
 #include "cl_game.hpp"
@@ -123,6 +124,7 @@ int32_t run(
     int32_t argc,
     char *argv[]) {
     global_linear_allocator_init((uint32_t)megabytes(30));
+    // Random number generators aren't really used so this is good enough
     srand((uint32_t)time(NULL));
     running = 1;
     files_init();
@@ -140,6 +142,7 @@ int32_t run(
     
     app::init_settings();
     vk::init_context();
+    al::init_context();
     ui::init_submission();
     init_scene_transition();
     init_net(state);
@@ -156,7 +159,7 @@ int32_t run(
     prepare_scenes(state);
 
     // Bind main menu
-    ux::bind_scene(ST_MAIN, state);
+    ux::bind_scene(ST_DEBUG, state);
 
     get_frame_info()->debug_window = 1;
 

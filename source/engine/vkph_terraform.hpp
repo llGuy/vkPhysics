@@ -26,7 +26,7 @@ struct sphere_create_info_t {
 };
 
 struct platform_create_info_t {
-    const vector3_t &position;
+    vector3_t position;
     float width;
     float depth;
     generation_type_t type;
@@ -34,8 +34,8 @@ struct platform_create_info_t {
 };
 
 struct math_equation_create_info_t {
-    const vector3_t &ws_center;
-    const vector3_t &ws_extent;
+    vector3_t ws_center;
+    vector3_t ws_extent;
     float(*equation)(float x, float y, float z);
     generation_type_t type;
     voxel_color_t color;

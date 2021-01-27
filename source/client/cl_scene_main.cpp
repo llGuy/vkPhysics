@@ -165,11 +165,6 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
         ux::bind_scene(ST_PLAY, state);
     } break;
 
-    // case vkph::ET_REQUEST_TO_JOIN_SERVER: {
-    //     vkph::submit_event(vkph::ET_ENTER_GAME_PLAY_SCENE, NULL);
-    //     ux::bind_scene(ST_PLAY, state);
-    // } break;
-
     case vkph::ET_REQUEST_USER_INFORMATION: {
         ux::clear_panels();
         ux::push_panel(ux::SI_SIGN_UP);

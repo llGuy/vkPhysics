@@ -7,8 +7,8 @@
 namespace vk {
 
 void shadow_stage_t::init() {
-    map_extent.width = 1024;
-    map_extent.height = 1024;
+    map_extent.width = 1024 * 2;
+    map_extent.height = 1024 * 2;
 
     VkExtent3D extent3d = {};
     extent3d.width = map_extent.width;
@@ -115,8 +115,8 @@ void end_shadow_rendering(VkCommandBuffer cmdbuf) {
     vkCmdEndRenderPass(cmdbuf);
     end_debug_region(cmdbuf);
 
-    float blur_output_width = (float)(shadow->map_extent.width / 2);
-    float blur_output_height = (float)(shadow->map_extent.height / 2);
+    float blur_output_width = (float)(shadow->map_extent.width);
+    float blur_output_height = (float)(shadow->map_extent.height);
     vector2_t scale = 1.0f / vector2_t(blur_output_width, blur_output_height);
 
     begin_debug_region(cmdbuf, "Shadow Blur Stage", STAGE_COLORS[ST_SHADOW]);

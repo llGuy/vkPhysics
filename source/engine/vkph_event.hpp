@@ -127,6 +127,12 @@ struct event_t {
       Likely to be allocated on free list allocator (for data types, see vkph_event_data.hpp).
     */
     void *data;
+
+
+    /*
+      Contains the name of the function which submitted the event
+     */
+    const char *src;
 };
 
 }

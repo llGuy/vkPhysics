@@ -16,22 +16,45 @@ void debug_scene_t::init() {
 }
 
 void debug_scene_t::subscribe_to_events(vkph::listener_t listener) {
-    
+    vkph::subscribe_to_event(vkph::ET_PRESSED_ESCAPE, listener);
+}
+
+void debug_scene_t::handle_input(vkph::state_t *state) {
+    switch (submode_) {
+
+    case S_IN_GAME: {
+        game_input(app::g_delta_time, state);
+    } break;
+
+    case S_PAUSE: {
+        ux::handle_input(state);
+
+        /* 
+          We also need to make sure to push the actions of the player (otherwise
+          the player doesn't update at all).
+        */
+        game_input(app::g_delta_time, state, true);
+    } break;
+
+    default: {
+    } break;
+
+    }
 }
 
 void debug_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) {
     state->timestep_begin(app::g_delta_time);
 
-    auto *main_player = state->get_player(main_player_id_);
-    main_player->flags.is_third_person = 0;
-
-    game_input(app::g_delta_time, state);
-    tick_game(state);
-
     ux::scene_info_t *scene_info = ux::get_scene_info();
     vk::eye_3d_info_t *eye_info = &scene_info->eye;
 
+    auto *main_player = state->get_player(main_player_id_);
     if (main_player) {
+        main_player->flags.is_third_person = 0;
+
+        handle_input(state);
+        tick_game(state);
+
         fill_eye_info(eye_info, main_player);
     }
 
@@ -46,8 +69,21 @@ void debug_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state)
     state->timestep_end();
 }
 
-void debug_scene_t::handle_event(void *object, vkph::event_t *events) {
-    
+void debug_scene_t::handle_event(void *object, vkph::event_t *event) {
+    auto *state = (vkph::state_t *)object;
+
+    switch (event->type) {
+    case vkph::ET_PRESSED_ESCAPE: {
+        if (submode_ == S_IN_GAME) {
+            change_view_type(GVT_MENU);
+            submode_ = S_PAUSE;
+        }
+        else {
+            change_view_type(GVT_IN_GAME);
+            submode_ = S_IN_GAME;
+        }
+    } break;
+    }
 }
 
 void debug_scene_t::prepare_for_binding(vkph::state_t *state) {
@@ -91,6 +127,14 @@ void debug_scene_t::prepare_for_binding(vkph::state_t *state) {
 
         test_player->render = init_player_render();
     }
+
+    vkph::platform_create_info_t platform;
+    platform.color = vkph::v3_color_to_b8(vector3_t(1.0f));
+    platform.position = vector3_t(0.0f);
+    platform.width = 30.0f;
+    platform.depth = 30.0f;
+    platform.type = vkph::GT_ADDITIVE;
+    state->generate_platform(&platform);
 
     get_frame_info()->blurred = 0;
     get_frame_info()->ssao = 1;

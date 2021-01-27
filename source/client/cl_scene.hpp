@@ -98,7 +98,17 @@ struct debug_scene_t : ux::scene_t {
     void prepare_for_binding(vkph::state_t *state) override;
     void prepare_for_unbinding(vkph::state_t *state) override;
 private:
+    void handle_input(vkph::state_t *state);
+
     int32_t main_player_id_;
+
+    enum submode_t {
+        S_IN_GAME,
+        S_PAUSE,
+        S_INVALID
+    };
+
+    submode_t submode_;
 };
 
 }

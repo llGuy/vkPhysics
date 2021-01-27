@@ -31,8 +31,8 @@ void main() {
     }
     else {
         for (int i = 1; i < 4; ++i){
-            color += texture(u_diffuse, in_fs.uvs + vec2(0.0f, tex_offset.y * i)).rgb * weights[i];
-            color += texture(u_diffuse, in_fs.uvs - vec2(0.0f, tex_offset.y * i)).rgb * weights[i];
+            color += texture(u_diffuse, in_fs.uvs + vec2(0.0f, tex_offset.x * i)).rgb * weights[i];
+            color += texture(u_diffuse, in_fs.uvs - vec2(0.0f, tex_offset.x * i)).rgb * weights[i];
         }
     }
 
