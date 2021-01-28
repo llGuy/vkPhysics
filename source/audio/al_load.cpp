@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include <files.hpp>
 #include <serialiser.hpp>
 #include <allocators.hpp>
@@ -28,7 +29,7 @@ wav_file_data_t load_wav_file(const char *path) {
     { // Load header
         char tmp [4] = {};
         serialiser.deserialise_bytes((uint8_t *)tmp, 4); // RIFF
-        if (strcmp(tmp, "RIFF")) {
+        if (memcmp(tmp, "RIFF", 4)) {
             LOG_ERRORV("Failed to load .wav file: %s\n", path);
 
             return data;
@@ -37,7 +38,7 @@ wav_file_data_t load_wav_file(const char *path) {
         uint32_t size = serialiser.deserialise_uint32();
 
         serialiser.deserialise_bytes((uint8_t *)tmp, 4);
-        if (strcmp(tmp, "WAVE")) {
+        if (memcmp(tmp, "WAVE", 4)) {
             LOG_ERRORV("Failed to load .wav file: %s\n", path);
 
             return data;
@@ -55,7 +56,7 @@ wav_file_data_t load_wav_file(const char *path) {
 
         uint32_t bits_per_sample = serialiser.deserialise_uint16();
         serialiser.deserialise_bytes((uint8_t *)tmp, 4); // "data"
-        if (strcmp(tmp, "data")) {
+        if (memcmp(tmp, "data", 4)) {
             LOG_ERRORV("Failed to load .wav file: %s\n", path);
 
             return data;
