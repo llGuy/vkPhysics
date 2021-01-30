@@ -298,9 +298,11 @@ void popup_input(const app::raw_input_t *input) {
             }
         }
 
-        if (input->buttons[app::BT_MOUSE_LEFT].instant)
+        if (input->buttons[app::BT_MOUSE_LEFT].instant) {
+            handle_button_click();
             if (input_proc)
                 input_proc(popup);
+        }
 
         if (!hovering_over_typing) {
             popup->current_typing_section = INVALID_TYPING_INDEX;

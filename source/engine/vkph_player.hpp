@@ -13,6 +13,7 @@
 namespace cl {
 
 struct player_render_t;
+struct player_audio_t;
 
 }
 
@@ -115,6 +116,11 @@ struct player_t {
       this module won't contain ANY rendering code, hence the forward declaration.
      */
     cl::player_render_t *render;
+
+    /*
+      This *will* contain everything that has to do with playing sound for the player.
+     */
+    cl::player_audio_t *audio;
 
     uint32_t player_action_count;
     player_action_t player_actions[PLAYER_MAX_ACTIONS_COUNT];

@@ -229,6 +229,8 @@ void sign_up_menu_input(const app::raw_input_t *input) {
     if (input->buttons[app::BT_MOUSE_LEFT].instant) {
         switch (hovering_over) {
         case B_SIGNUP: case B_LOGIN: {
+            handle_button_click();
+
             currently_typing = TB_INVALID;
             // Request meta server if username is available, if not, re-prompt
             // Immediately SHA1 the password
@@ -269,10 +271,12 @@ void sign_up_menu_input(const app::raw_input_t *input) {
         } break;
 
         case B_USERNAME: {
+            handle_button_click();
             currently_typing = TB_USERNAME;
         } break;
 
         case B_PASSWORD: {
+            handle_button_click();
             currently_typing = TB_PASSWORD;
         } break;
 

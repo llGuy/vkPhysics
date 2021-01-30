@@ -14,6 +14,7 @@
 #include <ux_menu_main.hpp>
 #include "cl_game_predict.hpp"
 #include <vkph_player.hpp>
+#include "cl_sound3d.hpp"
 #include <cstddef>
 #include <app.hpp>
 #include <vk.hpp>
@@ -114,6 +115,8 @@ void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     ui::render_submitted_ui(
         cmdbufs->transfer_cmdbuf,
         cmdbufs->ui_cmdbuf);
+
+    tick_sound3d();
 
     ux::scene_info_t *scene_info = ux::get_scene_info();
 

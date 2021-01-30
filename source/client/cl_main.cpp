@@ -7,6 +7,7 @@
 #include "cl_game.hpp"
 #include <time.hpp>
 #include "cl_frame.hpp"
+#include "cl_sound3d.hpp"
 #include "cl_scene.hpp"
 #include "cl_net.hpp"
 #include <vkph_state.hpp>
@@ -144,6 +145,7 @@ int32_t run(
     vk::init_context();
     al::init_context();
     ui::init_submission();
+    init_game_sounds_3d();
     init_scene_transition();
     init_net(state);
 

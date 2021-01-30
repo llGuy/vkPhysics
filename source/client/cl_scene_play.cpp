@@ -16,6 +16,7 @@
 #include <vk.hpp>
 #include <ui_submit.hpp>
 #include "cl_scene.hpp"
+#include "cl_sound3d.hpp"
 
 namespace cl {
 
@@ -141,6 +142,7 @@ void play_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
     // The world always gets ticked - when menus get displayed, the world has to keep being simulated
     tick_game(state);
     tick_net(state);
+    tick_sound3d();
 
     ux::scene_info_t *scene_info = ux::get_scene_info();
 

@@ -17,6 +17,8 @@ struct wav_file_data_t {
 };
 */
 
+namespace al {
+
 wav_file_data_t load_wav_file(const char *path) {
     file_handle_t file = create_file(path, FLF_BINARY);
     file_contents_t c = read_file(file);
@@ -78,4 +80,6 @@ wav_file_data_t load_wav_file(const char *path) {
     }
 
     return data;
+}
+
 }

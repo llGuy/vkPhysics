@@ -1,4 +1,5 @@
 #include "allocators.hpp"
+#include "cl_sound3d.hpp"
 #include "cl_game_interp.hpp"
 #include "cl_main.hpp"
 #include "cl_game.hpp"
@@ -145,6 +146,7 @@ void tick_game(vkph::state_t *state) {
                     // Make sure that players within radius get damage
                     rock->flags.active = 0;
                     state->rocks.list.remove(i);
+                    spawn_sound(S3DT_HIT, vector3_t(1000.0f, 0, 0));
                 }
 
                 rock->tick(state->delta_time);

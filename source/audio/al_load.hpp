@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+namespace al {
+
 struct wav_file_data_t {
     uint8_t *data;
     int32_t size;
@@ -11,3 +13,5 @@ struct wav_file_data_t {
 };
 
 wav_file_data_t load_wav_file(const char *path);
+
+}
