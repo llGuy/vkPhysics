@@ -94,7 +94,6 @@ enum event_type_t {
     // All the available (online) game servers
     ET_REQUEST_REFRESH_SERVER_PAGE = 0x40,
     ET_EXIT_SCENE = 0x41,
-    ET_ENTER_MAIN_MENU_SCENE = 0x42,
     // These two purely affect the main menu scene
     ET_ENTER_GAME_PLAY_SCENE = 0x43,
     ET_ENTER_MAP_CREATOR_SCENE = 0x44,
@@ -128,6 +127,12 @@ struct event_t {
       Likely to be allocated on free list allocator (for data types, see vkph_event_data.hpp).
     */
     void *data;
+
+
+    /*
+      Contains the name of the function which submitted the event
+     */
+    const char *src;
 };
 
 }

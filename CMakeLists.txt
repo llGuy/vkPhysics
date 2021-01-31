@@ -15,6 +15,7 @@ file(GLOB_RECURSE SERVER_SOURCES "source/server/*.cpp" "source/server/*.hpp")
 file(GLOB_RECURSE NET_SOURCES "source/net/*.cpp" "source/net/*.hpp")
 file(GLOB_RECURSE ENGINE_SOURCES "source/engine/*.cpp" "source/engine/*.hpp")
 file(GLOB_RECURSE RENDERER_SOURCES "source/renderer/*.cpp" "source/renderer/*.hpp" "dependencies/imgui/lib/*.cpp")
+file(GLOB_RECURSE AUDIO_SOURCES "source/audio/*.cpp" "source/audio/*.hpp")
 file(GLOB_RECURSE UIUX_SOURCES "source/uiux/*.cpp" "source/uiux/*.hpp")
 
 # Include directories for all targets
@@ -27,9 +28,11 @@ include_directories("${CMAKE_SOURCE_DIR}/source/net")
 include_directories("${CMAKE_SOURCE_DIR}/source/engine")
 include_directories("${CMAKE_SOURCE_DIR}/source/uiux/")
 include_directories("${CMAKE_SOURCE_DIR}/source/renderer/include")
+include_directories("${CMAKE_SOURCE_DIR}/source/audio")
 
 # Find packages
 find_package(Vulkan)
+find_package(OpenAL)
 find_package(CURL)
 
 # Threading library
@@ -46,8 +49,15 @@ target_compile_definitions(common PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 add_library(engine STATIC "${ENGINE_SOURCES}")
 target_compile_definitions(engine PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 
+if (OpenAL_FOUND)
+  message(STATUS "Found OpenAL package in system ${OPENAL_INCLUDE_DIR} ${OPENAL_LIBRARY}")
+  include_directories("${OPENAL_INCLUDE_DIR}")
+else()
+  # Do something special for Windows as usual
+endif()
+
 if(Vulkan_FOUND)
-  message(STATUS "Found Vulkan package in system")
+  message(STATUS "Found Vulkan package in system ${Vulkan_LIBRARY}")
   set(BUILD_CLIENT true)
   include_directories("${Vulkan_INCLUDE_DIRS}")
 else(Vulkan_FOUND)
@@ -86,6 +96,10 @@ if(BUILD_CLIENT)
   add_library(uiux STATIC "${UIUX_SOURCES}")
   target_compile_definitions(uiux PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
   target_link_libraries(uiux PUBLIC "renderer")
+
+  # Create audio
+  add_library(audio STATIC "${AUDIO_SOURCES}")
+  target_link_libraries(audio PUBLIC "${OPENAL_LIBRARY}")
 endif()
 
 if(CURL_FOUND)
@@ -114,7 +128,7 @@ target_compile_definitions(net PUBLIC PROJECT_ROOT="${CMAKE_SOURCE_DIR}" -DCURL_
 # Create client (recheck if statement for clarity - TODO: merge renderer with client)
 if(BUILD_CLIENT)
   add_executable(vkPhysics_client "${CLIENT_SOURCES}")
-  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "net" "engine" "uiux" "${CURL_LIBRARIES}")
+  target_link_libraries(vkPhysics_client PUBLIC "renderer" "common" "net" "engine" "uiux" "audio" "${CURL_LIBRARIES}" "${OPENAL_LIBRARY}")
   target_compile_definitions(vkPhysics_client PUBLIC "LINK_AGAINST_RENDERER")
 endif()
 

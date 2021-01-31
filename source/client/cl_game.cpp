@@ -1,4 +1,5 @@
 #include "allocators.hpp"
+#include "cl_sound3d.hpp"
 #include "cl_game_interp.hpp"
 #include "cl_main.hpp"
 #include "cl_game.hpp"
@@ -68,7 +69,6 @@ void initialise_client_game_session(uint32_t player_info_count, vkph::player_ini
         state->add_player_to_team(player, (vkph::team_color_t)player->flags.team_color);
 
         player->render = init_player_render();
-        init_player_animated_instance(&player->render->animations);
     }
 }
 
@@ -100,6 +100,8 @@ void tick_game(vkph::state_t *state) {
 
     { // Local and remote projectiles (basically predicting the state)
         vkph::player_t *local_player = state->get_player(get_local_player(state));
+
+        local_player->calculate_coord_system();
 
         for (uint32_t i = 0; i < state->rocks.list.data_count; ++i) {
             vkph::rock_t *rock = &state->rocks.list[i];
@@ -140,11 +142,13 @@ void tick_game(vkph::state_t *state) {
                     }
 
                     rock->flags.active = 0;
+                    spawn_sound(S3DT_HIT, state, rock->position);
                     state->rocks.list.remove(i);
                 }
                 else if (collided_with_terrain) {
                     // Make sure that players within radius get damage
                     rock->flags.active = 0;
+                    spawn_sound(S3DT_HIT, state, rock->position);
                     state->rocks.list.remove(i);
                 }
 

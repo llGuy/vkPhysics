@@ -39,7 +39,7 @@ vec3 get_normal(int i1, int i2, int i3) {
 }
 
 void main() {
-    vec3 normal = vec3(vec4(get_normal(0, 1, 2), 0.0));
+    vec3 normal = vec3(vec4(get_normal(2, 1, 0), 0.0));
 
     /* vec3 model_center = (u_camera_transforms.view * vec4(u_push_constant.model[3][0], u_push_constant.model[3][1], u_push_constant.model[3][2], 1.0f)).xyz; */
 

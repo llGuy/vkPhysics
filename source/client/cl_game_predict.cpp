@@ -119,35 +119,33 @@ void execute_player_actions(vkph::player_t *player, vkph::state_t *state) {
 
         player->execute_action(action, state);
 
+        // If this is local player, need to cache these commands to later send to server
+        player->camera_distance.animate(action->dt);
+        player->camera_fov.animate(action->dt);
+
+        local_current_terraform_package = player->terraform_package;
+        if (player->flags.interaction_mode != vkph::PIM_STANDING) {
+            local_current_terraform_package.ray_hit_terrain = 0;
+        }
+
+        vector3_t up_diff = player->next_camera_up - player->current_camera_up;
+        if (glm::dot(up_diff, up_diff) > 0.00001f) {
+            player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * action->dt * 1.5f);
+        }
+
         if (is_connected_to_server()) {
-            // If this is local player, need to cache these commands to later send to server
-            player->camera_distance.animate(action->dt);
-            player->camera_fov.animate(action->dt);
-
-            local_current_terraform_package = player->terraform_package;
-            if (player->flags.interaction_mode != vkph::PIM_STANDING) {
-                local_current_terraform_package.ray_hit_terrain = 0;
-            }
-
-            vector3_t up_diff = player->next_camera_up - player->current_camera_up;
-            if (glm::dot(up_diff, up_diff) > 0.00001f) {
-                player->current_camera_up = glm::normalize(player->current_camera_up + up_diff * action->dt * 1.5f);
-            }
-
-            if (is_connected_to_server()) {
-                if (player->cached_player_action_count < vkph::PLAYER_MAX_ACTIONS_COUNT * 2) {
-                    player->cached_player_actions[player->cached_player_action_count++] = *action;
-                }
-                else {
-                    LOG_WARNING("Too many cached player actions\n");
-                }
-            }
-
-            if (!player->flags.is_alive) {
+            if (!player->flags.is_alive && player->render) {
                 player->render->rotation_speed = 0.0f;
                 player->render->rotation_angle = 0.0f;
                 player->render->rolling_matrix = matrix4_t(1.0f);
                 vkph::submit_event(vkph::ET_LOCAL_PLAYER_DIED, NULL);
+            }
+
+            if (player->cached_player_action_count < vkph::PLAYER_MAX_ACTIONS_COUNT * 2) {
+                player->cached_player_actions[player->cached_player_action_count++] = *action;
+            }
+            else {
+                LOG_WARNING("Too many cached player actions\n");
             }
         }
 

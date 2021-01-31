@@ -25,16 +25,10 @@ struct arena_allocator_t {
 
     free_arena_header_t *head;
 
-    void pool_init(
-        uint32_t arena_size,
-        uint32_t pool_size);
-    
+    void pool_init(uint32_t arena_size, uint32_t pool_size);
     void *allocate_arena();
-    
     // Returns NULL
-    void *free_arena(
-        void *pointer);
-
+    void *free_arena(void *pointer);
     void free_pool();
 };
 
@@ -43,12 +37,8 @@ struct linear_allocator_t {
     void *current;
     uint32_t max_size;
 
-    void init(
-        uint32_t max_size);
-    
-    void *allocate(
-        uint32_t size);
-
+    void init(uint32_t max_size);
+    void *allocate(uint32_t size);
     void clear();
 };
 
@@ -56,26 +46,26 @@ void global_linear_allocator_init(uint32_t size);
 void *linear_malloc(uint32_t size);
 void linear_clear();
 
-// // Free list allocator
-// #define flmalloc<type>(n) (type *)malloc_debug(sizeof(type) * (n))
-// #define flfree(ptr) free_debug(ptr)
-
+// Implement custom free list allocator
 template <typename T>
-T *flmalloc(uint32_t count = 1) {
+inline T *flmalloc(uint32_t count = 1) {
     return (T *)malloc_debug(sizeof(T) * count);
 }
 
+template <typename T, typename ...Constr>
+inline T *flmalloc_and_init(Constr &&...args) {
+    T *p = (T *)malloc_debug(sizeof(T));
+    new(p) T(std::forward<Constr>(args)...);
+    return p;
+}
+
 template <typename T>
-void flfree(T *ptr) {
+inline void flfree(T *ptr) {
     free_debug(ptr);
 }
 
-// // Linear allocator
-// #define LN_MALLOC(type, n) (type *)linear_malloc(sizeof(type) * (n))
-// #define LN_CLEAR() linear_clear()
-
 template <typename T>
-T *lnmalloc(uint32_t count = 1) {
+inline T *lnmalloc(uint32_t count = 1) {
     return (T *)linear_malloc(sizeof(T) * count);
 }
 

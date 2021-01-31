@@ -15,6 +15,7 @@ enum scene_type_t {
     ST_MAIN = 0,
     ST_PLAY = 1,
     ST_MAP_CREATOR = 2,
+    ST_DEBUG = 3,
 
     ST_INVALID
 };
@@ -87,6 +88,27 @@ private:
     char edit_buffer_[EDIT_BUFFER_MAX_CHAR_COUNT_] = {};
     vkph::voxel_color_t current_color_;
     bool display_text_in_minibuffer_;
+};
+
+struct debug_scene_t : ux::scene_t {
+    void init() override;
+    void subscribe_to_events(vkph::listener_t listener) override;
+    void tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) override;
+    void handle_event(void *object, vkph::event_t *events) override;
+    void prepare_for_binding(vkph::state_t *state) override;
+    void prepare_for_unbinding(vkph::state_t *state) override;
+private:
+    void handle_input(vkph::state_t *state);
+
+    int32_t main_player_id_;
+
+    enum submode_t {
+        S_IN_GAME,
+        S_PAUSE,
+        S_INVALID
+    };
+
+    submode_t submode_;
 };
 
 }

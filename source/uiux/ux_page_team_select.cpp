@@ -137,6 +137,7 @@ void team_select_page_input(const app::raw_input_t *raw_input, vkph::state_t *st
         int32_t team = hovered_button;
 
         if (team > -1) {
+            handle_button_click();
             // Check if we can join this team (if it is full compared to the other teams)
             vkph::team_color_t color = buttons[team].color;
 

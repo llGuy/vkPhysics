@@ -15,6 +15,9 @@
 #include <app.hpp>
 #include <vk.hpp>
 #include <allocators.hpp>
+#include <al_source.hpp>
+#include <al_sounddb.hpp>
+#include <al_load.hpp>
 
 namespace ux {
 
@@ -86,6 +89,8 @@ static vkph::listener_t listener;
 
 static ui::font_t *global_font;
 static vk::texture_t textures[UT_INVALID_TEXTURE];
+static al::source_t source;
+static uint32_t sounds[UST_INVALID_SOUND];
 
 ui::font_t *get_game_font() {
     return global_font;
@@ -105,6 +110,13 @@ static void s_ui_textures_init() {
     textures[UT_COLOR_TABLE].init("assets/textures/gui/color_table.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     textures[UT_TEAM_SELECT].init("assets/textures/gui/team.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
     textures[UT_DAMAGE_INDICATOR].init("assets/textures/gui/damage.png", VK_FORMAT_R8G8B8A8_UNORM, NULL, 0, 0, VK_FILTER_LINEAR);
+}
+
+static void s_ui_sounds_init() {
+    source = al::init_ui_source();
+
+    auto click = al::load_wav_file("assets/sound/click.wav");
+    sounds[UST_BUTTON_CLICK] = al::register_sound(&click);
 }
 
 void init(vkph::state_t *state) {
@@ -129,6 +141,7 @@ void init(vkph::state_t *state) {
 
     // Initialise some textures
     s_ui_textures_init();
+    s_ui_sounds_init();
     init_main_menu(state);
     init_hud();
     init_game_menu();
@@ -211,6 +224,11 @@ void pop_panel() {
 
 void clear_panels() {
     stack_item_count = 0;
+}
+
+void handle_button_click() {
+    al::sound_t *sound = al::get_sound(sounds[UST_BUTTON_CLICK]);
+    source.play_sound(sound);
 }
 
 }

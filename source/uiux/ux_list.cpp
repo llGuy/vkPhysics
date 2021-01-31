@@ -180,6 +180,7 @@ void list_t::input(const app::raw_input_t *input) {
         typing_box.box.color = pair.current_background;
 
         if (input->buttons[app::BT_MOUSE_LEFT].instant && hovered_over_ip_address) {
+            handle_button_click();
             typing_box.is_typing = 1;
 
             selected_item = 0xFFFF;
@@ -198,6 +199,7 @@ void list_t::input(const app::raw_input_t *input) {
             button->box.color = pair.current_background;
 
             if (hovered_over && input->buttons[app::BT_MOUSE_LEFT].instant) {
+                handle_button_click();
                 button->handle_input_proc(this);
             }
         }
@@ -216,6 +218,7 @@ void list_t::input(const app::raw_input_t *input) {
                 item->box.color = pair.current_background;
 
                 if (hovered_over && input->buttons[app::BT_MOUSE_LEFT].instant) {
+                    handle_button_click();
                     selected_item = i;
 
                     typing_box.is_typing = 0;

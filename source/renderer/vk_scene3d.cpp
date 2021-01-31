@@ -179,7 +179,7 @@ void prepare_scene3d_lighting() {
 
     lighting_data.ubo_data.point_light_count = 0;
 
-    lighting_data.shadow.init(lighting_data.directional_light, vector3_t(0.0f, 1.0f, 0.0f), 25.0f);
+    lighting_data.shadow.init(lighting_data.directional_light, vector3_t(0.0f, 1.0f, 0.0f), 50.0f);
     
     lighting_data.ubo.init(
         sizeof(lighting_ubo_data_t),
@@ -221,7 +221,8 @@ static void s_lighting_gpu_sync(lighting_info_t *info, eye_3d_info_t *eye, VkCom
         view_rotation[3][1] = 0.0f;
         view_rotation[3][2] = 0.0f;
     
-        lighting_data.ubo_data.ws_directional_light = -glm::normalize(info->ws_directional_light);
+        //lighting_data.ubo_data.ws_directional_light = -glm::normalize(info->ws_directional_light);
+        lighting_data.ubo_data.ws_directional_light = vector4_t(-glm::normalize(lighting_data.directional_light), 0.0f);
         lighting_data.ubo_data.vs_directional_light = view_rotation * lighting_data.ubo_data.ws_directional_light;
 
         vector4_t light_position = vector4_t(lighting_data.directional_light * 1000000.0f, 0.0f);

@@ -117,7 +117,7 @@ chunk_render_t *init_chunk_render(const vkph::chunk_t *chunk, const vector3_t &w
     chunk_render->mesh.init_mesh_vbo_final_list();
 
     chunk_render->render_data.model = glm::translate(ws_position);
-    chunk_render->render_data.pbr_info.x = 0.1f;
+    chunk_render->render_data.pbr_info.x = 0.6f;
     chunk_render->render_data.pbr_info.y = 0.1f;
     chunk_render->render_data.color = vector4_t(0.0f);
 

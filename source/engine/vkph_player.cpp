@@ -9,6 +9,9 @@ void player_t::init_default_values(player_init_info_t *info) {
     ws_position = info->ws_position;
     ws_view_direction = info->ws_view_direction;
     ws_up_vector = info->ws_up_vector;
+    current_camera_up = ws_up_vector;
+    camera_fov.current = 60.0f;
+    camera_distance.current = 1.0f;
     player_action_count = 0;
     default_speed = info->default_speed;
     next_random_spawn_position = info->next_random_spawn_position;
@@ -480,6 +483,19 @@ void player_t::update_player_chunk_status(state_t *state) {
             idx_in_chunk_list = idx;
         }
     }
+}
+
+void player_t::calculate_coord_system() {
+    coord_system.inverse_translate = -ws_position;
+    coord_system.rotation = matrix3_t(1.0f);
+
+    vector3_t forward = ws_view_direction;
+    vector3_t right = glm::cross(ws_view_direction, ws_up_vector);
+    vector3_t up = glm::cross(right, ws_view_direction);
+    
+    coord_system.rotation[0] = vector3_t(right.x, up.x, -forward.x);
+    coord_system.rotation[1] = vector3_t(right.y, up.y, -forward.y);
+    coord_system.rotation[2] = vector3_t(right.z, up.z, -forward.z);
 }
 
 }

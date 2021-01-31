@@ -14,6 +14,7 @@
 #include <ux_menu_main.hpp>
 #include "cl_game_predict.hpp"
 #include <vkph_player.hpp>
+#include "cl_sound3d.hpp"
 #include <cstddef>
 #include <app.hpp>
 #include <vk.hpp>
@@ -27,7 +28,6 @@ void main_scene_t::init() {
 }
 
 void main_scene_t::subscribe_to_events(vkph::listener_t listener) {
-    vkph::subscribe_to_event(vkph::ET_ENTER_MAIN_MENU_SCENE, listener);
     vkph::subscribe_to_event(vkph::ET_REQUEST_TO_JOIN_SERVER, listener);
     vkph::subscribe_to_event(vkph::ET_REQUEST_USER_INFORMATION, listener);
     vkph::subscribe_to_event(vkph::ET_ENTER_MAP_CREATOR_SCENE, listener);
@@ -48,6 +48,8 @@ void main_scene_t::prepare_for_binding(vkph::state_t *state) {
 
     get_frame_info()->blurred = 1;
     get_frame_info()->ssao = 0;
+
+    ux::push_panel(ux::SI_MAIN_MENU);
 }
 
 void main_scene_t::prepare_for_unbinding(vkph::state_t *state) {
@@ -114,6 +116,8 @@ void main_scene_t::tick(frame_command_buffers_t *cmdbufs, vkph::state_t *state) 
         cmdbufs->transfer_cmdbuf,
         cmdbufs->ui_cmdbuf);
 
+    tick_sound3d();
+
     ux::scene_info_t *scene_info = ux::get_scene_info();
 
     vk::eye_3d_info_t *eye_info = &scene_info->eye;
@@ -139,9 +143,6 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
     auto *state = (vkph::state_t *)object;
 
     switch (event->type) {
-    case vkph::ET_ENTER_MAIN_MENU_SCENE: {
-        ux::push_panel(ux::SI_MAIN_MENU);
-    } break;
 
     case vkph::ET_ENTER_SERVER: {
         auto *data = (vkph::event_enter_server_t *)event->data;
@@ -166,11 +167,6 @@ void main_scene_t::handle_event(void *object, vkph::event_t *event) {
 
         ux::bind_scene(ST_PLAY, state);
     } break;
-
-    // case vkph::ET_REQUEST_TO_JOIN_SERVER: {
-    //     vkph::submit_event(vkph::ET_ENTER_GAME_PLAY_SCENE, NULL);
-    //     ux::bind_scene(ST_PLAY, state);
-    // } break;
 
     case vkph::ET_REQUEST_USER_INFORMATION: {
         ux::clear_panels();

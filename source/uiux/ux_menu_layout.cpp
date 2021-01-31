@@ -1,3 +1,4 @@
+#include "ux.hpp"
 #include "ui_submit.hpp"
 #include "ux_menu_layout.hpp"
 
@@ -154,6 +155,7 @@ bool menu_layout_t::input(const app::raw_input_t *input) {
     if (input->buttons[app::BT_MOUSE_LEFT].instant && current_button != widget_count) {
         if (!widgets[current_button].locked) {
             menu_click_handler_t proc = procs[current_button];
+            handle_button_click();
             if (proc) {
                 proc();
             }

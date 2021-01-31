@@ -13,6 +13,7 @@
 namespace cl {
 
 struct player_render_t;
+struct player_audio_t;
 
 }
 
@@ -77,6 +78,11 @@ struct player_init_info_t {
     vector3_t next_random_spawn_position;
 };
 
+struct player_coord_system_t {
+    vector3_t inverse_translate;
+    matrix3_t rotation;
+};
+
 struct player_t {
 
     /*
@@ -115,6 +121,11 @@ struct player_t {
       this module won't contain ANY rendering code, hence the forward declaration.
      */
     cl::player_render_t *render;
+
+    /*
+      This *will* contain everything that has to do with playing sound for the player.
+     */
+    cl::player_audio_t *audio;
 
     uint32_t player_action_count;
     player_action_t player_actions[PLAYER_MAX_ACTIONS_COUNT];
@@ -196,6 +207,8 @@ struct player_t {
 
     uint32_t health;
 
+    player_coord_system_t coord_system;
+
 
 
     void init(player_init_info_t *info, int16_t *client_to_local_id_map);
@@ -219,6 +232,8 @@ struct player_t {
       Sets the appropriate state so that player dies.
      */
     void die();
+
+    void calculate_coord_system();
 
 private:
 

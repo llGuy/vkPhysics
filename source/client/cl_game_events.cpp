@@ -84,7 +84,6 @@ static void s_handle_event_new_player(vkph::event_t *event, vkph::state_t *state
     }
 
     player->render = init_player_render();
-    init_player_animated_instance(&player->render->animations);
 
     flfree(event->data);
 }

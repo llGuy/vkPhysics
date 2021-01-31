@@ -1,5 +1,6 @@
 #include <ux_scene.hpp>
 #include "cl_render.hpp"
+#include <app.hpp>
 
 namespace cl {
 
@@ -38,6 +39,16 @@ void init_render_resources() {
     init_player_render_resources();
     init_projectile_render_resources();
     init_fixed_premade_scene_shaders();
+}
+
+void fill_eye_info(vk::eye_3d_info_t *eye, const vkph::player_t *player) {
+    eye->position = player->ws_position;
+    eye->direction = player->ws_view_direction;
+    eye->up = player->current_camera_up;
+    eye->fov = player->camera_fov.current;
+    eye->near = 0.01f;
+    eye->far = 10000.0f;
+    eye->dt = app::g_delta_time;
 }
 
 }

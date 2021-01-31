@@ -36,7 +36,15 @@ enum ui_texture_t {
     UT_INVALID_TEXTURE
 };
 
+enum ui_sound_type_t {
+    UST_BUTTON_CLICK,
+    UST_INVALID_SOUND
+};
+
 ui::font_t *get_game_font();
 VkDescriptorSet get_texture(ui_texture_t type);
+
+// Mostly for audio
+void handle_button_click();
 
 }

@@ -1,11 +1,13 @@
 #include <cstddef>
 #include <ctime>
 #include <ux.hpp>
+#include <al_context.hpp>
 #include "cl_render.hpp"
 #include "ux_scene.hpp"
 #include "cl_game.hpp"
 #include <time.hpp>
 #include "cl_frame.hpp"
+#include "cl_sound3d.hpp"
 #include "cl_scene.hpp"
 #include "cl_net.hpp"
 #include <vkph_state.hpp>
@@ -86,7 +88,6 @@ static void s_open() {
     fade_info->duration = 6.0f;
     fade_info->trigger_count = 0;
     vkph::submit_event(vkph::ET_BEGIN_FADE, fade_info);
-    vkph::submit_event(vkph::ET_ENTER_MAIN_MENU_SCENE, NULL);
 }
 
 static void s_game_event_listener(
@@ -124,6 +125,7 @@ int32_t run(
     int32_t argc,
     char *argv[]) {
     global_linear_allocator_init((uint32_t)megabytes(30));
+    // Random number generators aren't really used so this is good enough
     srand((uint32_t)time(NULL));
     running = 1;
     files_init();
@@ -141,7 +143,9 @@ int32_t run(
     
     app::init_settings();
     vk::init_context();
+    al::init_context();
     ui::init_submission();
+    init_game_sounds_3d();
     init_scene_transition();
     init_net(state);
 

@@ -110,15 +110,12 @@ struct player_render_t {
 };
 
 player_render_t *init_player_render();
-void init_player_animated_instance(vk::animated_instance_t *instance);
 
 /* 
   Helper function which for a gien animated state, says if it's a repeating animation,
   or one that will stop after the animation cycle reaches the end of its timeline.
  */
 bool is_animation_repeating(vkph::player_animated_state_t state);
-
-bool &is_first_person();
 
 
 
@@ -162,5 +159,10 @@ struct fixed_premade_scene_t {
 void premade_scene_gpu_sync_and_render(
     VkCommandBuffer render,
     fixed_premade_scene_t *scene);
+
+/*
+  Some utility functions
+ */
+void fill_eye_info(vk::eye_3d_info_t *eye, const vkph::player_t *player);
 
 }
