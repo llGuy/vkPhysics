@@ -101,12 +101,7 @@ void tick_game(vkph::state_t *state) {
     { // Local and remote projectiles (basically predicting the state)
         vkph::player_t *local_player = state->get_player(get_local_player(state));
 
-        vector3_t inverse_translate = -local_player->ws_position;
-        matrix3_t rotation = matrix3_t(1.0f);
-        auto axes = vkph::compute_movement_axes(local_player->ws_view_direction, local_player->ws_up_vector);
-        rotation[0] = vector3_t(axes.right.x, axes.up.x, -axes.forward.x);
-        rotation[1] = vector3_t(axes.right.y, axes.up.y, -axes.forward.y);
-        rotation[2] = vector3_t(axes.right.z, axes.up.z, -axes.forward.z);
+        local_player->calculate_coord_system();
 
         for (uint32_t i = 0; i < state->rocks.list.data_count; ++i) {
             vkph::rock_t *rock = &state->rocks.list[i];
@@ -152,12 +147,8 @@ void tick_game(vkph::state_t *state) {
                 else if (collided_with_terrain) {
                     // Make sure that players within radius get damage
                     rock->flags.active = 0;
-                    vector3_t sound_pos = rock->position + inverse_translate;
-                    sound_pos = rotation * sound_pos;
-
+                    spawn_sound(S3DT_HIT, state, rock->position);
                     state->rocks.list.remove(i);
-
-                    spawn_sound(S3DT_HIT, sound_pos);
                 }
 
                 rock->tick(state->delta_time);

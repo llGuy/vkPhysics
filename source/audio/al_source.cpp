@@ -63,7 +63,7 @@ source_t init_3d_source() {
     alSourcei(res.id, AL_SOURCE_RELATIVE, AL_TRUE);
     // For now, just use these default values
     alSourcef(res.id, AL_ROLLOFF_FACTOR, 2.5f);
-    alSourcef(res.id, AL_REFERENCE_DISTANCE, 10);
+    alSourcef(res.id, AL_REFERENCE_DISTANCE, 15);
     alSourcef(res.id, AL_MAX_DISTANCE, 1000);
 
     return res;

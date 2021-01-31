@@ -78,6 +78,11 @@ struct player_init_info_t {
     vector3_t next_random_spawn_position;
 };
 
+struct player_coord_system_t {
+    vector3_t inverse_translate;
+    matrix3_t rotation;
+};
+
 struct player_t {
 
     /*
@@ -202,6 +207,8 @@ struct player_t {
 
     uint32_t health;
 
+    player_coord_system_t coord_system;
+
 
 
     void init(player_init_info_t *info, int16_t *client_to_local_id_map);
@@ -225,6 +232,8 @@ struct player_t {
       Sets the appropriate state so that player dies.
      */
     void die();
+
+    void calculate_coord_system();
 
 private:
 

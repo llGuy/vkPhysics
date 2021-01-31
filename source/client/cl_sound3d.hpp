@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <math.hpp>
 #include <al_source.hpp>
+#include <vkph_state.hpp>
 
 namespace cl {
 
@@ -26,7 +27,7 @@ enum sound_3d_type_t {
 
 void init_game_sounds_3d();
 
-void spawn_sound(sound_3d_type_t type, const vector3_t &position);
+void spawn_sound(sound_3d_type_t type, vkph::state_t *state, const vector3_t &position);
 
 void tick_sound3d();
 

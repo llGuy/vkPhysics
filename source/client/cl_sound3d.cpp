@@ -21,7 +21,11 @@ void init_game_sounds_3d() {
     game_sources.init(MAX_SOURCES);
 }
 
-void spawn_sound(sound_3d_type_t type, const vector3_t &position) {
+void spawn_sound(sound_3d_type_t type, vkph::state_t *state, const vector3_t &position) {
+    vkph::player_t *local_player = state->get_player(state->local_player_id);
+    vector3_t sound_pos = position + local_player->coord_system.inverse_translate;
+    sound_pos = local_player->coord_system.rotation * sound_pos;
+
     uint32_t idx = game_sources.add();
     game_source_t *src =game_sources.get(idx);
 
@@ -30,11 +34,11 @@ void spawn_sound(sound_3d_type_t type, const vector3_t &position) {
         src->is_initialised = 1;
     }
 
-    src->src.update_position(position);
+    src->src.update_position(sound_pos);
     src->src.update_velocity(vector3_t(0.0f));
     src->src.play_sound(al::get_sound(sounds[type]));
 
-    LOG_INFOV("Spawned sound at %s\n", glm::to_string(position).c_str());
+    LOG_INFOV("Spawned sound at %s\n", glm::to_string(sound_pos).c_str());
 }
 
 void tick_sound3d() {
