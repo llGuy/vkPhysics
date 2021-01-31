@@ -29,11 +29,12 @@ void spawn_sound(sound_3d_type_t type, const vector3_t &position) {
         src->src = al::init_3d_source();
         src->is_initialised = 1;
     }
+
     src->src.update_position(position);
     src->src.update_velocity(vector3_t(0.0f));
     src->src.play_sound(al::get_sound(sounds[type]));
 
-    LOG_INFO("Spawned sound\n");
+    LOG_INFOV("Spawned sound at %s\n", glm::to_string(position).c_str());
 }
 
 void tick_sound3d() {
