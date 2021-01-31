@@ -161,7 +161,7 @@ int32_t run(
     prepare_scenes(state);
 
     // Bind main menu
-    ux::bind_scene(ST_DEBUG, state);
+    ux::bind_scene(ST_MAIN, state);
 
     get_frame_info()->debug_window = 1;
 

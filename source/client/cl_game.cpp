@@ -142,6 +142,7 @@ void tick_game(vkph::state_t *state) {
                     }
 
                     rock->flags.active = 0;
+                    spawn_sound(S3DT_HIT, state, rock->position);
                     state->rocks.list.remove(i);
                 }
                 else if (collided_with_terrain) {

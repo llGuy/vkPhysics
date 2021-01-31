@@ -44,9 +44,13 @@ void spawn_sound(sound_3d_type_t type, vkph::state_t *state, const vector3_t &po
 void tick_sound3d() {
     for (uint32_t i = 0; i < game_sources.data_count; ++i) {
         auto *src = game_sources.get(i);
-        if (!src->src.is_playing()) {
-            src->is_initialised = 0;
-            game_sources.remove(i);
+        if (src->is_initialised) {
+            if (!src->src.is_playing()) {
+                src->is_initialised = 0;
+                uint32_t al_src_id = src->src.id;
+                game_sources.remove(i);
+                src->src.id = al_src_id;
+            }
         }
     }
 }
