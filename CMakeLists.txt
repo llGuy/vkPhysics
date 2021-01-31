@@ -32,7 +32,11 @@ include_directories("${CMAKE_SOURCE_DIR}/source/audio")
 
 # Find packages
 find_package(Vulkan)
-find_package(OpenAL)
+
+if (NOT WIN32)
+  find_package(OpenAL)
+endif()
+
 find_package(CURL)
 
 # Threading library
@@ -54,6 +58,7 @@ if (OpenAL_FOUND)
   include_directories("${OPENAL_INCLUDE_DIR}")
 else()
   # Do something special for Windows as usual
+  include_directories("${CMAKE_SOURCE_DIR}/dependencies/openal-soft-bin-include/include")
 endif()
 
 if(Vulkan_FOUND)
@@ -99,7 +104,11 @@ if(BUILD_CLIENT)
 
   # Create audio
   add_library(audio STATIC "${AUDIO_SOURCES}")
-  target_link_libraries(audio PUBLIC "${OPENAL_LIBRARY}")
+  if (WIN32)
+    target_link_libraries(audio PUBLIC "${CMAKE_SOURCE_DIR}/dependencies/openal-soft-bin-include/bin/Debug/OpenAL32.lib")
+  else()
+    target_link_libraries(audio PUBLIC "${OPENAL_LIBRARY}")
+  endif()
 endif()
 
 if(CURL_FOUND)

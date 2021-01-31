@@ -120,7 +120,7 @@ void init_game(vkph::state_t *state) {
     state->prepare();
 
     state->configure_game_mode(vkph::game_mode_t::DEATHMATCH);
-    state->configure_map("nucleus.map");
+    state->configure_map("ice.map");
     state->configure_team_count(2);
     state->configure_team(0, vkph::team_color_t::BLUE, 10);
     state->configure_team(1, vkph::team_color_t::RED, 10);
