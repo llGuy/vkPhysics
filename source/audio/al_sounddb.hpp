@@ -8,6 +8,7 @@ struct wav_file_data_t;
 
 struct sound_t {
     uint32_t buffer_id;
+    float duration;
 };
 
 void init_sounddb(uint32_t max_count);

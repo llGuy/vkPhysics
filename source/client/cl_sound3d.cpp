@@ -17,8 +17,22 @@ static uint32_t sounds[S3DT_INVALID];
 void init_game_sounds_3d() {
     auto hit = al::load_wav_file("assets/sound/hit.wav");
     sounds[S3DT_HIT] = al::register_sound(&hit);
+    auto hard_step0 = al::load_wav_file("assets/sound/hard_step0.wav");
+    sounds[S3DT_HARD_STEP0] = al::register_sound(&hit);
+    auto hard_step1 = al::load_wav_file("assets/sound/hard_step1.wav");
+    sounds[S3DT_HARD_STEP1] = al::register_sound(&hit);
+    auto hard_step2 = al::load_wav_file("assets/sound/hard_step2.wav");
+    sounds[S3DT_HARD_STEP2] = al::register_sound(&hit);
+    auto hard_step3 = al::load_wav_file("assets/sound/hard_step3.wav");
+    sounds[S3DT_HARD_STEP3] = al::register_sound(&hit);
+    auto hard_step4 = al::load_wav_file("assets/sound/hard_step4.wav");
+    sounds[S3DT_HARD_STEP4] = al::register_sound(&hit);
 
     game_sources.init(MAX_SOURCES);
+}
+
+game_source_t *get_game_source(uint32_t handle) {
+    return game_sources.get(handle);
 }
 
 void spawn_sound(sound_3d_type_t type, vkph::state_t *state, const vector3_t &position) {
@@ -39,6 +53,10 @@ void spawn_sound(sound_3d_type_t type, vkph::state_t *state, const vector3_t &po
     src->src.play_sound(al::get_sound(sounds[type]));
 
     LOG_INFOV("Spawned sound at %s\n", glm::to_string(sound_pos).c_str());
+}
+
+uint32_t spawn_composed_sound(sound_3d_type_t *types, uint32_t count, float sound_per_sec) {
+    
 }
 
 void tick_sound3d() {

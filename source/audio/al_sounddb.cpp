@@ -19,6 +19,11 @@ uint32_t register_sound(wav_file_data_t *data) {
 
     alGenBuffers(1, &s->buffer_id);
 
+    uint32_t bytes_per_sample = (float)data->bits_per_sample / 8.0f;
+    float length = (float)data->size / ((float)bytes_per_sample * (float)data->channels * (float)data->sample_rate);
+
+    s->duration = length;
+
     ALenum format;
     
     if (data->channels == 1 && data->bits_per_sample == 8) {
