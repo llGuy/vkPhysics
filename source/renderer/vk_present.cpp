@@ -146,7 +146,8 @@ void init_swapchain(uint32_t width, uint32_t height) {
     // add 1 to the minimum images supported in the swapchain
     uint32_t image_count = swapchain_details->capabilities.minImageCount + 1;
 
-    if (image_count > swapchain_details->capabilities.maxImageCount)
+    if (image_count > swapchain_details->capabilities.maxImageCount &&
+        swapchain_details->capabilities.maxImageCount)
         image_count = swapchain_details->capabilities.maxImageCount;
 
     uint32_t queue_family_indices[] = {

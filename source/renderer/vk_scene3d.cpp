@@ -502,7 +502,6 @@ static void s_scene_debug_menu() {
 
     updated_environment = ImGui::Button("Update");
     
-    environment.atm.eye_height = eye_height;
     environment.atm.light_direction_x = light_direction[0];
     environment.atm.light_direction_y = light_direction[1];
     environment.atm.light_direction_z = light_direction[2];

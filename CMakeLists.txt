@@ -114,6 +114,7 @@ endif()
 if(CURL_FOUND)
   message("Found CURL")
   include_directories("${CURL_INCLUDE_DIRS}")
+  message("${CURL_INCLUDE_DIRS}")
 else(CURL_FOUND)
   message("Didn't find curl - using bundled curl")
 

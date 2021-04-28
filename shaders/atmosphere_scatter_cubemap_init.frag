@@ -16,7 +16,6 @@ layout(push_constant) uniform push_constant_t {
     float light_direction_x;
     float light_direction_y;
     float light_direction_z;
-    float eye_height;
     float rayleigh;
     float mie;
     float intensity;
@@ -125,7 +124,7 @@ void main() {
     vec3 kr = vec3(u_push_constant.air_color_r, u_push_constant.air_color_g, u_push_constant.air_color_b);
     
     vec3 eye_direction = compute_spherical_view_direction();
-    vec3 eye_position = vec3(0.0f, u_push_constant.eye_height, 0.0f);
+    vec3 eye_position = vec3(0.0f, EYE_HEIGHT, 0.0f);
 
     vec3 light_dir = normalize(vec3(u_push_constant.light_direction_x, u_push_constant.light_direction_y, u_push_constant.light_direction_z));
     light_dir.xz *= -1.0f;
@@ -143,7 +142,7 @@ void main() {
     vec3 accumulated_rayleigh = vec3(0.0f);
     vec3 accumulated_mie = vec3(0.0f);
 
-    float eye_extinction = horizon_extinction(eye_position, eye_direction, u_push_constant.eye_height - 0.25f);
+    float eye_extinction = horizon_extinction(eye_position, eye_direction, EYE_HEIGHT - 0.25f);
     
     float intensity = u_push_constant.intensity;
 
@@ -153,7 +152,7 @@ void main() {
         float sample_distance = ray_step_length * float(i);
         vec3 ray_sample_position = eye_position + sample_distance * eye_direction;
 
-        float extinction = horizon_extinction(ray_sample_position, light_dir, u_push_constant.eye_height - 0.35f);
+        float extinction = horizon_extinction(ray_sample_position, light_dir, EYE_HEIGHT - 0.35f);
         
         float sample_depth = atmospheric_depth(eye_position, light_dir);
 

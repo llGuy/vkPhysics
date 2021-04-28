@@ -224,7 +224,7 @@ context_info_t init_context(const char *name) {
     context_info_t ctx_info = {};
     ctx_info.surface_proc = &s_create_vulkan_surface_proc;
     ctx_info.width = width;
-    ctx_info.width = height;
+    ctx_info.height = height;
     ctx_info.name = ctx.name;
     ctx_info.window = (void *)ctx.window;
 

@@ -144,7 +144,7 @@ static int32_t s_verify_hardware_meets_requirements(const device_extensions_t &e
     }
 
     return is_swapchain_supported && is_swapchain_usable
-        && device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+        // && device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
         && g_ctx->queue_families.is_complete()
         && device_features.geometryShader
         && device_features.wideLines
@@ -213,11 +213,17 @@ void init_device() {
         if (s_verify_hardware_meets_requirements(requested_ext, &used_ext)) {
             break;
         }
+        else {
+            g_ctx->hardware = VK_NULL_HANDLE;
+        }
 
         memset(&used_ext, 0, sizeof(used_ext));
     }
 
-    assert(g_ctx->hardware != VK_NULL_HANDLE);
+    if (g_ctx->hardware == VK_NULL_HANDLE) {
+        LOG_ERROR("Failed to find suitable graphics device\n");
+        exit(-1);
+    }
 
     vkGetPhysicalDeviceMemoryProperties(g_ctx->hardware, &g_ctx->hardware_memory_properties);
 

@@ -142,7 +142,6 @@ void integral_lut_t::cleanup_resources() {
 }
 
 void atmosphere_model_default_values(atmosphere_model_t *model, const vector3_t &directional_light) {
-    float eye_height = 0.0f;
     float light_direction[3] = { directional_light.x, directional_light.y, directional_light.z };
     float rayleigh = -0.082f;
     float mie = -0.908f;
@@ -154,7 +153,6 @@ void atmosphere_model_default_values(atmosphere_model_t *model, const vector3_t 
     float mie_collection = 2.981f;
     float kr[3] = {27.0f / 255.0f, 82.0f / 255.0f, 111.0f / 255.0f};
     
-    model->eye_height = eye_height;
     model->light_direction_x = light_direction[0];
     model->light_direction_y = light_direction[1];
     model->light_direction_z = light_direction[2];

@@ -31,7 +31,6 @@ struct atmosphere_model_t {
     float light_direction_x;
     float light_direction_y;
     float light_direction_z;
-    float eye_height;
     float rayleigh;
     float mie;
     float intensity;
