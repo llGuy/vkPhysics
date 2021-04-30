@@ -17,7 +17,7 @@
 namespace net {
 
 static constexpr uint32_t REQUEST_RESULT_MAX_SIZE = 4096;
-static const char *meta_server_hostname = "meta.llguy.fun";
+static const char *meta_server_hostname = "meta.lguy.fun";
 
 static available_servers_t available_servers;
 
@@ -53,7 +53,7 @@ static size_t s_write_callback(char *ptr, size_t size, size_t nmemb, void *userd
     }
 
     LOG_INFOV("META: Received %d bytes\n", byte_count);
-    // LOG_INFOV("META: Message: \n%s\n", shared.request_result);
+     LOG_INFOV("META: Message: \n%s\n", shared.request_result);
 
     return byte_count;
 }
@@ -80,6 +80,8 @@ static void s_set_url(const char *path) {
     serialiser_t serialiser = s_fill_request();
     serialiser.serialise_string(path);
     CURL_CHECK(curl_easy_setopt(curl, CURLOPT_URL, serialiser.data_buffer));
+
+    LOG_INFOV("%s\n", serialiser.data_buffer);
 }
 
 static void s_meta_thread() {
