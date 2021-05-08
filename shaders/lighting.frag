@@ -7,20 +7,20 @@ layout(location = 0) in VS_DATA {
 layout(location = 0) out vec4 out_final_color;
 layout(location = 1) out vec4 out_bright_color;
 
-layout(binding = 0, set = 0) uniform sampler2D u_gbuffer_albedo;
-layout(binding = 1, set = 0) uniform sampler2D u_gbuffer_normal;
-layout(binding = 2, set = 0) uniform sampler2D u_gbuffer_position;
-layout(binding = 3, set = 0) uniform sampler2D u_gbuffer_sun;
+layout(set = 0, binding = 0) uniform sampler2D u_gbuffer_albedo;
+layout(set = 0, binding = 1) uniform sampler2D u_gbuffer_normal;
+layout(set = 0, binding = 2) uniform sampler2D u_gbuffer_position;
+layout(set = 0, binding = 3) uniform sampler2D u_gbuffer_sun;
 // TODO: Get position from depth buffer - for now, use gbuffer position as testcase
-layout(binding = 4, set = 0) uniform sampler2D u_gbuffer_depth;
+layout(set = 0, binding = 4) uniform sampler2D u_gbuffer_depth;
 
-layout(binding = 0, set = 3) uniform samplerCube u_irradiance_map;
+layout(set = 3, binding = 0) uniform samplerCube u_irradiance_map;
 
-layout(binding = 0, set = 4) uniform sampler2D u_integral_lookup;
-layout(binding = 0, set = 5) uniform samplerCube u_prefilter_map;
+layout(set = 4, binding = 0) uniform sampler2D u_integral_lookup;
+layout(set = 5, binding = 0) uniform samplerCube u_prefilter_map;
 
 // layout(binding = 0, set = 6) uniform sampler2D u_ao;
-layout(binding = 0, set = 6) uniform sampler2D u_shadow_map_moment;
+layout(set = 6, binding = 0) uniform sampler2D u_shadow_map_moment;
 
 layout(set = 1, binding = 0) uniform lighting_t {
     vec4 vs_light_positions[10];
@@ -52,6 +52,11 @@ layout(set = 2, binding = 0) uniform camera_transforms_t {
     float width;
     float height;
 } u_camera_transforms;
+
+layout(set = 7, binding = 0) uniform graphics_settings_t {
+    uint is_shadow_enabled;
+    uint is_god_rays_enabled;
+} u_graphics_settings;
 
 float linear_depth(
     float d,

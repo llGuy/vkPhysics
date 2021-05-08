@@ -17,6 +17,7 @@ static uint32_t sounds[S3DT_INVALID];
 void init_game_sounds_3d() {
     auto hit = al::load_wav_file("assets/sound/hit.wav");
     sounds[S3DT_HIT] = al::register_sound(&hit);
+#if 0
     auto hard_step0 = al::load_wav_file("assets/sound/hard_step0.wav");
     sounds[S3DT_HARD_STEP0] = al::register_sound(&hit);
     auto hard_step1 = al::load_wav_file("assets/sound/hard_step1.wav");
@@ -27,6 +28,7 @@ void init_game_sounds_3d() {
     sounds[S3DT_HARD_STEP3] = al::register_sound(&hit);
     auto hard_step4 = al::load_wav_file("assets/sound/hard_step4.wav");
     sounds[S3DT_HARD_STEP4] = al::register_sound(&hit);
+#endif
 
     game_sources.init(MAX_SOURCES);
 }

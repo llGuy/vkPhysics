@@ -574,4 +574,20 @@ void insert_debug(
 
 void end_debug_region(VkCommandBuffer cmdbuf);
 
+/*
+  Graphics settings
+ */
+
+struct graphics_settings_t {
+    // Make sure to also add the "degree" of each effect
+    uint32_t is_shadow_enabled;
+    uint32_t is_god_rays_enabled;
+    // ...
+};
+
+extern graphics_settings_t g_gfx_settings;
+
+// For now just loads default
+void sync_settings(VkCommandBuffer transfer);
+
 }

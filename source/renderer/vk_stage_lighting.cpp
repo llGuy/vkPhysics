@@ -2,6 +2,7 @@
 #include "vk_scene3d.hpp"
 #include "vk_context.hpp"
 #include "vk_stage_shadow.hpp"
+#include "vk_settings.hpp"
 #include "vk_stage_deferred.hpp"
 #include "vk_stage_lighting.hpp"
 
@@ -86,6 +87,7 @@ void lighting_stage_t::init() {
         get_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         get_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
         get_descriptor_layout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+        get_descriptor_layout(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
     };
     
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -144,7 +146,8 @@ void lighting_stage_t::execute(VkCommandBuffer cmdbuf) {
         scene_descriptors.diff_ibl_tx,
         scene_descriptors.lut_tx,
         scene_descriptors.spec_ibl_tx,
-        g_ctx->pipeline.shadow->blur.current_set
+        g_ctx->pipeline.shadow->blur.current_set,
+        get_settings_descriptor()
     };
     
     vkCmdBindDescriptorSets(

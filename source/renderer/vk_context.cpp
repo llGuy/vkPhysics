@@ -7,6 +7,7 @@
 #include "vk_context.hpp"
 #include "vk_present.hpp"
 #include "vk_instance.hpp"
+#include "vk_settings.hpp"
 #include "app_context.hpp"
 #include "vk_descriptor.hpp"
 
@@ -48,6 +49,7 @@ void init_context() {
     g_ctx->pipeline.init();
     prepare_scene3d_environment();
     init_sensitive_buffer_deletions();
+    init_settings();
 
     // UI
     g_ctx->frame_id = 0;
